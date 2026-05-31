@@ -1,26 +1,43 @@
-.page{display:flex;flex-direction:column;min-height:100vh}
-.topbar{padding:20px 32px;border-bottom:1px solid var(--border);background:var(--surface)}
-.title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700}
-.sub{font-size:13px;color:var(--muted2);margin-top:2px}
-.content{flex:1;padding:28px 32px}
-.filters{display:flex;gap:4px;margin-bottom:24px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:4px;width:fit-content}
-.ftab{padding:8px 20px;border-radius:9px;font-size:13px;font-weight:500;color:var(--muted2);cursor:pointer;transition:all .15s}
-.ftabOn{background:var(--surface2);color:var(--text);border:1px solid var(--border2)}
-.loading{display:flex;align-items:center;justify-content:center;padding:60px;color:var(--muted)}
-.empty{text-align:center;padding:60px 20px}
-.emptyTitle{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:8px}
-.emptySub{font-size:14px;color:var(--muted2)}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:all .2s}
-.card:hover{border-color:var(--border2);transform:translateY(-2px)}
-.cardThumb{aspect-ratio:9/16;display:flex;align-items:center;justify-content:center;position:relative}
-.statusBadge{position:absolute;top:8px;right:8px;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:500}
-.done{background:rgba(34,197,94,.2);color:var(--green)}
-.processing{background:rgba(245,158,11,.2);color:var(--amber)}
-.failed{background:rgba(239,68,68,.2);color:var(--red)}
-.cardInfo{padding:12px}
-.cardTitle{font-size:13px;font-weight:500;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cardMeta{font-size:11px;color:var(--muted)}
-.cardActions{display:flex;gap:6px;padding:0 12px 12px}
-.actionBtn{flex:1;padding:6px;border-radius:7px;background:var(--surface2);border:1px solid var(--border);color:var(--muted2);font-size:12px;cursor:pointer;text-align:center;display:flex;align-items:center;justify-content:center;gap:4px;text-decoration:none;transition:all .15s}
-.actionBtn:hover{color:var(--text);border-color:var(--border2)}
+'use client'
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase-browser'
+import styles from './historico.module.css'
+
+export default function HistoricoPage() {
+  const [generations, setGenerations] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState('todos')
+  const supabase = createClient()
+
+  useEffect(() => {
+    async function load() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase.from('generations').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
+      setGenerations(data || [])
+      setLoading(false)
+    }
+    load()
+  }, [])
+
+  const filtered = generations.filter(g => filter === 'todos' || g.type === filter)
+
+  function formatDate(d: string) {
+    return new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
+  }
+
+  return (
+    <div className={styles.page}>
+      <div className={styles.topbar}><div><div className={styles.title}>Histórico</div><div className={styles.sub}>Todos os vídeos e ebooks gerados na sua conta</div></div></div>
+      <div className={styles.content}>
+        <div className={styles.filters}>
+          {['todos','video','ebook'].map(f=><div key={f} className={`${styles.ftab} ${filter===f?styles.ftabOn:''}`} onClick={()=>setFilter(f)}>{f==='todos'?'Todos':f==='video'?'Vídeos':'Ebooks'}</div>)}
+        </div>
+        {loading ? <div className={styles.loading}><i className="ti ti-loader" style={{fontSize:28,animation:'spin 1s linear infinite'}}/></div>
+        : filtered.length === 0 ? <div className={styles.empty}><i className="ti ti-history" style={{fontSize:48,color:'var(--muted)',display:'block',marginBottom:16}}/><div className={styles.emptyTitle}>Nenhuma geração ainda</div><div className={styles.emptySub}>Seus vídeos e ebooks gerados aparecerão aqui</div></div>
+        : <div className={styles.grid}>{filtered.map(g=><div key={g.id} className={styles.card}><div className={styles.cardThumb} style={{background:g.type==='video'?'linear-gradient(135deg,rgba(124,92,252,.2),rgba(167,139,250,.1))':'linear-gradient(135deg,rgba(34,197,94,.2),rgba(34,197,94,.1))'}}><i className={`ti ${g.type==='video'?'ti-video':'ti-book-2'}`} style={{fontSize:32,color:g.type==='video'?'var(--accent2)':'var(--green)'}}/><div className={`${styles.statusBadge} ${g.status==='completed'?styles.done:g.status==='processing'?styles.processing:styles.failed}`}>{g.status==='completed'?'✓ Pronto':g.status==='processing'?'⏳ Processando':'✗ Falhou'}</div></div><div className={styles.cardInfo}><div className={styles.cardTitle}>{g.title||g.niche||'Sem título'}</div><div className={styles.cardMeta}>{g.type==='video'?'Vídeo':'Ebook'} · {formatDate(g.created_at)}</div></div><div className={styles.cardActions}>{g.output_url&&<a href={g.output_url} download className={styles.actionBtn}><i className="ti ti-download"/>Baixar</a>}<div className={styles.actionBtn}><i className="ti ti-share"/>Compartilhar</div></div></div>)}</div>}
+      </div>
+      <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>
+    </div>
+  )
+}
