@@ -14,8 +14,10 @@ export default function EbookPage() {
   const [customDetails, setCustomDetails] = useState('')
   const [loading, setLoading] = useState(false)
   const [loadingPdf, setLoadingPdf] = useState(false)
+  const [loadingCover, setLoadingCover] = useState(false)
   const [step, setStep] = useState(0)
   const [result, setResult] = useState<any>(null)
+  const [coverUrl, setCoverUrl] = useState('')
   const supabase = createClient()
 
   const steps = ['Analisando nicho...','Gerando estrutura...','Escrevendo com IA...','Aplicando design...','Pronto! ✓']
@@ -28,7 +30,7 @@ export default function EbookPage() {
 
   async function generate() {
     if (!niche || !title) return alert('Preencha o nicho e o título!')
-    setLoading(true); setStep(0); setResult(null)
+    setLoading(true); setStep(0); setResult(null); setCoverUrl('')
     for (let i = 0; i < steps.length - 1; i++) { await new Promise(r => setTimeout(r, 1000)); setStep(i + 1) }
     const { data: { session } } = await supabase.auth.getSession()
     const res = await fetch('/api/generate-ebook', {
@@ -40,6 +42,21 @@ export default function EbookPage() {
     setLoading(false)
     if (data.ebook) setResult(data)
     else alert('Erro: ' + (data.error || 'Tente novamente'))
+  }
+
+  async function generateCover() {
+    if (!title) return alert('Preencha o título primeiro!')
+    setLoadingCover(true)
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch('/api/generate-cover', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+      body: JSON.stringify({ title, subtitle, niche, color, template })
+    })
+    const data = await res.json()
+    setLoadingCover(false)
+    if (data.imageUrl) setCoverUrl(data.imageUrl)
+    else alert('Erro ao gerar capa: ' + (data.error || 'Tente novamente'))
   }
 
   async function downloadPdf() {
@@ -54,13 +71,8 @@ export default function EbookPage() {
     const data = await res.json()
     setLoadingPdf(false)
     if (!data.html) return alert('Erro ao gerar PDF')
-
     const win = window.open('', '_blank')
-    if (win) {
-      win.document.write(data.html)
-      win.document.close()
-      setTimeout(() => win.print(), 500)
-    }
+    if (win) { win.document.write(data.html); win.document.close(); setTimeout(() => win.print(), 500) }
   }
 
   return (
@@ -110,13 +122,28 @@ export default function EbookPage() {
               <label>Detalhe seu ebook (opcional)</label>
               <textarea value={customDetails} onChange={e=>setCustomDetails(e.target.value)} placeholder="Ex: quero que o ebook seja focado em mães que trabalham em casa..." rows={3} style={{width:'100%',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:9,padding:'10px 14px',color:'var(--text)',fontSize:14,fontFamily:'DM Sans, sans-serif',outline:'none',resize:'vertical'}}/>
             </div>
+
+            <button className={styles.btnCover} onClick={generateCover} disabled={loadingCover || !title}>
+              <i className="ti ti-photo-ai"/> {loadingCover ? 'Gerando capa 3D...' : 'Gerar capa 3D com IA'}
+            </button>
+
             <button className={styles.btnGenerate} onClick={generate} disabled={loading}>
-              {loading?'Gerando...':<><i className="ti ti-sparkles"/>Gerar ebook com IA · 1 crédito</>}
+              {loading ? 'Gerando...' : <><i className="ti ti-sparkles"/>Gerar ebook com IA · 1 crédito</>}
             </button>
             {loading && <div className={styles.progress}>{steps.map((s,i)=><div key={i} className={`${styles.progStep} ${i<step?styles.done:i===step?styles.active:''}`}><div className={styles.dot}/><span>{s}</span></div>)}</div>}
           </div>
 
           <div className={styles.preview}>
+            {coverUrl && (
+              <div className={styles.coverResult}>
+                <div className={styles.coverResultTitle}>Capa 3D gerada</div>
+                <img src={coverUrl} alt="Capa do ebook" className={styles.coverImg}/>
+                <a href={coverUrl} download="capa-ebook.png" className={styles.downloadCoverBtn}>
+                  <i className="ti ti-download"/> Baixar capa
+                </a>
+              </div>
+            )}
+
             {result ? (
               <>
                 <div className={styles.ebookCard}>
@@ -131,19 +158,19 @@ export default function EbookPage() {
                     {result.ebook.chapters?.length > 7 && <div style={{fontSize:12,color:'#999',padding:'8px 0'}}>+ {result.ebook.chapters.length - 7} capítulos...</div>}
                   </div>
                 </div>
-                <div style={{display:'flex',gap:8,marginTop:12,width:'100%'}}>
+                <div style={{display:'flex',gap:8,marginTop:12,width:'100%',maxWidth:420}}>
                   <button onClick={downloadPdf} disabled={loadingPdf} style={{flex:1,padding:'12px',background:'#C2FF00',color:'#000',border:'none',borderRadius:10,fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
                     <i className="ti ti-download"/>{loadingPdf?'Gerando PDF...':'Baixar PDF com design'}
                   </button>
                 </div>
               </>
-            ) : (
+            ) : !coverUrl ? (
               <div className={styles.emptyState}>
                 <i className="ti ti-book-2" style={{fontSize:48,color:'var(--muted)',display:'block',marginBottom:16}}/>
                 <div className={styles.emptyTitle}>Seu ebook aparece aqui</div>
                 <div className={styles.emptySub}>Preencha as informações e clique em gerar</div>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
