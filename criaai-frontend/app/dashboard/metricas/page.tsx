@@ -8,6 +8,7 @@ export default function MetricasPage() {
   const [result, setResult] = useState<any>(null)
   const [printPreview, setPrintPreview] = useState('')
   const [loadingMsg, setLoadingMsg] = useState('')
+
   const [inv, setInv] = useState('')
   const [res, setRes] = useState('')
   const [imp, setImp] = useState('')
@@ -19,6 +20,10 @@ export default function MetricasPage() {
   const [nicho, setNicho] = useState('')
   const [ticket, setTicket] = useState('')
   const [dias, setDias] = useState('')
+  const [viewPagina, setViewPagina] = useState('')
+  const [iniciouCheckout, setIniciouCheckout] = useState('')
+  const [cliquesLink, setCliquesLink] = useState('')
+  const [descricaoAnuncio, setDescricaoAnuncio] = useState('')
   const [nichoPrint, setNichoPrint] = useState('')
   const [objPrint, setObjPrint] = useState('vendas')
 
@@ -35,13 +40,15 @@ export default function MetricasPage() {
   }
 
   function gerarAnalise(d: any) {
-    const { invN, resN, cpmN, ctrN, cpcN, objV, nichoV, ticketN, diasN } = d
+    const { invN, resN, cpmN, ctrN, cpcN, objV, nichoV, ticketN, diasN, viewN, checkN, cliN } = d
     let score = 5
     const pos: string[] = [], atc: string[] = [], neg: string[] = [], met: any[] = [], rec: any[] = []
     const cpaN = resN > 0 ? invN / resN : 0
     const roasN = ticketN > 0 && resN > 0 ? (resN * ticketN) / invN : 0
     const cpcCalc = cpcN || (parseFloat(cli) > 0 ? invN / parseFloat(cli) : 0)
     const ctrCalc = ctrN || (parseFloat(imp) > 0 && parseFloat(cli) > 0 ? (parseFloat(cli) / parseFloat(imp)) * 100 : 0)
+    const taxaConvPagina = viewN > 0 && resN > 0 ? ((resN / viewN) * 100) : 0
+    const taxaCheckout = checkN > 0 && resN > 0 ? ((resN / checkN) * 100) : 0
 
     if (ctrCalc >= 2) { score += 1; pos.push(`CTR de ${ctrCalc.toFixed(1)}% acima da média (benchmark: 1.5-2%)`) }
     else if (ctrCalc >= 1) atc.push(`CTR de ${ctrCalc.toFixed(1)}% na média — criativos mais impactantes podem melhorar`)
@@ -57,6 +64,17 @@ export default function MetricasPage() {
       else { score -= 1; neg.push(`ROAS de ${roasN.toFixed(1)}x abaixo do equilíbrio`) }
     }
 
+    if (taxaConvPagina > 0) {
+      if (taxaConvPagina >= 3) { score += 0.5; pos.push(`Taxa de conversão da página de ${taxaConvPagina.toFixed(1)}% está ótima`) }
+      else if (taxaConvPagina >= 1) atc.push(`Taxa de conversão da página de ${taxaConvPagina.toFixed(1)}% pode melhorar — revise a oferta`)
+      else neg.push(`Taxa de conversão da página de ${taxaConvPagina.toFixed(1)}% está muito baixa — problema na página de vendas`)
+    }
+
+    if (taxaCheckout > 0) {
+      if (taxaCheckout >= 50) { score += 0.5; pos.push(`${taxaCheckout.toFixed(0)}% dos que iniciaram checkout concluíram — ótimo!`) }
+      else atc.push(`Apenas ${taxaCheckout.toFixed(0)}% dos que iniciaram checkout concluíram — simplifique o processo`)
+    }
+
     if (invN > 0 && diasN > 0) {
       const dd = invN / diasN
       if (dd >= 30) pos.push(`Orçamento diário de R$${dd.toFixed(0)} adequado`)
@@ -64,17 +82,21 @@ export default function MetricasPage() {
     }
 
     score = Math.min(10, Math.max(0, score))
+
     met.push({ label: 'CTR', valor: ctrCalc > 0 ? ctrCalc.toFixed(1) + '%' : 'N/A', status: ctrCalc >= 2 ? 'bom' : ctrCalc >= 1 ? 'atencao' : 'ruim', benchmark: 'Meta: 2%+' })
     met.push({ label: 'CPM', valor: cpmN > 0 ? 'R$' + cpmN : 'N/A', status: cpmN <= 20 ? 'bom' : cpmN <= 40 ? 'atencao' : 'ruim', benchmark: 'Meta: <R$20' })
     met.push({ label: 'CPC', valor: cpcCalc > 0 ? 'R$' + cpcCalc.toFixed(2) : 'N/A', status: cpcCalc > 0 && cpcCalc <= 1 ? 'bom' : cpcCalc <= 2 ? 'atencao' : 'ruim', benchmark: 'Meta: <R$1' })
     met.push({ label: 'CPA', valor: cpaN > 0 ? 'R$' + cpaN.toFixed(2) : 'N/A', status: ticketN > 0 && cpaN > 0 ? (cpaN < ticketN * 0.3 ? 'bom' : cpaN < ticketN * 0.5 ? 'atencao' : 'ruim') : 'atencao', benchmark: 'Meta: <30% ticket' })
     met.push({ label: 'ROAS', valor: roasN > 0 ? roasN.toFixed(1) + 'x' : 'N/A', status: roasN >= 3 ? 'bom' : roasN >= 1.5 ? 'atencao' : 'ruim', benchmark: 'Meta: 3x+' })
-    met.push({ label: 'Investido', valor: invN > 0 ? 'R$' + invN : 'N/A', status: 'atencao', benchmark: diasN + ' dias' })
+    met.push({ label: 'Conv. Página', valor: taxaConvPagina > 0 ? taxaConvPagina.toFixed(1) + '%' : 'N/A', status: taxaConvPagina >= 3 ? 'bom' : taxaConvPagina >= 1 ? 'atencao' : 'ruim', benchmark: 'Meta: 3%+' })
+    met.push({ label: 'Checkout', valor: taxaCheckout > 0 ? taxaCheckout.toFixed(0) + '%' : 'N/A', status: taxaCheckout >= 50 ? 'bom' : taxaCheckout >= 25 ? 'atencao' : 'ruim', benchmark: 'Meta: 50%+' })
+    met.push({ label: 'Cliques Link', valor: cliN > 0 ? cliN.toString() : 'N/A', status: 'atencao', benchmark: 'Total' })
 
-    rec.push({ titulo: 'Teste novos criativos', descricao: `Para ${nichoV || 'seu produto'}, experimente criativos com prova social, demonstração em uso e urgência. Use a geração de vídeo da plataforma para criar variações rapidamente.` })
-    if (ctrCalc < 2) rec.push({ titulo: 'Melhore o hook do criativo', descricao: 'Os primeiros 3 segundos são decisivos. Teste iniciar com pergunta provocativa, resultado surpreendente ou cena de problema do público.' })
-    if (cpmN > 25) rec.push({ titulo: 'Expanda os públicos', descricao: 'CPM alto indica audiência saturada. Teste Lookalike 2-5%, interesses mais amplos ou públicos frios.' })
-    if (objV === 'vendas' && roasN < 3) rec.push({ titulo: 'Otimize a página de vendas', descricao: 'Com ROAS abaixo de 3x, o problema pode ser a conversão na página. Verifique velocidade, clareza da oferta e facilidade de compra.' })
+    rec.push({ titulo: 'Teste novos criativos', descricao: `Para ${nichoV || 'seu produto'}, experimente criativos com prova social, demonstração em uso e urgência.` })
+    if (ctrCalc < 2) rec.push({ titulo: 'Melhore o hook do criativo', descricao: 'Os primeiros 3 segundos são decisivos. Teste iniciar com pergunta provocativa ou resultado surpreendente.' })
+    if (cpmN > 25) rec.push({ titulo: 'Expanda os públicos', descricao: 'CPM alto indica audiência saturada. Teste Lookalike 2-5% ou interesses mais amplos.' })
+    if (taxaConvPagina > 0 && taxaConvPagina < 2) rec.push({ titulo: 'Otimize a página de vendas', descricao: 'Taxa de conversão baixa indica problema na página. Verifique velocidade, clareza da oferta e depoimentos.' })
+    if (taxaCheckout > 0 && taxaCheckout < 50) rec.push({ titulo: 'Reduza o abandono no checkout', descricao: 'Muitos iniciam mas não concluem. Simplifique o processo, ofereça mais formas de pagamento e adicione garantia visível.' })
 
     const resumo = score >= 8 ? 'Excelente performance — foque em escalar' : score >= 6 ? 'Bom desempenho com oportunidades de melhoria' : score >= 4 ? 'Performance mediana — ajustes necessários' : 'Abaixo do esperado — revisão completa recomendada'
     return { score, resumo, metricas: met, positivos: pos, atencao: atc, negativos: neg, recomendacoes: rec }
@@ -88,8 +110,8 @@ export default function MetricasPage() {
     await new Promise(r => setTimeout(r, isManual ? 4000 : 5000))
     clearInterval(iv)
     const data = isManual
-      ? gerarAnalise({ invN: +inv, resN: +res, cpmN: +cpm, ctrN: +ctr, cpcN: +cpc, objV: obj, nichoV: nicho, ticketN: +ticket, diasN: +dias || 1 })
-      : gerarAnalise({ invN: 200, resN: 8, cpmN: 16.6, ctrN: 2.3, cpcN: 0.71, objV: objPrint, nichoV: nichoPrint, ticketN: 197, diasN: 5 })
+      ? gerarAnalise({ invN: +inv, resN: +res, cpmN: +cpm, ctrN: +ctr, cpcN: +cpc, objV: obj, nichoV: nicho, ticketN: +ticket, diasN: +dias || 1, viewN: +viewPagina, checkN: +iniciouCheckout, cliN: +cliquesLink })
+      : gerarAnalise({ invN: 200, resN: 8, cpmN: 16.6, ctrN: 2.3, cpcN: 0.71, objV: objPrint, nichoV: nichoPrint, ticketN: 197, diasN: 5, viewN: 180, checkN: 25, cliN: 280 })
     setResult(data)
     setLoading(false)
   }
@@ -115,10 +137,10 @@ export default function MetricasPage() {
             </div>
             <div className={`${styles.grid} ${styles.grid3}`} style={{marginBottom:14}}>
               <div className={styles.field}><label>Impressões</label><input type="number" value={imp} onChange={e=>setImp(e.target.value)} placeholder="Ex: 15000"/></div>
-              <div className={styles.field}><label>Cliques</label><input type="number" value={cli} onChange={e=>setCli(e.target.value)} placeholder="Ex: 320"/></div>
+              <div className={styles.field}><label>Cliques no link</label><input type="number" value={cliquesLink} onChange={e=>setCliquesLink(e.target.value)} placeholder="Ex: 320"/></div>
               <div className={styles.field}><label>CPM (R$)</label><input type="number" value={cpm} onChange={e=>setCpm(e.target.value)} placeholder="Ex: 18"/></div>
             </div>
-            <div className={`${styles.grid} ${styles.grid3}`}>
+            <div className={`${styles.grid} ${styles.grid3}`} style={{marginBottom:14}}>
               <div className={styles.field}><label>CTR (%)</label><input type="number" value={ctr} onChange={e=>setCtr(e.target.value)} placeholder="Ex: 2.1" step="0.1"/></div>
               <div className={styles.field}><label>CPC (R$)</label><input type="number" value={cpc} onChange={e=>setCpc(e.target.value)} placeholder="Ex: 0.47" step="0.01"/></div>
               <div className={styles.field}><label>Objetivo</label>
@@ -130,14 +152,28 @@ export default function MetricasPage() {
                 </select>
               </div>
             </div>
+            <div className={`${styles.grid} ${styles.grid3}`}>
+              <div className={styles.field}><label>Visualiz. pág. destino</label><input type="number" value={viewPagina} onChange={e=>setViewPagina(e.target.value)} placeholder="Ex: 180"/></div>
+              <div className={styles.field}><label>Iniciou checkout</label><input type="number" value={iniciouCheckout} onChange={e=>setIniciouCheckout(e.target.value)} placeholder="Ex: 25"/></div>
+              <div className={styles.field}><label>Ticket médio (R$)</label><input type="number" value={ticket} onChange={e=>setTicket(e.target.value)} placeholder="Ex: 197"/></div>
+            </div>
           </div>
           <div className={styles.section}>
             <div className={styles.sectionTitle}>Contexto do anúncio</div>
             <div className={`${styles.grid} ${styles.grid2}`} style={{marginBottom:14}}>
               <div className={styles.field}><label>Nicho / produto</label><input type="text" value={nicho} onChange={e=>setNicho(e.target.value)} placeholder="Ex: suplemento, curso..."/></div>
-              <div className={styles.field}><label>Ticket médio (R$)</label><input type="number" value={ticket} onChange={e=>setTicket(e.target.value)} placeholder="Ex: 197"/></div>
+              <div className={styles.field}><label>Dias rodando</label><input type="number" value={dias} onChange={e=>setDias(e.target.value)} placeholder="Ex: 7"/></div>
             </div>
-            <div className={styles.field}><label>Dias rodando</label><input type="number" value={dias} onChange={e=>setDias(e.target.value)} placeholder="Ex: 7"/></div>
+            <div className={styles.field}>
+              <label>Descreva seu anúncio com suas palavras (opcional)</label>
+              <textarea
+                value={descricaoAnuncio}
+                onChange={e=>setDescricaoAnuncio(e.target.value)}
+                placeholder="Ex: estou rodando um anúncio de vídeo para um suplemento de emagrecimento, público feminino 25-45 anos, objetivo compra, campanha rodando há 5 dias..."
+                rows={3}
+                style={{width:'100%',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:9,padding:'10px 14px',color:'var(--text)',fontSize:14,fontFamily:'DM Sans, sans-serif',outline:'none',resize:'vertical'}}
+              />
+            </div>
           </div>
           <button className={styles.btnAnalyze} onClick={()=>analisar(true)} disabled={loading || !inv}>
             <i className="ti ti-sparkles"/> {loading ? loadingMsg : 'Analisar com IA'}
@@ -154,7 +190,7 @@ export default function MetricasPage() {
           </div>
           <div className={styles.section}>
             <div className={styles.sectionTitle}>Contexto adicional</div>
-            <div className={`${styles.grid} ${styles.grid2}`}>
+            <div className={`${styles.grid} ${styles.grid2}`} style={{marginBottom:14}}>
               <div className={styles.field}><label>Nicho</label><input type="text" value={nichoPrint} onChange={e=>setNichoPrint(e.target.value)} placeholder="Ex: suplemento..."/></div>
               <div className={styles.field}><label>Objetivo</label>
                 <select value={objPrint} onChange={e=>setObjPrint(e.target.value)}>
@@ -163,6 +199,16 @@ export default function MetricasPage() {
                   <option value="trafego">Tráfego</option>
                 </select>
               </div>
+            </div>
+            <div className={styles.field}>
+              <label>Descreva seu anúncio (opcional)</label>
+              <textarea
+                value={descricaoAnuncio}
+                onChange={e=>setDescricaoAnuncio(e.target.value)}
+                placeholder="Ex: anúncio de vídeo para produto de beleza, público 25-45 anos..."
+                rows={3}
+                style={{width:'100%',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:9,padding:'10px 14px',color:'var(--text)',fontSize:14,fontFamily:'DM Sans, sans-serif',outline:'none',resize:'vertical'}}
+              />
             </div>
           </div>
           <button className={styles.btnAnalyze} onClick={()=>analisar(false)} disabled={loading || !printPreview}>
