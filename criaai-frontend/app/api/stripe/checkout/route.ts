@@ -4,13 +4,6 @@ import { createClient } from '@/lib/supabase-server'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-04-10' })
 
-// Planos (assinatura) continuam vindo de env vars
-const PRICE_MAP: Record<string, string> = {
-  Starter: process.env.STRIPE_PRICE_STARTER_MONTHLY!,
-  Pro:     process.env.STRIPE_PRICE_PRO_MONTHLY!,
-  Agency:  process.env.STRIPE_PRICE_AGENCY_MONTHLY!,
-}
-
 export async function POST(req: NextRequest) {
   try {
     const supabase = createClient()
@@ -18,7 +11,7 @@ export async function POST(req: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
     const body = await req.json()
-    const { plan, packId, billing = 'monthly' } = body
+    const { plan, billing = 'monthly', packId } = body
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://mcpia.brenojunio.com.br'
 
@@ -71,9 +64,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ url: session.url })
     }
 
-    // ===== Assinatura de plano =====
-    const priceId = PRICE_MAP[plan]
-    if (!priceId) return NextResponse.json({ error: 'Plano inválido' }, { status: 400 })
+    // ===== Assinatura de plano (busca Price ID do banco) =====
+    const { data: planData } = await supabase
+      .from('plans')
+      .select('id, name, stripe_price_id_monthly, stripe_price_id_yearly')
+      .eq('name', plan)
+      .single()
+
+    if (!planData) {
+      return NextResponse.json({ error: 'Plano inválido' }, { status: 400 })
+    }
+
+    const priceId = billing === 'yearly'
+      ? planData.stripe_price_id_yearly
+      : planData.stripe_price_id_monthly
+
+    if (!priceId) {
+      return NextResponse.json({ error: `Price ID ${billing} não configurado para o plano ${plan}` }, { status: 400 })
+    }
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -87,7 +95,7 @@ export async function POST(req: NextRequest) {
       },
       success_url: `${appUrl}/dashboard?success=true`,
       cancel_url: `${appUrl}/dashboard/planos?canceled=true`,
-      metadata: { supabase_user_id: user.id, kind: 'subscription', plan },
+      metadata: { supabase_user_id: user.id, kind: 'subscription', plan, billing },
     })
 
     return NextResponse.json({ url: session.url })
