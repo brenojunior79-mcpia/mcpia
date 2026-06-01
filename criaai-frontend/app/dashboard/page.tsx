@@ -9,6 +9,7 @@ export default function DashboardPage() {
   const [niche, setNiche] = useState('')
   const [tone, setTone] = useState('lifestyle')
   const [format, setFormat] = useState('9:16')
+  const [customPrompt, setCustomPrompt] = useState('')
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState(0)
   const [result, setResult] = useState('')
@@ -36,18 +37,10 @@ export default function DashboardPage() {
         .single()
       if (data) {
         setProfile(data)
-        const { data: gens } = await supabase
-          .from('generations')
-          .select('type, created_at')
-          .eq('user_id', user.id)
+        const { data: gens } = await supabase.from('generations').select('type').eq('user_id', user.id)
         const videos = gens?.filter(g => g.type === 'video').length || 0
         const ebooks = gens?.filter(g => g.type === 'ebook').length || 0
-        setStats({
-          videos,
-          ebooks,
-          creditsUsed: data.credits_videos_used || 0,
-          creditsLimit: data.plans?.credits_videos || 15,
-        })
+        setStats({ videos, ebooks, creditsUsed: data.credits_videos_used || 0, creditsLimit: data.plans?.credits_videos || 15 })
       }
     }
     loadProfile()
@@ -74,7 +67,7 @@ export default function DashboardPage() {
     const res = await fetch('/api/generate-video', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
-      body: JSON.stringify({ imageUrl: publicUrl, niche, tone, format })
+      body: JSON.stringify({ imageUrl: publicUrl, niche, tone, format, customPrompt })
     })
     const data = await res.json()
     setLoading(false)
@@ -97,26 +90,10 @@ export default function DashboardPage() {
       </div>
       <div className={styles.content}>
         <div className={styles.stats}>
-          <div className={styles.statCard}>
-            <div className={styles.statLabel}>Vídeos gerados</div>
-            <div className={styles.statValue}>{stats.videos}</div>
-            <div className={styles.statSub}>total na conta</div>
-          </div>
-          <div className={styles.statCard}>
-            <div className={styles.statLabel}>Ebooks gerados</div>
-            <div className={styles.statValue}>{stats.ebooks}</div>
-            <div className={styles.statSub}>total na conta</div>
-          </div>
-          <div className={styles.statCard}>
-            <div className={styles.statLabel}>Créditos usados</div>
-            <div className={styles.statValue}>{stats.creditsUsed}</div>
-            <div className={styles.statSub}>{plan?.is_unlimited ? '∞' : stats.creditsLimit - stats.creditsUsed} restantes</div>
-          </div>
-          <div className={styles.statCard}>
-            <div className={styles.statLabel}>Economia estimada</div>
-            <div className={styles.statValue}>R${economia}</div>
-            <div className={styles.statSub}>vs agência</div>
-          </div>
+          <div className={styles.statCard}><div className={styles.statLabel}>Vídeos gerados</div><div className={styles.statValue}>{stats.videos}</div><div className={styles.statSub}>total na conta</div></div>
+          <div className={styles.statCard}><div className={styles.statLabel}>Ebooks gerados</div><div className={styles.statValue}>{stats.ebooks}</div><div className={styles.statSub}>total na conta</div></div>
+          <div className={styles.statCard}><div className={styles.statLabel}>Créditos usados</div><div className={styles.statValue}>{stats.creditsUsed}</div><div className={styles.statSub}>{plan?.is_unlimited ? '∞' : stats.creditsLimit - stats.creditsUsed} restantes</div></div>
+          <div className={styles.statCard}><div className={styles.statLabel}>Economia estimada</div><div className={styles.statValue}>R${economia}</div><div className={styles.statSub}>vs agência</div></div>
         </div>
 
         <div className={styles.uploadSection}>
@@ -150,6 +127,16 @@ export default function DashboardPage() {
                   <div key={v} className={`${styles.toggleBtn} ${format===v?styles.toggleOn:''}`} onClick={()=>setFormat(v)}>{l}</div>
                 ))}
               </div>
+            </div>
+            <div className={styles.field}>
+              <label>Detalhe seu criativo (opcional)</label>
+              <textarea
+                value={customPrompt}
+                onChange={e=>setCustomPrompt(e.target.value)}
+                placeholder="Ex: quero que mostre o produto sendo usado por uma mulher jovem em ambiente natural, com luz solar..."
+                rows={3}
+                style={{width:'100%',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:9,padding:'10px 14px',color:'var(--text)',fontSize:14,fontFamily:'DM Sans, sans-serif',outline:'none',resize:'vertical'}}
+              />
             </div>
           </div>
         </div>
