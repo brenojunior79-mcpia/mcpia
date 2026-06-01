@@ -5,7 +5,7 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'CriaAI — Gerador de criativos com IA',
+  title: 'MCP.IA — Gerador de criativos com IA',
   description: 'Gere vídeos e ebooks com IA para escalar no Facebook Ads',
 }
 
