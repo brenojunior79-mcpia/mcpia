@@ -31,7 +31,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
 
   return (
     <aside className={styles.sidebar}>
-      <div className={styles.logo}>Cria<span>AI</span></div>
+      <div className={styles.logo}>MCP<span>.IA</span></div>
       <nav className={styles.nav}>
         {navItems.map(item => (
           <Link key={item.href} href={item.href} className={`${styles.navItem} ${pathname===item.href?styles.active:''}`}>
@@ -42,7 +42,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
       </nav>
 
       <div className={styles.bottom}>
-        <a href={`https://wa.me/${WHATSAPP}?text=Olá, preciso de suporte no CriaAI`} target="_blank" rel="noreferrer" className={styles.supportBtn}>
+        <a href={`https://wa.me/${WHATSAPP}?text=Olá, preciso de suporte no MCP.IA`} target="_blank" rel="noreferrer" className={styles.supportBtn}>
           <i className="ti ti-brand-whatsapp"/> Suporte
         </a>
 
