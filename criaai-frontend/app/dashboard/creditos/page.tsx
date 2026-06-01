@@ -1,32 +1,57 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import styles from './creditos.module.css'
 
-const packs = [
-  { id: 'pack_10', credits: 10, price: 27, perCredit: 2.70, label: '' },
-  { id: 'pack_30', credits: 30, price: 67, perCredit: 2.23, label: 'Mais vendido' },
-  { id: 'pack_100', credits: 100, price: 197, perCredit: 1.97, label: 'Melhor preço' },
-]
+type Pack = { id: string; name: string; credits: number; price: number }
 
 export default function CreditosPage() {
-  const [selected, setSelected] = useState('pack_30')
+  const [packs, setPacks] = useState<Pack[]>([])
+  const [selected, setSelected] = useState<string>('')
   const [loading, setLoading] = useState(false)
   const supabase = createClient()
 
+  useEffect(() => {
+    async function load() {
+      const { data } = await supabase
+        .from('credit_packs')
+        .select('id, name, credits, price')
+        .eq('active', true)
+        .order('credits', { ascending: true })
+      if (data && data.length) {
+        setPacks(data as Pack[])
+        setSelected(data[1]?.id || data[0].id)
+      }
+    }
+    load()
+  }, [])
+
+  function perCredit(p: Pack) {
+    return (p.price / p.credits).toFixed(2)
+  }
+
+  function badgeFor(i: number) {
+    if (i === 1) return 'Mais vendido'
+    if (i === 2) return 'Melhor preço'
+    return ''
+  }
+
   async function comprar() {
+    if (!selected) return
     setLoading(true)
     const { data: { session } } = await supabase.auth.getSession()
     const res = await fetch('/api/stripe/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
-      body: JSON.stringify({ plan: selected, billing: 'once' })
+      body: JSON.stringify({ packId: selected }),
     })
     const data = await res.json()
     setLoading(false)
     if (data.url) window.location.href = data.url
     else alert('Erro: ' + (data.error || 'Tente novamente'))
   }
+
+  const atual = packs.find(p => p.id === selected)
 
   return (
     <div className={styles.page}>
@@ -36,15 +61,18 @@ export default function CreditosPage() {
       </div>
       <div className={styles.content}>
         <div className={styles.packs}>
-          {packs.map(p => (
-            <div key={p.id} className={`${styles.pack} ${selected===p.id?styles.selected:''}`} onClick={()=>setSelected(p.id)}>
-              {p.label && <div className={styles.packBadge}>{p.label}</div>}
-              <div className={styles.packCredits}>{p.credits}</div>
-              <div className={styles.packLabel}>créditos de vídeo</div>
-              <div className={styles.packPrice}>R${p.price}</div>
-              <div className={styles.packPer}>R${p.perCredit.toFixed(2)} por crédito</div>
-            </div>
-          ))}
+          {packs.map((p, i) => {
+            const badge = badgeFor(i)
+            return (
+              <div key={p.id} className={`${styles.pack} ${selected===p.id?styles.selected:''}`} onClick={()=>setSelected(p.id)}>
+                {badge && <div className={styles.packBadge}>{badge}</div>}
+                <div className={styles.packCredits}>{p.credits}</div>
+                <div className={styles.packLabel}>créditos de vídeo</div>
+                <div className={styles.packPrice}>R${p.price}</div>
+                <div className={styles.packPer}>R${perCredit(p)} por crédito</div>
+              </div>
+            )
+          })}
         </div>
 
         <div className={styles.infoBox}>
@@ -55,8 +83,8 @@ export default function CreditosPage() {
           </div>
         </div>
 
-        <button className={styles.btnBuy} onClick={comprar} disabled={loading}>
-          <i className="ti ti-credit-card"/> {loading ? 'Aguarde...' : `Comprar ${packs.find(p=>p.id===selected)?.credits} créditos · R$${packs.find(p=>p.id===selected)?.price}`}
+        <button className={styles.btnBuy} onClick={comprar} disabled={loading || !atual}>
+          <i className="ti ti-credit-card"/> {loading ? 'Aguarde...' : atual ? `Comprar ${atual.credits} créditos · R$${atual.price}` : 'Carregando...'}
         </button>
 
         <div className={styles.guarantee}>
