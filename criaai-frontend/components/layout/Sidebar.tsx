@@ -27,6 +27,8 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
     { href: '/dashboard/admin', icon: 'ti-shield', label: 'Admin' },
   ]
 
+  const WHATSAPP = '5531999999999'
+
   return (
     <aside className={styles.sidebar}>
       <div className={styles.logo}>Cria<span>AI</span></div>
@@ -38,7 +40,12 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
           </Link>
         ))}
       </nav>
+
       <div className={styles.bottom}>
+        <a href={`https://wa.me/${WHATSAPP}?text=Olá, preciso de suporte no CriaAI`} target="_blank" rel="noreferrer" className={styles.supportBtn}>
+          <i className="ti ti-brand-whatsapp"/> Suporte
+        </a>
+
         <div className={styles.userRow}>
           <div className={styles.userAvatar}>{user?.email?.[0].toUpperCase()}</div>
           <div className={styles.userInfo}>
@@ -47,10 +54,14 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
           </div>
           <button className={styles.logoutBtn} onClick={logout}><i className="ti ti-logout"/></button>
         </div>
+
         <div className={styles.creditsBox}>
           <div className={styles.creditsLabel}>Créditos de vídeo</div>
           <div className={styles.creditsCount}>{plan?.is_unlimited ? '∞' : videosUsed} <span>/ {plan?.is_unlimited ? '∞' : videosLimit}</span></div>
           <div className={styles.creditsBar}><div className={styles.creditsFill} style={{ width: `${creditPct}%` }}/></div>
+          <Link href="/dashboard/planos" className={styles.addCreditsBtn}>
+            <i className="ti ti-plus"/> Adicionar créditos
+          </Link>
         </div>
       </div>
     </aside>
