@@ -10,8 +10,9 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
   const supabase = createClient()
   const plan = profile?.plans
   const videosUsed = profile?.credits_videos_used || 0
-  const videosLimit = plan?.is_unlimited ? 999 : (plan?.credits_videos || 0)
-  const creditPct = plan?.is_unlimited ? 50 : Math.round((videosUsed / videosLimit) * 100)
+  const videosExtra = profile?.credits_videos_extra || 0
+  const videosLimit = plan?.is_unlimited ? 999 : ((plan?.credits_videos || 0) + videosExtra)
+  const creditPct = plan?.is_unlimited ? 50 : (videosLimit ? Math.round((videosUsed / videosLimit) * 100) : 0)
 
   async function logout() {
     await supabase.auth.signOut()
