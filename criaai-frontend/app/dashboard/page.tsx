@@ -40,7 +40,7 @@ export default function DashboardPage() {
         const { data: gens } = await supabase.from('generations').select('type').eq('user_id', user.id)
         const videos = gens?.filter(g => g.type === 'video').length || 0
         const ebooks = gens?.filter(g => g.type === 'ebook').length || 0
-        setStats({ videos, ebooks, creditsUsed: data.credits_videos_used || 0, creditsLimit: data.plans?.credits_videos || 15 })
+        setStats({ videos, ebooks, creditsUsed: data.credits_videos_used || 0, creditsLimit: (data.plans?.credits_videos || 15) + (data.credits_videos_extra || 0) })
       }
     }
     loadProfile()
