@@ -13,8 +13,16 @@
 .colorRow{display:flex;gap:8px;margin-top:4px}
 .colorSwatch{width:28px;height:28px;border-radius:8px;cursor:pointer;border:2px solid transparent;transition:all .15s}
 .colorActive{border-color:var(--text);transform:scale(1.1)}
+.templateGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
+.templateOpt{border:1px solid var(--border);border-radius:10px;padding:10px 8px;cursor:pointer;transition:all .15s;text-align:center}
+.templateOpt:hover{border-color:var(--border2)}
+.templateSelected{border-color:#C2FF00;background:rgba(194,255,0,0.05)}
+.templatePreview{width:100%;height:44px;border-radius:6px;margin-bottom:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px}
+.templateName{font-size:12px;font-weight:600;color:var(--text)}
+.templateDesc{font-size:10px;color:var(--muted2);margin-top:2px}
 .btnGenerate{width:100%;padding:13px;font-size:15px;font-family:'Syne',sans-serif;font-weight:700;background:linear-gradient(135deg,var(--accent),#9b6dfc);color:#fff;border:none;border-radius:12px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px}
-.btnGenerate:disabled{opacity:.5;cursor:not-allowed}
+.btnGenerate:hover{transform:translateY(-1px)}
+.btnGenerate:disabled{opacity:.5;cursor:not-allowed;transform:none}
 .progress{margin-top:16px;display:flex;flex-direction:column;gap:10px}
 .progStep{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted2)}
 .done{color:var(--green)}
