@@ -40,7 +40,18 @@ export default function EbookPage() {
             <div className={styles.field}><label>Título</label><input type="text" value={title} onChange={e=>setTitle(e.target.value)} placeholder="Ex: Guia Completo de..."/></div>
             <div className={styles.field}><label>Subtítulo</label><input type="text" value={subtitle} onChange={e=>setSubtitle(e.target.value)} placeholder="Uma frase de impacto..."/></div>
             <div className={styles.field}><label>Autor</label><input type="text" value={author} onChange={e=>setAuthor(e.target.value)} placeholder="Seu nome ou marca"/></div>
-            <div className={styles.field}><label>Capítulos</label><select value={chapters} onChange={e=>setChapters(e.target.value)}><option value="5">5</option><option value="7">7</option><option value="10">10</option><option value="12">12</option></select></div>
+            <div className={styles.field}>
+              <label>Capítulos</label>
+              <select value={chapters} onChange={e=>setChapters(e.target.value)}>
+                <option value="5">5 capítulos</option>
+                <option value="7">7 capítulos</option>
+                <option value="10">10 capítulos</option>
+                <option value="15">15 capítulos</option>
+                <option value="20">20 capítulos</option>
+                <option value="25">25 capítulos</option>
+                <option value="30">30 capítulos</option>
+              </select>
+            </div>
             <div className={styles.field}><label>Cor</label><div className={styles.colorRow}>{colors.map(c=><div key={c} className={`${styles.colorSwatch} ${color===c?styles.colorActive:''}`} style={{background:c}} onClick={()=>setColor(c)}/>)}</div></div>
             <button className={styles.btnGenerate} onClick={generate} disabled={loading}>{loading?'Gerando...':<><i className="ti ti-sparkles"/>Gerar ebook com IA · 1 crédito</>}</button>
             {loading && <div className={styles.progress}>{steps.map((s,i)=><div key={i} className={`${styles.progStep} ${i<step?styles.done:i===step?styles.active:''}`}><div className={styles.dot}/><span>{s}</span></div>)}</div>}
@@ -55,7 +66,8 @@ export default function EbookPage() {
                 </div>
                 <div className={styles.ebookBody}>
                   <div className={styles.tocTitle} style={{color}}>Sumário</div>
-                  {result.ebook.chapters?.slice(0,5).map((c:any,i:number)=><div key={i} className={styles.tocItem}><span style={{color,fontWeight:700}}>{String(i+1).padStart(2,'0')}</span><span>{c.title}</span><span className={styles.tocPage}>{(i+1)*3+2}</span></div>)}
+                  {result.ebook.chapters?.slice(0,7).map((c:any,i:number)=><div key={i} className={styles.tocItem}><span style={{color,fontWeight:700}}>{String(i+1).padStart(2,'0')}</span><span>{c.title}</span><span className={styles.tocPage}>{(i+1)*3+2}</span></div>)}
+                  {result.ebook.chapters?.length > 7 && <div style={{fontSize:12,color:'#999',padding:'8px 0'}}>+ {result.ebook.chapters.length - 7} capítulos...</div>}
                 </div>
               </div>
             ) : (
