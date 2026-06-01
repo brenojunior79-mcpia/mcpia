@@ -59,7 +59,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
           <div className={styles.creditsLabel}>Créditos de vídeo</div>
           <div className={styles.creditsCount}>{plan?.is_unlimited ? '∞' : videosUsed} <span>/ {plan?.is_unlimited ? '∞' : videosLimit}</span></div>
           <div className={styles.creditsBar}><div className={styles.creditsFill} style={{ width: `${creditPct}%` }}/></div>
-          <Link href="/dashboard/planos" className={styles.addCreditsBtn}>
+          <Link href="/dashboard/creditos" className={styles.addCreditsBtn}>
             <i className="ti ti-plus"/> Adicionar créditos
           </Link>
         </div>
