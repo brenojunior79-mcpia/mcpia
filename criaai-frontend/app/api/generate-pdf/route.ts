@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
-    const { title, subtitle, author, niche, color, template, chapters } = await req.json()
+    const { title, subtitle, author, niche, color, template, chapters, coverImageUrl } = await req.json()
     if (!title || !chapters) return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 })
 
     const templates: Record<string, any> = {
@@ -83,11 +83,14 @@ export async function POST(req: NextRequest) {
 <body>
 <div class="cover">
   <div class="cover-pattern"></div>
-  <div class="cover-niche">${niche || 'Ebook'}</div>
-  <div class="cover-line"></div>
-  <div class="cover-title">${title}</div>
-  <div class="cover-subtitle">${subtitle || ''}</div>
-  <div class="cover-author">${author || 'Autor'}</div>
+  ${coverImageUrl ? `<img src="${coverImageUrl}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.35;"/>` : ''}
+  <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:60px;text-align:center;">
+    <div class="cover-niche">${niche || 'Ebook'}</div>
+    <div class="cover-line"></div>
+    <div class="cover-title">${title}</div>
+    <div class="cover-subtitle">${subtitle || ''}</div>
+    <div class="cover-author">${author || 'Autor'}</div>
+  </div>
 </div>
 <div class="toc-page">
   <div class="toc-header">Sumário</div>
