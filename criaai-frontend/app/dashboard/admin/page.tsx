@@ -82,7 +82,7 @@ export default function AdminPage() {
                 <div className={styles.apiName}>Kling AI</div>
                 <div className={styles.apiSub}>Créditos de vídeo</div>
               </div>
-              <a href="https://klingapi.com/dashboard" target="_blank" rel="noreferrer" className={styles.apiLink}>
+              <a href="https://klingapi.com/en/workspace" target="_blank" rel="noreferrer" className={styles.apiLink}>
                 <i className="ti ti-external-link"/>
               </a>
             </div>
