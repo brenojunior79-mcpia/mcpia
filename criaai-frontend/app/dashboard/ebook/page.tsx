@@ -64,10 +64,25 @@ export default function EbookPage() {
     if (!result) return
     setLoadingPdf(true)
     const { data: { session } } = await supabase.auth.getSession()
+
+    // Converte imagem para base64 via rota separada
+    let coverBase64 = null
+    if (result.coverImageUrl) {
+      try {
+        const convRes = await fetch('/api/convert-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+          body: JSON.stringify({ imageUrl: result.coverImageUrl })
+        })
+        const convData = await convRes.json()
+        coverBase64 = convData.base64 || null
+      } catch {}
+    }
+
     const res = await fetch('/api/generate-pdf', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
-  body: JSON.stringify({ title, subtitle, author, niche, color, template, chapters: result.ebook.chapters, coverImageUrl: result.coverImageUrl, coverBase64: result.coverBase64 })
+      body: JSON.stringify({ title, subtitle, author, niche, color, template, chapters: result.ebook.chapters, coverImageUrl: result.coverImageUrl, coverBase64 })
     })
     const data = await res.json()
     setLoadingPdf(false)
