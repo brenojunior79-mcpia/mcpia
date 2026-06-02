@@ -10,6 +10,20 @@ export async function POST(req: NextRequest) {
     const { title, subtitle, author, niche, color, template, chapters, coverImageUrl } = await req.json()
     if (!title || !chapters) return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 })
 
+    // Converte imagem da capa para base64 para funcionar no PDF
+    let coverBase64 = ''
+    if (coverImageUrl) {
+      try {
+        const imgRes = await fetch(coverImageUrl)
+        const arrayBuffer = await imgRes.arrayBuffer()
+        const base64 = Buffer.from(arrayBuffer).toString('base64')
+        const mimeType = imgRes.headers.get('content-type') || 'image/png'
+        coverBase64 = `data:${mimeType};base64,${base64}`
+      } catch {
+        coverBase64 = ''
+      }
+    }
+
     const templates: Record<string, any> = {
       moderno: {
         bg: '#0a0a0f',
@@ -83,7 +97,7 @@ export async function POST(req: NextRequest) {
 <body>
 <div class="cover">
   <div class="cover-pattern"></div>
-  ${coverImageUrl ? `<img src="${coverImageUrl}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.35;"/>` : ''}
+  ${coverBase64 ? `<img src="${coverBase64}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.4;"/>` : ''}
   <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:60px;text-align:center;">
     <div class="cover-niche">${niche || 'Ebook'}</div>
     <div class="cover-line"></div>
