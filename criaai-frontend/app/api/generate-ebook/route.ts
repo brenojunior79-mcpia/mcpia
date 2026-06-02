@@ -20,20 +20,27 @@ export async function POST(req: NextRequest) {
 - Número de capítulos: ${numChapters}
 ${customDetails ? `- Detalhes adicionais: ${customDetails}` : ''}
 
-Retorne APENAS um JSON válido com esta estrutura exata:
+Retorne APENAS um JSON válido com esta estrutura exata (sem markdown, sem backticks):
 {
+  "introduction": "Introdução do ebook com 2-3 parágrafos completos e detalhados",
+  "conclusion": "Conclusão do ebook com 2-3 parágrafos completos",
   "chapters": [
     {
       "number": 1,
       "title": "Título do Capítulo",
-      "content": "Conteúdo completo do capítulo com pelo menos 3 parágrafos bem desenvolvidos..."
+      "introduction": "Parágrafo introdutório do capítulo com 3-4 frases detalhadas sobre o tema",
+      "keyPoints": [
+        "Ponto importante 1 com explicação detalhada de pelo menos 2 frases",
+        "Ponto importante 2 com explicação detalhada de pelo menos 2 frases",
+        "Ponto importante 3 com explicação detalhada de pelo menos 2 frases",
+        "Ponto importante 4 com explicação detalhada de pelo menos 2 frases"
+      ],
+      "conclusion": "Parágrafo de conclusão do capítulo com dica prática e motivacional"
     }
-  ],
-  "introduction": "Introdução do ebook com 2-3 parágrafos...",
-  "conclusion": "Conclusão do ebook com 2-3 parágrafos..."
+  ]
 }
 
-Escreva conteúdo real, útil e de qualidade. Cada capítulo deve ter pelo menos 200 palavras.`
+Escreva conteúdo REAL, útil, detalhado e de alta qualidade. Cada ponto deve ter pelo menos 2 frases completas.`
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -46,19 +53,14 @@ Escreva conteúdo real, útil e de qualidade. Cada capítulo deve ter pelo menos
         messages: [{ role: 'user', content: prompt }],
         max_tokens: 4000,
         temperature: 0.7,
+        response_format: { type: 'json_object' },
       }),
     })
 
     const data = await response.json()
-    const raw = data.choices?.[0]?.message?.content || ''
+    const raw = data.choices?.[0]?.message?.content || '{}'
+    const ebook = JSON.parse(raw)
 
-    // Parse JSON da resposta
-    const jsonMatch = raw.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) return NextResponse.json({ error: 'Erro ao gerar conteúdo' }, { status: 500 })
-
-    const ebook = JSON.parse(jsonMatch[0])
-
-    // Registra no banco
     await supabase.from('generations').insert({
       user_id: user.id,
       type: 'ebook',
@@ -68,7 +70,6 @@ Escreva conteúdo real, útil e de qualidade. Cada capítulo deve ter pelo menos
       metadata: { title, subtitle, author, chapters: numChapters },
     })
 
-    // Incrementa ebooks usados
     const { data: profile } = await supabase.from('profiles').select('credits_ebooks_used').eq('id', user.id).single()
     await supabase.from('profiles').update({ credits_ebooks_used: (profile?.credits_ebooks_used || 0) + 1 }).eq('id', user.id)
 
