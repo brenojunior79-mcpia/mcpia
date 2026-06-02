@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import styles from './dashboard.module.css'
 
@@ -15,6 +15,7 @@ export default function DashboardPage() {
   const [result, setResult] = useState('')
   const [profile, setProfile] = useState<any>(null)
   const [stats, setStats] = useState({ videos: 0, ebooks: 0, creditsUsed: 0, creditsLimit: 15 })
+  const pollingRef = useRef<NodeJS.Timeout | null>(null)
   const supabase = createClient()
 
   const steps = [
@@ -40,10 +41,16 @@ export default function DashboardPage() {
         const { data: gens } = await supabase.from('generations').select('type').eq('user_id', user.id)
         const videos = gens?.filter(g => g.type === 'video').length || 0
         const ebooks = gens?.filter(g => g.type === 'ebook').length || 0
-        setStats({ videos, ebooks, creditsUsed: data.credits_videos_used || 0, creditsLimit: (data.plans?.credits_videos || 15) + (data.credits_videos_extra || 0) })
+        setStats({
+          videos,
+          ebooks,
+          creditsUsed: data.credits_videos_used || 0,
+          creditsLimit: (data.plans?.credits_videos || 15) + (data.credits_videos_extra || 0)
+        })
       }
     }
     loadProfile()
+    return () => { if (pollingRef.current) clearInterval(pollingRef.current) }
   }, [])
 
   function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -53,28 +60,68 @@ export default function DashboardPage() {
     setPreview(URL.createObjectURL(file))
   }
 
+  async function pollStatus(taskId: string, session: any) {
+    let attempts = 0
+    const maxAttempts = 36
+
+    pollingRef.current = setInterval(async () => {
+      attempts++
+      setStep(Math.min(3 + Math.floor(attempts / 4), 4))
+
+      try {
+        const res = await fetch(`/api/generate-video/status?taskId=${taskId}`, {
+          headers: { 'Authorization': `Bearer ${session?.access_token}` }
+        })
+        const data = await res.json()
+
+        if (data.status === 'completed' && data.videoUrl) {
+          clearInterval(pollingRef.current!)
+          setStep(5)
+          setResult(data.videoUrl)
+          setLoading(false)
+          setStats(s => ({ ...s, videos: s.videos + 1, creditsUsed: s.creditsUsed + 1 }))
+        } else if (data.status === 'failed' || attempts >= maxAttempts) {
+          clearInterval(pollingRef.current!)
+          setLoading(false)
+          alert(data.error || 'Timeout na geração. Tente novamente.')
+        }
+      } catch {
+        if (attempts >= maxAttempts) {
+          clearInterval(pollingRef.current!)
+          setLoading(false)
+          alert('Erro ao verificar status. Tente novamente.')
+        }
+      }
+    }, 5000)
+  }
+
   async function generate() {
     if (!image || !niche) return alert('Sobe uma imagem e preencha o nicho!')
-    setLoading(true); setStep(0)
-    for (let i = 0; i < steps.length - 1; i++) {
-      await new Promise(r => setTimeout(r, 1200))
-      setStep(i + 1)
-    }
+    setLoading(true); setStep(0); setResult('')
+
     const { data: { session } } = await supabase.auth.getSession()
+
+    setStep(1)
     const fileName = `${Date.now()}-${image.name}`
     await supabase.storage.from('products').upload(fileName, image)
     const { data: { publicUrl } } = supabase.storage.from('products').getPublicUrl(fileName)
+
+    setStep(2)
     const res = await fetch('/api/generate-video', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
       body: JSON.stringify({ imageUrl: publicUrl, niche, tone, format, customPrompt })
     })
     const data = await res.json()
-    setLoading(false)
-    if (data.videoUrl) {
-      setResult(data.videoUrl)
-      setStats(s => ({ ...s, videos: s.videos + 1, creditsUsed: s.creditsUsed + 1 }))
-    } else alert('Erro: ' + data.error)
+
+    if (!data.taskId) {
+      setLoading(false)
+      alert('Erro: ' + (data.error || 'Tente novamente'))
+      return
+    }
+
+    setStep(3)
+    await pollStatus(data.taskId, session)
   }
 
   const plan = profile?.plans
@@ -133,7 +180,7 @@ export default function DashboardPage() {
               <textarea
                 value={customPrompt}
                 onChange={e=>setCustomPrompt(e.target.value)}
-                placeholder="Ex: quero que mostre o produto sendo usado por uma mulher jovem em ambiente natural, com luz solar..."
+                placeholder="Ex: quero que mostre o produto sendo usado por uma mulher jovem..."
                 rows={3}
                 style={{width:'100%',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:9,padding:'10px 14px',color:'var(--text)',fontSize:14,fontFamily:'DM Sans, sans-serif',outline:'none',resize:'vertical'}}
               />
