@@ -67,7 +67,7 @@ export default function EbookPage() {
     const res = await fetch('/api/generate-pdf', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
-      body: JSON.stringify({ title, subtitle, author, niche, color, template, chapters: result.ebook.chapters })
+      body: JSON.stringify({ title, subtitle, author, niche, color, template, chapters: result.ebook.chapters, coverImageUrl: result.coverImageUrl })
     })
     const data = await res.json()
     setLoadingPdf(false)
@@ -85,25 +85,16 @@ export default function EbookPage() {
         </div>
       </div>
 
-      {/* ABAS */}
       <div className={styles.tabBar}>
-        <button
-          className={`${styles.tabBtn} ${activeTab === 'ebook' ? styles.tabActive : ''}`}
-          onClick={() => setActiveTab('ebook')}
-        >
+        <button className={`${styles.tabBtn} ${activeTab === 'ebook' ? styles.tabActive : ''}`} onClick={() => setActiveTab('ebook')}>
           <i className="ti ti-book-2"/> Gerar Ebook
         </button>
-        <button
-          className={`${styles.tabBtn} ${activeTab === 'capa' ? styles.tabActive : ''}`}
-          onClick={() => setActiveTab('capa')}
-        >
+        <button className={`${styles.tabBtn} ${activeTab === 'capa' ? styles.tabActive : ''}`} onClick={() => setActiveTab('capa')}>
           <i className="ti ti-photo-ai"/> Gerar Capa 3D
         </button>
       </div>
 
       <div className={styles.content}>
-
-        {/* ABA EBOOK */}
         {activeTab === 'ebook' && (
           <div className={styles.grid}>
             <div className={styles.panel}>
@@ -136,10 +127,13 @@ export default function EbookPage() {
               {result ? (
                 <>
                   <div className={styles.ebookCard}>
-                    <div className={styles.cover} style={{background:`linear-gradient(135deg,${color},${color}99)`}}>
-                      <div className={styles.coverNiche}>{niche.toUpperCase()}</div>
-                      <div className={styles.coverTitle}>{result.ebook.title}</div>
-                      <div className={styles.coverSub}>{result.ebook.subtitle}</div>
+                    <div className={styles.cover} style={{background:`linear-gradient(135deg,${color},${color}99)`, position:'relative', overflow:'hidden'}}>
+                      {result.coverImageUrl && <img src={result.coverImageUrl} alt="capa" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',opacity:0.4}}/>}
+                      <div style={{position:'relative',zIndex:1}}>
+                        <div className={styles.coverNiche}>{niche.toUpperCase()}</div>
+                        <div className={styles.coverTitle}>{title}</div>
+                        <div className={styles.coverSub}>{subtitle}</div>
+                      </div>
                     </div>
                     <div className={styles.ebookBody}>
                       <div className={styles.tocTitle} style={{color}}>Sumário</div>
@@ -170,7 +164,6 @@ export default function EbookPage() {
           </div>
         )}
 
-        {/* ABA CAPA 3D */}
         {activeTab === 'capa' && (
           <div className={styles.grid}>
             <div className={styles.panel}>
@@ -222,7 +215,6 @@ export default function EbookPage() {
             </div>
           </div>
         )}
-
       </div>
     </div>
   )
