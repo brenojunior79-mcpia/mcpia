@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
 <body>
 <div class="cover">
   <div class="cover-pattern"></div>
-  ${coverImageUrl ? `<img src="${coverImageUrl}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.4;" crossorigin="anonymous"/>` : ''}
+  ${coverBase64 ? `<img src="${coverBase64}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.4;"/>` : ''}
   <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:60px;text-align:center;">
     <div class="cover-niche">${niche || 'Ebook'}</div>
     <div class="cover-line"></div>
