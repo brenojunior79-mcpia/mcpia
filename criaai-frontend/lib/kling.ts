@@ -1,5 +1,20 @@
-const KLING_API_URL = process.env.KLING_API_URL || 'https://api.klingapi.com'
-const KLING_API_KEY = process.env.KLING_API_KEY!
+import crypto from 'crypto'
+
+const KLING_API_URL = process.env.KLING_API_URL || 'https://api.klingai.com'
+const KLING_ACCESS_KEY = process.env.KLING_ACCESS_KEY!
+const KLING_SECRET_KEY = process.env.KLING_SECRET_KEY!
+
+function generateKlingToken(): string {
+  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url')
+  const now = Math.floor(Date.now() / 1000)
+  const payload = Buffer.from(JSON.stringify({
+    iss: KLING_ACCESS_KEY,
+    exp: now + 1800,
+    nbf: now - 5,
+  })).toString('base64url')
+  const signature = crypto.createHmac('sha256', KLING_SECRET_KEY).update(`${header}.${payload}`).digest('base64url')
+  return `${header}.${payload}.${signature}`
+}
 
 export interface KlingGenerateParams {
   imageUrl: string
@@ -27,46 +42,45 @@ export async function buildKlingPrompt(niche: string, tone: string): Promise<str
 
 export async function createKlingJob(params: KlingGenerateParams): Promise<KlingJob> {
   const prompt = await buildKlingPrompt(params.niche, params.tone)
+  const token = generateKlingToken()
   const response = await fetch(`${KLING_API_URL}/v1/videos/image2video`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${KLING_API_KEY}`,
+      'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'kling-v1-5',
+      model_name: 'kling-v1-5',
       image_url: params.imageUrl,
       prompt,
       negative_prompt: 'blurry, low quality, text, watermark, distorted face, bad hands',
       cfg_scale: 0.5,
       mode: 'std',
-      duration: params.duration || 5,
+      duration: String(params.duration || 5),
       aspect_ratio: '9:16',
     }),
   })
   if (!response.ok) throw new Error(`Kling API error: ${await response.text()}`)
   const data = await response.json()
-  const jobId = data.task_id || data.data?.task_id
-  if (!jobId) throw new Error('Kling não retornou task_id')
+  const jobId = data.data?.task_id
+  if (!jobId) throw new Error(`Kling não retornou task_id: ${JSON.stringify(data)}`)
   return { jobId, status: 'pending' }
 }
 
 export async function checkKlingJob(jobId: string): Promise<KlingJob> {
-  const response = await fetch(`${KLING_API_URL}/v1/videos/${jobId}`, {
-    headers: { 'Authorization': `Bearer ${KLING_API_KEY}` },
+  const token = generateKlingToken()
+  const response = await fetch(`${KLING_API_URL}/v1/videos/image2video/${jobId}`, {
+    headers: { 'Authorization': `Bearer ${token}` },
   })
   if (!response.ok) throw new Error('Kling status check failed')
   const data = await response.json()
-  const task = data.data || data
-  const statusRaw = task.status || task.task_status || ''
+  const task = data.data
   const statusMap: Record<string, KlingJob['status']> = {
-    submitted: 'pending', pending: 'pending',
-    processing: 'processing', running: 'processing',
-    succeed: 'completed', completed: 'completed', success: 'completed',
-    failed: 'failed', error: 'failed',
+    submitted: 'pending', processing: 'processing',
+    succeed: 'completed', failed: 'failed',
   }
-  const status = statusMap[statusRaw] || 'processing'
-  const videoUrl = task.video_url || task.result?.video_url || task.task_result?.videos?.[0]?.url
+  const status = statusMap[task?.task_status] || 'processing'
+  const videoUrl = task?.task_result?.videos?.[0]?.url
   return { jobId, status, videoUrl, cost: 0.14 }
 }
 
