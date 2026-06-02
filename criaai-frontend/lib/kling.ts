@@ -21,6 +21,7 @@ export interface KlingGenerateParams {
   niche: string
   tone: string
   duration?: number
+  customPrompt?: string
 }
 
 export interface KlingJob {
@@ -30,18 +31,23 @@ export interface KlingJob {
   cost?: number
 }
 
-export async function buildKlingPrompt(niche: string, tone: string): Promise<string> {
-  const toneMap: Record<string, string> = {
-    lifestyle: 'natural lifestyle setting, warm lighting, everyday use, relatable and aspirational',
-    urgencia: 'dynamic fast-paced scene, bold movement, high energy, urgency and excitement',
-    luxo: 'luxury setting, premium materials visible, elegant slow motion, sophisticated atmosphere',
-    humor: 'playful fun scene, expressive movement, lighthearted and entertaining, smile-inducing',
+export async function buildKlingPrompt(niche: string, tone: string, customPrompt?: string): Promise<string> {
+  if (customPrompt && customPrompt.trim().length > 10) {
+    return `${customPrompt.trim()}. Vertical 9:16 format, cinematic quality, realistic motion, no text overlays, 5 seconds.`
   }
-  return `A professional product advertisement video. The ${niche} product is shown being used naturally by hands in a ${toneMap[tone] || toneMap.lifestyle}. Smooth cinematic camera movement, professional commercial quality lighting. The product stays clearly visible and in focus throughout. No text overlays. Realistic motion. Duration 5 seconds. Vertical format 9:16.`
+
+  const toneMap: Record<string, string> = {
+    lifestyle: 'smiling warmly at camera, in a cozy home setting with natural lighting',
+    urgencia: 'speaking with urgency and excitement, gesturing expressively, dynamic background',
+    luxo: 'in an elegant setting, speaking confidently, premium atmosphere with soft luxury lighting',
+    humor: 'with a fun playful expression, laughing and gesturing, bright cheerful background',
+  }
+
+  return `A person is holding the ${niche} product directly in front of the camera and talking about it enthusiastically. The person is ${toneMap[tone] || toneMap.lifestyle}. The product is clearly visible in their hand throughout the video. UGC style, authentic feel, vertical 9:16 format, realistic motion, no text overlays, 5 seconds duration.`
 }
 
 export async function createKlingJob(params: KlingGenerateParams): Promise<KlingJob> {
-  const prompt = await buildKlingPrompt(params.niche, params.tone)
+  const prompt = await buildKlingPrompt(params.niche, params.tone, params.customPrompt)
   const token = generateKlingToken()
   const response = await fetch(`${KLING_API_URL}/v1/videos/image2video`, {
     method: 'POST',
@@ -53,7 +59,7 @@ export async function createKlingJob(params: KlingGenerateParams): Promise<Kling
       model_name: 'kling-v1-5',
       image: params.imageUrl,
       prompt,
-      negative_prompt: 'blurry, low quality, text, watermark, distorted face, bad hands',
+      negative_prompt: 'blurry, low quality, text, watermark, distorted face, bad anatomy, multiple people',
       cfg_scale: 0.5,
       mode: 'std',
       duration: String(params.duration || 5),
