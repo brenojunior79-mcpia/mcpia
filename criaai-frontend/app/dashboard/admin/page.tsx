@@ -9,8 +9,6 @@ export default function AdminPage() {
   const [stats, setStats] = useState({ receita: 0, custo: 0, alunos: 0, videos: 0 })
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('todos')
-  const [apis, setApis] = useState<any>(null)
-  const [apisLoading, setApisLoading] = useState(true)
   const supabase = createClient()
   const router = useRouter()
 
@@ -34,14 +32,6 @@ export default function AdminPage() {
         setStats({ receita, custo, alunos: allProfiles.length, videos })
       }
       setLoading(false)
-
-      const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch('/api/admin/apis', {
-        headers: { 'Authorization': `Bearer ${session?.access_token}` }
-      })
-      const data = await res.json()
-      setApis(data)
-      setApisLoading(false)
     }
     load()
   }, [])
@@ -68,10 +58,6 @@ export default function AdminPage() {
     return true
   })
 
-  const klingPct = apis?.kling?.total > 0
-    ? Math.round((apis.kling.credits / apis.kling.total) * 100)
-    : null
-
   if (loading) return (
     <div className={styles.loading}>
       <i className="ti ti-loader" style={{fontSize:32,animation:'spin 1s linear infinite'}}/>
@@ -96,33 +82,13 @@ export default function AdminPage() {
                 <div className={styles.apiName}>Kling AI</div>
                 <div className={styles.apiSub}>Créditos de vídeo</div>
               </div>
-              <a href="https://klingai.com" target="_blank" rel="noreferrer" className={styles.apiLink}>
+              <a href="https://klingapi.com/dashboard" target="_blank" rel="noreferrer" className={styles.apiLink}>
                 <i className="ti ti-external-link"/>
               </a>
             </div>
-            {apisLoading ? (
-              <div className={styles.apiLoading}>Carregando...</div>
-            ) : apis?.kling?.error ? (
-              <div className={styles.apiErr}><i className="ti ti-alert-circle"/> {apis.kling.error}</div>
-            ) : (
-              <>
-                <div className={styles.apiBalance}>
-                  <span className={styles.apiBalanceNum}>{apis?.kling?.credits?.toLocaleString() || 0}</span>
-                  <span className={styles.apiBalanceLabel}> / {apis?.kling?.total?.toLocaleString() || 0} créditos</span>
-                </div>
-                {klingPct !== null && (
-                  <div className={styles.apiBar}>
-                    <div className={styles.apiBarFill} style={{
-                      width: `${klingPct}%`,
-                      background: klingPct > 30 ? 'var(--green)' : klingPct > 10 ? 'var(--amber)' : 'var(--red)'
-                    }}/>
-                  </div>
-                )}
-                <div className={styles.apiNote} style={{color: klingPct !== null && klingPct < 15 ? 'var(--red)' : 'var(--muted2)'}}>
-                  {klingPct !== null && klingPct < 15 ? '⚠ Saldo baixo — recarregue em breve' : `${klingPct ?? '—'}% restante`}
-                </div>
-              </>
-            )}
+            <div className={styles.apiNote}>
+              Clique no ícone <i className="ti ti-external-link" style={{fontSize:11}}/> para ver o saldo em klingapi.com
+            </div>
           </div>
 
           <div className={styles.apiCard}>
@@ -138,25 +104,9 @@ export default function AdminPage() {
                 <i className="ti ti-external-link"/>
               </a>
             </div>
-            {apisLoading ? (
-              <div className={styles.apiLoading}>Carregando...</div>
-            ) : apis?.openai?.error ? (
-              <div className={styles.apiErr}><i className="ti ti-alert-circle"/> Verifique em platform.openai.com</div>
-            ) : (
-              <>
-                <div className={styles.apiBalance}>
-                  <span className={styles.apiBalanceNum}>
-                    {apis?.openai?.balance != null ? `$${(apis.openai.balance / 100).toFixed(2)}` : '—'}
-                  </span>
-                  <span className={styles.apiBalanceLabel}> créditos disponíveis</span>
-                </div>
-                <div className={styles.apiNote} style={{color: apis?.openai?.balance != null && apis.openai.balance < 500 ? 'var(--red)' : 'var(--muted2)'}}>
-                  {apis?.openai?.balance != null && apis.openai.balance < 500
-                    ? '⚠ Saldo abaixo de $5 — recarregue'
-                    : 'Saldo suficiente'}
-                </div>
-              </>
-            )}
+            <div className={styles.apiNote}>
+              Clique no ícone <i className="ti ti-external-link" style={{fontSize:11}}/> para ver o saldo em platform.openai.com
+            </div>
           </div>
         </div>
 
