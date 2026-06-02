@@ -12,7 +12,19 @@ export async function POST(req: NextRequest) {
 
     const numChapters = Math.min(Math.max(parseInt(chapters) || 7, 3), 15)
 
-    const prompt = `Crie um ebook completo e profissional em português com as seguintes informações:
+    // Gera conteúdo e imagem em paralelo
+    const [ebookRes, imageRes] = await Promise.all([
+      fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [{
+            role: 'user',
+            content: `Crie um ebook completo e profissional em português com as seguintes informações:
 - Título: ${title}
 - Subtítulo: ${subtitle || ''}
 - Nicho: ${niche}
@@ -41,25 +53,34 @@ Retorne APENAS um JSON válido com esta estrutura exata (sem markdown, sem backt
 }
 
 Escreva conteúdo REAL, útil, detalhado e de alta qualidade. Cada ponto deve ter pelo menos 2 frases completas.`
-
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 4000,
-        temperature: 0.7,
-        response_format: { type: 'json_object' },
+          }],
+          max_tokens: 4000,
+          temperature: 0.7,
+          response_format: { type: 'json_object' },
+        }),
       }),
-    })
+      fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'dall-e-3',
+          prompt: `Professional ebook cover illustration for "${title}" about ${niche}. ${customDetails ? customDetails + '.' : ''} Digital art style, vibrant colors, modern design, no text, no words, no letters. Cinematic lighting, high quality.`,
+          n: 1,
+          size: '1024x1792',
+          quality: 'standard',
+        }),
+      }),
+    ])
 
-    const data = await response.json()
-    const raw = data.choices?.[0]?.message?.content || '{}'
+    const ebookData = await ebookRes.json()
+    const imageData = await imageRes.json()
+
+    const raw = ebookData.choices?.[0]?.message?.content || '{}'
     const ebook = JSON.parse(raw)
+    const coverImageUrl = imageData.data?.[0]?.url || null
 
     await supabase.from('generations').insert({
       user_id: user.id,
@@ -73,7 +94,7 @@ Escreva conteúdo REAL, útil, detalhado e de alta qualidade. Cada ponto deve te
     const { data: profile } = await supabase.from('profiles').select('credits_ebooks_used').eq('id', user.id).single()
     await supabase.from('profiles').update({ credits_ebooks_used: (profile?.credits_ebooks_used || 0) + 1 }).eq('id', user.id)
 
-    return NextResponse.json({ ebook })
+    return NextResponse.json({ ebook, coverImageUrl })
   } catch (err: any) {
     console.error('generate-ebook error:', err)
     return NextResponse.json({ error: err.message || 'Erro interno' }, { status: 500 })
