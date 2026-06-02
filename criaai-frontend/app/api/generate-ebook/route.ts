@@ -67,7 +67,7 @@ Escreva conteúdo REAL, útil, detalhado e de alta qualidade. Cada ponto deve te
         },
         body: JSON.stringify({
           model: 'dall-e-3',
-          prompt: `Professional ebook cover illustration for "${title}" about ${niche}. ${customDetails ? customDetails + '.' : ''} Digital art style, vibrant colors, modern design, no text, no words, no letters. Cinematic lighting, high quality.`,
+          prompt: `Professional ebook cover illustration for a book titled "${title}" about ${niche}. ${customDetails ? customDetails + '.' : ''} Digital art style, vibrant colors, modern design, no text, no words, no letters anywhere. Cinematic lighting, high quality illustration.`,
           n: 1,
           size: '1024x1792',
           quality: 'standard',
@@ -80,7 +80,31 @@ Escreva conteúdo REAL, útil, detalhado e de alta qualidade. Cada ponto deve te
 
     const raw = ebookData.choices?.[0]?.message?.content || '{}'
     const ebook = JSON.parse(raw)
-    const coverImageUrl = imageData.data?.[0]?.url || null
+    const dalleUrl = imageData.data?.[0]?.url || null
+
+    // Baixa imagem e salva no Supabase Storage com URL permanente
+    let coverImageUrl: string | null = null
+    if (dalleUrl) {
+      try {
+        const imgRes = await fetch(dalleUrl)
+        const arrayBuffer = await imgRes.arrayBuffer()
+        const buffer = Buffer.from(arrayBuffer)
+        const fileName = `covers/${user.id}-${Date.now()}.png`
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('products')
+          .upload(fileName, buffer, { contentType: 'image/png', upsert: true })
+        if (uploadData && !uploadError) {
+          const { data: { publicUrl } } = supabase.storage.from('products').getPublicUrl(fileName)
+          coverImageUrl = publicUrl
+        } else {
+          console.error('Upload error:', uploadError)
+          coverImageUrl = dalleUrl // fallback URL temporária
+        }
+      } catch (e) {
+        console.error('Erro ao salvar imagem:', e)
+        coverImageUrl = dalleUrl // fallback URL temporária
+      }
+    }
 
     await supabase.from('generations').insert({
       user_id: user.id,
