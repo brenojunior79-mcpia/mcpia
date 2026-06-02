@@ -9,6 +9,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
   const router = useRouter()
   const supabase = createClient()
   const plan = profile?.plans
+  const isAdmin = profile?.is_admin
   const videosUsed = profile?.credits_videos_used || 0
   const videosExtra = profile?.credits_videos_extra || 0
   const videosLimit = plan?.is_unlimited ? 999 : ((plan?.credits_videos || 0) + videosExtra)
@@ -26,7 +27,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
     { href: '/dashboard/metricas', icon: 'ti-chart-bar', label: 'Métricas' },
     { href: '/dashboard/historico', icon: 'ti-history', label: 'Histórico' },
     { href: '/dashboard/planos', icon: 'ti-credit-card', label: 'Planos' },
-    { href: '/dashboard/admin', icon: 'ti-shield', label: 'Admin' },
+    ...(isAdmin ? [{ href: '/dashboard/admin', icon: 'ti-shield', label: 'Admin' }] : []),
   ]
 
   const WHATSAPP = '5531999999999'
