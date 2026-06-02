@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
-    const { title, subtitle, author, niche, color, template, chapters, coverImageUrl } = await req.json()
+    const { title, subtitle, author, niche, color, template, chapters, coverImageUrl, coverBase64 } = await req.json()
     if (!title || !chapters) return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 })
 
     const templates: Record<string, any> = {
