@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Cria job no Kling e retorna task_id imediatamente
-    const job = await createKlingJob({ imageUrl, niche, tone: tone || 'lifestyle' })
+    const job = await createKlingJob({ imageUrl, niche, tone: tone || 'lifestyle', customPrompt })
 
     // Salva job pendente no banco para rastrear
     await supabase.from('generations').insert({
