@@ -51,7 +51,7 @@ export async function createKlingJob(params: KlingGenerateParams): Promise<Kling
     },
     body: JSON.stringify({
       model_name: 'kling-v1-5',
-      image_url: params.imageUrl,
+      image: params.imageUrl,
       prompt,
       negative_prompt: 'blurry, low quality, text, watermark, distorted face, bad hands',
       cfg_scale: 0.5,
