@@ -67,7 +67,7 @@ export default function EbookPage() {
     const res = await fetch('/api/generate-pdf', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
-      body: JSON.stringify({ title, subtitle, author, niche, color, template, chapters: result.ebook.chapters, coverImageUrl: result.coverImageUrl })
+  body: JSON.stringify({ title, subtitle, author, niche, color, template, chapters: result.ebook.chapters, coverImageUrl: result.coverImageUrl, coverBase64: result.coverBase64 })
     })
     const data = await res.json()
     setLoadingPdf(false)
