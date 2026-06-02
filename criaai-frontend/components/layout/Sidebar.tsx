@@ -22,6 +22,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
 
   const navItems = [
     { href: '/dashboard', icon: 'ti-sparkles', label: 'Gerar vídeo' },
+    { href: '/dashboard/chat', icon: 'ti-message-circle', label: 'Assistente IA' },
     { href: '/dashboard/ebook', icon: 'ti-book-2', label: 'Ebook Builder' },
     { href: '/dashboard/paginas', icon: 'ti-layout', label: 'Páginas de vendas' },
     { href: '/dashboard/metricas', icon: 'ti-chart-bar', label: 'Métricas' },
