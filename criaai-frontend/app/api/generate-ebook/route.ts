@@ -39,7 +39,7 @@ Escreva conteúdo REAL e detalhado. Cada ponto deve ter pelo menos 2 frases.` }]
         body: JSON.stringify({
           model: 'dall-e-3',
           prompt: `Professional ebook cover illustration for "${title}" about ${niche}. ${customDetails || ''} Digital art style, vibrant colors, modern design, absolutely no text, no words, no letters. Cinematic lighting, high quality.`,
-          n: 1, size: '1024x1792', quality: 'standard',
+          n: 1, size: '1024x1024', quality: 'standard',
         }),
       }),
     ])
