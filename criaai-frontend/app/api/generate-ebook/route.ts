@@ -47,7 +47,9 @@ Escreva conteúdo REAL e detalhado. Cada ponto deve ter pelo menos 2 frases.` }]
     const ebookData = await ebookRes.json()
     const imageData = await imageRes.json()
     const ebook = JSON.parse(ebookData.choices?.[0]?.message?.content || '{}')
-    const coverImageUrl = imageData.data?.[0]?.url || null
+    console.log('DALL-E response:', JSON.stringify(imageData).slice(0, 500))
+const coverImageUrl = imageData.data?.[0]?.url || null
+console.log('coverImageUrl:', coverImageUrl ? 'OK' : 'NULL')
 
     await supabase.from('generations').insert({
       user_id: user.id, type: 'ebook', status: 'completed', niche, credits_consumed: 1,
