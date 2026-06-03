@@ -47,22 +47,7 @@ Escreva conteúdo REAL e detalhado. Cada ponto deve ter pelo menos 2 frases.` }]
     const ebookData = await ebookRes.json()
     const imageData = await imageRes.json()
     const ebook = JSON.parse(ebookData.choices?.[0]?.message?.content || '{}')
-    const dalleUrl = imageData.data?.[0]?.url || null
-
-    // Converte para base64 AQUI no generate-ebook (antes de retornar)
-    let coverBase64: string | null = null
-    let coverImageUrl: string | null = dalleUrl
-    if (dalleUrl) {
-      try {
-        const imgRes = await fetch(dalleUrl)
-        const arrayBuffer = await imgRes.arrayBuffer()
-        const base64 = Buffer.from(arrayBuffer).toString('base64')
-        const mime = imgRes.headers.get('content-type') || 'image/png'
-        coverBase64 = `data:${mime};base64,${base64}`
-      } catch (e) {
-        console.error('Erro ao converter imagem:', e)
-      }
-    }
+    const coverImageUrl = imageData.data?.[0]?.url || null
 
     await supabase.from('generations').insert({
       user_id: user.id, type: 'ebook', status: 'completed', niche, credits_consumed: 1,
@@ -71,7 +56,7 @@ Escreva conteúdo REAL e detalhado. Cada ponto deve ter pelo menos 2 frases.` }]
     const { data: profile } = await supabase.from('profiles').select('credits_ebooks_used').eq('id', user.id).single()
     await supabase.from('profiles').update({ credits_ebooks_used: (profile?.credits_ebooks_used || 0) + 1 }).eq('id', user.id)
 
-    return NextResponse.json({ ebook, coverImageUrl, coverBase64 })
+    return NextResponse.json({ ebook, coverImageUrl })
   } catch (err: any) {
     console.error('generate-ebook error:', err)
     return NextResponse.json({ error: err.message || 'Erro interno' }, { status: 500 })
