@@ -48,7 +48,9 @@ Escreva conteúdo REAL e detalhado. Cada ponto deve ter pelo menos 2 frases.` }]
     const imageData = await imageRes.json()
     const ebook = JSON.parse(ebookData.choices?.[0]?.message?.content || '{}')
     console.log('DALL-E response:', JSON.stringify(imageData).slice(0, 500))
+console.log('DALLE response:', JSON.stringify(imageData).slice(0, 300))
 const coverImageUrl = imageData.data?.[0]?.url || null
+console.log('coverImageUrl result:', coverImageUrl ? 'GERADA' : 'NULL')
 console.log('coverImageUrl:', coverImageUrl ? 'OK' : 'NULL')
 
     await supabase.from('generations').insert({
