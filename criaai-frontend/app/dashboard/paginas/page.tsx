@@ -13,7 +13,7 @@ export default function PaginasPage() {
   const [form, setForm] = useState({
     productName: '', price: '', audience: '',
     benefits: ['','',''], bonus: '', guarantee: '',
-    checkoutUrl: '', theme: 'light',
+    checkoutUrl: '', theme: 'light', customPrompt: '',
   })
   const supabase = createClient()
 
@@ -149,6 +149,10 @@ export default function PaginasPage() {
                 <div className={styles.field}>
                   <label>Garantia</label>
                   <input type="text" value={form.guarantee} onChange={e=>setField('guarantee',e.target.value)} placeholder="Ex: 7 dias de garantia incondicional"/>
+                </div>
+                <div className={styles.field}>
+                  <label>Instruções detalhadas para a IA (opcional)</label>
+                  <textarea value={form.customPrompt} onChange={e=>setField('customPrompt',e.target.value)} placeholder="Ex: Quero um tom emocional e inspirador, foco em mães solteiras, com storytelling sobre superação. Use linguagem simples e calorosa. Destaque o resultado em 30 dias e crie senso de urgência." rows={4} style={{width:'100%',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:9,padding:'10px 14px',color:'var(--text)',fontSize:14,fontFamily:'DM Sans, sans-serif',outline:'none',resize:'vertical'}}/>
                 </div>
               </div>
 
