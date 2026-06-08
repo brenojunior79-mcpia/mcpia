@@ -109,11 +109,12 @@ export async function POST(req: NextRequest) {
     const supabase = createRouteHandlerClient({ cookies })
 
     const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
+      data: { session },
+    } = await supabase.auth.getSession()
 
-    if (authError || !user) {
+    const user = session?.user
+
+    if (!user) {
       return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
     }
 
