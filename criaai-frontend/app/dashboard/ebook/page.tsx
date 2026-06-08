@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { BookOpen, Download, Loader2, Sparkles, AlertCircle, CheckCircle2, ChevronRight, FileText, Zap } from 'lucide-react'
 
 interface EbookFormData {
   title: string
@@ -26,52 +25,6 @@ interface CreditInfo {
   used: number
   limit: number
   planName: string
-}
-
-function CreditBadge({ info }: { info: CreditInfo | null }) {
-  if (!info) return null
-  const remaining = info.limit - info.used
-  const pct = Math.min(100, Math.round((info.used / info.limit) * 100))
-  const isEmpty = remaining <= 0
-  const isLow = remaining <= 1 && !isEmpty
-
-  return (
-    <div className="flex items-center gap-3 bg-[#0f1a0f] border border-[#1e3a1e] rounded-xl px-4 py-3">
-      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isEmpty ? 'bg-red-900/40' : isLow ? 'bg-yellow-900/40' : 'bg-[#1a3a1a]'}`}>
-        <BookOpen size={15} className={isEmpty ? 'text-red-400' : isLow ? 'text-yellow-400' : 'text-[#4ade80]'} />
-      </div>
-      <div className="min-w-0">
-        <p className="text-xs text-gray-400 leading-none mb-1">Créditos de Ebook</p>
-        <div className="flex items-center gap-2">
-          <span className={`text-sm font-semibold ${isEmpty ? 'text-red-400' : isLow ? 'text-yellow-400' : 'text-white'}`}>
-            {remaining} restantes
-          </span>
-          <span className="text-xs text-gray-600">/ {info.limit} · {info.planName}</span>
-        </div>
-        <div className="mt-1.5 h-1 w-28 bg-[#1a2a1a] rounded-full overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all ${isEmpty ? 'bg-red-500' : isLow ? 'bg-yellow-500' : 'bg-[#4ade80]'}`}
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, { label: string; dot: string; text: string }> = {
-    completed: { label: 'Concluído', dot: 'bg-[#4ade80]', text: 'text-[#4ade80]' },
-    processing: { label: 'Processando', dot: 'bg-blue-400', text: 'text-blue-400' },
-    failed: { label: 'Erro', dot: 'bg-red-400', text: 'text-red-400' },
-  }
-  const s = map[status] ?? { label: status, dot: 'bg-gray-500', text: 'text-gray-400' }
-  return (
-    <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${s.text}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-      {s.label}
-    </span>
-  )
 }
 
 export default function EbookPage() {
@@ -192,111 +145,120 @@ export default function EbookPage() {
   }
 
   const noCredits = credits !== null && credits.used >= credits.limit
+  const remaining = credits ? credits.limit - credits.used : 0
+  const pct = credits ? Math.min(100, Math.round((credits.used / credits.limit) * 100)) : 0
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    background: '#0a120a',
+    border: '1px solid #1e3a1e',
+    borderRadius: '8px',
+    padding: '10px 12px',
+    fontSize: '14px',
+    color: '#ffffff',
+    outline: 'none',
+    boxSizing: 'border-box',
+  }
+
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    fontSize: '12px',
+    fontWeight: 500,
+    color: '#9ca3af',
+    marginBottom: '6px',
+  }
 
   return (
-    <div className="min-h-screen bg-[#0a0f0a] text-white">
-      <div className="max-w-2xl mx-auto px-5 py-8 space-y-6">
+    <div style={{ minHeight: '100vh', background: '#0a0f0a', color: '#fff', fontFamily: 'inherit' }}>
+      <div style={{ maxWidth: '680px', margin: '0 auto', padding: '32px 20px' }}>
 
         {/* Header */}
-        <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-8 h-8 bg-[#1a3a1a] rounded-lg flex items-center justify-center">
-                <BookOpen size={16} className="text-[#4ade80]" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+              <div style={{ width: '32px', height: '32px', background: '#1a3a1a', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>
+                📘
               </div>
-              <h1 className="text-xl font-bold text-white tracking-tight">Ebook Builder</h1>
+              <h1 style={{ fontSize: '20px', fontWeight: 700, color: '#fff', margin: 0 }}>Ebook Builder</h1>
             </div>
-            <p className="text-xs text-gray-500 ml-10">Powered by Gamma · Documentos profissionais em PDF</p>
+            <p style={{ fontSize: '12px', color: '#6b7280', margin: 0, paddingLeft: '42px' }}>Powered by Gamma · Documentos profissionais em PDF</p>
           </div>
-          <CreditBadge info={credits} />
+
+          {/* Badge créditos */}
+          {credits && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#0f1a0f', border: '1px solid #1e3a1e', borderRadius: '12px', padding: '12px 16px' }}>
+              <div style={{ width: '32px', height: '32px', background: '#1a3a1a', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                📗
+              </div>
+              <div>
+                <p style={{ fontSize: '11px', color: '#9ca3af', margin: '0 0 2px 0' }}>Créditos de Ebook</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '14px', fontWeight: 600, color: remaining <= 0 ? '#f87171' : remaining <= 1 ? '#fbbf24' : '#ffffff' }}>
+                    {remaining} restantes
+                  </span>
+                  <span style={{ fontSize: '12px', color: '#4b5563' }}>/ {credits.limit} · {credits.planName}</span>
+                </div>
+                <div style={{ marginTop: '6px', height: '4px', width: '112px', background: '#1a2a1a', borderRadius: '999px', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${pct}%`, background: remaining <= 0 ? '#ef4444' : remaining <= 1 ? '#f59e0b' : '#4ade80', borderRadius: '999px' }} />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Alertas */}
         {upgradeRequired && (
-          <div className="flex gap-3 p-4 rounded-xl bg-yellow-950/40 border border-yellow-800/40 text-sm">
-            <AlertCircle size={16} className="text-yellow-400 shrink-0 mt-0.5" />
+          <div style={{ display: 'flex', gap: '12px', padding: '16px', borderRadius: '12px', background: 'rgba(120,53,15,0.2)', border: '1px solid rgba(180,83,9,0.3)', marginBottom: '16px' }}>
+            <span style={{ fontSize: '16px' }}>⚠️</span>
             <div>
-              <p className="font-semibold text-yellow-300">Créditos esgotados</p>
-              <p className="text-yellow-400/80 mt-0.5">{error}</p>
-              <a href="/dashboard/planos" className="inline-flex items-center gap-1 text-yellow-300 font-medium mt-2 text-xs hover:underline">
-                Ver planos <ChevronRight size={12} />
-              </a>
+              <p style={{ fontWeight: 600, color: '#fcd34d', margin: '0 0 4px 0', fontSize: '14px' }}>Créditos esgotados</p>
+              <p style={{ color: '#fbbf24', margin: '0 0 8px 0', fontSize: '13px' }}>{error}</p>
+              <a href="/dashboard/planos" style={{ color: '#fcd34d', fontSize: '12px', fontWeight: 500 }}>Ver planos →</a>
             </div>
           </div>
         )}
 
         {error && !upgradeRequired && (
-          <div className="flex gap-3 p-4 rounded-xl bg-red-950/40 border border-red-800/40 text-sm">
-            <AlertCircle size={16} className="text-red-400 shrink-0 mt-0.5" />
-            <p className="text-red-300">{error}</p>
+          <div style={{ display: 'flex', gap: '12px', padding: '16px', borderRadius: '12px', background: 'rgba(127,29,29,0.2)', border: '1px solid rgba(185,28,28,0.3)', marginBottom: '16px' }}>
+            <span>❌</span>
+            <p style={{ color: '#fca5a5', margin: 0, fontSize: '14px' }}>{error}</p>
           </div>
         )}
 
         {success && (
-          <div className="flex gap-3 p-4 rounded-xl bg-green-950/40 border border-green-800/40 text-sm">
-            <CheckCircle2 size={16} className="text-[#4ade80] shrink-0 mt-0.5" />
-            <p className="text-green-300">{success}</p>
+          <div style={{ display: 'flex', gap: '12px', padding: '16px', borderRadius: '12px', background: 'rgba(6,78,59,0.2)', border: '1px solid rgba(6,95,70,0.3)', marginBottom: '16px' }}>
+            <span>✅</span>
+            <p style={{ color: '#6ee7b7', margin: 0, fontSize: '14px' }}>{success}</p>
           </div>
         )}
 
         {/* Formulário */}
-        <div className="bg-[#0d150d] border border-[#1a2e1a] rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-[#1a2e1a] flex items-center gap-2">
-            <FileText size={14} className="text-[#4ade80]" />
-            <span className="text-sm font-semibold text-white">Detalhes do Ebook</span>
+        <div style={{ background: '#0d150d', border: '1px solid #1a2e1a', borderRadius: '16px', overflow: 'hidden', marginBottom: '24px' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid #1a2e1a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '14px' }}>📋</span>
+            <span style={{ fontSize: '14px', fontWeight: 600, color: '#fff' }}>Detalhes do Ebook</span>
           </div>
 
-          <div className="p-5 space-y-4">
+          <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1.5">
-                Título <span className="text-[#4ade80]">*</span>
-              </label>
-              <input
-                type="text"
-                name="title"
-                value={form.title}
-                onChange={handleChange}
-                placeholder="Ex: Guia Definitivo de Marketing Digital"
-                required
-                className="w-full bg-[#0a120a] border border-[#1e3a1e] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#4ade80]/50 focus:ring-1 focus:ring-[#4ade80]/20 transition-colors"
-              />
+              <label style={labelStyle}>Título <span style={{ color: '#4ade80' }}>*</span></label>
+              <input type="text" name="title" value={form.title} onChange={handleChange} placeholder="Ex: Guia Definitivo de Marketing Digital" required style={inputStyle} />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1.5">
-                Tópico / Assunto principal <span className="text-[#4ade80]">*</span>
-              </label>
-              <textarea
-                name="topic"
-                value={form.topic}
-                onChange={handleChange}
-                placeholder="Descreva o tema central, objetivo e contexto do ebook..."
-                required
-                rows={3}
-                className="w-full bg-[#0a120a] border border-[#1e3a1e] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#4ade80]/50 focus:ring-1 focus:ring-[#4ade80]/20 transition-colors resize-none"
-              />
+              <label style={labelStyle}>Tópico / Assunto principal <span style={{ color: '#4ade80' }}>*</span></label>
+              <textarea name="topic" value={form.topic} onChange={handleChange} placeholder="Descreva o tema central, objetivo e contexto do ebook..." required rows={3} style={{ ...inputStyle, resize: 'none' }} />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Público-alvo</label>
-                <input
-                  type="text"
-                  name="targetAudience"
-                  value={form.targetAudience}
-                  onChange={handleChange}
-                  placeholder="Ex: empreendedores"
-                  className="w-full bg-[#0a120a] border border-[#1e3a1e] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#4ade80]/50 focus:ring-1 focus:ring-[#4ade80]/20 transition-colors"
-                />
+                <label style={labelStyle}>Público-alvo</label>
+                <input type="text" name="targetAudience" value={form.targetAudience} onChange={handleChange} placeholder="Ex: empreendedores" style={inputStyle} />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Tom e estilo</label>
-                <select
-                  name="tone"
-                  value={form.tone}
-                  onChange={handleChange}
-                  className="w-full bg-[#0a120a] border border-[#1e3a1e] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#4ade80]/50 focus:ring-1 focus:ring-[#4ade80]/20 transition-colors"
-                >
+                <label style={labelStyle}>Tom e estilo</label>
+                <select name="tone" value={form.tone} onChange={handleChange} style={inputStyle}>
                   <option value="profissional e didático">Profissional e didático</option>
                   <option value="informal e acessível">Informal e acessível</option>
                   <option value="técnico e detalhado">Técnico e detalhado</option>
@@ -307,27 +269,13 @@ export default function EbookPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1.5">
-                Capítulos <span className="text-gray-600 font-normal">(opcional · um por linha)</span>
-              </label>
-              <textarea
-                name="chapters"
-                value={form.chapters}
-                onChange={handleChange}
-                placeholder={"Introdução\nCapítulo 1\nConclusão"}
-                rows={3}
-                className="w-full bg-[#0a120a] border border-[#1e3a1e] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#4ade80]/50 focus:ring-1 focus:ring-[#4ade80]/20 transition-colors resize-none font-mono"
-              />
+              <label style={labelStyle}>Capítulos <span style={{ color: '#6b7280', fontWeight: 400 }}>(opcional · um por linha)</span></label>
+              <textarea name="chapters" value={form.chapters} onChange={handleChange} placeholder={"Introdução\nCapítulo 1\nConclusão"} rows={3} style={{ ...inputStyle, resize: 'none', fontFamily: 'monospace' }} />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1.5">Idioma</label>
-              <select
-                name="language"
-                value={form.language}
-                onChange={handleChange}
-                className="w-full bg-[#0a120a] border border-[#1e3a1e] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#4ade80]/50 focus:ring-1 focus:ring-[#4ade80]/20 transition-colors"
-              >
+              <label style={labelStyle}>Idioma</label>
+              <select name="language" value={form.language} onChange={handleChange} style={inputStyle}>
                 <option value="pt-BR">🇧🇷 Português (Brasil)</option>
                 <option value="en-US">🇺🇸 English (US)</option>
                 <option value="es-ES">🇪🇸 Español</option>
@@ -335,86 +283,76 @@ export default function EbookPage() {
             </div>
 
             <button
-              type="submit"
               onClick={handleSubmit}
               disabled={loading || !form.title || !form.topic || noCredits}
-              className="w-full flex items-center justify-center gap-2 font-semibold py-3 rounded-xl transition-all text-sm mt-2 disabled:opacity-40 disabled:cursor-not-allowed"
               style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                padding: '12px',
+                borderRadius: '12px',
+                border: 'none',
+                cursor: loading || noCredits || !form.title || !form.topic ? 'not-allowed' : 'pointer',
                 background: loading || noCredits ? '#1a2e1a' : 'linear-gradient(135deg, #16a34a, #4ade80)',
                 color: loading || noCredits ? '#4ade80' : '#0a0f0a',
+                fontWeight: 700,
+                fontSize: '14px',
+                opacity: !form.title || !form.topic ? 0.5 : 1,
               }}
             >
-              {loading ? (
-                <>
-                  <Loader2 size={15} className="animate-spin" />
-                  Gerando ebook — aguarde até 3 min...
-                </>
-              ) : (
-                <>
-                  <Sparkles size={15} />
-                  Gerar Ebook com IA
-                </>
-              )}
+              {loading ? '⏳ Gerando ebook — aguarde até 3 min...' : '✨ Gerar Ebook com IA'}
             </button>
 
             {loading && (
-              <div className="flex items-center gap-2 justify-center">
-                <Zap size={12} className="text-[#4ade80]" />
-                <p className="text-xs text-center text-gray-500">
-                  O Gamma está criando seu documento. Não feche esta aba.
-                </p>
-              </div>
+              <p style={{ fontSize: '12px', color: '#6b7280', textAlign: 'center', margin: 0 }}>
+                ⚡ O Gamma está criando seu documento. Não feche esta aba.
+              </p>
             )}
           </div>
         </div>
 
         {/* Histórico */}
         <div>
-          <div className="flex items-center gap-2 mb-3">
-            <FileText size={14} className="text-gray-500" />
-            <h2 className="text-sm font-semibold text-gray-300">Ebooks gerados</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            <span style={{ fontSize: '14px', color: '#6b7280' }}>📄</span>
+            <h2 style={{ fontSize: '14px', fontWeight: 600, color: '#d1d5db', margin: 0 }}>Ebooks gerados</h2>
           </div>
 
           {loadingData ? (
-            <div className="flex items-center gap-2 text-gray-600 text-sm py-6 justify-center">
-              <Loader2 size={14} className="animate-spin" />
-              Carregando...
-            </div>
+            <p style={{ fontSize: '14px', color: '#6b7280', textAlign: 'center', padding: '24px 0' }}>Carregando...</p>
           ) : ebooks.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-center border border-dashed border-[#1a2e1a] rounded-2xl">
-              <BookOpen size={24} className="text-gray-700 mb-2" />
-              <p className="text-sm text-gray-600">Nenhum ebook gerado ainda.</p>
-              <p className="text-xs text-gray-700 mt-1">Preencha o formulário acima para começar.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 20px', border: '1px dashed #1a2e1a', borderRadius: '16px', textAlign: 'center' }}>
+              <span style={{ fontSize: '28px', marginBottom: '8px' }}>📚</span>
+              <p style={{ fontSize: '14px', color: '#4b5563', margin: '0 0 4px 0' }}>Nenhum ebook gerado ainda.</p>
+              <p style={{ fontSize: '12px', color: '#374151', margin: 0 }}>Preencha o formulário acima para começar.</p>
             </div>
           ) : (
-            <div className="bg-[#0d150d] border border-[#1a2e1a] rounded-2xl overflow-hidden divide-y divide-[#1a2e1a]">
-              {ebooks.map((ebook) => (
-                <div key={ebook.gamma_generation_id} className="flex items-center justify-between gap-3 px-5 py-3.5 hover:bg-[#0f1a0f] transition-colors">
-                  <div className="min-w-0 flex items-center gap-3">
-                    <div className="w-7 h-7 bg-[#1a2e1a] rounded-lg flex items-center justify-center shrink-0">
-                      <FileText size={13} className="text-[#4ade80]" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{ebook.title}</p>
+            <div style={{ background: '#0d150d', border: '1px solid #1a2e1a', borderRadius: '16px', overflow: 'hidden' }}>
+              {ebooks.map((ebook, i) => (
+                <div key={ebook.gamma_generation_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '14px 20px', borderTop: i > 0 ? '1px solid #1a2e1a' : 'none' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                    <div style={{ width: '28px', height: '28px', background: '#1a2e1a', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '13px' }}>📄</div>
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ fontSize: '14px', fontWeight: 500, color: '#fff', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ebook.title}</p>
                       {ebook.created_at && (
-                        <p className="text-xs text-gray-600 mt-0.5">
-                          {new Date(ebook.created_at).toLocaleDateString('pt-BR', {
-                            day: '2-digit', month: 'short', year: 'numeric',
-                            hour: '2-digit', minute: '2-digit'
-                          })}
+                        <p style={{ fontSize: '12px', color: '#4b5563', margin: '2px 0 0 0' }}>
+                          {new Date(ebook.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </p>
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <StatusBadge status={ebook.status} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+                    <span style={{ fontSize: '12px', color: ebook.status === 'completed' ? '#4ade80' : ebook.status === 'failed' ? '#f87171' : '#60a5fa', fontWeight: 500 }}>
+                      {ebook.status === 'completed' ? '● Concluído' : ebook.status === 'failed' ? '● Erro' : '● Processando'}
+                    </span>
                     {ebook.status === 'completed' && (
                       <button
                         onClick={() => handleDownload(ebook)}
-                        className="flex items-center gap-1.5 text-xs bg-[#1a3a1a] hover:bg-[#1e4a1e] text-[#4ade80] font-medium px-3 py-1.5 rounded-lg transition-colors"
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', background: '#1a3a1a', color: '#4ade80', fontWeight: 600, padding: '6px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer' }}
                       >
-                        <Download size={12} />
-                        PDF
+                        ⬇ PDF
                       </button>
                     )}
                   </div>
