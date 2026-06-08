@@ -52,8 +52,9 @@ export default function EbookPage() {
   async function loadUserData() {
     setLoadingData(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+     const { data: { session } } = await supabase.auth.getSession()
+const user = session?.user
+if (!user) return
 
       const { data: profile } = await supabase
         .from('profiles')
