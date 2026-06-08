@@ -173,16 +173,18 @@ export async function POST(req: NextRequest) {
       console.error('[generate-ebook] Erro ao incrementar créditos:', updateError)
     }
 
-    await supabase.from('ebooks').insert({
-      user_id: user.id,
-      title,
-      topic,
-      gamma_generation_id: generationId,
-      pdf_url: pdfUrl,
-      status: 'completed',
-    }).throwOnError().catch(() => {
+    try {
+      await supabase.from('ebooks').insert({
+        user_id: user.id,
+        title,
+        topic,
+        gamma_generation_id: generationId,
+        pdf_url: pdfUrl,
+        status: 'completed',
+      })
+    } catch {
       console.warn('[generate-ebook] Tabela ebooks não encontrada, pulando insert.')
-    })
+    }
 
     return NextResponse.json({
       success: true,
