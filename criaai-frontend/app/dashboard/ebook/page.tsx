@@ -1,233 +1,296 @@
 'use client'
-import { useState } from 'react'
-import { createClient } from '@/lib/supabase-browser'
-import styles from './ebook.module.css'
+
+import { useState, useEffect } from 'react'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { BookOpen, Download, Loader2, Sparkles, AlertCircle, CheckCircle2 } from 'lucide-react'
+
+interface EbookFormData {
+  title: string
+  topic: string
+  targetAudience: string
+  tone: string
+  chapters: string
+  language: string
+}
+
+interface GeneratedEbook {
+  id?: string
+  gamma_generation_id: string
+  title: string
+  pdf_url: string
+  created_at?: string
+  status: string
+}
+
+interface CreditInfo {
+  used: number
+  limit: number
+  planName: string
+}
+
+function CreditBadge({ info }: { info: CreditInfo | null }) {
+  if (!info) return null
+  const remaining = info.limit - info.used
+  const isLow = remaining <= 1
+  const isEmpty = remaining <= 0
+
+  return (
+    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium border ${
+      isEmpty ? 'bg-red-50 border-red-200 text-red-700'
+      : isLow ? 'bg-amber-50 border-amber-200 text-amber-700'
+      : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+    }`}>
+      <BookOpen size={14} />
+      <span>{remaining} de {info.limit} ebooks — Plano {info.planName}</span>
+    </div>
+  )
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const map: Record<string, { label: string; className: string }> = {
+    completed: { label: 'Concluído', className: 'bg-emerald-100 text-emerald-700' },
+    processing: { label: 'Processando', className: 'bg-blue-100 text-blue-700' },
+    failed: { label: 'Erro', className: 'bg-red-100 text-red-700' },
+  }
+  const s = map[status] ?? { label: status, className: 'bg-gray-100 text-gray-600' }
+  return (
+    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.className}`}>
+      {s.label}
+    </span>
+  )
+}
 
 export default function EbookPage() {
-  const [activeTab, setActiveTab] = useState<'ebook'|'capa'>('ebook')
-  const [niche, setNiche] = useState('')
-  const [title, setTitle] = useState('')
-  const [subtitle, setSubtitle] = useState('')
-  const [author, setAuthor] = useState('')
-  const [chapters, setChapters] = useState('7')
-  const [color, setColor] = useState('#7c5cfc')
-  const [template, setTemplate] = useState('moderno')
-  const [customDetails, setCustomDetails] = useState('')
+  const supabase = createClientComponentClient()
+
+  const [form, setForm] = useState<EbookFormData>({
+    title: '',
+    topic: '',
+    targetAudience: '',
+    tone: 'profissional e didático',
+    chapters: '',
+    language: 'pt-BR',
+  })
+
+  const [credits, setCredits] = useState<CreditInfo | null>(null)
+  const [ebooks, setEbooks] = useState<GeneratedEbook[]>([])
   const [loading, setLoading] = useState(false)
-  const [loadingPdf, setLoadingPdf] = useState(false)
-  const [loadingCover, setLoadingCover] = useState(false)
-  const [step, setStep] = useState(0)
-  const [result, setResult] = useState<any>(null)
-  const [coverUrl, setCoverUrl] = useState('')
-  const supabase = createClient()
+  const [loadingData, setLoadingData] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  const [upgradeRequired, setUpgradeRequired] = useState(false)
 
-  const steps = ['Analisando nicho...','Gerando estrutura...','Escrevendo com IA...','Aplicando design...','Pronto! ✓']
-  const colors = ['#7c5cfc','#ef4444','#22c55e','#f59e0b','#0ea5e9','#ec4899']
-  const templates = [
-    { id: 'moderno', label: 'Moderno', desc: 'Fundo escuro, neon', bg: '#0a0a0f', accent: '#C2FF00' },
-    { id: 'minimalista', label: 'Minimalista', desc: 'Clean e elegante', bg: '#ffffff', accent: '#333333' },
-    { id: 'bold', label: 'Bold', desc: 'Cores vibrantes', bg: color, accent: '#ffffff' },
-  ]
+  useEffect(() => { loadUserData() }, [])
 
-  async function generate() {
-    if (!niche || !title) return alert('Preencha o nicho e o título!')
-    setLoading(true); setStep(0); setResult(null)
-    for (let i = 0; i < steps.length - 1; i++) { await new Promise(r => setTimeout(r, 1000)); setStep(i + 1) }
-    const { data: { session } } = await supabase.auth.getSession()
-    const res = await fetch('/api/generate-ebook', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
-      body: JSON.stringify({ niche, title, subtitle, author, chapters: parseInt(chapters), color, customDetails })
-    })
-    const data = await res.json()
-    setLoading(false)
-    if (data.ebook) setResult(data)
-    else alert('Erro: ' + (data.error || 'Tente novamente'))
-  }
+  async function loadUserData() {
+    setLoadingData(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
 
-  async function generateCover() {
-    if (!title) return alert('Preencha o título primeiro!')
-    setLoadingCover(true)
-    const { data: { session } } = await supabase.auth.getSession()
-    const res = await fetch('/api/generate-cover', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
-      body: JSON.stringify({ title, subtitle, niche, color, template })
-    })
-    const data = await res.json()
-    setLoadingCover(false)
-    if (data.imageUrl) setCoverUrl(data.imageUrl)
-    else alert('Erro ao gerar capa: ' + (data.error || 'Tente novamente'))
-  }
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('credits_ebooks_used, credits_ebooks_extra, plans(name, credits_ebooks)')
+        .eq('id', user.id)
+        .single()
 
-  async function downloadPdf() {
-    if (!result) return
-    setLoadingPdf(true)
-    const { data: { session } } = await supabase.auth.getSession()
-
-    // Converte imagem para base64 via rota separada
-    let coverBase64 = null
-    if (result.coverImageUrl) {
-      try {
-        const convRes = await fetch('/api/convert-image', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
-          body: JSON.stringify({ imageUrl: result.coverImageUrl })
+      if (profile) {
+        const plan = (profile as any).plans
+        setCredits({
+          used: profile.credits_ebooks_used ?? 0,
+          limit: (plan?.credits_ebooks ?? 0) + (profile.credits_ebooks_extra ?? 0),
+          planName: plan?.name ?? 'Desconhecido',
         })
-        const convData = await convRes.json()
-        coverBase64 = convData.base64 || null
-      } catch {}
-    }
+      }
 
-    const res = await fetch('/api/generate-pdf', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
-      body: JSON.stringify({ title, subtitle, author, niche, color, template, chapters: result.ebook.chapters, coverImageUrl: result.coverImageUrl, coverBase64 })
-    })
-    const data = await res.json()
-    setLoadingPdf(false)
-    if (!data.html) return alert('Erro ao gerar PDF')
-    const win = window.open('', '_blank')
-    if (win) { win.document.write(data.html); win.document.close(); setTimeout(() => win.print(), 500) }
+      const { data: ebookList } = await supabase
+        .from('ebooks')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(10)
+
+      if (ebookList) setEbooks(ebookList as GeneratedEbook[])
+    } catch (err) {
+      console.error('Erro ao carregar dados:', err)
+    } finally {
+      setLoadingData(false)
+    }
+  }
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    setSuccess(null)
+    setUpgradeRequired(false)
+    setLoading(true)
+
+    try {
+      const chaptersArray = form.chapters
+        ? form.chapters.split('\n').map((c) => c.trim()).filter(Boolean)
+        : []
+
+      const res = await fetch('/api/generate-ebook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: form.title,
+          topic: form.topic,
+          targetAudience: form.targetAudience || undefined,
+          tone: form.tone || undefined,
+          chapters: chaptersArray.length > 0 ? chaptersArray : undefined,
+          language: form.language,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        if (data.upgradeRequired) {
+          setUpgradeRequired(true)
+          setError(data.details ?? 'Limite de créditos atingido.')
+        } else {
+          setError(data.error ?? 'Erro ao gerar ebook.')
+        }
+        return
+      }
+
+      setSuccess(`Ebook gerado com sucesso! ${data.creditsRemaining} crédito(s) restante(s).`)
+      setForm({ title: '', topic: '', targetAudience: '', tone: 'profissional e didático', chapters: '', language: 'pt-BR' })
+      await loadUserData()
+    } catch (err: any) {
+      setError(err.message ?? 'Erro inesperado.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function handleDownload(ebook: GeneratedEbook) {
+    const url = `/api/generate-pdf?generationId=${encodeURIComponent(ebook.gamma_generation_id)}`
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${ebook.title}.pdf`
+    link.click()
   }
 
   return (
-    <div className={styles.page}>
-      <div className={styles.topbar}>
+    <div className="max-w-3xl mx-auto py-8 px-4 space-y-8">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <div className={styles.title}>Ebook Builder</div>
-          <div className={styles.sub}>Crie ebooks completos com IA para qualquer nicho</div>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <BookOpen className="text-indigo-600" size={24} />
+            Gerar Ebook com IA
+          </h1>
+          <p className="text-gray-500 text-sm mt-1">Powered by Gamma — documentos profissionais em PDF</p>
         </div>
+        <CreditBadge info={credits} />
       </div>
 
-      <div className={styles.tabBar}>
-        <button className={`${styles.tabBtn} ${activeTab === 'ebook' ? styles.tabActive : ''}`} onClick={() => setActiveTab('ebook')}>
-          <i className="ti ti-book-2"/> Gerar Ebook
-        </button>
-        <button className={`${styles.tabBtn} ${activeTab === 'capa' ? styles.tabActive : ''}`} onClick={() => setActiveTab('capa')}>
-          <i className="ti ti-photo-ai"/> Gerar Capa 3D
-        </button>
-      </div>
+      {upgradeRequired && (
+        <div className="flex gap-3 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+          <AlertCircle size={18} className="shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold">Créditos esgotados</p>
+            <p>{error}</p>
+            <a href="/dashboard/planos" className="underline font-medium mt-1 inline-block">Ver planos disponíveis →</a>
+          </div>
+        </div>
+      )}
 
-      <div className={styles.content}>
-        {activeTab === 'ebook' && (
-          <div className={styles.grid}>
-            <div className={styles.panel}>
-              <div className={styles.sectionTitle}>Conteúdo</div>
-              <div className={styles.field}><label>Nicho / tema</label><input type="text" value={niche} onChange={e=>setNiche(e.target.value)} placeholder="Ex: emagrecimento, renda extra..."/></div>
-              <div className={styles.field}><label>Título</label><input type="text" value={title} onChange={e=>setTitle(e.target.value)} placeholder="Ex: Guia Completo de..."/></div>
-              <div className={styles.field}><label>Subtítulo</label><input type="text" value={subtitle} onChange={e=>setSubtitle(e.target.value)} placeholder="Uma frase de impacto..."/></div>
-              <div className={styles.field}><label>Autor</label><input type="text" value={author} onChange={e=>setAuthor(e.target.value)} placeholder="Seu nome ou marca"/></div>
-              <div className={styles.field}>
-                <label>Capítulos</label>
-                <select value={chapters} onChange={e=>setChapters(e.target.value)}>
-                  {['5','7','10','15','20','25','30'].map(n => <option key={n} value={n}>{n} capítulos</option>)}
-                </select>
-              </div>
-              <div className={styles.field}>
-                <label>Cor principal</label>
-                <div className={styles.colorRow}>{colors.map(c=><div key={c} className={`${styles.colorSwatch} ${color===c?styles.colorActive:''}`} style={{background:c}} onClick={()=>setColor(c)}/>)}</div>
-              </div>
-              <div className={styles.field}>
-                <label>Detalhe seu ebook (opcional)</label>
-                <textarea value={customDetails} onChange={e=>setCustomDetails(e.target.value)} placeholder="Ex: quero que o ebook seja focado em mães que trabalham em casa..." rows={3} style={{width:'100%',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:9,padding:'10px 14px',color:'var(--text)',fontSize:14,fontFamily:'DM Sans, sans-serif',outline:'none',resize:'vertical'}}/>
-              </div>
-              <button className={styles.btnGenerate} onClick={generate} disabled={loading}>
-                {loading ? 'Gerando...' : <><i className="ti ti-sparkles"/>Gerar ebook com IA · 1 crédito</>}
-              </button>
-              {loading && <div className={styles.progress}>{steps.map((s,i)=><div key={i} className={`${styles.progStep} ${i<step?styles.done:i===step?styles.active:''}`}><div className={styles.dot}/><span>{s}</span></div>)}</div>}
+      {error && !upgradeRequired && (
+        <div className="flex gap-3 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+          <AlertCircle size={18} className="shrink-0 mt-0.5" />
+          <p>{error}</p>
+        </div>
+      )}
+
+      {success && (
+        <div className="flex gap-3 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm">
+          <CheckCircle2 size={18} className="shrink-0 mt-0.5" />
+          <p>{success}</p>
+        </div>
+      )}
+
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-5">
+        <h2 className="text-base font-semibold text-gray-800">Detalhes do Ebook</h2>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Título <span className="text-red-500">*</span></label>
+            <input type="text" name="title" value={form.title} onChange={handleChange} placeholder="Ex: Guia Definitivo de Marketing Digital" required className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tópico <span className="text-red-500">*</span></label>
+            <textarea name="topic" value={form.topic} onChange={handleChange} placeholder="Descreva o tema central..." required rows={3} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Público-alvo</label>
+              <input type="text" name="targetAudience" value={form.targetAudience} onChange={handleChange} placeholder="Ex: empreendedores iniciantes" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
-
-            <div className={styles.preview}>
-              {result ? (
-                <>
-                  <div className={styles.ebookCard}>
-                    <div className={styles.cover} style={{background:`linear-gradient(135deg,${color},${color}99)`, position:'relative', overflow:'hidden'}}>
-                      {result.coverImageUrl && <img src={result.coverImageUrl} alt="capa" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',opacity:0.4}}/>}
-                      <div style={{position:'relative',zIndex:1}}>
-                        <div className={styles.coverNiche}>{niche.toUpperCase()}</div>
-                        <div className={styles.coverTitle}>{title}</div>
-                        <div className={styles.coverSub}>{subtitle}</div>
-                      </div>
-                    </div>
-                    <div className={styles.ebookBody}>
-                      <div className={styles.tocTitle} style={{color}}>Sumário</div>
-                      {result.ebook.chapters?.slice(0,7).map((c:any,i:number)=>(
-                        <div key={i} className={styles.tocItem}>
-                          <span style={{color,fontWeight:700}}>{String(i+1).padStart(2,'0')}</span>
-                          <span>{c.title}</span>
-                          <span className={styles.tocPage}>{(i+1)*3+2}</span>
-                        </div>
-                      ))}
-                      {result.ebook.chapters?.length > 7 && <div style={{fontSize:12,color:'#999',padding:'8px 0'}}>+ {result.ebook.chapters.length - 7} capítulos...</div>}
-                    </div>
-                  </div>
-                  <div style={{display:'flex',gap:8,marginTop:12,width:'100%',maxWidth:420}}>
-                    <button onClick={downloadPdf} disabled={loadingPdf} style={{flex:1,padding:'12px',background:'#C2FF00',color:'#000',border:'none',borderRadius:10,fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
-                      <i className="ti ti-download"/>{loadingPdf?'Gerando PDF...':'Baixar PDF com design'}
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <div className={styles.emptyState}>
-                  <i className="ti ti-book-2" style={{fontSize:48,color:'var(--muted)',display:'block',marginBottom:16}}/>
-                  <div className={styles.emptyTitle}>Seu ebook aparece aqui</div>
-                  <div className={styles.emptySub}>Preencha as informações e clique em gerar</div>
-                </div>
-              )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tom e estilo</label>
+              <select name="tone" value={form.tone} onChange={handleChange} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="profissional e didático">Profissional e didático</option>
+                <option value="informal e acessível">Informal e acessível</option>
+                <option value="técnico e detalhado">Técnico e detalhado</option>
+                <option value="motivacional e inspirador">Motivacional e inspirador</option>
+                <option value="acadêmico e formal">Acadêmico e formal</option>
+              </select>
             </div>
           </div>
-        )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Capítulos <span className="text-gray-400 font-normal">(opcional — um por linha)</span></label>
+            <textarea name="chapters" value={form.chapters} onChange={handleChange} placeholder={"Introdução\nCapítulo 1\nConclusão"} rows={4} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none font-mono" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Idioma</label>
+            <select name="language" value={form.language} onChange={handleChange} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="pt-BR">Português (Brasil)</option>
+              <option value="en-US">English (US)</option>
+              <option value="es-ES">Español</option>
+            </select>
+          </div>
+        </div>
 
-        {activeTab === 'capa' && (
-          <div className={styles.grid}>
-            <div className={styles.panel}>
-              <div className={styles.sectionTitle}>Configurar Capa</div>
-              <div className={styles.field}><label>Título do ebook</label><input type="text" value={title} onChange={e=>setTitle(e.target.value)} placeholder="Ex: Guia Completo de..."/></div>
-              <div className={styles.field}><label>Subtítulo</label><input type="text" value={subtitle} onChange={e=>setSubtitle(e.target.value)} placeholder="Uma frase de impacto..."/></div>
-              <div className={styles.field}><label>Nicho / tema</label><input type="text" value={niche} onChange={e=>setNiche(e.target.value)} placeholder="Ex: emagrecimento, renda extra..."/></div>
-              <div className={styles.field}>
-                <label>Cor principal</label>
-                <div className={styles.colorRow}>{colors.map(c=><div key={c} className={`${styles.colorSwatch} ${color===c?styles.colorActive:''}`} style={{background:c}} onClick={()=>setColor(c)}/>)}</div>
-              </div>
-              <div className={styles.field}>
-                <label>Template de design</label>
-                <div className={styles.templateGrid}>
-                  {templates.map(t => (
-                    <div key={t.id} className={`${styles.templateOpt} ${template===t.id?styles.templateSelected:''}`} onClick={()=>setTemplate(t.id)}>
-                      <div className={styles.templatePreview} style={{background:t.id==='bold'?color:t.bg}}>
-                        <div style={{width:20,height:3,background:t.id==='bold'?'#fff':t.accent,borderRadius:2,marginBottom:4}}/>
-                        <div style={{width:32,height:2,background:t.id==='bold'?'rgba(255,255,255,0.5)':'rgba(0,0,0,0.15)',borderRadius:2,marginBottom:3}}/>
-                        <div style={{width:28,height:2,background:t.id==='bold'?'rgba(255,255,255,0.3)':'rgba(0,0,0,0.1)',borderRadius:2}}/>
-                      </div>
-                      <div className={styles.templateName}>{t.label}</div>
-                      <div className={styles.templateDesc}>{t.desc}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <button className={styles.btnGenerate} onClick={generateCover} disabled={loadingCover || !title}>
-                <i className="ti ti-photo-ai"/> {loadingCover ? 'Gerando capa 3D...' : 'Gerar capa 3D com IA · 1 crédito'}
-              </button>
-            </div>
+        <button type="submit" onClick={handleSubmit} disabled={loading || !form.title || !form.topic || (credits !== null && credits.used >= credits.limit)} className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white font-medium py-2.5 rounded-xl transition-colors text-sm">
+          {loading ? <><Loader2 size={16} className="animate-spin" />Gerando ebook (pode levar até 3 min)...</> : <><Sparkles size={16} />Gerar Ebook</>}
+        </button>
 
-            <div className={styles.preview}>
-              {coverUrl ? (
-                <div className={styles.coverResult}>
-                  <div className={styles.coverResultTitle}>Capa 3D gerada</div>
-                  <img src={coverUrl} alt="Capa do ebook" className={styles.coverImg}/>
-                  <a href={coverUrl} download="capa-ebook.png" className={styles.downloadCoverBtn}>
-                    <i className="ti ti-download"/> Baixar capa
-                  </a>
+        {loading && <p className="text-xs text-center text-gray-400">O Gamma está criando seu documento. Não feche esta aba.</p>}
+      </div>
+
+      <div className="space-y-3">
+        <h2 className="text-base font-semibold text-gray-800">Ebooks gerados</h2>
+        {loadingData ? (
+          <div className="flex items-center gap-2 text-gray-400 text-sm py-4"><Loader2 size={16} className="animate-spin" />Carregando...</div>
+        ) : ebooks.length === 0 ? (
+          <p className="text-sm text-gray-400 py-4">Nenhum ebook gerado ainda.</p>
+        ) : (
+          <div className="divide-y divide-gray-100 border border-gray-200 rounded-xl overflow-hidden bg-white">
+            {ebooks.map((ebook) => (
+              <div key={ebook.gamma_generation_id} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-800 truncate">{ebook.title}</p>
+                  {ebook.created_at && (
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {new Date(ebook.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  )}
                 </div>
-              ) : (
-                <div className={styles.emptyState}>
-                  <i className="ti ti-photo-ai" style={{fontSize:48,color:'var(--muted)',display:'block',marginBottom:16}}/>
-                  <div className={styles.emptyTitle}>Sua capa aparece aqui</div>
-                  <div className={styles.emptySub}>Configure e clique em gerar capa</div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <StatusBadge status={ebook.status} />
+                  {ebook.status === 'completed' && (
+                    <button onClick={() => handleDownload(ebook)} className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors">
+                      <Download size={14} />PDF
+                    </button>
+                  )}
                 </div>
-              )}
-            </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
