@@ -5,12 +5,34 @@ import styles from './paginas.module.css'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mcpia.site'
 
+interface SalesPage {
+  id: string
+  slug: string
+  product_name: string
+  theme: string
+  views: number
+  created_at: string
+  active: boolean
+}
+
+interface FormState {
+  productName: string
+  price: string
+  audience: string
+  benefits: string[]
+  bonus: string
+  guarantee: string
+  checkoutUrl: string
+  theme: string
+  customPrompt: string
+}
+
 export default function PaginasPage() {
-  const [tab, setTab] = useState('criar')
-  const [pages, setPages] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState(null)
-  const [form, setForm] = useState({
+  const [tab, setTab] = useState<string>('criar')
+  const [pages, setPages] = useState<SalesPage[]>([])
+  const [loading, setLoading] = useState<boolean>(false)
+  const [result, setResult] = useState<{ slug: string; url: string } | null>(null)
+  const [form, setForm] = useState<FormState>({
     productName: '',
     price: '',
     audience: '',
@@ -36,14 +58,14 @@ export default function PaginasPage() {
       .select('id, slug, product_name, theme, views, created_at, active')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
-    setPages(res.data || [])
+    setPages((res.data as SalesPage[]) || [])
   }
 
-  function setField(key, value) {
+  function setField(key: string, value: string) {
     setForm(function(f) { return Object.assign({}, f, { [key]: value }) })
   }
 
-  function setBenefit(i, value) {
+  function setBenefit(i: number, value: string) {
     const b = [...form.benefits]
     b[i] = value
     setForm(function(f) { return Object.assign({}, f, { benefits: b }) })
@@ -82,7 +104,7 @@ export default function PaginasPage() {
     }
   }
 
-  async function toggleActive(id, active) {
+  async function toggleActive(id: string, active: boolean) {
     await supabase.from('sales_pages').update({ active: !active }).eq('id', id)
     loadPages()
   }
@@ -120,7 +142,7 @@ export default function PaginasPage() {
                 <i className="ti ti-external-link" /> {result.url}
               </a>
               <div className={styles.successActions}>
-                <button className={styles.btnCopy} onClick={function() { navigator.clipboard.writeText(result.url) }}>
+                <button className={styles.btnCopy} onClick={function() { navigator.clipboard.writeText(result!.url) }}>
                   <i className="ti ti-copy" /> Copiar link
                 </button>
                 <button className={styles.btnNew} onClick={function() { setResult(null) }}>
@@ -233,7 +255,7 @@ export default function PaginasPage() {
             </div>
           ) : (
             <div className={styles.pageList}>
-              {pages.map(function(p) {
+              {pages.map(function(p: SalesPage) {
                 return (
                   <div key={p.id} className={styles.pageCard}>
                     <div className={styles.pageCardLeft}>
