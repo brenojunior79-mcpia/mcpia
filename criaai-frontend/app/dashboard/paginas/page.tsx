@@ -152,7 +152,7 @@ export default function PaginasPage() {
                 </div>
                 <div className={styles.field}>
                   <label>Instruções detalhadas para a IA (opcional)</label>
-                  <textarea value={form.customPrompt} onChange={e=>setField('customPrompt',e.target.value)} placeholder="Ex: Quero um tom emocional e inspirador, foco em mães solteiras, com storytelling sobre superação. Use linguagem simples e calorosa. Destaque o resultado em 30 dias e crie senso de urgência." rows={4} style={{width:'100%',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:9,padding:'10px 14px',color:'var(--text)',fontSize:14,fontFamily:'DM Sans, sans-serif',outline:'none',resize:'vertical'}}/>
+                  <textarea value={form.customPrompt} onChange={e=>setField('customPrompt',e.target.value)} placeholder="Ex: Quero um tom emocional e inspirador, foco em mães solteiras..." rows={4} style={{width:'100%',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:9,padding:'10px 14px',color:'var(--text)',fontSize:14,fontFamily:'DM Sans, sans-serif',outline:'none',resize:'vertical'}}/>
                 </div>
               </div>
 
@@ -198,6 +198,13 @@ export default function PaginasPage() {
                     <button className={`${styles.statusBtn} ${p.active?styles.statusOn:styles.statusOff}`} onClick={()=>toggleActive(p.id, p.active)}>
                       {p.active ? 'Ativa' : 'Pausada'}
                     </button>
+                    
+                      href={`/dashboard/paginas/editor/${p.id}`}
+                      className={styles.copyBtn}
+                      style={{textDecoration:'none', display:'flex', alignItems:'center', justifyContent:'center'}}
+                    >
+                      ✏️
+                    </a>
                     <button className={styles.copyBtn} onClick={()=>navigator.clipboard.writeText(`${APP_URL}/p/${p.slug}`)}>
                       <i className="ti ti-copy"/>
                     </button>
