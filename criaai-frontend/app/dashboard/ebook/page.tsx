@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createBrowserClient } from '@supabase/ssr'
 
 interface EbookFormData {
   title: string
@@ -45,7 +45,10 @@ const defaultThemes: Theme[] = [
 ]
 
 export default function EbookPage() {
-  const supabase = createClientComponentClient()
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
 
   const [form, setForm] = useState<EbookFormData>({
     title: '',
@@ -77,9 +80,7 @@ export default function EbookPage() {
       const res = await fetch('/api/ebook-themes')
       if (res.ok) {
         const data = await res.json()
-        if (data.themes && data.themes.length > 0) {
-          setThemes(data.themes)
-        }
+        if (data.themes && data.themes.length > 0) setThemes(data.themes)
       }
     } catch (err) {
       console.error('Erro ao carregar temas:', err)
@@ -89,33 +90,32 @@ export default function EbookPage() {
   async function loadUserData() {
     setLoadingData(true)
     try {
-      const sessionResult = await supabase.auth.getSession()
-      const user = sessionResult.data.session?.user
+      const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      const profileResult = await supabase
+      const { data: profile } = await supabase
         .from('profiles')
         .select('credits_ebooks_used, credits_ebooks_extra, plans(name, credits_ebooks)')
         .eq('id', user.id)
         .single()
 
-      if (profileResult.data) {
-        const plan = (profileResult.data as any).plans
+      if (profile) {
+        const plan = (profile as any).plans
         setCredits({
-          used: profileResult.data.credits_ebooks_used ?? 0,
-          limit: (plan?.credits_ebooks ?? 0) + (profileResult.data.credits_ebooks_extra ?? 0),
+          used: profile.credits_ebooks_used ?? 0,
+          limit: (plan?.credits_ebooks ?? 0) + (profile.credits_ebooks_extra ?? 0),
           planName: plan?.name ?? 'Starter',
         })
       }
 
-      const ebookResult = await supabase
+      const { data: ebookList } = await supabase
         .from('ebooks')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(10)
 
-      if (ebookResult.data) setEbooks(ebookResult.data as GeneratedEbook[])
+      if (ebookList) setEbooks(ebookList as GeneratedEbook[])
     } catch (err) {
       console.error('Erro ao carregar dados:', err)
     } finally {
@@ -223,7 +223,6 @@ export default function EbookPage() {
             </div>
             <p style={{ fontSize: '12px', color: '#6b7280', margin: 0, paddingLeft: '42px' }}>Gerador de ebooks profissionais em PDF</p>
           </div>
-
           {credits && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#0f1a0f', border: '1px solid #1e3a1e', borderRadius: '12px', padding: '12px 16px' }}>
               <div style={{ width: '32px', height: '32px', background: '#1a3a1a', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>📗</div>
@@ -271,24 +270,19 @@ export default function EbookPage() {
             <span>📋</span>
             <span style={{ fontSize: '14px', fontWeight: 600, color: '#fff' }}>Detalhes do Ebook</span>
           </div>
-
           <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
             <div>
               <label style={labelStyle}>Título <span style={{ color: '#4ade80' }}>*</span></label>
               <input type="text" name="title" value={form.title} onChange={handleChange} placeholder="Ex: Guia Definitivo de Marketing Digital" required style={inputStyle} />
             </div>
-
             <div>
               <label style={labelStyle}>Tópico principal <span style={{ color: '#4ade80' }}>*</span></label>
               <textarea name="topic" value={form.topic} onChange={handleChange} placeholder="Descreva o tema central do ebook..." required rows={2} style={{ ...inputStyle, resize: 'none' }} />
             </div>
-
             <div>
               <label style={labelStyle}>Detalhamento <span style={{ color: '#6b7280', fontWeight: 400 }}>(opcional · descreva com mais detalhes o que quer no ebook)</span></label>
               <textarea name="details" value={form.details} onChange={handleChange} placeholder="Ex: Quero um ebook com linguagem simples, exemplos práticos, voltado para quem nunca vendeu online..." rows={4} style={{ ...inputStyle, resize: 'none' }} />
             </div>
-
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
                 <label style={labelStyle}>Público-alvo</label>
@@ -305,7 +299,6 @@ export default function EbookPage() {
                 </select>
               </div>
             </div>
-
             <div>
               <label style={labelStyle}>Design visual</label>
               <select name="themeId" value={form.themeId} onChange={handleChange} style={inputStyle}>
@@ -315,12 +308,10 @@ export default function EbookPage() {
                 })}
               </select>
             </div>
-
             <div>
               <label style={labelStyle}>Capítulos <span style={{ color: '#6b7280', fontWeight: 400 }}>(opcional · um por linha)</span></label>
               <textarea name="chapters" value={form.chapters} onChange={handleChange} placeholder={'Introdução\nCapítulo 1\nConclusão'} rows={3} style={{ ...inputStyle, resize: 'none', fontFamily: 'monospace' }} />
             </div>
-
             <div>
               <label style={labelStyle}>Idioma</label>
               <select name="language" value={form.language} onChange={handleChange} style={inputStyle}>
@@ -329,30 +320,20 @@ export default function EbookPage() {
                 <option value="es-ES">Español</option>
               </select>
             </div>
-
             <button
               onClick={handleSubmit}
               disabled={loading || !form.title || !form.topic || noCredits}
               style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                padding: '12px',
-                borderRadius: '12px',
-                border: 'none',
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                padding: '12px', borderRadius: '12px', border: 'none',
                 cursor: loading || noCredits || !form.title || !form.topic ? 'not-allowed' : 'pointer',
                 background: loading || noCredits ? '#1a2e1a' : 'linear-gradient(135deg, #16a34a, #4ade80)',
                 color: loading || noCredits ? '#4ade80' : '#0a0f0a',
-                fontWeight: 700,
-                fontSize: '14px',
-                opacity: !form.title || !form.topic ? 0.5 : 1,
+                fontWeight: 700, fontSize: '14px', opacity: !form.title || !form.topic ? 0.5 : 1,
               }}
             >
               {loading ? '⏳ Gerando ebook — aguarde até 3 min...' : '✨ Gerar Ebook com IA'}
             </button>
-
             {loading && (
               <p style={{ fontSize: '12px', color: '#6b7280', textAlign: 'center', margin: 0 }}>
                 ⚡ Seu ebook está sendo criado. Não feche esta aba.
@@ -366,7 +347,6 @@ export default function EbookPage() {
             <span style={{ fontSize: '14px', color: '#6b7280' }}>📄</span>
             <h2 style={{ fontSize: '14px', fontWeight: 600, color: '#d1d5db', margin: 0 }}>Ebooks gerados</h2>
           </div>
-
           {loadingData ? (
             <p style={{ fontSize: '14px', color: '#6b7280', textAlign: 'center', padding: '24px 0' }}>Carregando...</p>
           ) : ebooks.length === 0 ? (
