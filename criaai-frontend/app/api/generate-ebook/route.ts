@@ -1,6 +1,5 @@
-// criaai-frontend/app/api/generate-ebook/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 const GAMMA_API_URL = 'https://public-api.gamma.app/v1.0/generations'
@@ -14,34 +13,26 @@ function sleep(ms: number) {
 }
 
 async function startGammaGeneration(prompt: string): Promise<string> {
-  const body = {
-    input: prompt,
-    options: {
-      format: 'document',
-      orientation: 'portrait',
-    },
-  }
-
   const res = await fetch(GAMMA_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-API-KEY': GAMMA_API_KEY,
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify({
+      input: prompt,
+      options: { format: 'document', orientation: 'portrait' },
+    }),
   })
 
   if (!res.ok) {
     const errText = await res.text()
-    throw new Error(`Gamma API error ao iniciar geração: ${res.status} — ${errText}`)
+    throw new Error(`Gamma API error: ${res.status} — ${errText}`)
   }
 
   const data = await res.json()
   const generationId: string = data.generationId ?? data.id
-  if (!generationId) {
-    throw new Error('Gamma não retornou generationId. Resposta: ' + JSON.stringify(data))
-  }
-
+  if (!generationId) throw new Error('Gamma não retornou generationId: ' + JSON.stringify(data))
   return generationId
 }
 
@@ -56,17 +47,13 @@ async function pollGammaUntilDone(generationId: string): Promise<string> {
       headers: { 'X-API-KEY': GAMMA_API_KEY },
     })
 
-    if (!res.ok) {
-      const errText = await res.text()
-      throw new Error(`Gamma polling error: ${res.status} — ${errText}`)
-    }
+    if (!res.ok) throw new Error(`Gamma polling error: ${res.status}`)
 
     const data = await res.json()
     const status: string = data.status ?? data.state ?? ''
 
     if (status === 'completed' || status === 'done' || status === 'success') {
-      const pdfUrl = await exportGammaAsPdf(generationId)
-      return pdfUrl
+      return await exportGammaAsPdf(generationId)
     }
 
     if (status === 'failed' || status === 'error') {
@@ -74,13 +61,11 @@ async function pollGammaUntilDone(generationId: string): Promise<string> {
     }
   }
 
-  throw new Error('Timeout: Gamma demorou mais de 5 minutos para gerar o ebook.')
+  throw new Error('Timeout: Gamma demorou mais de 5 minutos.')
 }
 
 async function exportGammaAsPdf(generationId: string): Promise<string> {
-  const exportUrl = `${GAMMA_API_URL}/${generationId}/export`
-
-  const res = await fetch(exportUrl, {
+  const res = await fetch(`${GAMMA_API_URL}/${generationId}/export`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -89,32 +74,61 @@ async function exportGammaAsPdf(generationId: string): Promise<string> {
     body: JSON.stringify({ format: 'pdf' }),
   })
 
-  if (!res.ok) {
-    const errText = await res.text()
-    throw new Error(`Gamma export error: ${res.status} — ${errText}`)
-  }
+  if (!res.ok) throw new Error(`Gamma export error: ${res.status}`)
 
   const data = await res.json()
   const url: string = data.url ?? data.downloadUrl ?? data.pdfUrl
-
-  if (!url) {
-    throw new Error('Gamma export não retornou URL. Resposta: ' + JSON.stringify(data))
-  }
-
+  if (!url) throw new Error('Gamma export não retornou URL: ' + JSON.stringify(data))
   return url
+}
+
+function buildGammaPrompt({ title, topic, targetAudience, tone, chapters, language }: {
+  title: string
+  topic: string
+  targetAudience?: string
+  tone?: string
+  chapters?: string[]
+  language: string
+}): string {
+  const lines = [
+    `Crie um ebook completo com o título: "${title}".`,
+    `Tema principal: ${topic}.`,
+  ]
+  if (targetAudience) lines.push(`Público-alvo: ${targetAudience}.`)
+  if (tone) lines.push(`Tom e estilo: ${tone}.`)
+  if (chapters && chapters.length > 0) {
+    lines.push(`Estrutura de capítulos sugerida:`)
+    chapters.forEach((ch, i) => lines.push(`  ${i + 1}. ${ch}`))
+  } else {
+    lines.push(`Estrutura sugerida: Introdução, 4 a 6 capítulos com conteúdo aprofundado, e Conclusão.`)
+  }
+  lines.push(
+    `O documento deve ser visualmente organizado, com títulos claros, subtítulos e parágrafos bem espaçados.`,
+    `Idioma: ${language}.`,
+    `Formato: documento vertical (portrait), pronto para exportação em PDF.`
+  )
+  return lines.join('\n')
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const cookieStore = cookies()
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) { return cookieStore.get(name)?.value },
+          set() {},
+          remove() {},
+        },
+      }
+    )
 
-    const user = session?.user
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-    if (!user) {
+    if (authError || !user) {
       return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
     }
 
@@ -155,24 +169,17 @@ export async function POST(req: NextRequest) {
     const { title, topic, targetAudience, tone, chapters, language = 'pt-BR' } = body
 
     if (!title || !topic) {
-      return NextResponse.json(
-        { error: 'Campos obrigatórios: title, topic.' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Campos obrigatórios: title, topic.' }, { status: 400 })
     }
 
     const prompt = buildGammaPrompt({ title, topic, targetAudience, tone, chapters, language })
     const generationId = await startGammaGeneration(prompt)
     const pdfUrl = await pollGammaUntilDone(generationId)
 
-    const { error: updateError } = await supabase
+    await supabase
       .from('profiles')
       .update({ credits_ebooks_used: creditsUsed + 1 })
       .eq('id', user.id)
-
-    if (updateError) {
-      console.error('[generate-ebook] Erro ao incrementar créditos:', updateError)
-    }
 
     try {
       await supabase.from('ebooks').insert({
@@ -200,38 +207,4 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     )
   }
-}
-
-function buildGammaPrompt({
-  title, topic, targetAudience, tone, chapters, language,
-}: {
-  title: string
-  topic: string
-  targetAudience?: string
-  tone?: string
-  chapters?: string[]
-  language: string
-}): string {
-  const lines: string[] = [
-    `Crie um ebook completo com o título: "${title}".`,
-    `Tema principal: ${topic}.`,
-  ]
-
-  if (targetAudience) lines.push(`Público-alvo: ${targetAudience}.`)
-  if (tone) lines.push(`Tom e estilo: ${tone}.`)
-
-  if (chapters && chapters.length > 0) {
-    lines.push(`Estrutura de capítulos sugerida:`)
-    chapters.forEach((ch, i) => lines.push(`  ${i + 1}. ${ch}`))
-  } else {
-    lines.push(`Estrutura sugerida: Introdução, 4 a 6 capítulos com conteúdo aprofundado, e Conclusão.`)
-  }
-
-  lines.push(
-    `O documento deve ser visualmente organizado, com títulos claros, subtítulos, listas e parágrafos bem espaçados.`,
-    `Idioma: ${language}.`,
-    `Formato: documento vertical (portrait), pronto para exportação em PDF.`
-  )
-
-  return lines.join('\n')
 }
