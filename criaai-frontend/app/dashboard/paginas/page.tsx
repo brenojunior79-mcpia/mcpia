@@ -250,7 +250,7 @@ export default function PaginasPage() {
                       >
                         {p.active ? 'Ativa' : 'Pausada'}
                       </button>
-                      
+                      <a
                         href={'/dashboard/paginas/editor/' + p.id}
                         className={styles.copyBtn}
                         style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
