@@ -19,10 +19,10 @@ async function startGammaGeneration(prompt: string): Promise<string> {
       'Content-Type': 'application/json',
       'X-API-KEY': GAMMA_API_KEY,
     },
-   body: JSON.stringify({
-  inputText: prompt,
-  textMode: 'generate',
-}),
+    body: JSON.stringify({
+      inputText: prompt,
+      textMode: 'generate',
+    }),
   })
 
   if (!res.ok) {
@@ -31,7 +31,9 @@ async function startGammaGeneration(prompt: string): Promise<string> {
   }
 
   const data = await res.json()
-  const generationId: string = data.generationId ?? data.id
+  console.log('[gamma] startGeneration response:', JSON.stringify(data))
+
+  const generationId: string = data.generationId ?? data.id ?? data.docId
   if (!generationId) throw new Error('Gamma não retornou generationId: ' + JSON.stringify(data))
   return generationId
 }
@@ -50,10 +52,25 @@ async function pollGammaUntilDone(generationId: string): Promise<string> {
     if (!res.ok) throw new Error(`Gamma polling error: ${res.status}`)
 
     const data = await res.json()
+    console.log('[gamma] polling response:', JSON.stringify(data))
+
     const status: string = data.status ?? data.state ?? ''
 
     if (status === 'completed' || status === 'done' || status === 'success') {
-      return await exportGammaAsPdf(generationId)
+      // Tentar pegar URL do PDF direto na resposta
+      const pdfUrl: string =
+        data.pdfUrl ??
+        data.pdf_url ??
+        data.exportUrl ??
+        data.url ??
+        data.downloadUrl ??
+        data.outputUrl ??
+        ''
+
+      if (pdfUrl) return pdfUrl
+
+      // Se não tiver URL, retornar o ID para o frontend buscar
+      throw new Error('Gamma concluiu mas não retornou URL do PDF. Resposta: ' + JSON.stringify(data))
     }
 
     if (status === 'failed' || status === 'error') {
@@ -62,24 +79,6 @@ async function pollGammaUntilDone(generationId: string): Promise<string> {
   }
 
   throw new Error('Timeout: Gamma demorou mais de 5 minutos.')
-}
-
-async function exportGammaAsPdf(generationId: string): Promise<string> {
-  const res = await fetch(`${GAMMA_API_URL}/${generationId}/export`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-API-KEY': GAMMA_API_KEY,
-    },
-    body: JSON.stringify({ format: 'pdf' }),
-  })
-
-  if (!res.ok) throw new Error(`Gamma export error: ${res.status}`)
-
-  const data = await res.json()
-  const url: string = data.url ?? data.downloadUrl ?? data.pdfUrl
-  if (!url) throw new Error('Gamma export não retornou URL: ' + JSON.stringify(data))
-  return url
 }
 
 function buildGammaPrompt({ title, topic, targetAudience, tone, chapters, language }: {
