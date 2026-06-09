@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
 
 interface EbookFormData {
   title: string
@@ -45,11 +44,6 @@ const defaultThemes: Theme[] = [
 ]
 
 export default function EbookPage() {
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-
   const [form, setForm] = useState<EbookFormData>({
     title: '',
     topic: '',
@@ -90,32 +84,12 @@ export default function EbookPage() {
   async function loadUserData() {
     setLoadingData(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('credits_ebooks_used, credits_ebooks_extra, plans(name, credits_ebooks)')
-        .eq('id', user.id)
-        .single()
-
-      if (profile) {
-        const plan = (profile as any).plans
-        setCredits({
-          used: profile.credits_ebooks_used ?? 0,
-          limit: (plan?.credits_ebooks ?? 0) + (profile.credits_ebooks_extra ?? 0),
-          planName: plan?.name ?? 'Starter',
-        })
+      const res = await fetch('/api/list-ebooks')
+      if (res.ok) {
+        const data = await res.json()
+        if (data.credits) setCredits(data.credits)
+        if (data.ebooks) setEbooks(data.ebooks)
       }
-
-      const { data: ebookList } = await supabase
-        .from('ebooks')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(10)
-
-      if (ebookList) setEbooks(ebookList as GeneratedEbook[])
     } catch (err) {
       console.error('Erro ao carregar dados:', err)
     } finally {
@@ -169,8 +143,6 @@ export default function EbookPage() {
       setSuccess('Ebook gerado com sucesso! ' + data.creditsRemaining + ' credito(s) restante(s).')
       setForm({ title: '', topic: '', details: '', targetAudience: '', tone: 'profissional e didático', chapters: '', language: 'pt-BR', themeId: '' })
       await loadUserData()
-      setTimeout(async function() { await loadUserData() }, 2000)
-      setTimeout(async function() { await loadUserData() }, 5000)
     } catch (err: any) {
       setError(err.message ?? 'Erro inesperado.')
     } finally {
@@ -187,23 +159,14 @@ export default function EbookPage() {
   const pct = credits ? Math.min(100, Math.round((credits.used / credits.limit) * 100)) : 0
 
   const inputStyle: React.CSSProperties = {
-    width: '100%',
-    background: '#0a120a',
-    border: '1px solid #1e3a1e',
-    borderRadius: '8px',
-    padding: '10px 12px',
-    fontSize: '14px',
-    color: '#ffffff',
-    outline: 'none',
-    boxSizing: 'border-box',
+    width: '100%', background: '#0a120a', border: '1px solid #1e3a1e',
+    borderRadius: '8px', padding: '10px 12px', fontSize: '14px',
+    color: '#ffffff', outline: 'none', boxSizing: 'border-box',
   }
 
   const labelStyle: React.CSSProperties = {
-    display: 'block',
-    fontSize: '12px',
-    fontWeight: 500,
-    color: '#9ca3af',
-    marginBottom: '6px',
+    display: 'block', fontSize: '12px', fontWeight: 500,
+    color: '#9ca3af', marginBottom: '6px',
   }
 
   const themeOptions = themes.map(function(t) {
@@ -281,7 +244,7 @@ export default function EbookPage() {
             </div>
             <div>
               <label style={labelStyle}>Detalhamento <span style={{ color: '#6b7280', fontWeight: 400 }}>(opcional · descreva com mais detalhes o que quer no ebook)</span></label>
-              <textarea name="details" value={form.details} onChange={handleChange} placeholder="Ex: Quero um ebook com linguagem simples, exemplos práticos, voltado para quem nunca vendeu online..." rows={4} style={{ ...inputStyle, resize: 'none' }} />
+              <textarea name="details" value={form.details} onChange={handleChange} placeholder="Ex: Quero um ebook com linguagem simples, exemplos práticos..." rows={4} style={{ ...inputStyle, resize: 'none' }} />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
