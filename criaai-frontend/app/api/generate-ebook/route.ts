@@ -3,27 +3,36 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 const GAMMA_API_URL = 'https://public-api.gamma.app/v1.0/generations'
-const GAMMA_EXPORT_URL = 'https://public-api.gamma.app/v1.0/export'
 const GAMMA_API_KEY = process.env.GAMMA_API_KEY!
 
-const POLL_INTERVAL_MS = 4_000
+const POLL_INTERVAL_MS = 5_000
 const POLL_TIMEOUT_MS = 5 * 60 * 1_000
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-async function startGammaGeneration(prompt: string): Promise<string> {
+async function startGammaGeneration(prompt: string, title: string, targetAudience: string, tone: string, language: string): Promise<string> {
+  const body: any = {
+    inputText: prompt,
+    textMode: 'generate',
+    format: 'doc',
+    exportAs: 'pdf',
+    title: title,
+    textOptions: {
+      language: language === 'pt-BR' ? 'pt' : language === 'en-US' ? 'en' : 'es',
+      tone: tone || 'professional',
+      audience: targetAudience || 'general audience',
+    },
+  }
+
   const res = await fetch(GAMMA_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-API-KEY': GAMMA_API_KEY,
     },
-    body: JSON.stringify({
-      inputText: prompt,
-      textMode: 'generate',
-    }),
+    body: JSON.stringify(body),
   })
 
   if (!res.ok) {
@@ -34,12 +43,12 @@ async function startGammaGeneration(prompt: string): Promise<string> {
   const data = await res.json()
   console.log('[gamma] startGeneration response:', JSON.stringify(data))
 
-  const generationId: string = data.generationId ?? data.id
+  const generationId: string = data.generationId
   if (!generationId) throw new Error('Gamma não retornou generationId: ' + JSON.stringify(data))
   return generationId
 }
 
-async function pollGammaUntilDone(generationId: string): Promise<{ gammaId: string; gammaUrl: string }> {
+async function pollGammaUntilDone(generationId: string): Promise<{ exportUrl: string; gammaUrl: string }> {
   const statusUrl = `${GAMMA_API_URL}/${generationId}`
   const deadline = Date.now() + POLL_TIMEOUT_MS
 
@@ -55,13 +64,13 @@ async function pollGammaUntilDone(generationId: string): Promise<{ gammaId: stri
     const data = await res.json()
     console.log('[gamma] polling response:', JSON.stringify(data))
 
-    const status: string = data.status ?? data.state ?? ''
+    const status: string = data.status ?? ''
 
-    if (status === 'completed' || status === 'done' || status === 'success') {
-      const gammaId: string = data.gammaId ?? ''
+    if (status === 'completed') {
+      const exportUrl: string = data.exportUrl ?? ''
       const gammaUrl: string = data.gammaUrl ?? ''
-      if (!gammaId) throw new Error('Gamma não retornou gammaId: ' + JSON.stringify(data))
-      return { gammaId, gammaUrl }
+      if (!exportUrl) throw new Error('Gamma completou mas sem exportUrl. Resposta: ' + JSON.stringify(data))
+      return { exportUrl, gammaUrl }
     }
 
     if (status === 'failed' || status === 'error') {
@@ -72,58 +81,21 @@ async function pollGammaUntilDone(generationId: string): Promise<{ gammaId: stri
   throw new Error('Timeout: Gamma demorou mais de 5 minutos.')
 }
 
-async function exportGammaAsPdf(gammaId: string): Promise<string> {
-  const res = await fetch(GAMMA_EXPORT_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-API-KEY': GAMMA_API_KEY,
-    },
-    body: JSON.stringify({
-      docId: gammaId,
-      format: 'pdf',
-    }),
-  })
-
-  if (!res.ok) {
-    const errText = await res.text()
-    console.log('[gamma] export error response:', errText)
-    throw new Error(`Gamma export error: ${res.status} — ${errText}`)
-  }
-
-  const data = await res.json()
-  console.log('[gamma] export response:', JSON.stringify(data))
-
-  const url: string = data.url ?? data.downloadUrl ?? data.pdfUrl ?? data.exportUrl ?? ''
-  if (!url) throw new Error('Gamma export não retornou URL: ' + JSON.stringify(data))
-  return url
-}
-
-function buildGammaPrompt({ title, topic, targetAudience, tone, chapters, language }: {
+function buildGammaPrompt({ title, topic, chapters }: {
   title: string
   topic: string
-  targetAudience?: string
-  tone?: string
   chapters?: string[]
-  language: string
 }): string {
   const lines = [
-    `Crie um ebook completo com o título: "${title}".`,
-    `Tema principal: ${topic}.`,
+    `Ebook: "${title}"`,
+    `Tema: ${topic}.`,
   ]
-  if (targetAudience) lines.push(`Público-alvo: ${targetAudience}.`)
-  if (tone) lines.push(`Tom e estilo: ${tone}.`)
   if (chapters && chapters.length > 0) {
-    lines.push(`Estrutura de capítulos sugerida:`)
-    chapters.forEach((ch, i) => lines.push(`  ${i + 1}. ${ch}`))
+    lines.push(`Capítulos:`)
+    chapters.forEach((ch, i) => lines.push(`${i + 1}. ${ch}`))
   } else {
-    lines.push(`Estrutura sugerida: Introdução, 4 a 6 capítulos com conteúdo aprofundado, e Conclusão.`)
+    lines.push(`Estrutura: Introdução, 4 a 6 capítulos aprofundados, Conclusão.`)
   }
-  lines.push(
-    `O documento deve ser visualmente organizado, com títulos claros, subtítulos e parágrafos bem espaçados.`,
-    `Idioma: ${language}.`,
-    `Formato: documento vertical (portrait), pronto para exportação em PDF.`
-  )
   return lines.join('\n')
 }
 
@@ -189,10 +161,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Campos obrigatórios: title, topic.' }, { status: 400 })
     }
 
-    const prompt = buildGammaPrompt({ title, topic, targetAudience, tone, chapters, language })
-    const generationId = await startGammaGeneration(prompt)
-    const { gammaId, gammaUrl } = await pollGammaUntilDone(generationId)
-    const pdfUrl = await exportGammaAsPdf(gammaId)
+    const prompt = buildGammaPrompt({ title, topic, chapters })
+    const generationId = await startGammaGeneration(prompt, title, targetAudience, tone, language)
+    const { exportUrl, gammaUrl } = await pollGammaUntilDone(generationId)
 
     await supabase
       .from('profiles')
@@ -205,8 +176,7 @@ export async function POST(req: NextRequest) {
         title,
         topic,
         gamma_generation_id: generationId,
-        pdf_url: pdfUrl,
-        gamma_url: gammaUrl,
+        pdf_url: exportUrl,
         status: 'completed',
       })
     } catch {
@@ -215,7 +185,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      pdfUrl,
+      pdfUrl: exportUrl,
       gammaUrl,
       generationId,
       creditsRemaining: creditLimit - (creditsUsed + 1),
