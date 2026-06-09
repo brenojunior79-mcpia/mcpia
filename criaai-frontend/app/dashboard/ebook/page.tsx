@@ -36,6 +36,14 @@ interface Theme {
   toneKeywords: string[]
 }
 
+const defaultThemes: Theme[] = [
+  { id: 'Chisel', name: 'Chisel', colorKeywords: ['Moderno', 'Clean'], toneKeywords: [] },
+  { id: 'Prism', name: 'Prism', colorKeywords: ['Colorido', 'Vibrante'], toneKeywords: [] },
+  { id: 'Pitch', name: 'Pitch', colorKeywords: ['Escuro', 'Elegante'], toneKeywords: [] },
+  { id: 'Candy', name: 'Candy', colorKeywords: ['Pastel', 'Suave'], toneKeywords: [] },
+  { id: 'Marble', name: 'Marble', colorKeywords: ['Claro', 'Sofisticado'], toneKeywords: [] },
+]
+
 export default function EbookPage() {
   const supabase = createClientComponentClient()
 
@@ -52,7 +60,7 @@ export default function EbookPage() {
 
   const [credits, setCredits] = useState<CreditInfo | null>(null)
   const [ebooks, setEbooks] = useState<GeneratedEbook[]>([])
-  const [themes, setThemes] = useState<Theme[]>([])
+  const [themes, setThemes] = useState<Theme[]>(defaultThemes)
   const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -69,7 +77,9 @@ export default function EbookPage() {
       const res = await fetch('/api/ebook-themes')
       if (res.ok) {
         const data = await res.json()
-        setThemes(data.themes ?? [])
+        if (data.themes && data.themes.length > 0) {
+          setThemes(data.themes)
+        }
       }
     } catch (err) {
       console.error('Erro ao carregar temas:', err)
@@ -79,33 +89,33 @@ export default function EbookPage() {
   async function loadUserData() {
     setLoadingData(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const user = session?.user
+      const sessionResult = await supabase.auth.getSession()
+      const user = sessionResult.data.session?.user
       if (!user) return
 
-      const { data: profile } = await supabase
+      const profileResult = await supabase
         .from('profiles')
         .select('credits_ebooks_used, credits_ebooks_extra, plans(name, credits_ebooks)')
         .eq('id', user.id)
         .single()
 
-      if (profile) {
-        const plan = (profile as any).plans
+      if (profileResult.data) {
+        const plan = (profileResult.data as any).plans
         setCredits({
-          used: profile.credits_ebooks_used ?? 0,
-          limit: (plan?.credits_ebooks ?? 0) + (profile.credits_ebooks_extra ?? 0),
+          used: profileResult.data.credits_ebooks_used ?? 0,
+          limit: (plan?.credits_ebooks ?? 0) + (profileResult.data.credits_ebooks_extra ?? 0),
           planName: plan?.name ?? 'Starter',
         })
       }
 
-      const { data: ebookList } = await supabase
+      const ebookResult = await supabase
         .from('ebooks')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(10)
 
-      if (ebookList) setEbooks(ebookList as GeneratedEbook[])
+      if (ebookResult.data) setEbooks(ebookResult.data as GeneratedEbook[])
     } catch (err) {
       console.error('Erro ao carregar dados:', err)
     } finally {
@@ -114,7 +124,7 @@ export default function EbookPage() {
   }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
+    setForm(function(prev) { return { ...prev, [e.target.name]: e.target.value } })
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -126,7 +136,7 @@ export default function EbookPage() {
 
     try {
       const chaptersArray = form.chapters
-        ? form.chapters.split('\n').map((c) => c.trim()).filter(Boolean)
+        ? form.chapters.split('\n').map(function(c) { return c.trim() }).filter(Boolean)
         : []
 
       const res = await fetch('/api/generate-ebook', {
@@ -193,6 +203,11 @@ export default function EbookPage() {
     color: '#9ca3af',
     marginBottom: '6px',
   }
+
+  const themeOptions = themes.map(function(t) {
+    const colors = t.colorKeywords && t.colorKeywords.length > 0 ? ' · ' + t.colorKeywords.slice(0, 3).join(', ') : ''
+    return { value: t.id, label: t.name + colors }
+  })
 
   return (
     <div style={{ minHeight: '100vh', background: '#0a0f0a', color: '#fff', fontFamily: 'inherit' }}>
@@ -293,21 +308,9 @@ export default function EbookPage() {
               <label style={labelStyle}>Design visual</label>
               <select name="themeId" value={form.themeId} onChange={handleChange} style={inputStyle}>
                 <option value="">🎨 Automático (IA escolhe)</option>
-                {themes.length > 0 ? (
-                  themes.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}{t.colorKeywords?.length > 0 ? ' · ' + t.colorKeywords.slice(0, 3).join(', ') : ''}
-                    </option>
-                  ))
-                ) : (
-                  <>
-                    <option value="Chisel">Chisel · moderno, clean</option>
-                    <option value="Prism">Prism · colorido, vibrante</option>
-                    <option value="Pitch">Pitch · escuro, elegante</option>
-                    <option value="Candy">Candy · pastel, suave</option>
-                    <option value="Marble">Marble · claro, sofisticado</option>
-                  </>
-                )}
+                {themeOptions.map(function(opt) {
+                  return <option key={opt.value} value={opt.value}>{opt.label}</option>
+                })}
               </select>
             </div>
 
@@ -319,9 +322,9 @@ export default function EbookPage() {
             <div>
               <label style={labelStyle}>Idioma</label>
               <select name="language" value={form.language} onChange={handleChange} style={inputStyle}>
-                <option value="pt-BR">🇧🇷 Português (Brasil)</option>
-                <option value="en-US">🇺🇸 English (US)</option>
-                <option value="es-ES">🇪🇸 Español</option>
+                <option value="pt-BR">Português (Brasil)</option>
+                <option value="en-US">English (US)</option>
+                <option value="es-ES">Español</option>
               </select>
             </div>
 
@@ -372,31 +375,33 @@ export default function EbookPage() {
             </div>
           ) : (
             <div style={{ background: '#0d150d', border: '1px solid #1a2e1a', borderRadius: '16px', overflow: 'hidden' }}>
-              {ebooks.map((ebook, i) => (
-                <div key={ebook.gamma_generation_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '14px 20px', borderTop: i > 0 ? '1px solid #1a2e1a' : 'none' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                    <div style={{ width: '28px', height: '28px', background: '#1a2e1a', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>📄</div>
-                    <div style={{ minWidth: 0 }}>
-                      <p style={{ fontSize: '14px', fontWeight: 500, color: '#fff', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ebook.title}</p>
-                      {ebook.created_at && (
-                        <p style={{ fontSize: '12px', color: '#4b5563', margin: '2px 0 0 0' }}>
-                          {new Date(ebook.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                        </p>
+              {ebooks.map(function(ebook, i) {
+                return (
+                  <div key={ebook.gamma_generation_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '14px 20px', borderTop: i > 0 ? '1px solid #1a2e1a' : 'none' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                      <div style={{ width: '28px', height: '28px', background: '#1a2e1a', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>📄</div>
+                      <div style={{ minWidth: 0 }}>
+                        <p style={{ fontSize: '14px', fontWeight: 500, color: '#fff', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ebook.title}</p>
+                        {ebook.created_at && (
+                          <p style={{ fontSize: '12px', color: '#4b5563', margin: '2px 0 0 0' }}>
+                            {new Date(ebook.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+                      <span style={{ fontSize: '12px', color: ebook.status === 'completed' ? '#4ade80' : ebook.status === 'failed' ? '#f87171' : '#60a5fa', fontWeight: 500 }}>
+                        {ebook.status === 'completed' ? '● Concluído' : ebook.status === 'failed' ? '● Erro' : '● Processando'}
+                      </span>
+                      {ebook.status === 'completed' && (
+                        <button onClick={function() { handleDownload(ebook) }} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', background: '#1a3a1a', color: '#4ade80', fontWeight: 600, padding: '6px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer' }}>
+                          ⬇ PDF
+                        </button>
                       )}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-                    <span style={{ fontSize: '12px', color: ebook.status === 'completed' ? '#4ade80' : ebook.status === 'failed' ? '#f87171' : '#60a5fa', fontWeight: 500 }}>
-                      {ebook.status === 'completed' ? '● Concluído' : ebook.status === 'failed' ? '● Erro' : '● Processando'}
-                    </span>
-                    {ebook.status === 'completed' && (
-                      <button onClick={() => handleDownload(ebook)} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', background: '#1a3a1a', color: '#4ade80', fontWeight: 600, padding: '6px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer' }}>
-                        ⬇ PDF
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
