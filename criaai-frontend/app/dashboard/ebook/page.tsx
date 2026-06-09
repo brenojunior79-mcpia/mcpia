@@ -169,6 +169,8 @@ export default function EbookPage() {
       setSuccess('Ebook gerado com sucesso! ' + data.creditsRemaining + ' credito(s) restante(s).')
       setForm({ title: '', topic: '', details: '', targetAudience: '', tone: 'profissional e didático', chapters: '', language: 'pt-BR', themeId: '' })
       await loadUserData()
+      setTimeout(async function() { await loadUserData() }, 2000)
+      setTimeout(async function() { await loadUserData() }, 5000)
     } catch (err: any) {
       setError(err.message ?? 'Erro inesperado.')
     } finally {
