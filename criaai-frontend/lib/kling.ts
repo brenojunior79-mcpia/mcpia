@@ -32,23 +32,28 @@ export interface KlingJob {
 }
 
 export async function buildKlingPrompt(niche: string, tone: string, customPrompt?: string): Promise<string> {
-  if (customPrompt && customPrompt.trim().length > 10) {
-    return `${customPrompt.trim()}. Vertical 9:16 format, cinematic quality, realistic motion, no text overlays, 5 seconds.`
-  }
-
   const toneMap: Record<string, string> = {
-    lifestyle: 'smiling warmly at camera, in a cozy home setting with natural lighting',
-    urgencia: 'speaking with urgency and excitement, gesturing expressively, dynamic background',
-    luxo: 'in an elegant setting, speaking confidently, premium atmosphere with soft luxury lighting',
-    humor: 'with a fun playful expression, laughing and gesturing, bright cheerful background',
+    lifestyle: 'smiling warmly at the camera, relaxed and natural, cozy home setting with warm natural lighting, authentic UGC feel',
+    urgencia: 'speaking directly to camera with urgency and excitement, using expressive hand gestures, energetic and dynamic movement',
+    luxo: 'speaking confidently in an elegant premium setting, slow deliberate movements, soft luxury lighting, sophisticated atmosphere',
+    humor: 'laughing and using playful exaggerated expressions, fun gestures, bright cheerful background, entertaining and light-hearted',
   }
 
-  return `A person is holding the ${niche} product directly in front of the camera and talking about it enthusiastically. The person is ${toneMap[tone] || toneMap.lifestyle}. The product is clearly visible in their hand throughout the video. UGC style, authentic feel, vertical 9:16 format, realistic motion, no text overlays, 5 seconds duration.`
+  const toneDescription = toneMap[tone] || toneMap['lifestyle']
+
+  if (customPrompt && customPrompt.trim().length > 10) {
+    return `UGC video ad for "${niche}". ${customPrompt.trim()}. The person is ${toneDescription}. The product is clearly visible throughout. Vertical 9:16 format, cinematic quality, realistic human motion, no text overlays, no watermarks, 5 seconds duration.`
+  }
+
+  return `UGC video ad. A real person holds the "${niche}" product clearly in front of the camera, looks directly at the viewer, and talks about it enthusiastically. The person is ${toneDescription}. Product is prominently visible in hand throughout entire video. Authentic user-generated content style, vertical 9:16 format, cinematic quality, realistic motion, no text overlays, no watermarks, 5 seconds duration.`
 }
 
 export async function createKlingJob(params: KlingGenerateParams): Promise<KlingJob> {
   const prompt = await buildKlingPrompt(params.niche, params.tone, params.customPrompt)
   const token = generateKlingToken()
+
+  console.log('[kling] prompt:', prompt)
+
   const response = await fetch(`${KLING_API_URL}/v1/videos/image2video`, {
     method: 'POST',
     headers: {
@@ -59,17 +64,18 @@ export async function createKlingJob(params: KlingGenerateParams): Promise<Kling
       model_name: 'kling-v1-5',
       image: params.imageUrl,
       prompt,
-      negative_prompt: 'blurry, low quality, text, watermark, distorted face, bad anatomy, multiple people',
+      negative_prompt: 'blurry, low quality, text overlay, watermark, distorted face, bad anatomy, multiple people, cartoon, animation, CGI, unrealistic skin',
       cfg_scale: 0.5,
       mode: 'std',
       duration: String(params.duration || 5),
       aspect_ratio: '9:16',
     }),
   })
+
   if (!response.ok) throw new Error(`Kling API error: ${await response.text()}`)
   const data = await response.json()
   const jobId = data.data?.task_id
-  if (!jobId) throw new Error(`Kling não retornou task_id: ${JSON.stringify(data)}`)
+  if (!jobId) throw new Error(`Kling nao retornou task_id: ${JSON.stringify(data)}`)
   return { jobId, status: 'pending' }
 }
 
@@ -99,5 +105,5 @@ export async function waitForKlingJob(jobId: string): Promise<KlingJob> {
     if (job.status === 'completed' || job.status === 'failed') return job
     attempts++
   }
-  throw new Error('Kling job timeout após 5 minutos')
+  throw new Error('Kling job timeout apos 5 minutos')
 }
