@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 const GAMMA_API_URL = 'https://public-api.gamma.app/v1.0/generations'
+const GAMMA_EXPORT_URL = 'https://public-api.gamma.app/v1.0/export'
 const GAMMA_API_KEY = process.env.GAMMA_API_KEY!
 
 const POLL_INTERVAL_MS = 4_000
@@ -33,12 +34,12 @@ async function startGammaGeneration(prompt: string): Promise<string> {
   const data = await res.json()
   console.log('[gamma] startGeneration response:', JSON.stringify(data))
 
-  const generationId: string = data.generationId ?? data.id ?? data.docId
+  const generationId: string = data.generationId ?? data.id
   if (!generationId) throw new Error('Gamma não retornou generationId: ' + JSON.stringify(data))
   return generationId
 }
 
-async function pollGammaUntilDone(generationId: string): Promise<string> {
+async function pollGammaUntilDone(generationId: string): Promise<{ gammaId: string; gammaUrl: string }> {
   const statusUrl = `${GAMMA_API_URL}/${generationId}`
   const deadline = Date.now() + POLL_TIMEOUT_MS
 
@@ -57,20 +58,10 @@ async function pollGammaUntilDone(generationId: string): Promise<string> {
     const status: string = data.status ?? data.state ?? ''
 
     if (status === 'completed' || status === 'done' || status === 'success') {
-      // Tentar pegar URL do PDF direto na resposta
-      const pdfUrl: string =
-        data.pdfUrl ??
-        data.pdf_url ??
-        data.exportUrl ??
-        data.url ??
-        data.downloadUrl ??
-        data.outputUrl ??
-        ''
-
-      if (pdfUrl) return pdfUrl
-
-      // Se não tiver URL, retornar o ID para o frontend buscar
-      throw new Error('Gamma concluiu mas não retornou URL do PDF. Resposta: ' + JSON.stringify(data))
+      const gammaId: string = data.gammaId ?? ''
+      const gammaUrl: string = data.gammaUrl ?? ''
+      if (!gammaId) throw new Error('Gamma não retornou gammaId: ' + JSON.stringify(data))
+      return { gammaId, gammaUrl }
     }
 
     if (status === 'failed' || status === 'error') {
@@ -79,6 +70,33 @@ async function pollGammaUntilDone(generationId: string): Promise<string> {
   }
 
   throw new Error('Timeout: Gamma demorou mais de 5 minutos.')
+}
+
+async function exportGammaAsPdf(gammaId: string): Promise<string> {
+  const res = await fetch(GAMMA_EXPORT_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-API-KEY': GAMMA_API_KEY,
+    },
+    body: JSON.stringify({
+      docId: gammaId,
+      format: 'pdf',
+    }),
+  })
+
+  if (!res.ok) {
+    const errText = await res.text()
+    console.log('[gamma] export error response:', errText)
+    throw new Error(`Gamma export error: ${res.status} — ${errText}`)
+  }
+
+  const data = await res.json()
+  console.log('[gamma] export response:', JSON.stringify(data))
+
+  const url: string = data.url ?? data.downloadUrl ?? data.pdfUrl ?? data.exportUrl ?? ''
+  if (!url) throw new Error('Gamma export não retornou URL: ' + JSON.stringify(data))
+  return url
 }
 
 function buildGammaPrompt({ title, topic, targetAudience, tone, chapters, language }: {
@@ -173,7 +191,8 @@ export async function POST(req: NextRequest) {
 
     const prompt = buildGammaPrompt({ title, topic, targetAudience, tone, chapters, language })
     const generationId = await startGammaGeneration(prompt)
-    const pdfUrl = await pollGammaUntilDone(generationId)
+    const { gammaId, gammaUrl } = await pollGammaUntilDone(generationId)
+    const pdfUrl = await exportGammaAsPdf(gammaId)
 
     await supabase
       .from('profiles')
@@ -187,15 +206,17 @@ export async function POST(req: NextRequest) {
         topic,
         gamma_generation_id: generationId,
         pdf_url: pdfUrl,
+        gamma_url: gammaUrl,
         status: 'completed',
       })
     } catch {
-      console.warn('[generate-ebook] Tabela ebooks não encontrada, pulando insert.')
+      console.warn('[generate-ebook] Erro ao salvar ebook.')
     }
 
     return NextResponse.json({
       success: true,
       pdfUrl,
+      gammaUrl,
       generationId,
       creditsRemaining: creditLimit - (creditsUsed + 1),
     })
