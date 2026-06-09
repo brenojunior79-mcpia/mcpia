@@ -12,19 +12,36 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-async function startGammaGeneration(prompt: string, title: string, targetAudience: string, tone: string, language: string): Promise<string> {
-  const body: any = {
+function getGammaLanguage(language: string): string {
+  const map: Record<string, string> = {
+    'pt-BR': 'pt-br',
+    'en-US': 'en',
+    'es-ES': 'es',
+  }
+  return map[language] ?? 'pt-br'
+}
+
+async function startGammaGeneration(
+  prompt: string,
+  title: string,
+  targetAudience: string,
+  tone: string,
+  language: string
+): Promise<string> {
+  const body = {
     inputText: prompt,
     textMode: 'generate',
-    format: 'doc',
+    format: 'document',
     exportAs: 'pdf',
     title: title,
     textOptions: {
-      language: language === 'pt-BR' ? 'pt' : language === 'en-US' ? 'en' : 'es',
+      language: getGammaLanguage(language),
       tone: tone || 'professional',
       audience: targetAudience || 'general audience',
     },
   }
+
+  console.log('[gamma] request body:', JSON.stringify(body))
 
   const res = await fetch(GAMMA_API_URL, {
     method: 'POST',
@@ -69,7 +86,7 @@ async function pollGammaUntilDone(generationId: string): Promise<{ exportUrl: st
     if (status === 'completed') {
       const exportUrl: string = data.exportUrl ?? ''
       const gammaUrl: string = data.gammaUrl ?? ''
-      if (!exportUrl) throw new Error('Gamma completou mas sem exportUrl. Resposta: ' + JSON.stringify(data))
+      if (!exportUrl) throw new Error('Gamma completou sem exportUrl. Resposta: ' + JSON.stringify(data))
       return { exportUrl, gammaUrl }
     }
 
