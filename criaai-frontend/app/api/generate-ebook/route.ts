@@ -19,11 +19,10 @@ async function startGammaGeneration(prompt: string): Promise<string> {
       'Content-Type': 'application/json',
       'X-API-KEY': GAMMA_API_KEY,
     },
-    body: JSON.stringify({
-      inputText: prompt,
-      textMode: 'generate',
-      options: { format: 'document', orientation: 'portrait' },
-    }),
+   body: JSON.stringify({
+  inputText: prompt,
+  textMode: 'generate',
+}),
   })
 
   if (!res.ok) {
