@@ -8,11 +8,12 @@ export async function POST(req: NextRequest) {
   try {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    if (!user) return NextResponse.json({ error: 'Nao autorizado' }, { status: 401 })
 
-    const { imageUrl, niche, tone, format, customPrompt } = await req.json()
-    if (!imageUrl || !niche) {
-      return NextResponse.json({ error: 'Imagem e nicho são obrigatórios' }, { status: 400 })
+    const { imageUrl, niche, tone, format, customPrompt, duration } = await req.json()
+
+    if (!niche && !customPrompt) {
+      return NextResponse.json({ error: 'Preencha o nicho ou descreva o criativo.' }, { status: 400 })
     }
 
     const { data: profile } = await supabase
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    if (!profile) return NextResponse.json({ error: 'Perfil não encontrado' }, { status: 404 })
+    if (!profile) return NextResponse.json({ error: 'Perfil nao encontrado' }, { status: 404 })
 
     const plan = (profile as any)?.plans
     const isUnlimited = plan?.is_unlimited
@@ -43,31 +44,35 @@ export async function POST(req: NextRequest) {
       const monthlyUsed = count || 0
       if (monthlyUsed >= AGENCY_VIDEO_LIMIT) {
         return NextResponse.json({
-          error: `Limite mensal de ${AGENCY_VIDEO_LIMIT} vídeos atingido.`,
+          error: `Limite mensal de ${AGENCY_VIDEO_LIMIT} videos atingido.`,
           limitReached: true,
         }, { status: 429 })
       }
     } else {
       if (used >= limit) {
         return NextResponse.json({
-          error: 'Sem créditos de vídeo disponíveis.',
+          error: 'Sem creditos de video disponiveis.',
           limitReached: true,
         }, { status: 403 })
       }
     }
 
-    // Cria job no Kling e retorna task_id imediatamente
-    const job = await createKlingJob({ imageUrl, niche, tone: tone || 'lifestyle', customPrompt })
+    const job = await createKlingJob({
+      imageUrl: imageUrl || null,
+      niche: niche || '',
+      tone: tone || 'lifestyle',
+      customPrompt,
+      duration: duration || 10,
+    })
 
-    // Salva job pendente no banco para rastrear
     await supabase.from('generations').insert({
       user_id: user.id,
       type: 'video',
       status: 'pending',
-      niche,
+      niche: niche || customPrompt?.slice(0, 50) || 'criativo',
       format: format || '9:16',
       credits_consumed: 1,
-      metadata: { tone, customPrompt, taskId: job.jobId },
+      metadata: { tone, customPrompt, taskId: job.jobId, duration },
     })
 
     return NextResponse.json({ taskId: job.jobId })
