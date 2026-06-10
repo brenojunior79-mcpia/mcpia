@@ -79,7 +79,7 @@ export async function createKlingJob(params: KlingGenerateParams): Promise<Kling
       prompt,
       negative_prompt: 'blurry, low quality, text overlay, watermark, distorted face, bad anatomy, multiple people, cartoon, animation, CGI',
       cfg_scale: 0.5,
-      mode: 'std',
+      mode: 'pro',
       duration: String(duration),
       aspect_ratio: '9:16',
     }
