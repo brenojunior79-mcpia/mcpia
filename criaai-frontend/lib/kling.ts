@@ -17,7 +17,7 @@ function generateKlingToken(): string {
 }
 
 export interface KlingGenerateParams {
-  imageUrl: string
+  imageUrl: string | null
   niche: string
   tone: string
   duration?: number
@@ -42,34 +42,56 @@ export async function buildKlingPrompt(niche: string, tone: string, customPrompt
   const toneDescription = toneMap[tone] || toneMap['lifestyle']
 
   if (customPrompt && customPrompt.trim().length > 10) {
-    return `UGC video ad for "${niche}". ${customPrompt.trim()}. The person is ${toneDescription}. The product is clearly visible throughout. Vertical 9:16 format, cinematic quality, realistic human motion, no text overlays, no watermarks, 5 seconds duration.`
+    return `UGC video ad${niche ? ' for "' + niche + '"' : ''}. ${customPrompt.trim()}. The person is ${toneDescription}. Vertical 9:16 format, cinematic quality, realistic human motion, no text overlays, no watermarks.`
   }
 
-  return `UGC video ad. A real person holds the "${niche}" product clearly in front of the camera, looks directly at the viewer, and talks about it enthusiastically. The person is ${toneDescription}. Product is prominently visible in hand throughout entire video. Authentic user-generated content style, vertical 9:16 format, cinematic quality, realistic motion, no text overlays, no watermarks, 5 seconds duration.`
+  return `UGC video ad. A real person talks enthusiastically about "${niche}" directly to camera. The person is ${toneDescription}. Product is the main focus. Authentic user-generated content style, vertical 9:16 format, cinematic quality, realistic motion, no text overlays, no watermarks.`
 }
 
 export async function createKlingJob(params: KlingGenerateParams): Promise<KlingJob> {
   const prompt = await buildKlingPrompt(params.niche, params.tone, params.customPrompt)
   const token = generateKlingToken()
+  const duration = params.duration || 10
 
+  console.log('[kling] mode:', params.imageUrl ? 'image2video' : 'text2video')
+  console.log('[kling] duration:', duration)
   console.log('[kling] prompt:', prompt)
 
-  const response = await fetch(`${KLING_API_URL}/v1/videos/image2video`, {
+  let endpoint: string
+  let body: any
+
+  if (params.imageUrl) {
+    endpoint = `${KLING_API_URL}/v1/videos/image2video`
+    body = {
+      model_name: 'kling-v1-5',
+      image: params.imageUrl,
+      prompt,
+      negative_prompt: 'blurry, low quality, text overlay, watermark, distorted face, bad anatomy, multiple people, cartoon, animation, CGI',
+      cfg_scale: 0.5,
+      mode: 'std',
+      duration: String(duration),
+      aspect_ratio: '9:16',
+    }
+  } else {
+    endpoint = `${KLING_API_URL}/v1/videos/text2video`
+    body = {
+      model_name: 'kling-v1-5',
+      prompt,
+      negative_prompt: 'blurry, low quality, text overlay, watermark, distorted face, bad anatomy, multiple people, cartoon, animation, CGI',
+      cfg_scale: 0.5,
+      mode: 'std',
+      duration: String(duration),
+      aspect_ratio: '9:16',
+    }
+  }
+
+  const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      model_name: 'kling-v1-5',
-      image: params.imageUrl,
-      prompt,
-      negative_prompt: 'blurry, low quality, text overlay, watermark, distorted face, bad anatomy, multiple people, cartoon, animation, CGI, unrealistic skin',
-      cfg_scale: 0.5,
-      mode: 'std',
-      duration: String(params.duration || 5),
-      aspect_ratio: '9:16',
-    }),
+    body: JSON.stringify(body),
   })
 
   if (!response.ok) throw new Error(`Kling API error: ${await response.text()}`)
