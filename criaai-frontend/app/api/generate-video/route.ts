@@ -65,6 +65,8 @@ export async function POST(req: NextRequest) {
       duration: duration || 10,
     })
 
+    const mode = imageUrl ? 'image2video' : 'text2video'
+
     await supabase.from('generations').insert({
       user_id: user.id,
       type: 'video',
@@ -72,7 +74,7 @@ export async function POST(req: NextRequest) {
       niche: niche || customPrompt?.slice(0, 50) || 'criativo',
       format: format || '9:16',
       credits_consumed: 1,
-      metadata: { tone, customPrompt, taskId: job.jobId, duration },
+      metadata: { tone, customPrompt, taskId: job.jobId, duration, mode },
     })
 
     return NextResponse.json({ taskId: job.jobId })
