@@ -5,9 +5,24 @@ import OpenAI from 'openai'
 
 const CREATOMATE_API_KEY = process.env.CREATOMATE_API_KEY!
 const CREATOMATE_TEMPLATE_ID = process.env.CREATOMATE_TEMPLATE_ID!
+const UNSPLASH_ACCESS_KEY = process.env.UNSPLASH_ACCESS_KEY!
 const AGENCY_VIDEO_LIMIT = 100
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
+
+async function getUnsplashImages(query: string): Promise<string[]> {
+  try {
+    const res = await fetch(
+      'https://api.unsplash.com/search/photos?query=' + encodeURIComponent(query) + '&per_page=4&orientation=portrait',
+      { headers: { 'Authorization': 'Client-ID ' + UNSPLASH_ACCESS_KEY } }
+    )
+    if (!res.ok) return []
+    const data = await res.json()
+    return (data.results || []).map(function(img: any) { return img.urls.regular })
+  } catch {
+    return []
+  }
+}
 
 async function generateScript(niche: string, tone: string, customPrompt: string) {
   const toneMap: Record<string, string> = {
@@ -58,7 +73,19 @@ async function generateScript(niche: string, tone: string, customPrompt: string)
   }
 }
 
-async function createRender(script: { text1: string; text2: string; text3: string; text4: string }): Promise<string> {
+async function createRender(script: { text1: string; text2: string; text3: string; text4: string }, images: string[]): Promise<string> {
+  const modifications: Record<string, string> = {
+    'Text-1.text': script.text1,
+    'Text-2.text': script.text2,
+    'Text-3.text': script.text3,
+    'Text-4.text': script.text4,
+  }
+
+  if (images[0]) modifications['Background-1.source'] = images[0]
+  if (images[1]) modifications['Background-2.source'] = images[1]
+  if (images[2]) modifications['Background-3.source'] = images[2]
+  if (images[3]) modifications['Background-4.source'] = images[3]
+
   const res = await fetch('https://api.creatomate.com/v2/renders', {
     method: 'POST',
     headers: {
@@ -67,91 +94,5 @@ async function createRender(script: { text1: string; text2: string; text3: strin
     },
     body: JSON.stringify({
       template_id: CREATOMATE_TEMPLATE_ID,
-      modifications: {
-        'Text-1.text': script.text1,
-        'Text-2.text': script.text2,
-        'Text-3.text': script.text3,
-        'Text-4.text': script.text4,
-      },
+      modifications: modifications,
     }),
-  })
-
-  if (!res.ok) {
-    const err = await res.text()
-    throw new Error('Creatomate error ' + res.status + ': ' + err)
-  }
-
-  const data = await res.json()
-  const renders = Array.isArray(data) ? data : [data]
-  const renderId = renders[0]?.id
-  if (!renderId) throw new Error('Creatomate sem render ID: ' + JSON.stringify(data))
-  return renderId
-}
-
-export async function POST(req: NextRequest) {
-  try {
-    const cookieStore = cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) { return cookieStore.get(name)?.value },
-          set() {},
-          remove() {},
-        },
-      }
-    )
-
-    const user = (await supabase.auth.getUser()).data.user
-    if (!user) return NextResponse.json({ error: 'Nao autorizado' }, { status: 401 })
-
-    const body = await req.json()
-    const niche: string = body.niche || ''
-    const tone: string = body.tone || 'lifestyle'
-    const format: string = body.format || '9:16'
-    const customPrompt: string = body.customPrompt || ''
-
-    if (!niche && !customPrompt) {
-      return NextResponse.json({ error: 'Preencha o nicho ou descreva o criativo.' }, { status: 400 })
-    }
-
-    const profile = (await supabase.from('profiles').select('credits_videos_used, credits_videos_extra, plans(name, credits_videos, is_unlimited)').eq('id', user.id).single()).data
-    if (!profile) return NextResponse.json({ error: 'Perfil nao encontrado' }, { status: 404 })
-
-    const plan = (profile as any)?.plans
-    const isUnlimited = plan?.is_unlimited
-    const isAgency = plan?.name === 'Agency'
-    const used = profile.credits_videos_used || 0
-    const extra = profile.credits_videos_extra || 0
-    const limit = isUnlimited ? 999999 : ((plan?.credits_videos || 0) + extra)
-
-    if (isAgency || isUnlimited) {
-      const startOfMonth = new Date()
-      startOfMonth.setDate(1)
-      startOfMonth.setHours(0, 0, 0, 0)
-      const { count } = await supabase.from('generations').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('type', 'video').gte('created_at', startOfMonth.toISOString())
-      if ((count || 0) >= AGENCY_VIDEO_LIMIT) return NextResponse.json({ error: 'Limite mensal atingido.', limitReached: true }, { status: 429 })
-    } else {
-      if (used >= limit) return NextResponse.json({ error: 'Sem creditos de video disponiveis.', limitReached: true }, { status: 403 })
-    }
-
-    const script = await generateScript(niche, tone, customPrompt)
-    const renderId = await createRender(script)
-
-    await supabase.from('generations').insert({
-      user_id: user.id,
-      type: 'video',
-      status: 'pending',
-      niche: niche || customPrompt.slice(0, 50),
-      format: format,
-      credits_consumed: 1,
-      metadata: { renderId, tone, customPrompt, script, provider: 'creatomate' },
-    })
-
-    return NextResponse.json({ renderId, script })
-  } catch (err: any) {
-    console.error('[generate-video]', err)
-    return NextResponse.json({ error: err.message || 'Erro interno' }, { status: 500 })
-  }
-}
