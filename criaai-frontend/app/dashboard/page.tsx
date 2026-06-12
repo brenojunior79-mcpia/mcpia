@@ -53,7 +53,7 @@ export default function DashboardPage() {
 
   async function pollStatus(taskId: string, session: any) {
     let attempts = 0
-    const maxAttempts = 60
+    const maxAttempts = 120
 
     pollingRef.current = setInterval(async () => {
       attempts++
