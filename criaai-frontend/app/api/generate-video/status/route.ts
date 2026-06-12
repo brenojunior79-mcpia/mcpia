@@ -1,66 +1,58 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase-server'
-import { checkKlingJob } from '@/lib/kling'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+
+const CREATOMATE_API_KEY = process.env.CREATOMATE_API_KEY!
 
 export async function GET(req: NextRequest) {
   try {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const cookieStore = cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) { return cookieStore.get(name)?.value },
+          set() {},
+          remove() {},
+        },
+      }
+    )
+
+    const user = (await supabase.auth.getUser()).data.user
     if (!user) return NextResponse.json({ error: 'Nao autorizado' }, { status: 401 })
 
-    const taskId = req.nextUrl.searchParams.get('taskId')
-    if (!taskId) return NextResponse.json({ error: 'taskId obrigatorio' }, { status: 400 })
+    const renderId = req.nextUrl.searchParams.get('renderId')
+    if (!renderId) return NextResponse.json({ error: 'renderId obrigatorio' }, { status: 400 })
 
-    // Buscar o mode salvo no metadata da generation
-    const { data: generation } = await supabase
-      .from('generations')
-      .select('metadata')
-      .eq('user_id', user.id)
-      .contains('metadata', { taskId })
-      .single()
+    const res = await fetch('https://api.creatomate.com/v2/renders/' + renderId, {
+      headers: { 'Authorization': 'Bearer ' + CREATOMATE_API_KEY },
+    })
 
-    const mode = generation?.metadata?.mode || 'image2video'
+    if (!res.ok) throw new Error('Creatomate status error: ' + res.status)
 
-    const job = await checkKlingJob(taskId, mode)
+    const data = await res.json()
+    const status: string = data.status || 'planned'
+    const videoUrl: string = data.url || ''
 
-    if (job.status === 'completed' && job.videoUrl) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('credits_videos_used, plans(is_unlimited, name)')
-        .eq('id', user.id)
-        .single()
-
+    if (status === 'succeeded' && videoUrl) {
+      const profile = (await supabase.from('profiles').select('credits_videos_used').eq('id', user.id).single()).data
       const used = profile?.credits_videos_used || 0
 
-      await supabase
-        .from('generations')
-        .update({ status: 'completed', output_url: job.videoUrl, api_cost: job.cost || 0 })
-        .eq('user_id', user.id)
-        .eq('status', 'pending')
-        .contains('metadata', { taskId })
+      await supabase.from('generations').update({ status: 'completed', output_url: videoUrl }).eq('user_id', user.id).eq('status', 'pending').contains('metadata', { renderId })
+      await supabase.from('profiles').update({ credits_videos_used: used + 1 }).eq('id', user.id)
 
-      await supabase
-        .from('profiles')
-        .update({ credits_videos_used: used + 1 })
-        .eq('id', user.id)
-
-      return NextResponse.json({ status: 'completed', videoUrl: job.videoUrl })
+      return NextResponse.json({ status: 'completed', videoUrl })
     }
 
-    if (job.status === 'failed') {
-      await supabase
-        .from('generations')
-        .update({ status: 'failed' })
-        .eq('user_id', user.id)
-        .eq('status', 'pending')
-        .contains('metadata', { taskId })
-
-      return NextResponse.json({ status: 'failed', error: 'Geracao falhou no Kling' })
+    if (status === 'failed') {
+      await supabase.from('generations').update({ status: 'failed' }).eq('user_id', user.id).eq('status', 'pending').contains('metadata', { renderId })
+      return NextResponse.json({ status: 'failed', error: data.error_message || 'Geracao falhou' })
     }
 
-    return NextResponse.json({ status: job.status })
+    return NextResponse.json({ status: 'processing' })
   } catch (err: any) {
-    console.error('video-status error:', err)
+    console.error('[video-status]', err)
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
