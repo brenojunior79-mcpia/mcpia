@@ -12,8 +12,8 @@ function generateKlingToken(): string {
     exp: now + 1800,
     nbf: now - 5,
   })).toString('base64url')
-  const signature = crypto.createHmac('sha256', KLING_SECRET_KEY).update(`${header}.${payload}`).digest('base64url')
-  return `${header}.${payload}.${signature}`
+  const sig = crypto.createHmac('sha256', KLING_SECRET_KEY).update(header + '.' + payload).digest('base64url')
+  return header + '.' + payload + '.' + sig
 }
 
 export interface KlingGenerateParams {
@@ -32,105 +32,114 @@ export interface KlingJob {
   mode?: string
 }
 
-export async function buildKlingPrompt(niche: string, tone: string, customPrompt?: string): Promise<string> {
-  const toneMap: Record<string, string> = {
-    lifestyle: 'smiling warmly at the camera, relaxed and natural, cozy home setting with warm natural lighting, authentic UGC feel',
-    urgencia: 'speaking directly to camera with urgency and excitement, using expressive hand gestures, energetic and dynamic movement',
-    luxo: 'speaking confidently in an elegant premium setting, slow deliberate movements, soft luxury lighting, sophisticated atmosphere',
-    humor: 'laughing and using playful exaggerated expressions, fun gestures, bright cheerful background, entertaining and light-hearted',
-  }
+const STATUS_MAP: Record<string, KlingJob['status']> = {
+  submitted: 'pending',
+  processing: 'processing',
+  succeed: 'completed',
+  failed: 'failed',
+}
 
-  const toneDescription = toneMap[tone] || toneMap['lifestyle']
+const TONE_MAP: Record<string, string> = {
+  lifestyle: 'smiling warmly at the camera, relaxed and natural, cozy home setting with warm natural lighting, authentic UGC feel',
+  urgencia: 'speaking directly to camera with urgency and excitement, using expressive hand gestures, energetic and dynamic movement',
+  luxo: 'speaking confidently in an elegant premium setting, slow deliberate movements, soft luxury lighting, sophisticated atmosphere',
+  humor: 'laughing and using playful exaggerated expressions, fun gestures, bright cheerful background, entertaining and light-hearted',
+}
 
+export function buildKlingPrompt(niche: string, tone: string, customPrompt?: string): string {
+  const toneDesc = TONE_MAP[tone] || TONE_MAP['lifestyle']
   if (customPrompt && customPrompt.trim().length > 10) {
-    return `UGC video ad${niche ? ' for "' + niche + '"' : ''}. ${customPrompt.trim()}. The person is ${toneDescription}. Vertical 9:16 format, cinematic quality, realistic human motion, no text overlays, no watermarks.`
+    const nicheStr = niche ? ' for "' + niche + '"' : ''
+    return 'UGC video ad' + nicheStr + '. ' + customPrompt.trim() + '. The person is ' + toneDesc + '. Vertical 9:16 format, cinematic quality, realistic human motion, no text overlays, no watermarks.'
   }
-
-  return `UGC video ad. A real person talks enthusiastically about "${niche}" directly to camera. The person is ${toneDescription}. Product is the main focus. Authentic user-generated content style, vertical 9:16 format, cinematic quality, realistic motion, no text overlays, no watermarks.`
+  return 'UGC video ad. A real person talks enthusiastically about "' + niche + '" directly to camera. The person is ' + toneDesc + '. Product is the main focus. Authentic user-generated content style, vertical 9:16 format, cinematic quality, realistic motion, no text overlays, no watermarks.'
 }
 
 export async function createKlingJob(params: KlingGenerateParams): Promise<KlingJob> {
-  const prompt = await buildKlingPrompt(params.niche, params.tone, params.customPrompt)
+  const prompt = buildKlingPrompt(params.niche, params.tone, params.customPrompt)
   const token = generateKlingToken()
-  const duration = params.duration || 10
-  const mode = params.imageUrl ? 'image2video' : 'text2video'
+  const dur = params.duration || 10
+  const hasImage = !!params.imageUrl
+  const mode = hasImage ? 'image2video' : 'text2video'
 
-  console.log('[kling] mode:', mode)
-  console.log('[kling] duration:', duration)
-  console.log('[kling] prompt:', prompt)
+  console.log('[kling] mode:', mode, 'dur:', dur)
 
-  let endpoint: string
-  let body: any
+  const endpoint = hasImage
+    ? KLING_API_URL + '/v1/videos/image2video'
+    : KLING_API_URL + '/v1/videos/text2video'
 
-  if (params.imageUrl) {
-    endpoint = `${KLING_API_URL}/v1/videos/image2video`
-    body = {
-      model_name: 'kling-v1-5',
-      image: params.imageUrl,
-      prompt,
-      negative_prompt: 'blurry, low quality, text overlay, watermark, distorted face, bad anatomy, multiple people, cartoon, animation, CGI',
-      cfg_scale: 0.5,
-      mode: 'std',
-      duration: String(duration),
-      aspect_ratio: '9:16',
-    }
-  } else {
-    endpoint = `${KLING_API_URL}/v1/videos/text2video`
-    body = {
-      model_name: 'kling-v1-5',
-      prompt,
-      negative_prompt: 'blurry, low quality, text overlay, watermark, distorted face, bad anatomy, multiple people, cartoon, animation, CGI',
-      cfg_scale: 0.5,
-      mode: 'pro',
-      duration: String(duration),
-      aspect_ratio: '9:16',
-    }
+  const body: Record<string, unknown> = {
+    model_name: 'kling-v1-5',
+    prompt: prompt,
+    negative_prompt: 'blurry, low quality, text overlay, watermark, distorted face, bad anatomy, multiple people, cartoon, animation, CGI',
+    cfg_scale: 0.5,
+    mode: hasImage ? 'std' : 'pro',
+    duration: String(dur),
+    aspect_ratio: '9:16',
+  }
+
+  if (hasImage) {
+    body['image'] = params.imageUrl
   }
 
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${token}`,
+      'Authorization': 'Bearer ' + token,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
   })
 
-  if (!response.ok) throw new Error(`Kling API error: ${await response.text()}`)
+  if (!response.ok) {
+    const txt = await response.text()
+    throw new Error('Kling API error: ' + txt)
+  }
+
   const data = await response.json()
   const jobId = data.data?.task_id
-  if (!jobId) throw new Error(`Kling nao retornou task_id: ${JSON.stringify(data)}`)
-  return { jobId, status: 'pending', mode }
+
+  if (!jobId) {
+    throw new Error('Kling did not return task_id: ' + JSON.stringify(data))
+  }
+
+  return { jobId: jobId, status: 'pending', mode: mode }
 }
 
 export async function checkKlingJob(jobId: string, mode?: string): Promise<KlingJob> {
   const token = generateKlingToken()
-  const endpoint = mode === 'text2video'
-    ? `${KLING_API_URL}/v1/videos/text2video/${jobId}`
-    : `${KLING_API_URL}/v1/videos/image2video/${jobId}`
+  const isText = mode === 'text2video'
+  const endpoint = isText
+    ? KLING_API_URL + '/v1/videos/text2video/' + jobId
+    : KLING_API_URL + '/v1/videos/image2video/' + jobId
 
   const response = await fetch(endpoint, {
-    headers: { 'Authorization': `Bearer ${token}` },
+    headers: { 'Authorization': 'Bearer ' + token },
   })
-  if (!response.ok) throw new Error('Kling status check failed')
+
+  if (!response.ok) {
+    throw new Error('Kling status check failed: ' + response.status)
+  }
+
   const data = await response.json()
   const task = data.data
-  const statusMap: Record<string, KlingJob['status']> = {
-    submitted: 'pending', processing: 'processing',
-    succeed: 'completed', failed: 'failed',
-  }
-  const status = statusMap[task?.task_status] || 'processing'
+  const st = STATUS_MAP[task?.task_status] || 'processing'
   const videoUrl = task?.task_result?.videos?.[0]?.url
-  return { jobId, status, videoUrl, cost: 0.14, mode }
+
+  return { jobId: jobId, status: st, videoUrl: videoUrl, cost: 0.14, mode: mode }
 }
 
 export async function waitForKlingJob(jobId: string, mode?: string): Promise<KlingJob> {
   const maxAttempts = 60
   let attempts = 0
   while (attempts < maxAttempts) {
-    await new Promise(r => setTimeout(r, 5000))
+    await new Promise(function(r) { setTimeout(r, 5000) })
     const job = await checkKlingJob(jobId, mode)
-    if (job.status === 'completed' || job.status === 'failed') return job
+    const done = job.status === 'completed' || job.status === 'failed'
+    if (done) {
+      return job
+    }
     attempts++
   }
-  throw new Error('Kling
+  throw new Error('Kling job timeout after 5 minutes')
+}
