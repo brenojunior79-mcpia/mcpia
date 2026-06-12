@@ -49,42 +49,20 @@ export default function LoginPage() {
 
   return (
     <div className={styles.split}>
-      <div className={styles.left}>
-        <div className={styles.logo}>MCP<span>.IA</span></div>
-        <div className={styles.leftContent}>
-          <div className={styles.tag}>Plataforma de criacao de conteudo com IA</div>
-          <h1 className={styles.title}>Seu ebook, sua pagina de vendas<br /><span>e seu criativo pronto em 5 minutos</span></h1>
-          <p className={styles.sub}>Descreva seu produto e a IA gera tudo automaticamente — sem precisar de designer ou agencia.</p>
-          <div className={styles.features}>
-            {[
-              ['ti-video', 'Criativos de video gerados automaticamente'],
-              ['ti-book-2', 'Ebooks profissionais em qualquer nicho'],
-              ['ti-layout', 'Paginas de vendas de alta conversao'],
-              ['ti-sparkles', 'Tudo com inteligencia artificial'],
-            ].map(function(item) {
-              return (
-                <div key={item[0]} className={styles.feature}>
-                  <div className={styles.featureDot}><i className={'ti ' + item[0]} /></div>
-                  <span>{item[1]}</span>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      </div>
-
       <div className={styles.right}>
+        <div className={styles.logo}>MCP<span>.IA</span></div>
+
         <div className={styles.authBox}>
           {success ? (
             <div className={styles.successState}>
               <div className={styles.successIcon}><i className="ti ti-mail" /></div>
               <h2>Confirme seu e-mail!</h2>
               <p>Enviamos um link de confirmacao para <strong>{email}</strong>.</p>
-              <p style={{ marginTop: 8, fontSize: 14, color: 'var(--muted2)' }}>
+              <p style={{ marginTop: 8, fontSize: 13, color: 'var(--muted2)' }}>
                 Verifique sua caixa de entrada e clique no link para ativar sua conta antes de fazer login.
               </p>
-              <div style={{ marginTop: 16, padding: '12px 16px', background: 'var(--surface2)', borderRadius: 10, fontSize: 13, color: 'var(--muted2)' }}>
-                Nao recebeu? Verifique a pasta de spam ou tente cadastrar novamente.
+              <div style={{ marginTop: 16, padding: '12px 16px', background: 'rgba(255,255,255,0.04)', borderRadius: 10, fontSize: 12, color: 'var(--muted2)', border: '1px solid var(--border)' }}>
+                Nao recebeu? Verifique a pasta de spam.
               </div>
             </div>
           ) : (
@@ -179,6 +157,31 @@ export default function LoginPage() {
               )}
             </div>
           )}
+        </div>
+
+        <div className={styles.copySection}>
+          <div className={styles.copyTitle}>
+            Seu ebook, sua pagina de vendas<br />
+            <span>e seu criativo em 5 minutos</span>
+          </div>
+          <div className={styles.copySub}>
+            Descreva seu produto e a IA gera tudo — sem designer, sem agencia.
+          </div>
+          <div className={styles.features}>
+            {[
+              ['ti-video', 'Criativos de video com IA'],
+              ['ti-book-2', 'Ebooks em qualquer nicho'],
+              ['ti-layout', 'Paginas de alta conversao'],
+              ['ti-sparkles', '100% automatizado'],
+            ].map(function(item) {
+              return (
+                <div key={item[0]} className={styles.feature}>
+                  <div className={styles.featureDot}><i className={'ti ' + item[0]} /></div>
+                  <span>{item[1]}</span>
+                </div>
+              )
+            })}
+          </div>
         </div>
       </div>
     </div>
