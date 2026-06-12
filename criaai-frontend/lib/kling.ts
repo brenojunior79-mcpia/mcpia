@@ -29,6 +29,7 @@ export interface KlingJob {
   status: 'pending' | 'processing' | 'completed' | 'failed'
   videoUrl?: string
   cost?: number
+  mode?: string
 }
 
 export async function buildKlingPrompt(niche: string, tone: string, customPrompt?: string): Promise<string> {
@@ -52,8 +53,9 @@ export async function createKlingJob(params: KlingGenerateParams): Promise<Kling
   const prompt = await buildKlingPrompt(params.niche, params.tone, params.customPrompt)
   const token = generateKlingToken()
   const duration = params.duration || 10
+  const mode = params.imageUrl ? 'image2video' : 'text2video'
 
-  console.log('[kling] mode:', params.imageUrl ? 'image2video' : 'text2video')
+  console.log('[kling] mode:', mode)
   console.log('[kling] duration:', duration)
   console.log('[kling] prompt:', prompt)
 
@@ -98,12 +100,16 @@ export async function createKlingJob(params: KlingGenerateParams): Promise<Kling
   const data = await response.json()
   const jobId = data.data?.task_id
   if (!jobId) throw new Error(`Kling nao retornou task_id: ${JSON.stringify(data)}`)
-  return { jobId, status: 'pending' }
+  return { jobId, status: 'pending', mode }
 }
 
-export async function checkKlingJob(jobId: string): Promise<KlingJob> {
+export async function checkKlingJob(jobId: string, mode?: string): Promise<KlingJob> {
   const token = generateKlingToken()
-  const response = await fetch(`${KLING_API_URL}/v1/videos/image2video/${jobId}`, {
+  const endpoint = mode === 'text2video'
+    ? `${KLING_API_URL}/v1/videos/text2video/${jobId}`
+    : `${KLING_API_URL}/v1/videos/image2video/${jobId}`
+
+  const response = await fetch(endpoint, {
     headers: { 'Authorization': `Bearer ${token}` },
   })
   if (!response.ok) throw new Error('Kling status check failed')
@@ -115,17 +121,16 @@ export async function checkKlingJob(jobId: string): Promise<KlingJob> {
   }
   const status = statusMap[task?.task_status] || 'processing'
   const videoUrl = task?.task_result?.videos?.[0]?.url
-  return { jobId, status, videoUrl, cost: 0.14 }
+  return { jobId, status, videoUrl, cost: 0.14, mode }
 }
 
-export async function waitForKlingJob(jobId: string): Promise<KlingJob> {
+export async function waitForKlingJob(jobId: string, mode?: string): Promise<KlingJob> {
   const maxAttempts = 60
   let attempts = 0
   while (attempts < maxAttempts) {
     await new Promise(r => setTimeout(r, 5000))
-    const job = await checkKlingJob(jobId)
+    const job = await checkKlingJob(jobId, mode)
     if (job.status === 'completed' || job.status === 'failed') return job
     attempts++
   }
-  throw new Error('Kling job timeout apos 5 minutos')
-}
+  throw new Error('Kling
