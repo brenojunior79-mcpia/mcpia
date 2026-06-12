@@ -90,8 +90,8 @@ export async function POST(req: NextRequest) {
       mode: 'subscription',
       allow_promotion_codes: true,
       subscription_data: {
-        trial_period_days: 7,
-        metadata: { supabase_user_id: user.id },
+  metadata: { supabase_user_id: user.id },
+},
       },
       success_url: `${appUrl}/dashboard?success=true`,
       cancel_url: `${appUrl}/dashboard/planos?canceled=true`,
