@@ -111,7 +111,7 @@ export default function PlanosPage() {
                   onClick={function() { checkout(p.name) }}
                   disabled={loading === p.name}
                 >
-                  {loading === p.name ? 'Aguarde...' : 'Comecar 7 dias gratis'}
+                  {loading === p.name ? 'Aguarde...' : 'Assinar agora'}
                 </button>
               </div>
             )
