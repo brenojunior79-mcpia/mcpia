@@ -4,9 +4,11 @@ import { createClient } from '@/lib/supabase-browser'
 import styles from './planos.module.css'
 
 const plans = [
-  { name: 'Starter', price: 97, priceAnual: 78, features: ['15 vídeos/mês','3 ebooks/mês','Formatos 9:16 e 1:1','Copy com IA','Download em HD'], missing: ['Painel admin','White label'] },
-  { name: 'Pro', price: 197, priceAnual: 158, featured: true, features: ['50 vídeos/mês','15 ebooks/mês','Todos os formatos','Copy com IA','Música automática','Painel admin'], missing: ['White label'] },
-  { name: 'Agency', price: 497, priceAnual: 398, features: ['Vídeos ilimitados','Ebooks ilimitados','Todos os formatos','Painel admin completo','White label incluso','Suporte prioritário'], missing: [] },
+const plans = [
+  { name: 'Starter', price: 47, priceAnual: 38, features: ['15 vídeos/mês','3 ebooks/mês','Formatos 9:16 e 1:1','Copy com IA','Download em HD'], missing: ['Painel admin','White label'] },
+  { name: 'Pro', price: 97, priceAnual: 78, featured: true, features: ['50 vídeos/mês','15 ebooks/mês','Todos os formatos','Copy com IA','Música automática','Painel admin'], missing: ['White label'] },
+  { name: 'Premium', price: 197, priceAnual: 158, features: ['Vídeos ilimitados','Ebooks ilimitados','Todos os formatos','Painel admin completo','White label incluso','Suporte prioritário'], missing: [] },
+]
 ]
 
 export default function PlanosPage() {
