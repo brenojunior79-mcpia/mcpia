@@ -6,7 +6,6 @@
   overflow: hidden;
 }
 
-/* Background animated gradient */
 .split::before {
   content: '';
   position: fixed;
@@ -27,29 +26,26 @@
   100% { transform: scale(1.1) rotate(3deg); opacity: 1; }
 }
 
-/* Floating orbs */
 .split::after {
   content: '';
   position: fixed;
-  top: 10%;
-  right: 10%;
-  width: 300px;
-  height: 300px;
-  background: radial-gradient(circle, rgba(124,92,252,0.12) 0%, transparent 70%);
+  top: 5%;
+  right: 8%;
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, rgba(124,92,252,0.1) 0%, transparent 70%);
   border-radius: 50%;
-  animation: float 6s ease-in-out infinite;
+  animation: float 7s ease-in-out infinite;
   pointer-events: none;
   z-index: 0;
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-20px); }
+  0%, 100% { transform: translateY(0px) scale(1); }
+  50% { transform: translateY(-24px) scale(1.05); }
 }
 
-.left {
-  display: none;
-}
+.left { display: none; }
 
 .right {
   flex: 1;
@@ -65,33 +61,34 @@
 .logo {
   font-family: 'Syne', sans-serif;
   font-weight: 800;
-  font-size: 26px;
-  margin-bottom: 40px;
-  animation: fadeDown 0.6s ease both;
+  font-size: 28px;
+  margin-bottom: 32px;
+  animation: fadeDown 0.5s ease both;
+  letter-spacing: -0.5px;
 }
 
 .logo span { color: var(--accent2); }
 
-.authBox {
-  width: 100%;
-  max-width: 420px;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 24px;
-  padding: 36px;
-  backdrop-filter: blur(20px);
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3), 0 0 0 1px rgba(124,92,252,0.1);
-  animation: fadeUp 0.6s ease both 0.1s;
-}
-
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(24px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
 @keyframes fadeDown {
   from { opacity: 0; transform: translateY(-16px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.authBox {
+  width: 100%;
+  max-width: 400px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 24px;
+  padding: 32px;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.4), 0 0 0 1px rgba(124,92,252,0.08);
+  animation: fadeUp 0.5s ease both 0.1s;
 }
 
 .tabs {
@@ -100,7 +97,7 @@
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 4px;
-  margin-bottom: 28px;
+  margin-bottom: 24px;
 }
 
 .tab {
@@ -125,18 +122,16 @@
 .form {
   display: flex;
   flex-direction: column;
-  animation: fadeUp 0.4s ease both;
+  animation: fadeUp 0.3s ease both;
 }
 
-.field {
-  margin-bottom: 16px;
-}
+.field { margin-bottom: 14px; }
 
 .field label {
   display: block;
   font-size: 11px;
   color: var(--muted2);
-  margin-bottom: 7px;
+  margin-bottom: 6px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-weight: 600;
@@ -162,9 +157,17 @@
   box-shadow: 0 0 0 3px rgba(124,92,252,0.1);
 }
 
-.field input::placeholder {
-  color: var(--muted);
+.field input::placeholder { color: var(--muted); }
+
+.forgotLink {
+  font-size: 12px;
+  color: var(--accent2);
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.2s;
 }
+
+.forgotLink:hover { opacity: 1; text-decoration: underline; }
 
 .submitBtn {
   width: 100%;
@@ -182,24 +185,29 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  margin-top: 4px;
   position: relative;
   overflow: hidden;
 }
 
-.submitBtn::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.submitBtn:hover::after { opacity: 1; }
 .submitBtn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(124,92,252,0.4); }
 .submitBtn:active { transform: translateY(0); }
 .submitBtn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.backBtn {
+  background: none;
+  border: none;
+  color: var(--muted2);
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 20px;
+  padding: 0;
+  transition: color 0.2s;
+}
+
+.backBtn:hover { color: var(--text); }
 
 .error {
   background: rgba(239,68,68,0.1);
@@ -209,81 +217,12 @@
   font-size: 13px;
   color: #fca5a5;
   margin-bottom: 14px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
-/* Copy section below the form */
-.copySection {
-  width: 100%;
-  max-width: 420px;
-  margin-top: 32px;
-  animation: fadeUp 0.6s ease both 0.3s;
-}
-
-.copyTitle {
-  font-family: 'Syne', sans-serif;
-  font-size: 22px;
-  font-weight: 800;
-  text-align: center;
-  line-height: 1.3;
-  margin-bottom: 6px;
-}
-
-.copyTitle span { color: var(--accent2); }
-
-.copySub {
-  font-size: 13px;
-  color: var(--muted2);
-  text-align: center;
-  margin-bottom: 24px;
-  line-height: 1.6;
-}
-
-.features {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.feature {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 12px;
-  color: var(--muted2);
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 12px;
-  padding: 10px 12px;
-  transition: all 0.2s;
-}
-
-.feature:hover {
-  border-color: rgba(124,92,252,0.2);
-  background: rgba(124,92,252,0.05);
-  color: var(--text);
-}
-
-.featureDot {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: var(--accent-glow);
-  border: 1px solid rgba(124,92,252,0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: var(--accent2);
-  font-size: 14px;
-}
-
-/* Success state */
+/* Success / verify email state */
 .successState {
   text-align: center;
-  padding: 10px 0;
+  padding: 8px 0;
 }
 
 .successIcon {
@@ -307,35 +246,157 @@
 
 .successState h2 {
   font-family: 'Syne', sans-serif;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 800;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .successState p {
+  font-size: 13px;
+  color: var(--muted2);
+  margin-bottom: 4px;
+}
+
+.emailHighlight {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent2);
+  background: rgba(124,92,252,0.1);
+  border: 1px solid rgba(124,92,252,0.2);
+  border-radius: 8px;
+  padding: 8px 14px;
+  margin: 10px 0 16px;
+}
+
+.verifySteps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.verifyStep {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--muted2);
+}
+
+.stepNum {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(124,92,252,0.15);
+  border: 1px solid rgba(124,92,252,0.3);
+  color: var(--accent2);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.spamNote {
+  font-size: 12px;
+  color: var(--muted);
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+/* Copy section */
+.copySection {
+  width: 100%;
+  max-width: 400px;
+  margin-top: 32px;
+  text-align: center;
+  animation: fadeUp 0.5s ease both 0.3s;
+}
+
+.copyBadge {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: 99px;
+  background: rgba(124,92,252,0.1);
+  border: 1px solid rgba(124,92,252,0.25);
+  font-size: 11px;
+  color: var(--accent2);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+.copyTitle {
+  font-family: 'Syne', sans-serif;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 10px;
+  letter-spacing: -0.5px;
+}
+
+.copyTitle span {
+  background: linear-gradient(135deg, var(--accent2), #c4b5fd);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.copySub {
   font-size: 14px;
   color: var(--muted2);
+  margin-bottom: 20px;
   line-height: 1.6;
 }
 
-/* Keep unused classes to avoid CSS module errors */
-.tag {}
-.title {}
-.sub {}
-.testimonial {}
-.testAuthor {}
-.avatar {}
-.testName {}
-.testRole {}
-.formTitle {}
-.formSub {}
-.inputWrap {}
-.planSelector {}
-.planOpt {}
-.planOn {}
-.planName {}
-.planPrice {}
-.trialBadge {}
-.divider {}
-.googleBtn {}
-.switchMode {}
+.features {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.feature {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--muted2);
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  padding: 12px 14px;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.feature:hover {
+  border-color: rgba(124,92,252,0.2);
+  background: rgba(124,92,252,0.05);
+  color: var(--text);
+}
+
+.featureDot {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: rgba(124,92,252,0.1);
+  border: 1px solid rgba(124,92,252,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--accent2);
+  font-size: 15px;
+}
+
+/* Unused but kept */
+.tag {} .title {} .sub {} .testimonial {} .testAuthor {}
+.avatar {} .testName {} .testRole {} .formTitle {} .formSub {}
+.inputWrap {} .planSelector {} .planOpt {} .planOn {}
+.planName {} .planPrice {} .trialBadge {} .divider {}
+.googleBtn {} .switchMode {}
