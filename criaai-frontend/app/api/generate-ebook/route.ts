@@ -21,14 +21,7 @@ function getGammaLanguage(language: string): string {
   return map[language] ?? 'pt-br'
 }
 
-async function startGammaGeneration(
-  prompt: string,
-  title: string,
-  targetAudience: string,
-  tone: string,
-  language: string,
-  themeId?: string
-): Promise<string> {
+async function startGammaGeneration(prompt: string, title: string, targetAudience: string, tone: string, language: string, themeId?: string): Promise<string> {
   const body: any = {
     inputText: prompt,
     textMode: 'generate',
@@ -41,15 +34,11 @@ async function startGammaGeneration(
       audience: targetAudience || 'general audience',
     },
   }
-
   if (themeId) body.themeId = themeId
 
   const res = await fetch(GAMMA_API_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-API-KEY': GAMMA_API_KEY,
-    },
+    headers: { 'Content-Type': 'application/json', 'X-API-KEY': GAMMA_API_KEY },
     body: JSON.stringify(body),
   })
 
@@ -70,84 +59,61 @@ async function pollGammaUntilDone(generationId: string): Promise<{ exportUrl: st
 
   while (Date.now() < deadline) {
     await sleep(POLL_INTERVAL_MS)
-
-    const res = await fetch(statusUrl, {
-      headers: { 'X-API-KEY': GAMMA_API_KEY },
-    })
-
+    const res = await fetch(statusUrl, { headers: { 'X-API-KEY': GAMMA_API_KEY } })
     if (!res.ok) throw new Error('Gamma polling error: ' + res.status)
-
     const data = await res.json()
     const status: string = data.status ?? ''
-
     if (status === 'completed') {
       const exportUrl: string = data.exportUrl ?? ''
       const gammaUrl: string = data.gammaUrl ?? ''
-      if (!exportUrl) throw new Error('Gamma completou sem exportUrl: ' + JSON.stringify(data))
+      if (!exportUrl) throw new Error('Gamma completou sem exportUrl')
       return { exportUrl, gammaUrl }
     }
-
-    if (status === 'failed' || status === 'error') {
-      throw new Error('Gamma geracao falhou: ' + JSON.stringify(data))
-    }
+    if (status === 'failed' || status === 'error') throw new Error('Gamma geracao falhou')
   }
-
   throw new Error('Timeout: Gamma demorou mais de 5 minutos.')
 }
 
 function buildGammaPrompt(title: string, topic: string, details?: string, chapters?: string[]): string {
-  const lines = [
-    'Ebook: "' + title + '"',
-    'Tema: ' + topic + '.',
-  ]
-
-  if (details) {
-    lines.push('Detalhes adicionais: ' + details)
-  }
-
+  const lines = ['Ebook: "' + title + '"', 'Tema: ' + topic + '.']
+  if (details) lines.push('Detalhes adicionais: ' + details)
   if (chapters && chapters.length > 0) {
     lines.push('Capitulos:')
     chapters.forEach(function(ch, i) { lines.push((i + 1) + '. ' + ch) })
   } else {
     lines.push('Estrutura: Introducao, 4 a 6 capitulos aprofundados, Conclusao.')
   }
-
   return lines.join('\n')
 }
 
 export async function POST(req: NextRequest) {
   try {
     const cookieStore = cookies()
-
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) { return cookieStore.get(name)?.value },
-          set() {},
-          remove() {},
-        },
-      }
+      { cookies: { get(name: string) { return cookieStore.get(name)?.value }, set() {}, remove() {} } }
     )
 
     const authResult = await supabase.auth.getUser()
     const user = authResult.data.user
-
-    if (!user) {
-      return NextResponse.json({ error: 'Nao autenticado.' }, { status: 401 })
-    }
+    if (!user) return NextResponse.json({ error: 'Nao autenticado.' }, { status: 401 })
 
     const profileResult = await supabase
       .from('profiles')
-      .select('credits_ebooks_used, credits_ebooks_extra, plan_id, plans(name, credits_ebooks)')
+      .select('credits_ebooks_used, credits_ebooks_extra, subscription_status, plan_id, plans(name, credits_ebooks)')
       .eq('id', user.id)
       .single()
 
     const profile = profileResult.data
+    if (!profile) return NextResponse.json({ error: 'Perfil nao encontrado.' }, { status: 404 })
 
-    if (!profile) {
-      return NextResponse.json({ error: 'Perfil nao encontrado.' }, { status: 404 })
+    const status = profile.subscription_status
+    if (status !== 'active' && status !== 'trialing') {
+      return NextResponse.json({
+        error: 'Assine um plano para usar este recurso.',
+        requiresPlan: true,
+      }, { status: 403 })
     }
 
     const plan = (profile as any).plans
@@ -155,14 +121,11 @@ export async function POST(req: NextRequest) {
     const creditsUsed: number = profile.credits_ebooks_used ?? 0
 
     if (creditsUsed >= creditLimit) {
-      return NextResponse.json(
-        {
-          error: 'Limite de creditos atingido.',
-          details: 'Voce usou ' + creditsUsed + ' de ' + creditLimit + ' ebooks disponiveis no plano ' + (plan?.name ?? '') + '.',
-          upgradeRequired: true,
-        },
-        { status: 402 }
-      )
+      return NextResponse.json({
+        error: 'Limite de creditos atingido.',
+        details: 'Voce usou ' + creditsUsed + ' de ' + creditLimit + ' ebooks disponiveis.',
+        upgradeRequired: true,
+      }, { status: 402 })
     }
 
     const body = await req.json()
@@ -175,42 +138,31 @@ export async function POST(req: NextRequest) {
     const language: string = body.language ?? 'pt-BR'
     const themeId: string = body.themeId ?? ''
 
-    if (!title || !topic) {
-      return NextResponse.json({ error: 'Campos obrigatorios: title, topic.' }, { status: 400 })
-    }
+    if (!title || !topic) return NextResponse.json({ error: 'Campos obrigatorios: title, topic.' }, { status: 400 })
 
     const prompt = buildGammaPrompt(title, topic, details, chapters)
     const generationId = await startGammaGeneration(prompt, title, targetAudience, tone, language, themeId || undefined)
     const result = await pollGammaUntilDone(generationId)
-    const exportUrl = result.exportUrl
-    const gammaUrl = result.gammaUrl
 
-    await supabase
-      .from('profiles')
-      .update({ credits_ebooks_used: creditsUsed + 1 })
-      .eq('id', user.id)
-
+    await supabase.from('profiles').update({ credits_ebooks_used: creditsUsed + 1 }).eq('id', user.id)
     await supabase.from('ebooks').insert({
       user_id: user.id,
       title: title,
       topic: topic,
       gamma_generation_id: generationId,
-      pdf_url: exportUrl,
+      pdf_url: result.exportUrl,
       status: 'completed',
     })
 
     return NextResponse.json({
       success: true,
-      pdfUrl: exportUrl,
-      gammaUrl: gammaUrl,
+      pdfUrl: result.exportUrl,
+      gammaUrl: result.gammaUrl,
       generationId: generationId,
       creditsRemaining: creditLimit - (creditsUsed + 1),
     })
   } catch (err: any) {
     console.error('[generate-ebook]', err)
-    return NextResponse.json(
-      { error: err.message ?? 'Erro interno ao gerar ebook.' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: err.message ?? 'Erro interno ao gerar ebook.' }, { status: 500 })
   }
 }
