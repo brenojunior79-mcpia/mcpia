@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase-browser'
 
 interface EbookFormData {
   title: string
@@ -49,7 +50,7 @@ export default function EbookPage() {
     topic: '',
     details: '',
     targetAudience: '',
-    tone: 'profissional e didático',
+    tone: 'profissional e didatico',
     chapters: '',
     language: 'pt-BR',
     themeId: '',
@@ -63,11 +64,27 @@ export default function EbookPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [upgradeRequired, setUpgradeRequired] = useState(false)
+  const [hasSubscription, setHasSubscription] = useState(true)
+  const supabase = createClient()
 
-  useEffect(() => {
+  useEffect(function() {
+    checkSubscription()
     loadUserData()
     loadThemes()
   }, [])
+
+  async function checkSubscription() {
+    const userResult = await supabase.auth.getUser()
+    const user = userResult.data.user
+    if (!user) return
+    const result = await supabase
+      .from('profiles')
+      .select('subscription_status')
+      .eq('id', user.id)
+      .single()
+    const status = result.data?.subscription_status
+    setHasSubscription(status === 'active' || status === 'trialing')
+  }
 
   async function loadThemes() {
     try {
@@ -131,9 +148,11 @@ export default function EbookPage() {
       const data = await res.json()
 
       if (!res.ok) {
-        if (data.upgradeRequired) {
+        if (data.requiresPlan) {
+          setHasSubscription(false)
+        } else if (data.upgradeRequired) {
           setUpgradeRequired(true)
-          setError(data.details ?? 'Limite de créditos atingido.')
+          setError(data.details ?? 'Limite de creditos atingido.')
         } else {
           setError(data.error ?? 'Erro ao gerar ebook.')
         }
@@ -141,7 +160,7 @@ export default function EbookPage() {
       }
 
       setSuccess('Ebook gerado com sucesso! ' + data.creditsRemaining + ' credito(s) restante(s).')
-      setForm({ title: '', topic: '', details: '', targetAudience: '', tone: 'profissional e didático', chapters: '', language: 'pt-BR', themeId: '' })
+      setForm({ title: '', topic: '', details: '', targetAudience: '', tone: 'profissional e didatico', chapters: '', language: 'pt-BR', themeId: '' })
       await loadUserData()
     } catch (err: any) {
       setError(err.message ?? 'Erro inesperado.')
@@ -174,6 +193,26 @@ export default function EbookPage() {
     return { value: t.id, label: t.name + colors }
   })
 
+  if (!hasSubscription) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#0a0f0a', color: '#fff', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div style={{ maxWidth: 480, textAlign: 'center' }}>
+          <div style={{ fontSize: 56, marginBottom: 16 }}>🔒</div>
+          <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 24, fontWeight: 800, marginBottom: 12 }}>Recurso exclusivo para assinantes</h2>
+          <p style={{ fontSize: 15, color: '#9ca3af', lineHeight: 1.6, marginBottom: 28 }}>
+            Para gerar ebooks profissionais com IA, voce precisa ter um plano ativo. Escolha o plano ideal para o seu negocio.
+          </p>
+          <a
+            href="/dashboard/planos"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'linear-gradient(135deg, #7c5cfc, #9b6dfc)', color: '#fff', fontWeight: 700, fontSize: 15, padding: '14px 32px', borderRadius: 14, textDecoration: 'none' }}
+          >
+            Ver planos e precos
+          </a>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: '#0a0f0a', color: '#fff', fontFamily: 'inherit' }}>
       <div style={{ maxWidth: '680px', margin: '0 auto', padding: '32px 20px' }}>
@@ -190,7 +229,7 @@ export default function EbookPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#0f1a0f', border: '1px solid #1e3a1e', borderRadius: '12px', padding: '12px 16px' }}>
               <div style={{ width: '32px', height: '32px', background: '#1a3a1a', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>📗</div>
               <div>
-                <p style={{ fontSize: '11px', color: '#9ca3af', margin: '0 0 2px 0' }}>Créditos de Ebook</p>
+                <p style={{ fontSize: '11px', color: '#9ca3af', margin: '0 0 2px 0' }}>Creditos de Ebook</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: '14px', fontWeight: 600, color: remaining <= 0 ? '#f87171' : remaining <= 1 ? '#fbbf24' : '#ffffff' }}>{remaining} restantes</span>
                   <span style={{ fontSize: '12px', color: '#4b5563' }}>/ {credits.limit} · {credits.planName}</span>
@@ -207,9 +246,9 @@ export default function EbookPage() {
           <div style={{ display: 'flex', gap: '12px', padding: '16px', borderRadius: '12px', background: 'rgba(120,53,15,0.2)', border: '1px solid rgba(180,83,9,0.3)', marginBottom: '16px' }}>
             <span>⚠️</span>
             <div>
-              <p style={{ fontWeight: 600, color: '#fcd34d', margin: '0 0 4px 0', fontSize: '14px' }}>Créditos esgotados</p>
+              <p style={{ fontWeight: 600, color: '#fcd34d', margin: '0 0 4px 0', fontSize: '14px' }}>Creditos esgotados</p>
               <p style={{ color: '#fbbf24', margin: '0 0 8px 0', fontSize: '13px' }}>{error}</p>
-              <a href="/dashboard/planos" style={{ color: '#fcd34d', fontSize: '12px', fontWeight: 500 }}>Ver planos →</a>
+              <a href="/dashboard/planos" style={{ color: '#fcd34d', fontSize: '12px', fontWeight: 500 }}>Ver planos</a>
             </div>
           </div>
         )}
@@ -235,52 +274,52 @@ export default function EbookPage() {
           </div>
           <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
-              <label style={labelStyle}>Título <span style={{ color: '#4ade80' }}>*</span></label>
+              <label style={labelStyle}>Titulo <span style={{ color: '#4ade80' }}>*</span></label>
               <input type="text" name="title" value={form.title} onChange={handleChange} placeholder="Ex: Guia Definitivo de Marketing Digital" required style={inputStyle} />
             </div>
             <div>
-              <label style={labelStyle}>Tópico principal <span style={{ color: '#4ade80' }}>*</span></label>
+              <label style={labelStyle}>Topico principal <span style={{ color: '#4ade80' }}>*</span></label>
               <textarea name="topic" value={form.topic} onChange={handleChange} placeholder="Descreva o tema central do ebook..." required rows={2} style={{ ...inputStyle, resize: 'none' }} />
             </div>
             <div>
-              <label style={labelStyle}>Detalhamento <span style={{ color: '#6b7280', fontWeight: 400 }}>(opcional · descreva com mais detalhes o que quer no ebook)</span></label>
-              <textarea name="details" value={form.details} onChange={handleChange} placeholder="Ex: Quero um ebook com linguagem simples, exemplos práticos..." rows={4} style={{ ...inputStyle, resize: 'none' }} />
+              <label style={labelStyle}>Detalhamento <span style={{ color: '#6b7280', fontWeight: 400 }}>(opcional)</span></label>
+              <textarea name="details" value={form.details} onChange={handleChange} placeholder="Ex: Quero um ebook com linguagem simples, exemplos praticos..." rows={4} style={{ ...inputStyle, resize: 'none' }} />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
-                <label style={labelStyle}>Público-alvo</label>
+                <label style={labelStyle}>Publico-alvo</label>
                 <input type="text" name="targetAudience" value={form.targetAudience} onChange={handleChange} placeholder="Ex: empreendedores" style={inputStyle} />
               </div>
               <div>
                 <label style={labelStyle}>Tom e estilo</label>
                 <select name="tone" value={form.tone} onChange={handleChange} style={inputStyle}>
-                  <option value="profissional e didático">Profissional e didático</option>
-                  <option value="informal e acessível">Informal e acessível</option>
-                  <option value="técnico e detalhado">Técnico e detalhado</option>
+                  <option value="profissional e didatico">Profissional e didatico</option>
+                  <option value="informal e acessivel">Informal e acessivel</option>
+                  <option value="tecnico e detalhado">Tecnico e detalhado</option>
                   <option value="motivacional e inspirador">Motivacional e inspirador</option>
-                  <option value="acadêmico e formal">Acadêmico e formal</option>
+                  <option value="academico e formal">Academico e formal</option>
                 </select>
               </div>
             </div>
             <div>
               <label style={labelStyle}>Design visual</label>
               <select name="themeId" value={form.themeId} onChange={handleChange} style={inputStyle}>
-                <option value="">🎨 Automático (IA escolhe)</option>
+                <option value="">Automatico (IA escolhe)</option>
                 {themeOptions.map(function(opt) {
                   return <option key={opt.value} value={opt.value}>{opt.label}</option>
                 })}
               </select>
             </div>
             <div>
-              <label style={labelStyle}>Capítulos <span style={{ color: '#6b7280', fontWeight: 400 }}>(opcional · um por linha)</span></label>
-              <textarea name="chapters" value={form.chapters} onChange={handleChange} placeholder={'Introdução\nCapítulo 1\nConclusão'} rows={3} style={{ ...inputStyle, resize: 'none', fontFamily: 'monospace' }} />
+              <label style={labelStyle}>Capitulos <span style={{ color: '#6b7280', fontWeight: 400 }}>(opcional · um por linha)</span></label>
+              <textarea name="chapters" value={form.chapters} onChange={handleChange} placeholder={'Introducao\nCapitulo 1\nConclusao'} rows={3} style={{ ...inputStyle, resize: 'none', fontFamily: 'monospace' }} />
             </div>
             <div>
               <label style={labelStyle}>Idioma</label>
               <select name="language" value={form.language} onChange={handleChange} style={inputStyle}>
-                <option value="pt-BR">Português (Brasil)</option>
+                <option value="pt-BR">Portugues (Brasil)</option>
                 <option value="en-US">English (US)</option>
-                <option value="es-ES">Español</option>
+                <option value="es-ES">Espanol</option>
               </select>
             </div>
             <button
@@ -295,11 +334,11 @@ export default function EbookPage() {
                 fontWeight: 700, fontSize: '14px', opacity: !form.title || !form.topic ? 0.5 : 1,
               }}
             >
-              {loading ? '⏳ Gerando ebook — aguarde até 3 min...' : '✨ Gerar Ebook com IA'}
+              {loading ? 'Gerando ebook — aguarde ate 3 min...' : 'Gerar Ebook com IA'}
             </button>
             {loading && (
               <p style={{ fontSize: '12px', color: '#6b7280', textAlign: 'center', margin: 0 }}>
-                ⚡ Seu ebook está sendo criado. Não feche esta aba.
+                Seu ebook esta sendo criado. Nao feche esta aba.
               </p>
             )}
           </div>
@@ -316,7 +355,7 @@ export default function EbookPage() {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 20px', border: '1px dashed #1a2e1a', borderRadius: '16px', textAlign: 'center' }}>
               <span style={{ fontSize: '28px', marginBottom: '8px' }}>📚</span>
               <p style={{ fontSize: '14px', color: '#4b5563', margin: '0 0 4px 0' }}>Nenhum ebook gerado ainda.</p>
-              <p style={{ fontSize: '12px', color: '#374151', margin: 0 }}>Preencha o formulário acima para começar.</p>
+              <p style={{ fontSize: '12px', color: '#374151', margin: 0 }}>Preencha o formulario acima para comecar.</p>
             </div>
           ) : (
             <div style={{ background: '#0d150d', border: '1px solid #1a2e1a', borderRadius: '16px', overflow: 'hidden' }}>
@@ -336,11 +375,11 @@ export default function EbookPage() {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
                       <span style={{ fontSize: '12px', color: ebook.status === 'completed' ? '#4ade80' : ebook.status === 'failed' ? '#f87171' : '#60a5fa', fontWeight: 500 }}>
-                        {ebook.status === 'completed' ? '● Concluído' : ebook.status === 'failed' ? '● Erro' : '● Processando'}
+                        {ebook.status === 'completed' ? 'Concluido' : ebook.status === 'failed' ? 'Erro' : 'Processando'}
                       </span>
                       {ebook.status === 'completed' && (
                         <button onClick={function() { handleDownload(ebook) }} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', background: '#1a3a1a', color: '#4ade80', fontWeight: 600, padding: '6px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer' }}>
-                          ⬇ PDF
+                          PDF
                         </button>
                       )}
                     </div>
