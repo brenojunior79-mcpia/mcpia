@@ -6,23 +6,23 @@ import styles from './planos.module.css'
 const plans = [
   {
     name: 'Starter',
-    price: 47,
-    priceAnual: 38,
+    price: 39.90,
+    priceAnual: 32,
     features: ['15 videos/mes', '3 ebooks/mes', 'Formatos 9:16 e 1:1', 'Copy com IA', 'Download em HD'],
     missing: ['Painel admin', 'White label'],
   },
   {
     name: 'Pro',
-    price: 97,
-    priceAnual: 78,
+    price: 49.90,
+    priceAnual: 40,
     featured: true,
     features: ['50 videos/mes', '15 ebooks/mes', 'Todos os formatos', 'Copy com IA', 'Musica automatica', 'Painel admin'],
     missing: ['White label'],
   },
   {
     name: 'Premium',
-    price: 197,
-    priceAnual: 158,
+    price: 89.90,
+    priceAnual: 72,
     features: ['Videos ilimitados', 'Ebooks ilimitados', 'Todos os formatos', 'Painel admin completo', 'White label incluso', 'Suporte prioritario'],
     missing: [],
   },
@@ -84,11 +84,11 @@ export default function PlanosPage() {
                 <div className={styles.planName}>{p.name}</div>
                 <div className={styles.planPrice}>
                   <sup>R$</sup>
-                  <span>{billing === 'monthly' ? p.price : p.priceAnual}</span>
+                  <span>{billing === 'monthly' ? p.price.toFixed(2).replace('.', ',') : p.priceAnual.toFixed(2).replace('.', ',')}</span>
                   <sub>/mes</sub>
                 </div>
                 {billing === 'yearly' && (
-                  <div className={styles.anualNote}>R${p.priceAnual * 12} cobrado anualmente</div>
+                  <div className={styles.anualNote}>R${(p.priceAnual * 12).toFixed(2).replace('.', ',')} cobrado anualmente</div>
                 )}
                 <ul className={styles.features}>
                   {p.features.map(function(f: string) {
