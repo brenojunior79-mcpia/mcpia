@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase-server'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 
 function slugify(text: string) {
   return text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 60)
@@ -68,7 +69,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .hero{min-height:90vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:80px 24px 60px;position:relative;overflow:hidden;background:${dark?'linear-gradient(135deg,#0a0a0f 0%,#12103a 50%,#0a0a0f 100%)':'linear-gradient(135deg,#f8f4ff 0%,#ede8ff 50%,#f8f4ff 100%)'}}
 .hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(124,92,252,0.25) 0%,transparent 70%);pointer-events:none;}
 .hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(124,92,252,0.15);border:1px solid rgba(124,92,252,0.35);color:#a78bfa;font-size:13px;font-weight:600;padding:7px 18px;border-radius:99px;letter-spacing:.05em;text-transform:uppercase;margin-bottom:28px;}
-.hero-badge::before{content:'✦';font-size:10px;}
 .hero h1{font-size:clamp(32px,5.5vw,62px);font-weight:900;line-height:1.1;max-width:800px;margin-bottom:24px;background:${dark?'linear-gradient(135deg,#fff 0%,#c4b5fd 100%)':'linear-gradient(135deg,#1a0050 0%,#7c5cfc 100%)'};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
 .hero-sub{font-size:clamp(16px,2vw,20px);color:${muted};max-width:580px;line-height:1.7;margin-bottom:40px;}
 .hero-image-wrap{margin:40px auto 0;max-width:480px;animation:float 4s ease-in-out infinite;}
@@ -82,38 +82,33 @@ section{padding:80px 24px;}
 .section-title{font-size:clamp(24px,3.5vw,38px);font-weight:800;line-height:1.2;margin-bottom:16px;}
 .section-sub{font-size:17px;color:${muted};line-height:1.7;max-width:540px;}
 .benefits-section{background:${surface};}
-.benefit-item{display:flex;align-items:flex-start;gap:16px;padding:20px;background:${bg};border:1px solid ${border};border-radius:14px;margin-bottom:12px;transition:transform .2s,border-color .2s;}
-.benefit-item:hover{transform:translateX(4px);border-color:rgba(124,92,252,0.4);}
+.benefit-item{display:flex;align-items:flex-start;gap:16px;padding:20px;background:${bg};border:1px solid ${border};border-radius:14px;margin-bottom:12px;}
 .benefit-check{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,${accent},${accentDark});color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;margin-top:2px;}
 .benefit-item span{font-size:16px;line-height:1.6;color:${text};}
 .testimonials-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-top:40px;}
-.testimonial-card{background:${surface};border:1px solid ${border};border-radius:16px;padding:28px;transition:transform .2s,box-shadow .2s;}
-.testimonial-card:hover{transform:translateY(-4px);box-shadow:0 20px 50px rgba(124,92,252,0.15);}
-.stars{color:#f59e0b;font-size:18px;margin-bottom:12px;letter-spacing:2px;}
+.testimonial-card{background:${surface};border:1px solid ${border};border-radius:16px;padding:28px;}
+.stars{color:#f59e0b;font-size:18px;margin-bottom:12px;}
 .testimonial-text{font-size:15px;line-height:1.7;color:${muted};margin-bottom:20px;font-style:italic;}
 .testimonial-author{display:flex;align-items:center;gap:12px;}
 .author-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,${accent},${accentDark});color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex-shrink:0;}
 .author-name{font-weight:700;font-size:14px;color:${text};}
 .author-role{font-size:13px;color:${muted};}
 .price-section{background:${dark?'linear-gradient(135deg,#12103a,#0a0a0f)':'linear-gradient(135deg,#ede8ff,#f8f4ff)'};text-align:center;}
-.price-box{background:${bg};border:1px solid ${border};border-radius:24px;padding:48px 40px;max-width:500px;margin:0 auto;box-shadow:0 20px 60px rgba(124,92,252,0.15);}
+.price-box{background:${bg};border:1px solid ${border};border-radius:24px;padding:48px 40px;max-width:500px;margin:0 auto;}
 .price-label{font-size:13px;color:${muted};text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;}
 .price-value{font-size:clamp(48px,8vw,72px);font-weight:900;color:${accent};line-height:1;}
 .price-currency{font-size:28px;vertical-align:super;}
 .price-period{font-size:16px;color:${muted};margin-top:8px;margin-bottom:32px;}
-.bonus-box{background:${dark?'rgba(124,92,252,0.1)':'rgba(124,92,252,0.06)'};border:1px solid rgba(124,92,252,0.3);border-radius:16px;padding:32px;margin:40px 0;position:relative;overflow:hidden;}
-.bonus-box::before{content:'🎁';position:absolute;right:24px;top:50%;transform:translateY(-50%);font-size:60px;opacity:0.15;}
+.bonus-box{background:${dark?'rgba(124,92,252,0.1)':'rgba(124,92,252,0.06)'};border:1px solid rgba(124,92,252,0.3);border-radius:16px;padding:32px;margin:40px 0;}
 .bonus-label{font-size:12px;font-weight:700;color:${accent};text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;}
 .bonus-text{font-size:20px;font-weight:700;color:${text};}
 .guarantee-box{display:flex;align-items:center;gap:24px;background:${surface2};border:1px solid ${border};border-radius:16px;padding:28px 32px;max-width:600px;margin:0 auto;}
 .guarantee-icon{font-size:52px;flex-shrink:0;}
 .guarantee-title{font-weight:700;font-size:18px;color:${text};margin-bottom:6px;}
 .guarantee-text{color:${muted};font-size:15px;line-height:1.6;}
-.urgency-bar{background:linear-gradient(135deg,${accent},${accentDark});color:#fff;text-align:center;padding:14px 24px;font-weight:700;font-size:15px;letter-spacing:.03em;}
-.urgency-bar span{opacity:.85;font-weight:400;}
+.urgency-bar{background:linear-gradient(135deg,${accent},${accentDark});color:#fff;text-align:center;padding:14px 24px;font-weight:700;font-size:15px;}
 .faq-section{background:${surface};}
-.faq-item{background:${bg};border:1px solid ${border};border-radius:12px;margin-bottom:10px;overflow:hidden;cursor:pointer;transition:border-color .2s;}
-.faq-item:hover{border-color:rgba(124,92,252,0.4);}
+.faq-item{background:${bg};border:1px solid ${border};border-radius:12px;margin-bottom:10px;overflow:hidden;cursor:pointer;}
 .faq-question{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;font-weight:600;font-size:16px;color:${text};}
 .faq-icon{font-size:22px;color:${accent};font-weight:300;transition:transform .3s;}
 .faq-answer{max-height:0;overflow:hidden;transition:max-height .4s ease,padding .3s;font-size:15px;color:${muted};line-height:1.7;padding:0 24px;}
@@ -124,9 +119,9 @@ footer{text-align:center;padding:40px 24px;color:${muted};font-size:13px;border-
 </style>
 </head>
 <body>
-<div class="urgency-bar">🔥 Oferta por tempo limitado <span>— Garanta agora antes que acabe!</span></div>
+<div class="urgency-bar">🔥 Oferta por tempo limitado — Garanta agora!</div>
 <section class="hero">
-  <div class="hero-badge">${form.audience || 'Para você'}</div>
+  <div class="hero-badge">${form.audience || 'Para voce'}</div>
   <h1 class="animate">${copy.headline}</h1>
   <p class="hero-sub animate animate-delay-1">${copy.subheadline}</p>
   ${heroImage}
@@ -137,28 +132,13 @@ footer{text-align:center;padding:40px 24px;color:${muted};font-size:13px;border-
 </section>
 <section class="benefits-section">
   <div class="container">
-    <div class="section-label animate">O que você vai receber</div>
-    <h2 class="section-title animate animate-delay-1">${copy.benefitsTitle || 'Tudo que você precisa'}</h2>
+    <div class="section-label animate">O que voce vai receber</div>
+    <h2 class="section-title animate animate-delay-1">${copy.benefitsTitle || 'Tudo que voce precisa'}</h2>
     <ul style="list-style:none;margin-top:32px;" class="animate animate-delay-2">${benefitsHtml}</ul>
   </div>
 </section>
-${copy.testimonials?.length ? `
-<section>
-  <div class="container">
-    <div class="section-label animate">Depoimentos</div>
-    <h2 class="section-title animate animate-delay-1">O que dizem nossos clientes</h2>
-    <div class="testimonials-grid animate animate-delay-2">${testimonialsHtml}</div>
-  </div>
-</section>` : ''}
-${copy.bonus ? `
-<section>
-  <div class="container">
-    <div class="bonus-box animate">
-      <div class="bonus-label">Bônus exclusivo</div>
-      <div class="bonus-text">${copy.bonus}</div>
-    </div>
-  </div>
-</section>` : ''}
+${copy.testimonials?.length ? `<section><div class="container"><div class="section-label animate">Depoimentos</div><h2 class="section-title animate animate-delay-1">O que dizem nossos clientes</h2><div class="testimonials-grid animate animate-delay-2">${testimonialsHtml}</div></div></section>` : ''}
+${copy.bonus ? `<section><div class="container"><div class="bonus-box animate"><div class="bonus-label">Bonus exclusivo</div><div class="bonus-text">${copy.bonus}</div></div></div></section>` : ''}
 <section class="price-section">
   <div class="container" style="text-align:center;">
     <div class="section-label animate">Investimento</div>
@@ -166,45 +146,26 @@ ${copy.bonus ? `
     <div class="price-box animate animate-delay-2">
       <div class="price-label">Apenas</div>
       <div class="price-value"><span class="price-currency">R$</span>${(form.price||'').toString().replace('R$','').replace(',','.')}</div>
-      <div class="price-period">pagamento único · acesso vitalício</div>
+      <div class="price-period">pagamento unico · acesso vitalicio</div>
       <a href="${form.checkoutUrl || '#'}" class="cta-btn" style="width:100%;justify-content:center;font-size:17px;">✦ ${copy.cta || 'Quero Comprar Agora'}</a>
-      <span class="cta-btn-secondary">🔒 Checkout seguro · Satisfação garantida</span>
+      <span class="cta-btn-secondary">🔒 Checkout seguro</span>
     </div>
-    ${copy.guarantee ? `
-    <div class="guarantee-box animate animate-delay-3" style="margin-top:32px;">
-      <div class="guarantee-icon">🛡️</div>
-      <div>
-        <div class="guarantee-title">Garantia ${form.guarantee || '7 dias'}</div>
-        <div class="guarantee-text">${copy.guarantee}</div>
-      </div>
-    </div>` : ''}
+    ${copy.guarantee ? `<div class="guarantee-box animate animate-delay-3" style="margin-top:32px;"><div class="guarantee-icon">🛡️</div><div><div class="guarantee-title">Garantia ${form.guarantee || '7 dias'}</div><div class="guarantee-text">${copy.guarantee}</div></div></div>` : ''}
   </div>
 </section>
-${copy.faq?.length ? `
-<section class="faq-section">
-  <div class="container">
-    <div class="section-label animate">Dúvidas</div>
-    <h2 class="section-title animate animate-delay-1">Perguntas frequentes</h2>
-    <div style="margin-top:32px;" class="animate animate-delay-2">${faqHtml}</div>
-  </div>
-</section>` : ''}
+${copy.faq?.length ? `<section class="faq-section"><div class="container"><div class="section-label animate">Duvidas</div><h2 class="section-title animate animate-delay-1">Perguntas frequentes</h2><div style="margin-top:32px;" class="animate animate-delay-2">${faqHtml}</div></div></section>` : ''}
 <section style="text-align:center;padding:60px 24px;">
   <div class="container">
-    <h2 class="section-title animate">${copy.finalCta || 'Não perca mais tempo. Comece hoje.'}</h2>
-    <p class="section-sub animate animate-delay-1" style="margin:16px auto 32px;">${copy.finalCtaSub || 'Centenas de pessoas já transformaram suas vidas.'}</p>
+    <h2 class="section-title animate">${copy.finalCta || 'Nao perca mais tempo. Comece hoje.'}</h2>
+    <p class="section-sub animate animate-delay-1" style="margin:16px auto 32px;">${copy.finalCtaSub || 'Centenas de pessoas ja transformaram suas vidas.'}</p>
     <a href="${form.checkoutUrl || '#'}" class="cta-btn animate animate-delay-2">✦ ${copy.cta || 'Quero Comprar Agora'}</a>
   </div>
 </section>
 <footer><p>© ${new Date().getFullYear()} ${form.productName} · Todos os direitos reservados</p></footer>
 <script>
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(e => { if(e.isIntersecting) e.target.style.animationPlayState = 'running' })
-}, {threshold: 0.1})
+const observer = new IntersectionObserver((entries) => { entries.forEach(e => { if(e.isIntersecting) e.target.style.animationPlayState = 'running' }) },{threshold:0.1})
 document.querySelectorAll('.animate').forEach(el => { el.style.animationPlayState = 'paused'; observer.observe(el) })
-function toggleFaq(i) {
-  document.getElementById('faq-'+i).classList.toggle('open')
-  document.getElementById('faq-icon-'+i).classList.toggle('open')
-}
+function toggleFaq(i) { document.getElementById('faq-'+i).classList.toggle('open'); document.getElementById('faq-icon-'+i).classList.toggle('open') }
 </script>
 </body>
 </html>`
@@ -212,45 +173,58 @@ function toggleFaq(i) {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    const cookieStore = cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { cookies: { get(name: string) { return cookieStore.get(name)?.value }, set() {}, remove() {} } }
+    )
 
-    const form = await req.json()
-    const { productName, price, audience, benefits, bonus, guarantee, checkoutUrl, theme } = form
-    if (!productName) return NextResponse.json({ error: 'Nome do produto é obrigatório' }, { status: 400 })
+    const user = (await supabase.auth.getUser()).data.user
+    if (!user) return NextResponse.json({ error: 'Nao autorizado' }, { status: 401 })
 
-    const { data: profile } = await supabase.from('profiles').select('credits_ebooks_used, plans(credits_ebooks)').eq('id', user.id).single()
+    const profileResult = await supabase
+      .from('profiles')
+      .select('credits_ebooks_used, subscription_status, plans(credits_ebooks)')
+      .eq('id', user.id)
+      .single()
+
+    const profile = profileResult.data
+    if (!profile) return NextResponse.json({ error: 'Perfil nao encontrado' }, { status: 404 })
+
+    const status = profile.subscription_status
+    if (status !== 'active' && status !== 'trialing') {
+      return NextResponse.json({
+        error: 'Assine um plano para usar este recurso.',
+        requiresPlan: true,
+      }, { status: 403 })
+    }
+
     const plan = (profile as any)?.plans
     const used = profile?.credits_ebooks_used || 0
     const limit = plan?.credits_ebooks || 3
-    if (used >= limit) return NextResponse.json({ error: 'Sem créditos de ebook disponíveis' }, { status: 403 })
+    if (used >= limit) return NextResponse.json({ error: 'Sem creditos de ebook disponiveis' }, { status: 403 })
+
+    const form = await req.json()
+    const { productName, price, audience, benefits, bonus, guarantee, checkoutUrl, theme } = form
+    if (!productName) return NextResponse.json({ error: 'Nome do produto e obrigatorio' }, { status: 400 })
 
     const [copyRes, imageRes] = await Promise.all([
       fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+        headers: { 'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: 'gpt-4o-mini',
-          messages: [{ role: 'user', content: `Crie copy persuasivo para uma página de vendas em português:
-Produto: ${productName}
-Preço: R$${price}
-Público-alvo: ${audience}
-Benefícios: ${(benefits||[]).filter(Boolean).join(', ')}
-Bônus: ${bonus || 'nenhum'}
-Garantia: ${guarantee || '7 dias'}
-
-Retorne APENAS JSON válido:
-{"headline":"título impactante (max 10 palavras)","subheadline":"subtítulo do benefício principal (max 20 palavras)","benefitsTitle":"título da seção (max 8 palavras)","benefits":["benefício 1 persuasivo","benefício 2","benefício 3"],"bonus":"${bonus ? 'bonus reescrito atraente' : ''}","guarantee":"texto da garantia tranquilizador","cta":"texto do botão (max 6 palavras imperativo)","finalCta":"título final persuasivo","finalCtaSub":"subtítulo final","testimonials":[{"name":"Nome Sobrenome","role":"Profissão, Cidade","text":"depoimento realista 2-3 frases"},{"name":"Nome Sobrenome","role":"Profissão, Cidade","text":"depoimento realista 2-3 frases"},{"name":"Nome Sobrenome","role":"Profissão, Cidade","text":"depoimento realista 2-3 frases"}],"faq":[{"question":"pergunta 1","answer":"resposta clara"},{"question":"pergunta 2","answer":"resposta clara"},{"question":"pergunta 3","answer":"resposta clara"}]}` }],
+          messages: [{ role: 'user', content: 'Crie copy persuasivo para uma pagina de vendas em portugues:\nProduto: ' + productName + '\nPreco: R$' + price + '\nPublico-alvo: ' + audience + '\nBeneficios: ' + (benefits||[]).filter(Boolean).join(', ') + '\nBonus: ' + (bonus || 'nenhum') + '\nGarantia: ' + (guarantee || '7 dias') + '\n\nRetorne APENAS JSON valido:\n{"headline":"titulo impactante (max 10 palavras)","subheadline":"subtitulo do beneficio principal (max 20 palavras)","benefitsTitle":"titulo da secao (max 8 palavras)","benefits":["beneficio 1","beneficio 2","beneficio 3"],"bonus":"' + (bonus ? 'bonus reescrito' : '') + '","guarantee":"texto da garantia","cta":"texto do botao (max 6 palavras)","finalCta":"titulo final persuasivo","finalCtaSub":"subtitulo final","testimonials":[{"name":"Nome Sobrenome","role":"Profissao, Cidade","text":"depoimento 2-3 frases"},{"name":"Nome Sobrenome","role":"Profissao, Cidade","text":"depoimento 2-3 frases"},{"name":"Nome Sobrenome","role":"Profissao, Cidade","text":"depoimento 2-3 frases"}],"faq":[{"question":"pergunta 1","answer":"resposta clara"},{"question":"pergunta 2","answer":"resposta clara"},{"question":"pergunta 3","answer":"resposta clara"}]}' }],
           max_tokens: 1500, temperature: 0.8, response_format: { type: 'json_object' }
         })
       }),
       fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+        headers: { 'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: 'dall-e-3',
-          prompt: `Professional product mockup for "${productName}" targeting ${audience || 'general audience'}. Clean modern design, premium feel, no text or words, vibrant colors, studio lighting. High quality digital product illustration.`,
+          prompt: 'Professional product mockup for "' + productName + '" targeting ' + (audience || 'general audience') + '. Clean modern design, premium feel, no text or words, vibrant colors, studio lighting.',
           n: 1, size: '1024x1024', quality: 'standard'
         })
       })
@@ -268,14 +242,14 @@ Retorne APENAS JSON válido:
         const arrayBuffer = await imgRes.arrayBuffer()
         const base64 = Buffer.from(arrayBuffer).toString('base64')
         const mime = imgRes.headers.get('content-type') || 'image/png'
-        heroImageBase64 = `data:${mime};base64,${base64}`
+        heroImageBase64 = 'data:' + mime + ';base64,' + base64
       } catch (e) {
         console.error('Erro ao converter hero image:', e)
       }
     }
 
     const html = buildHtml(copy, form, theme || 'light', heroImageBase64)
-    const slug = `${slugify(productName)}-${Date.now().toString(36)}`
+    const slug = slugify(productName) + '-' + Date.now().toString(36)
 
     await supabase.from('sales_pages').insert({
       user_id: user.id, slug, html,
@@ -286,7 +260,7 @@ Retorne APENAS JSON válido:
 
     await supabase.from('profiles').update({ credits_ebooks_used: used + 1 }).eq('id', user.id)
 
-    return NextResponse.json({ slug, url: `${process.env.NEXT_PUBLIC_APP_URL}/p/${slug}` })
+    return NextResponse.json({ slug, url: (process.env.NEXT_PUBLIC_APP_URL || 'https://mcpia.site') + '/p/' + slug })
   } catch (err: any) {
     console.error('generate-page error:', err)
     return NextResponse.json({ error: err.message || 'Erro interno' }, { status: 500 })
