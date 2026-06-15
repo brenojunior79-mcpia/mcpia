@@ -32,6 +32,7 @@ export default function PaginasPage() {
   const [pages, setPages] = useState<SalesPage[]>([])
   const [loading, setLoading] = useState<boolean>(false)
   const [result, setResult] = useState<{ slug: string; url: string } | null>(null)
+  const [hasSubscription, setHasSubscription] = useState<boolean | null>(null)
   const [form, setForm] = useState<FormState>({
     productName: '',
     price: '',
@@ -46,18 +47,24 @@ export default function PaginasPage() {
   const supabase = createClient()
 
   useEffect(function() {
+    checkSubscription()
     if (tab === 'minhas') loadPages()
   }, [tab])
+
+  async function checkSubscription() {
+    const userResult = await supabase.auth.getUser()
+    const user = userResult.data.user
+    if (!user) { setHasSubscription(false); return }
+    const result = await supabase.from('profiles').select('subscription_status').eq('id', user.id).single()
+    const status = result.data?.subscription_status
+    setHasSubscription(status === 'active' || status === 'trialing')
+  }
 
   async function loadPages() {
     const userResult = await supabase.auth.getUser()
     const user = userResult.data.user
     if (!user) return
-    const res = await supabase
-      .from('sales_pages')
-      .select('id, slug, product_name, theme, views, created_at, active')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
+    const res = await supabase.from('sales_pages').select('id, slug, product_name, theme, views, created_at, active').eq('user_id', user.id).order('created_at', { ascending: false })
     setPages((res.data as SalesPage[]) || [])
   }
 
@@ -78,6 +85,10 @@ export default function PaginasPage() {
   }
 
   async function gerar() {
+    if (!hasSubscription) {
+      window.location.href = '/dashboard/planos'
+      return
+    }
     const benefits = form.benefits.filter(function(b) { return b.trim() })
     if (!form.productName || !form.price || !form.audience || benefits.length < 2) {
       alert('Preencha: nome, preco, publico-alvo e pelo menos 2 beneficios.')
@@ -89,15 +100,14 @@ export default function PaginasPage() {
     const session = sessionResult.data.session
     const res = await fetch('/api/generate-page', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + (session ? session.access_token : ''),
-      },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session ? session.access_token : '') },
       body: JSON.stringify(Object.assign({}, form, { benefits: benefits })),
     })
     const data = await res.json()
     setLoading(false)
-    if (data.url) {
+    if (data.requiresPlan) {
+      window.location.href = '/dashboard/planos'
+    } else if (data.url) {
       setResult(data)
     } else {
       alert('Erro: ' + (data.error || 'Tente novamente'))
@@ -112,23 +122,24 @@ export default function PaginasPage() {
   return (
     <div className={styles.page}>
       <div className={styles.topbar}>
-        <div className={styles.title}>Paginas de vendas</div>
+        <div className={styles.title}>Criador de site</div>
         <div className={styles.sub}>Crie paginas de alta conversao com IA em segundos</div>
       </div>
 
+      {hasSubscription === false && (
+        <div style={{ margin: '0 24px 16px', display: 'flex', gap: 12, padding: 16, borderRadius: 12, background: 'rgba(124,92,252,0.08)', border: '1px solid rgba(124,92,252,0.25)' }}>
+          <span>🔒</span>
+          <div>
+            <p style={{ fontWeight: 600, color: '#a78bfa', margin: '0 0 4px 0', fontSize: 14 }}>Recurso exclusivo para assinantes</p>
+            <p style={{ color: '#9ca3af', margin: '0 0 8px 0', fontSize: 13 }}>Assine um plano para criar paginas de vendas com IA.</p>
+            <a href="/dashboard/planos" style={{ color: '#7c5cfc', fontSize: 13, fontWeight: 600 }}>Ver planos</a>
+          </div>
+        </div>
+      )}
+
       <div className={styles.tabs}>
-        <div
-          className={styles.tab + (tab === 'criar' ? ' ' + styles.active : '')}
-          onClick={function() { setTab('criar') }}
-        >
-          Criar pagina
-        </div>
-        <div
-          className={styles.tab + (tab === 'minhas' ? ' ' + styles.active : '')}
-          onClick={function() { setTab('minhas') }}
-        >
-          Minhas paginas
-        </div>
+        <div className={styles.tab + (tab === 'criar' ? ' ' + styles.active : '')} onClick={function() { setTab('criar') }}>Criar pagina</div>
+        <div className={styles.tab + (tab === 'minhas' ? ' ' + styles.active : '')} onClick={function() { setTab('minhas') }}>Minhas paginas</div>
       </div>
 
       {tab === 'criar' && (
@@ -173,7 +184,6 @@ export default function PaginasPage() {
                   <input type="text" value={form.audience} onChange={function(e) { setField('audience', e.target.value) }} placeholder="Ex: Empreendedores que querem vender mais no Instagram" />
                 </div>
               </div>
-
               <div className={styles.section}>
                 <div className={styles.sectionTitle}>Beneficios *</div>
                 <div className={styles.sub2}>Minimo 2, maximo 7.</div>
@@ -181,22 +191,14 @@ export default function PaginasPage() {
                   return (
                     <div key={i} className={styles.benefitRow}>
                       <span className={styles.benefitNum}>{i + 1}</span>
-                      <input
-                        type="text"
-                        value={b}
-                        onChange={function(e) { setBenefit(i, e.target.value) }}
-                        placeholder={'Beneficio ' + (i + 1)}
-                      />
+                      <input type="text" value={b} onChange={function(e) { setBenefit(i, e.target.value) }} placeholder={'Beneficio ' + (i + 1)} />
                     </div>
                   )
                 })}
                 {form.benefits.length < 7 && (
-                  <button className={styles.btnAddBenefit} onClick={addBenefit}>
-                    <i className="ti ti-plus" /> Adicionar beneficio
-                  </button>
+                  <button className={styles.btnAddBenefit} onClick={addBenefit}><i className="ti ti-plus" /> Adicionar beneficio</button>
                 )}
               </div>
-
               <div className={styles.section}>
                 <div className={styles.sectionTitle}>Extras (opcional)</div>
                 <div className={styles.field}>
@@ -209,36 +211,24 @@ export default function PaginasPage() {
                 </div>
                 <div className={styles.field}>
                   <label>Instrucoes para a IA (opcional)</label>
-                  <textarea
-                    value={form.customPrompt}
-                    onChange={function(e) { setField('customPrompt', e.target.value) }}
-                    placeholder="Ex: Tom emocional, foco em maes solteiras..."
-                    rows={4}
-                    style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 9, padding: '10px 14px', color: 'var(--text)', fontSize: 14, outline: 'none', resize: 'vertical' }}
-                  />
+                  <textarea value={form.customPrompt} onChange={function(e) { setField('customPrompt', e.target.value) }} placeholder="Ex: Tom emocional, foco em maes solteiras..." rows={4} style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 9, padding: '10px 14px', color: 'var(--text)', fontSize: 14, outline: 'none', resize: 'vertical' }} />
                 </div>
               </div>
-
               <div className={styles.section}>
                 <div className={styles.sectionTitle}>Tema visual</div>
                 <div className={styles.themes}>
-                  <div
-                    className={styles.themeOpt + (form.theme === 'light' ? ' ' + styles.themeOn : '')}
-                    onClick={function() { setField('theme', 'light') }}
-                  >
-                    Claro
-                  </div>
-                  <div
-                    className={styles.themeOpt + (form.theme === 'dark' ? ' ' + styles.themeOn : '')}
-                    onClick={function() { setField('theme', 'dark') }}
-                  >
-                    Escuro
-                  </div>
+                  <div className={styles.themeOpt + (form.theme === 'light' ? ' ' + styles.themeOn : '')} onClick={function() { setField('theme', 'light') }}>Claro</div>
+                  <div className={styles.themeOpt + (form.theme === 'dark' ? ' ' + styles.themeOn : '')} onClick={function() { setField('theme', 'dark') }}>Escuro</div>
                 </div>
               </div>
-
-              <button className={styles.btnGerar} onClick={gerar} disabled={loading}>
-                <i className="ti ti-wand" /> {loading ? 'Gerando sua pagina...' : 'Gerar pagina com IA'}
+              <button
+                className={styles.btnGerar}
+                onClick={gerar}
+                disabled={loading}
+                style={{ background: hasSubscription === false ? 'linear-gradient(135deg, #7c5cfc, #9b6dfc)' : undefined }}
+              >
+                <i className="ti ti-wand" />
+                {hasSubscription === false ? 'Assinar para criar paginas' : loading ? 'Gerando sua pagina...' : 'Gerar pagina com IA'}
               </button>
             </div>
           )}
@@ -266,23 +256,11 @@ export default function PaginasPage() {
                     </div>
                     <div className={styles.pageCardRight}>
                       <div className={styles.pageViews}><i className="ti ti-eye" /> {p.views} views</div>
-                      <button
-                        className={styles.statusBtn + ' ' + (p.active ? styles.statusOn : styles.statusOff)}
-                        onClick={function() { toggleActive(p.id, p.active) }}
-                      >
+                      <button className={styles.statusBtn + ' ' + (p.active ? styles.statusOn : styles.statusOff)} onClick={function() { toggleActive(p.id, p.active) }}>
                         {p.active ? 'Ativa' : 'Pausada'}
                       </button>
-                      <a
-                        href={'/dashboard/paginas/editor/' + p.id}
-                        className={styles.copyBtn}
-                        style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                      >
-                        ✏️
-                      </a>
-                      <button
-                        className={styles.copyBtn}
-                        onClick={function() { navigator.clipboard.writeText(APP_URL + '/p/' + p.slug) }}
-                      >
+                      <a href={'/dashboard/paginas/editor/' + p.id} className={styles.copyBtn} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✏️</a>
+                      <button className={styles.copyBtn} onClick={function() { navigator.clipboard.writeText(APP_URL + '/p/' + p.slug) }}>
                         <i className="ti ti-copy" />
                       </button>
                     </div>
