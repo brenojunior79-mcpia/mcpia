@@ -69,6 +69,7 @@ export default function EbookPage() {
 
   useEffect(function() {
     checkSubscription()
+    loadUserData()
     loadThemes()
   }, [])
 
@@ -85,11 +86,7 @@ export default function EbookPage() {
       .eq('id', user.id)
       .single()
     const status = result.data?.subscription_status
-    const active = status === 'active' || status === 'trialing'
-    setHasSubscription(active)
-    if (active) {
-      loadUserData()
-    }
+    setHasSubscription(status === 'active' || status === 'trialing')
   }
 
   async function loadThemes() {
@@ -126,6 +123,12 @@ export default function EbookPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+
+    if (!hasSubscription) {
+      window.location.href = '/dashboard/planos'
+      return
+    }
+
     setError(null)
     setSuccess(null)
     setUpgradeRequired(false)
@@ -156,6 +159,7 @@ export default function EbookPage() {
       if (!res.ok) {
         if (data.requiresPlan) {
           setHasSubscription(false)
+          setError('Voce precisa de um plano ativo para gerar ebooks.')
         } else if (data.upgradeRequired) {
           setUpgradeRequired(true)
           setError(data.details ?? 'Limite de creditos atingido.')
@@ -199,34 +203,6 @@ export default function EbookPage() {
     return { value: t.id, label: t.name + colors }
   })
 
-  if (hasSubscription === null) {
-    return (
-      <div style={{ minHeight: '100vh', background: '#0a0f0a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: '#6b7280', fontSize: 14 }}>Carregando...</p>
-      </div>
-    )
-  }
-
-  if (!hasSubscription) {
-    return (
-      <div style={{ minHeight: '100vh', background: '#0a0f0a', color: '#fff', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-        <div style={{ maxWidth: 480, textAlign: 'center' }}>
-          <div style={{ fontSize: 56, marginBottom: 16 }}>🔒</div>
-          <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 24, fontWeight: 800, marginBottom: 12 }}>Recurso exclusivo para assinantes</h2>
-          <p style={{ fontSize: 15, color: '#9ca3af', lineHeight: 1.6, marginBottom: 28 }}>
-            Para gerar ebooks profissionais com IA, voce precisa ter um plano ativo. Escolha o plano ideal para o seu negocio.
-          </p>
-          <a
-            href="/dashboard/planos"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'linear-gradient(135deg, #7c5cfc, #9b6dfc)', color: '#fff', fontWeight: 700, fontSize: 15, padding: '14px 32px', borderRadius: 14, textDecoration: 'none' }}
-          >
-            Ver planos e precos
-          </a>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div style={{ minHeight: '100vh', background: '#0a0f0a', color: '#fff', fontFamily: 'inherit' }}>
       <div style={{ maxWidth: '680px', margin: '0 auto', padding: '32px 20px' }}>
@@ -239,7 +215,7 @@ export default function EbookPage() {
             </div>
             <p style={{ fontSize: '12px', color: '#6b7280', margin: 0, paddingLeft: '42px' }}>Gerador de ebooks profissionais em PDF</p>
           </div>
-          {credits && (
+          {hasSubscription && credits && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#0f1a0f', border: '1px solid #1e3a1e', borderRadius: '12px', padding: '12px 16px' }}>
               <div style={{ width: '32px', height: '32px', background: '#1a3a1a', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>📗</div>
               <div>
@@ -254,7 +230,27 @@ export default function EbookPage() {
               </div>
             </div>
           )}
+          {hasSubscription === false && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(124,92,252,0.1)', border: '1px solid rgba(124,92,252,0.3)', borderRadius: 12, padding: '10px 16px' }}>
+              <span>🔒</span>
+              <div>
+                <p style={{ fontSize: 12, color: '#a78bfa', margin: 0, fontWeight: 600 }}>Sem plano ativo</p>
+                <a href="/dashboard/planos" style={{ fontSize: 12, color: '#7c5cfc', textDecoration: 'none' }}>Assinar agora →</a>
+              </div>
+            </div>
+          )}
         </div>
+
+        {hasSubscription === false && (
+          <div style={{ display: 'flex', gap: '12px', padding: '16px', borderRadius: '12px', background: 'rgba(124,92,252,0.08)', border: '1px solid rgba(124,92,252,0.25)', marginBottom: '16px' }}>
+            <span>🔒</span>
+            <div>
+              <p style={{ fontWeight: 600, color: '#a78bfa', margin: '0 0 4px 0', fontSize: '14px' }}>Recurso exclusivo para assinantes</p>
+              <p style={{ color: '#9ca3af', margin: '0 0 8px 0', fontSize: '13px' }}>Assine um plano para gerar ebooks com IA.</p>
+              <a href="/dashboard/planos" style={{ color: '#7c5cfc', fontSize: '13px', fontWeight: 600 }}>Ver planos →</a>
+            </div>
+          </div>
+        )}
 
         {upgradeRequired && (
           <div style={{ display: 'flex', gap: '12px', padding: '16px', borderRadius: '12px', background: 'rgba(120,53,15,0.2)', border: '1px solid rgba(180,83,9,0.3)', marginBottom: '16px' }}>
@@ -267,7 +263,7 @@ export default function EbookPage() {
           </div>
         )}
 
-        {error && !upgradeRequired && (
+        {error && !upgradeRequired && hasSubscription && (
           <div style={{ display: 'flex', gap: '12px', padding: '16px', borderRadius: '12px', background: 'rgba(127,29,29,0.2)', border: '1px solid rgba(185,28,28,0.3)', marginBottom: '16px' }}>
             <span>❌</span>
             <p style={{ color: '#fca5a5', margin: 0, fontSize: '14px' }}>{error}</p>
@@ -338,17 +334,22 @@ export default function EbookPage() {
             </div>
             <button
               onClick={handleSubmit}
-              disabled={loading || !form.title || !form.topic || noCredits}
+              disabled={loading || (hasSubscription === true && (!form.title || !form.topic || noCredits))}
               style={{
                 width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                 padding: '12px', borderRadius: '12px', border: 'none',
-                cursor: loading || noCredits || !form.title || !form.topic ? 'not-allowed' : 'pointer',
-                background: loading || noCredits ? '#1a2e1a' : 'linear-gradient(135deg, #16a34a, #4ade80)',
-                color: loading || noCredits ? '#4ade80' : '#0a0f0a',
-                fontWeight: 700, fontSize: '14px', opacity: !form.title || !form.topic ? 0.5 : 1,
+                cursor: loading ? 'not-allowed' : 'pointer',
+                background: hasSubscription === false
+                  ? 'linear-gradient(135deg, #7c5cfc, #9b6dfc)'
+                  : loading || noCredits ? '#1a2e1a' : 'linear-gradient(135deg, #16a34a, #4ade80)',
+                color: hasSubscription === false ? '#fff' : loading || noCredits ? '#4ade80' : '#0a0f0a',
+                fontWeight: 700, fontSize: '14px',
               }}
             >
-              {loading ? 'Gerando ebook — aguarde ate 3 min...' : 'Gerar Ebook com IA'}
+              {hasSubscription === false
+                ? 'Assinar para gerar ebooks'
+                : loading ? 'Gerando ebook — aguarde ate 3 min...' : 'Gerar Ebook com IA'
+              }
             </button>
             {loading && (
               <p style={{ fontSize: '12px', color: '#6b7280', textAlign: 'center', margin: 0 }}>
