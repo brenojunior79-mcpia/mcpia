@@ -9,7 +9,6 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
-  const [plan, setPlan] = useState('Starter')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
@@ -40,7 +39,7 @@ export default function LoginPage() {
     const result = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: name, plan } },
+      options: { data: { full_name: name } },
     })
     if (result.error) {
       setError(result.error.message)
@@ -210,14 +209,6 @@ export default function LoginPage() {
                       placeholder="Minimo 6 caracteres"
                       required
                     />
-                  </div>
-                  <div className={styles.field}>
-                    <label>Plano de interesse</label>
-                    <select value={plan} onChange={function(e) { setPlan(e.target.value) }}>
-                      <option value="Starter">Starter - R$47/mes</option>
-                      <option value="Pro">Pro - R$97/mes</option>
-                      <option value="Premium">Premium - R$197/mes</option>
-                    </select>
                   </div>
                   {error && <div className={styles.error}>{error}</div>}
                   <button type="submit" className={styles.submitBtn} disabled={loading}>
