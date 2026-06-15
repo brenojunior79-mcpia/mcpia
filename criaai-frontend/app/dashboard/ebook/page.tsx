@@ -64,26 +64,32 @@ export default function EbookPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [upgradeRequired, setUpgradeRequired] = useState(false)
-  const [hasSubscription, setHasSubscription] = useState(true)
+  const [hasSubscription, setHasSubscription] = useState<boolean | null>(null)
   const supabase = createClient()
 
   useEffect(function() {
     checkSubscription()
-    loadUserData()
     loadThemes()
   }, [])
 
   async function checkSubscription() {
     const userResult = await supabase.auth.getUser()
     const user = userResult.data.user
-    if (!user) return
+    if (!user) {
+      setHasSubscription(false)
+      return
+    }
     const result = await supabase
       .from('profiles')
       .select('subscription_status')
       .eq('id', user.id)
       .single()
     const status = result.data?.subscription_status
-    setHasSubscription(status === 'active' || status === 'trialing')
+    const active = status === 'active' || status === 'trialing'
+    setHasSubscription(active)
+    if (active) {
+      loadUserData()
+    }
   }
 
   async function loadThemes() {
@@ -192,6 +198,14 @@ export default function EbookPage() {
     const colors = t.colorKeywords && t.colorKeywords.length > 0 ? ' · ' + t.colorKeywords.slice(0, 3).join(', ') : ''
     return { value: t.id, label: t.name + colors }
   })
+
+  if (hasSubscription === null) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#0a0f0a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: '#6b7280', fontSize: 14 }}>Carregando...</p>
+      </div>
+    )
+  }
 
   if (!hasSubscription) {
     return (
