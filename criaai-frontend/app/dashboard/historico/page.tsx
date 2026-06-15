@@ -7,6 +7,8 @@ export default function HistoricoPage() {
   const [generations, setGenerations] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('todos')
+  const [deleting, setDeleting] = useState<string | null>(null)
+  const [clearingAll, setClearingAll] = useState(false)
   const supabase = createClient()
 
   useEffect(function() {
@@ -36,17 +38,26 @@ export default function HistoricoPage() {
     })
   }
 
-  function getThumbnail(g: any): string | null {
-    if (!g.output_url) return null
-    if (g.type === 'video') {
-      const meta = g.metadata || {}
-      if (meta.thumbnail) return meta.thumbnail
-      return null
-    }
-    if (g.type === 'ebook') {
-      return null
-    }
-    return null
+  async function deleteOne(id: string) {
+    if (!confirm('Remover este item do historico?')) return
+    setDeleting(id)
+    const userResult = await supabase.auth.getUser()
+    const user = userResult.data.user
+    if (!user) return
+    await supabase.from('generations').delete().eq('id', id).eq('user_id', user.id)
+    setGenerations(function(prev) { return prev.filter(function(g) { return g.id !== id }) })
+    setDeleting(null)
+  }
+
+  async function clearAll() {
+    if (!confirm('Limpar todo o historico? Esta acao nao pode ser desfeita.')) return
+    setClearingAll(true)
+    const userResult = await supabase.auth.getUser()
+    const user = userResult.data.user
+    if (!user) return
+    await supabase.from('generations').delete().eq('user_id', user.id)
+    setGenerations([])
+    setClearingAll(false)
   }
 
   function VideoThumb({ url }: { url: string }) {
@@ -86,6 +97,27 @@ export default function HistoricoPage() {
           <div className={styles.title}>Historico</div>
           <div className={styles.sub}>Todos os videos e ebooks gerados na sua conta</div>
         </div>
+        {generations.length > 0 && (
+          <button
+            onClick={clearAll}
+            disabled={clearingAll}
+            style={{
+              background: 'rgba(239,68,68,0.1)',
+              border: '1px solid rgba(239,68,68,0.25)',
+              borderRadius: 10,
+              padding: '8px 16px',
+              color: '#fca5a5',
+              fontSize: 13,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              fontFamily: 'DM Sans, sans-serif',
+            }}
+          >
+            <i className="ti ti-trash" /> {clearingAll ? 'Limpando...' : 'Limpar tudo'}
+          </button>
+        )}
       </div>
 
       <div className={styles.content}>
@@ -173,6 +205,14 @@ export default function HistoricoPage() {
                         <i className="ti ti-copy" /> Copiar link
                       </button>
                     )}
+                    <button
+                      className={styles.actionBtn}
+                      onClick={function() { deleteOne(g.id) }}
+                      disabled={deleting === g.id}
+                      style={{ color: '#fca5a5' }}
+                    >
+                      <i className="ti ti-trash" /> {deleting === g.id ? '...' : 'Limpar'}
+                    </button>
                   </div>
                 </div>
               )
