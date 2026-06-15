@@ -109,12 +109,25 @@ export async function POST(req: NextRequest) {
 
     if (!niche && !customPrompt) return NextResponse.json({ error: 'Preencha o nicho ou descreva o criativo.' }, { status: 400 })
 
-    const profileData = (await supabase.from('profiles').select('credits_videos_used, credits_videos_extra, plans(name, credits_videos, is_unlimited)').eq('id', user.id).single()).data
+    const profileData = (await supabase
+      .from('profiles')
+      .select('credits_videos_used, credits_videos_extra, subscription_status, plans(name, credits_videos, is_unlimited)')
+      .eq('id', user.id)
+      .single()).data
+
     if (!profileData) return NextResponse.json({ error: 'Perfil nao encontrado' }, { status: 404 })
+
+    const status = profileData.subscription_status
+    if (status !== 'active' && status !== 'trialing') {
+      return NextResponse.json({
+        error: 'Assine um plano para usar este recurso.',
+        requiresPlan: true,
+      }, { status: 403 })
+    }
 
     const plan = (profileData as any)?.plans
     const isUnlimited = plan?.is_unlimited
-    const isAgency = plan?.name === 'Agency'
+    const isAgency = plan?.name === 'Agency' || plan?.name === 'Premium'
     const used = profileData.credits_videos_used || 0
     const extraCredits = profileData.credits_videos_extra || 0
     const limit = isUnlimited ? 999999 : ((plan?.credits_videos || 0) + extraCredits)
