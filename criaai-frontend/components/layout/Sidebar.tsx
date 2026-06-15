@@ -50,7 +50,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
         })}
       </nav>
       <div className={styles.bottom}>
-        
+        <a
           href={'https://wa.me/' + WHATSAPP + '?text=Ola, preciso de suporte no MCP.IA'}
           target="_blank"
           rel="noreferrer"
