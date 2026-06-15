@@ -69,28 +69,17 @@ export default function LoginPage() {
           {success ? (
             <div className={styles.successState}>
               <div className={styles.successIcon}>
-                <i className="ti ti-mail" />
+                <i className="ti ti-check" />
               </div>
-              <h2>Verifique seu e-mail!</h2>
-              <p>Enviamos um link de ativacao para:</p>
-              <div className={styles.emailHighlight}>{email}</div>
-              <div className={styles.verifySteps}>
-                <div className={styles.verifyStep}>
-                  <div className={styles.stepNum}>1</div>
-                  <span>Abra seu e-mail agora</span>
-                </div>
-                <div className={styles.verifyStep}>
-                  <div className={styles.stepNum}>2</div>
-                  <span>Clique no link de confirmacao</span>
-                </div>
-                <div className={styles.verifyStep}>
-                  <div className={styles.stepNum}>3</div>
-                  <span>Faca login e comece a criar!</span>
-                </div>
-              </div>
-              <div className={styles.spamNote}>
-                Nao recebeu? Verifique a pasta de spam ou lixo eletronico.
-              </div>
+              <h2>Conta criada!</h2>
+              <p>Sua conta foi criada com sucesso. Faca login para comecar a usar o MCP.IA.</p>
+              <button
+                className={styles.submitBtn}
+                style={{ marginTop: 24 }}
+                onClick={function() { setSuccess(false); setTab('login') }}
+              >
+                Fazer login agora
+              </button>
             </div>
           ) : showReset ? (
             <div>
