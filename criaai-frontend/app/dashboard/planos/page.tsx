@@ -1,7 +1,13 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import styles from './planos.module.css'
+
+const CAKTO_LINKS: Record<string, string> = {
+  Starter: 'https://pay.cakto.com.br/jkx9urd_929562',
+  Pro: 'https://pay.cakto.com.br/hqhmn8e',
+  Premium: 'https://pay.cakto.com.br/kbwoae2',
+}
 
 const plans = [
   {
@@ -27,27 +33,37 @@ const plans = [
 
 export default function PlanosPage() {
   const [loading, setLoading] = useState('')
+  const [userEmail, setUserEmail] = useState('')
   const supabase = createClient()
 
-  async function checkout(planName: string) {
-    setLoading(planName)
-    const sessionResult = await supabase.auth.getSession()
-    const session = sessionResult.data.session
-    const res = await fetch('/api/stripe/checkout', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + (session ? session.access_token : ''),
-      },
-      body: JSON.stringify({ plan: planName, billing: 'monthly' }),
-    })
-    const data = await res.json()
-    setLoading('')
-    if (data.url) {
-      window.location.href = data.url
-    } else {
-      alert('Erro: ' + (data.error || 'Tente novamente'))
+  useEffect(function() {
+    async function loadEmail() {
+      const result = await supabase.auth.getUser()
+      const email = result.data.user?.email
+      if (email) setUserEmail(email)
     }
+    loadEmail()
+  }, [])
+
+  function checkout(planName: string) {
+    setLoading(planName)
+    const baseUrl = CAKTO_LINKS[planName]
+    if (!baseUrl) {
+      alert('Plano nao configurado. Tente novamente mais tarde.')
+      setLoading('')
+      return
+    }
+
+    let url = baseUrl
+    if (userEmail) {
+      const params = new URLSearchParams({
+        email: userEmail,
+        confirmEmail: userEmail,
+      })
+      url = baseUrl + '?' + params.toString()
+    }
+
+    window.location.href = url
   }
 
   return (
@@ -58,7 +74,6 @@ export default function PlanosPage() {
           <div className={styles.sub}>Escolha o plano ideal para o seu negocio</div>
         </div>
       </div>
-
       <div className={styles.content}>
         <div className={styles.plans}>
           {plans.map(function(p: any) {
@@ -92,13 +107,12 @@ export default function PlanosPage() {
                   onClick={function() { checkout(p.name) }}
                   disabled={loading === p.name}
                 >
-                  {loading === p.name ? 'Aguarde...' : 'Assinar agora'}
+                  {loading === p.name ? 'Redirecionando...' : 'Assinar agora'}
                 </button>
               </div>
             )
           })}
         </div>
-
         <div className={styles.guarantee}>
           <i className="ti ti-shield-check" style={{ fontSize: 28, color: 'var(--green)', flexShrink: 0 }} />
           <div>
