@@ -30,7 +30,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
     ...(isAdmin ? [{ href: '/dashboard/admin', icon: 'ti-shield', label: 'Admin' }] : []),
   ]
 
-  const WHATSAPP = '5531999999999'
+  const WHATSAPP = '5537999521440'
 
   return (
     <aside className={styles.sidebar}>
