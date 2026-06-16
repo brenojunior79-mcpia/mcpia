@@ -6,21 +6,21 @@ import styles from './planos.module.css'
 const plans = [
   {
     name: 'Starter',
-    price: 39.90,
+    price: 29.90,
     features: ['15 videos/mes', '3 ebooks/mes', 'Formatos 9:16 e 1:1', 'Copy com IA', 'Download em HD'],
     missing: ['Painel admin', 'White label'],
   },
   {
     name: 'Pro',
-    price: 49.90,
+    price: 39.90,
     featured: true,
-    features: ['50 videos/mes', '15 ebooks/mes', 'Todos os formatos', 'Copy com IA', 'Musica automatica', 'Painel admin'],
+    features: ['25 videos/mes', '6 ebooks/mes', 'Todos os formatos', 'Copy com IA', 'Musica automatica', 'Painel admin'],
     missing: ['White label'],
   },
   {
     name: 'Premium',
-    price: 89.90,
-    features: ['Videos ilimitados', 'Ebooks ilimitados', 'Todos os formatos', 'Painel admin completo', 'White label incluso', 'Suporte prioritario'],
+    price: 69.90,
+    features: ['50 videos/mes', '15 ebooks/mes', 'Todos os formatos', 'Painel admin completo', 'White label incluso', 'Suporte prioritario'],
     missing: [],
   },
 ]
