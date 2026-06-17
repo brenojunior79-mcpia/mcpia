@@ -10,17 +10,10 @@ const admin = createClient(
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const CAKTO_PRODUCT_TO_PLAN: Record<string, string> = {
-  // Preencher com: 'nome_ou_id_do_produto_na_cakto': 'Starter' | 'Pro' | 'Premium'
-}
-
-const CAKTO_PRICE_TO_PLAN: Record<string, string> = {
-  '29.9': 'Starter',
-  '29.90': 'Starter',
-  '39.9': 'Pro',
-  '39.90': 'Pro',
-  '69.9': 'Premium',
-  '69.90': 'Premium',
+const CAKTO_OFFER_TO_PLAN: Record<string, string> = {
+  'jkx9urd_929562': 'Starter',
+  'hqhmn8e': 'Pro',
+  'kbwoae2': 'Premium',
 }
 
 async function getPlanIdByName(planName: string): Promise<string | null> {
@@ -29,18 +22,16 @@ async function getPlanIdByName(planName: string): Promise<string | null> {
 }
 
 function resolvePlanName(payload: any): string | null {
-  const product = payload.data?.product || payload.product || {}
-  const price = product.price ?? payload.data?.amount ?? payload.amount
-
-  if (product.name && CAKTO_PRODUCT_TO_PLAN[product.name]) {
-    return CAKTO_PRODUCT_TO_PLAN[product.name]
+  const offerId = payload.data?.offer?.id || payload.data?.checkoutUrl?.match(/pay\.cakto\.com\.br\/([^?]+)/)?.[1]
+  if (offerId && CAKTO_OFFER_TO_PLAN[offerId]) {
+    return CAKTO_OFFER_TO_PLAN[offerId]
   }
-  if (product.id && CAKTO_PRODUCT_TO_PLAN[product.id]) {
-    return CAKTO_PRODUCT_TO_PLAN[product.id]
-  }
+  const price = payload.data?.offer?.price ?? payload.data?.baseAmount
   if (price !== undefined && price !== null) {
-    const key = String(price)
-    if (CAKTO_PRICE_TO_PLAN[key]) return CAKTO_PRICE_TO_PLAN[key]
+    const rounded = Math.round(Number(price) * 100) / 100
+    if (rounded === 29.9) return 'Starter'
+    if (rounded === 39.9) return 'Pro'
+    if (rounded === 69.9) return 'Premium'
   }
   return null
 }
@@ -48,9 +39,8 @@ function resolvePlanName(payload: any): string | null {
 function getCustomerEmail(payload: any): string | null {
   return (
     payload.data?.customer?.email ||
+    payload.data?.subscription?.customer?.email ||
     payload.customer?.email ||
-    payload.data?.customer_email ||
-    payload.customer_email ||
     null
   )
 }
@@ -66,15 +56,16 @@ async function findUserIdByEmail(email: string): Promise<string | null> {
 
 export async function POST(req: NextRequest) {
   try {
-    const secret = process.env.CAKTO_WEBHOOK_SECRET
-    const incomingSecret = req.headers.get('x-cakto-secret') || req.nextUrl.searchParams.get('secret')
+    const payload = await req.json()
 
-    if (secret && incomingSecret !== secret) {
+    const secretEnv = process.env.CAKTO_WEBHOOK_SECRET
+    const incomingSecret = payload.secret || req.headers.get('x-cakto-secret') || req.nextUrl.searchParams.get('secret')
+
+    if (secretEnv && incomingSecret !== secretEnv) {
       return NextResponse.json({ error: 'Assinatura invalida' }, { status: 401 })
     }
 
-    const payload = await req.json()
-    const eventName: string = payload.event || payload.type || payload.custom_id || ''
+    const eventName: string = payload.event || payload.type || ''
 
     const email = getCustomerEmail(payload)
     if (!email) {
@@ -88,8 +79,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ received: true, warning: 'usuario nao encontrado' })
     }
 
-    const orderId =
-      payload.data?.id || payload.data?.order_id || payload.id || payload.order_id || null
+    const orderId = payload.data?.id || null
 
     switch (eventName) {
       case 'purchase_approved':
@@ -110,6 +100,10 @@ export async function POST(req: NextRequest) {
             updated_at: new Date().toISOString(),
           })
           .eq('id', userId)
+
+        if (!planId) {
+          console.error('[cakto-webhook] plano nao identificado, payload offer:', JSON.stringify(payload.data?.offer))
+        }
         break
       }
 
