@@ -6,12 +6,18 @@ import styles from './admin.module.css'
 
 export default function AdminPage() {
   const [profiles, setProfiles] = useState<any[]>([])
-  const [stats, setStats] = useState({ receita: 0, custo: 0, alunos: 0, videos: 0, pagantes: 0 })
+  const [stats, setStats] = useState({ receita: 0, custo: 0, alunos: 0, videos: 0, pagantes: 0, hoje: 0 })
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('pagantes')
   const [search, setSearch] = useState('')
   const supabase = createClient()
   const router = useRouter()
+
+  function isToday(dateStr: string) {
+    const d = new Date(dateStr)
+    const now = new Date()
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
+  }
 
   useEffect(function() {
     async function load() {
@@ -31,10 +37,11 @@ export default function AdminPage() {
       if (allProfiles) {
         setProfiles(allProfiles)
         const pagantes = allProfiles.filter(function(p) { return p.subscription_status === 'active' })
+        const hoje = allProfiles.filter(function(p) { return isToday(p.created_at) })
         const receita = pagantes.reduce(function(a, p) { return a + (p.plans?.price_monthly || 0) }, 0)
         const custo = allProfiles.reduce(function(a, p) { return a + (p.credits_videos_used || 0) * 0.56 + (p.credits_ebooks_used || 0) * 1.65 }, 0)
         const videos = allProfiles.reduce(function(a, p) { return a + (p.credits_videos_used || 0) }, 0)
-        setStats({ receita, custo, alunos: allProfiles.length, videos, pagantes: pagantes.length })
+        setStats({ receita, custo, alunos: allProfiles.length, videos, pagantes: pagantes.length, hoje: hoje.length })
       }
       setLoading(false)
     }
@@ -67,6 +74,7 @@ export default function AdminPage() {
     if (filter === 'ok') return getRisco(p) === 'ok'
     if (filter === 'pagantes') return p.subscription_status === 'active'
     if (filter === 'inativos') return p.subscription_status !== 'active' && p.subscription_status !== 'trialing'
+    if (filter === 'hoje') return isToday(p.created_at)
     return true
   })
 
@@ -159,19 +167,21 @@ export default function AdminPage() {
           </div>
           <div
             className={styles.stat}
-            style={{ cursor: 'pointer', border: filter === 'todos' ? '1px solid var(--accent)' : undefined }}
-            onClick={function() { setFilter('todos') }}
+            style={{ cursor: 'pointer', border: filter === 'hoje' ? '1px solid var(--accent)' : undefined }}
+            onClick={function() { setFilter('hoje') }}
           >
-            <div className={styles.statLabel}>Total de cadastros</div>
-            <div className={styles.statValue}>{stats.alunos}</div>
-            <div className={styles.statUp}>{stats.videos} videos gerados — clique para ver todos</div>
+            <div className={styles.statLabel}>Cadastros hoje</div>
+            <div className={styles.statValue}>{stats.hoje}</div>
+            <div className={styles.statUp}>de {stats.alunos} no total — clique para ver</div>
           </div>
         </div>
 
         <div className={styles.tableCard}>
           <div className={styles.tableHeader}>
             <div className={styles.tableTitle}>
-              {filter === 'pagantes' ? 'Alunos com plano ativo (' + stats.pagantes + ')' : 'Alunos cadastrados'}
+              {filter === 'pagantes' ? 'Alunos com plano ativo (' + stats.pagantes + ')' :
+               filter === 'hoje' ? 'Cadastrados hoje (' + stats.hoje + ')' :
+               'Alunos cadastrados'}
             </div>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
               <input
@@ -191,14 +201,14 @@ export default function AdminPage() {
                 }}
               />
               <div className={styles.filters}>
-                {['pagantes', 'todos', 'inativos', 'risco', 'ok'].map(function(f) {
+                {['pagantes', 'hoje', 'todos', 'inativos', 'risco', 'ok'].map(function(f) {
                   return (
                     <div
                       key={f}
                       className={styles.ftab + (filter === f ? ' ' + styles.ftabOn : '')}
                       onClick={function() { setFilter(f) }}
                     >
-                      {f === 'todos' ? 'Todos' : f === 'pagantes' ? 'Pagantes' : f === 'inativos' ? 'Inativos' : f === 'risco' ? 'Em risco' : 'Saudaveis'}
+                      {f === 'todos' ? 'Todos' : f === 'pagantes' ? 'Pagantes' : f === 'hoje' ? 'Cadastrados hoje' : f === 'inativos' ? 'Inativos' : f === 'risco' ? 'Em risco' : 'Saudaveis'}
                     </div>
                   )
                 })}
