@@ -9,6 +9,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
+  const [whatsapp, setWhatsapp] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
@@ -32,14 +33,28 @@ export default function LoginPage() {
     router.push('/dashboard')
   }
 
+  function formatWhatsapp(value: string) {
+    const digits = value.replace(/\D/g, '').slice(0, 11)
+    if (digits.length <= 2) return digits
+    if (digits.length <= 7) return '(' + digits.slice(0, 2) + ') ' + digits.slice(2)
+    return '(' + digits.slice(0, 2) + ') ' + digits.slice(2, 7) + '-' + digits.slice(7)
+  }
+
   async function handleCadastro(e: React.FormEvent) {
     e.preventDefault()
+
+    const whatsappDigits = whatsapp.replace(/\D/g, '')
+    if (whatsappDigits.length < 10) {
+      setError('Digite um numero de WhatsApp valido com DDD.')
+      return
+    }
+
     setLoading(true)
     setError('')
     const result = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: name } },
+      options: { data: { full_name: name, whatsapp: whatsappDigits } },
     })
     if (result.error) {
       setError(result.error.message)
@@ -186,6 +201,16 @@ export default function LoginPage() {
                       value={email}
                       onChange={function(e) { setEmail(e.target.value) }}
                       placeholder="seu@email.com"
+                      required
+                    />
+                  </div>
+                  <div className={styles.field}>
+                    <label>WhatsApp</label>
+                    <input
+                      type="text"
+                      value={whatsapp}
+                      onChange={function(e) { setWhatsapp(formatWhatsapp(e.target.value)) }}
+                      placeholder="(11) 91234-5678"
                       required
                     />
                   </div>
