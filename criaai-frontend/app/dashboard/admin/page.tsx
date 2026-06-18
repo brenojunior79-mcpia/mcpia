@@ -8,7 +8,7 @@ export default function AdminPage() {
   const [profiles, setProfiles] = useState<any[]>([])
   const [stats, setStats] = useState({ receita: 0, custo: 0, alunos: 0, videos: 0, pagantes: 0 })
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState('todos')
+  const [filter, setFilter] = useState('pagantes')
   const [search, setSearch] = useState('')
   const supabase = createClient()
   const router = useRouter()
@@ -101,9 +101,7 @@ export default function AdminPage() {
                 <i className="ti ti-external-link" />
               </a>
             </div>
-            <div className={styles.apiNote}>
-              Verifique o saldo de renders em creatomate.com
-            </div>
+            <div className={styles.apiNote}>Verifique o saldo de renders em creatomate.com</div>
           </div>
 
           <div className={styles.apiCard}>
@@ -119,9 +117,7 @@ export default function AdminPage() {
                 <i className="ti ti-external-link" />
               </a>
             </div>
-            <div className={styles.apiNote}>
-              Verifique o saldo em platform.openai.com
-            </div>
+            <div className={styles.apiNote}>Verifique o saldo em platform.openai.com</div>
           </div>
 
           <div className={styles.apiCard}>
@@ -137,17 +133,19 @@ export default function AdminPage() {
                 <i className="ti ti-external-link" />
               </a>
             </div>
-            <div className={styles.apiNote}>
-              Verifique o saldo em gamma.app
-            </div>
+            <div className={styles.apiNote}>Verifique o saldo em gamma.app</div>
           </div>
         </div>
 
         <div className={styles.stats}>
-          <div className={styles.stat}>
+          <div
+            className={styles.stat}
+            style={{ cursor: 'pointer', border: filter === 'pagantes' ? '1px solid var(--accent)' : undefined }}
+            onClick={function() { setFilter('pagantes') }}
+          >
             <div className={styles.statLabel}>Receita mensal</div>
             <div className={styles.statValue}>R${stats.receita.toFixed(0)}</div>
-            <div className={styles.statUp}>{stats.pagantes} alunos pagantes</div>
+            <div className={styles.statUp}>{stats.pagantes} alunos pagantes — clique para ver</div>
           </div>
           <div className={styles.stat}>
             <div className={styles.statLabel}>Custo total APIs</div>
@@ -159,16 +157,22 @@ export default function AdminPage() {
             <div className={styles.statValue} style={{ color: 'var(--green)' }}>R${(stats.receita - stats.custo).toFixed(0)}</div>
             <div className={styles.statUp}>Margem {stats.receita > 0 ? Math.round(((stats.receita - stats.custo) / stats.receita) * 100) : 0}%</div>
           </div>
-          <div className={styles.stat}>
+          <div
+            className={styles.stat}
+            style={{ cursor: 'pointer', border: filter === 'todos' ? '1px solid var(--accent)' : undefined }}
+            onClick={function() { setFilter('todos') }}
+          >
             <div className={styles.statLabel}>Total de cadastros</div>
             <div className={styles.statValue}>{stats.alunos}</div>
-            <div className={styles.statUp}>{stats.videos} videos gerados</div>
+            <div className={styles.statUp}>{stats.videos} videos gerados — clique para ver todos</div>
           </div>
         </div>
 
         <div className={styles.tableCard}>
           <div className={styles.tableHeader}>
-            <div className={styles.tableTitle}>Alunos cadastrados</div>
+            <div className={styles.tableTitle}>
+              {filter === 'pagantes' ? 'Alunos com plano ativo (' + stats.pagantes + ')' : 'Alunos cadastrados'}
+            </div>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
               <input
                 type="text"
@@ -187,7 +191,7 @@ export default function AdminPage() {
                 }}
               />
               <div className={styles.filters}>
-                {['todos', 'pagantes', 'inativos', 'risco', 'ok'].map(function(f) {
+                {['pagantes', 'todos', 'inativos', 'risco', 'ok'].map(function(f) {
                   return (
                     <div
                       key={f}
