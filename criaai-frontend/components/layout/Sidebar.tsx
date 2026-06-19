@@ -24,7 +24,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
     { href: '/dashboard/chat', icon: 'ti-message-circle', label: 'Assistente IA' },
     { href: '/dashboard/ebook', icon: 'ti-book-2', label: 'Gerador de Ebook' },
     { href: '/dashboard/paginas', icon: 'ti-layout', label: 'Criador de site' },
-    { href: '/dashboard', icon: 'ti-sparkles', label: 'Criador de Criativos' },
+    { href: '/dashboard/criativo', icon: 'ti-sparkles', label: 'Criador de Criativos' },
     { href: '/dashboard/metricas', icon: 'ti-chart-bar', label: 'Analise suas metricas' },
     { href: '/dashboard/planos', icon: 'ti-credit-card', label: 'Planos' },
     ...(isAdmin ? [{ href: '/dashboard/admin', icon: 'ti-shield', label: 'Admin' }] : []),
