@@ -3,11 +3,25 @@ import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import styles from '../dashboard.module.css'
 
+const TEMPLATES = [
+  { id: 'aleatorio', label: 'Aleatorio', icon: 'ti-dice', desc: 'Sistema escolhe automaticamente' },
+  { id: '4aefa26c-a720-4955-aaeb-975ba67a04b9', label: 'Estilo 1', icon: 'ti-layout-2', desc: 'Template original' },
+  { id: 'd4989be7-36ac-4efa-ab21-2ffacf51ce5c', label: 'Estilo 2', icon: 'ti-layout-board', desc: 'Novo template' },
+  { id: 'b1530859-0435-47f3-b7c6-997edcf37631', label: 'Estilo 3', icon: 'ti-layout-grid', desc: 'Novo template' },
+]
+
+const TEMPLATE_IDS = TEMPLATES.filter(function(t) { return t.id !== 'aleatorio' }).map(function(t) { return t.id })
+
+function getRandomTemplate() {
+  return TEMPLATE_IDS[Math.floor(Math.random() * TEMPLATE_IDS.length)]
+}
+
 export default function CriativoPage() {
   const [niche, setNiche] = useState('')
   const [tone, setTone] = useState('lifestyle')
   const [format, setFormat] = useState('9:16')
   const [customPrompt, setCustomPrompt] = useState('')
+  const [templateId, setTemplateId] = useState('aleatorio')
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState(0)
   const [result, setResult] = useState('')
@@ -104,11 +118,14 @@ export default function CriativoPage() {
     setStep(0)
     setResult('')
     setScript(null)
+
+    const chosenTemplate = templateId === 'aleatorio' ? getRandomTemplate() : templateId
+
     try {
       const res = await fetch('/api/generate-video', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ niche, tone, format, customPrompt }),
+        body: JSON.stringify({ niche, tone, format, customPrompt, templateId: chosenTemplate }),
       })
       const data = await res.json()
       if (!data.renderId) {
@@ -178,14 +195,45 @@ export default function CriativoPage() {
 
         <div className={styles.configPanel} style={{ maxWidth: 700 }}>
           <div className={styles.configTitle}>Configuracoes do criativo</div>
+
           <div className={styles.field}>
             <label>Niche / produto</label>
             <input type="text" value={niche} onChange={function(e) { setNiche(e.target.value) }} placeholder="Ex: skincare, curso online, suplemento, ebook..." />
           </div>
+
           <div className={styles.field}>
             <label>Descreva seu criativo <span style={{ color: 'var(--accent2)', fontSize: 12 }}>(quanto mais detalhado, melhor)</span></label>
             <textarea value={customPrompt} onChange={function(e) { setCustomPrompt(e.target.value) }} placeholder="Ex: Quero um video para mulheres 25-40 anos que querem emagrecer." rows={4} style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 9, padding: '10px 14px', color: 'var(--text)', fontSize: 14, outline: 'none', resize: 'vertical', boxSizing: 'border-box' }} />
           </div>
+
+          <div className={styles.field}>
+            <label>Estilo do video</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+              {TEMPLATES.map(function(t) {
+                const isSelected = templateId === t.id
+                return (
+                  <div
+                    key={t.id}
+                    onClick={function() { setTemplateId(t.id) }}
+                    style={{
+                      background: isSelected ? 'rgba(124,92,252,0.15)' : 'var(--surface2)',
+                      border: isSelected ? '2px solid var(--accent)' : '1px solid var(--border)',
+                      borderRadius: 12,
+                      padding: '12px 10px',
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <i className={'ti ' + t.icon} style={{ fontSize: 22, color: isSelected ? 'var(--accent2)' : 'var(--muted2)', display: 'block', marginBottom: 6 }} />
+                    <div style={{ fontSize: 13, fontWeight: 600, color: isSelected ? 'var(--accent2)' : 'var(--text)' }}>{t.label}</div>
+                    <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{t.desc}</div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
           <div className={styles.field}>
             <label>Tom do criativo</label>
             <div className={styles.toggleGroup}>
@@ -196,6 +244,7 @@ export default function CriativoPage() {
               })}
             </div>
           </div>
+
           <div className={styles.field}>
             <label>Formato</label>
             <div className={styles.toggleGroup}>
