@@ -8,6 +8,12 @@ const CREATOMATE_TEMPLATE_ID = process.env.CREATOMATE_TEMPLATE_ID!
 const UNSPLASH_ACCESS_KEY = process.env.UNSPLASH_ACCESS_KEY!
 const AGENCY_VIDEO_LIMIT = 100
 
+const VALID_TEMPLATES = [
+  '4aefa26c-a720-4955-aaeb-975ba67a04b9',
+  'd4989be7-36ac-4efa-ab21-2ffacf51ce5c',
+  'b1530859-0435-47f3-b7c6-997edcf37631',
+]
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
 
 async function getUnsplashImages(query: string): Promise<string[]> {
@@ -61,7 +67,11 @@ async function generateScript(niche: string, tone: string, customPrompt: string)
   }
 }
 
-async function createRender(script: { text1: string; text2: string; text3: string; text4: string }, images: string[]): Promise<string> {
+async function createRender(
+  script: { text1: string; text2: string; text3: string; text4: string },
+  images: string[],
+  templateId: string
+): Promise<string> {
   const mods: Record<string, string> = {
     'Text-1.text': script.text1,
     'Text-2.text': script.text2,
@@ -73,7 +83,7 @@ async function createRender(script: { text1: string; text2: string; text3: strin
   if (images[2]) mods['Background-3.source'] = images[2]
   if (images[3]) mods['Background-4.source'] = images[3]
 
-  const payload = JSON.stringify({ template_id: CREATOMATE_TEMPLATE_ID, modifications: mods })
+  const payload = JSON.stringify({ template_id: templateId, modifications: mods })
 
   const res = await fetch('https://api.creatomate.com/v2/renders', {
     method: 'POST',
@@ -106,6 +116,11 @@ export async function POST(req: NextRequest) {
     const tone: string = reqBody.tone || 'lifestyle'
     const format: string = reqBody.format || '9:16'
     const customPrompt: string = reqBody.customPrompt || ''
+    const templateIdFromReq: string = reqBody.templateId || ''
+
+    const chosenTemplateId = VALID_TEMPLATES.includes(templateIdFromReq)
+      ? templateIdFromReq
+      : CREATOMATE_TEMPLATE_ID
 
     if (!niche && !customPrompt) return NextResponse.json({ error: 'Preencha o nicho ou descreva o criativo.' }, { status: 400 })
 
@@ -119,10 +134,7 @@ export async function POST(req: NextRequest) {
 
     const status = profileData.subscription_status
     if (status !== 'active' && status !== 'trialing') {
-      return NextResponse.json({
-        error: 'Assine um plano para usar este recurso.',
-        requiresPlan: true,
-      }, { status: 403 })
+      return NextResponse.json({ error: 'Assine um plano para usar este recurso.', requiresPlan: true }, { status: 403 })
     }
 
     const plan = (profileData as any)?.plans
@@ -143,8 +155,11 @@ export async function POST(req: NextRequest) {
     }
 
     const searchQuery = niche || customPrompt.slice(0, 50)
-    const [script, images] = await Promise.all([generateScript(niche, tone, customPrompt), getUnsplashImages(searchQuery)])
-    const renderId = await createRender(script, images)
+    const [script, images] = await Promise.all([
+      generateScript(niche, tone, customPrompt),
+      getUnsplashImages(searchQuery)
+    ])
+    const renderId = await createRender(script, images, chosenTemplateId)
 
     await supabase.from('generations').insert({
       user_id: user.id,
@@ -153,7 +168,7 @@ export async function POST(req: NextRequest) {
       niche: niche || customPrompt.slice(0, 50),
       format: format,
       credits_consumed: 1,
-      metadata: { renderId, tone, customPrompt, script, provider: 'creatomate' },
+      metadata: { renderId, tone, customPrompt, script, provider: 'creatomate', templateId: chosenTemplateId },
     })
 
     return NextResponse.json({ renderId, script })
