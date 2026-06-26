@@ -16,16 +16,20 @@ const CAKTO_OFFER_TO_PLAN: Record<string, string> = {
   'kbwoae2': 'Premium',
 }
 
+const CAKTO_OFFER_TO_CREDITS: Record<string, number> = {
+  'i74jv7b_943777': 10,
+  '35j9btc_943780': 30,
+  'bjwi3d9_943781': 100,
+}
+
 async function getPlanIdByName(planName: string): Promise<string | null> {
   const { data } = await admin.from('plans').select('id').eq('name', planName).maybeSingle()
   return data?.id || null
 }
 
 function resolvePlanName(payload: any): string | null {
-  const offerId = payload.data?.offer?.id || payload.data?.checkoutUrl?.match(/pay\.cakto\.com\.br\/([^?]+)/)?.[1]
-  if (offerId && CAKTO_OFFER_TO_PLAN[offerId]) {
-    return CAKTO_OFFER_TO_PLAN[offerId]
-  }
+  const offerId = payload.data?.offer?.id
+  if (offerId && CAKTO_OFFER_TO_PLAN[offerId]) return CAKTO_OFFER_TO_PLAN[offerId]
   const price = payload.data?.offer?.price ?? payload.data?.baseAmount
   if (price !== undefined && price !== null) {
     const rounded = Math.round(Number(price) * 100) / 100
@@ -34,6 +38,23 @@ function resolvePlanName(payload: any): string | null {
     if (rounded === 69.9) return 'Premium'
   }
   return null
+}
+
+function resolveCreditsPackage(payload: any): number | null {
+  const offerId = payload.data?.offer?.id
+  if (offerId && CAKTO_OFFER_TO_CREDITS[offerId]) return CAKTO_OFFER_TO_CREDITS[offerId]
+  const price = payload.data?.offer?.price ?? payload.data?.baseAmount
+  if (price !== undefined && price !== null) {
+    const rounded = Math.round(Number(price) * 100) / 100
+    if (rounded === 19.9) return 10
+    if (rounded === 49.9) return 30
+    if (rounded === 149.9) return 100
+  }
+  return null
+}
+
+function isSubscription(payload: any): boolean {
+  return !!(payload.data?.subscription?.id)
 }
 
 function getCustomerEmail(payload: any): string | null {
@@ -66,10 +87,10 @@ export async function POST(req: NextRequest) {
     }
 
     const eventName: string = payload.event || payload.type || ''
-
     const email = getCustomerEmail(payload)
+
     if (!email) {
-      console.error('[cakto-webhook] sem email no payload', JSON.stringify(payload).slice(0, 500))
+      console.error('[cakto-webhook] sem email no payload')
       return NextResponse.json({ received: true, warning: 'sem email' })
     }
 
@@ -82,7 +103,58 @@ export async function POST(req: NextRequest) {
     const orderId = payload.data?.id || null
 
     switch (eventName) {
-      case 'purchase_approved':
+      case 'purchase_approved': {
+        if (isSubscription(payload)) {
+          // Compra de assinatura
+          const planName = resolvePlanName(payload)
+          const planId = planName ? await getPlanIdByName(planName) : null
+
+          await admin
+            .from('profiles')
+            .update({
+              subscription_status: 'active',
+              plan_id: planId,
+              payment_provider: 'cakto',
+              cakto_order_id: orderId,
+              credits_videos_used: 0,
+              credits_ebooks_used: 0,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', userId)
+
+          if (!planId) {
+            console.error('[cakto-webhook] plano nao identificado, offer:', JSON.stringify(payload.data?.offer))
+          }
+        } else {
+          // Compra de creditos avulsos (pagamento unico)
+          const credits = resolveCreditsPackage(payload)
+
+          if (credits) {
+            const profileResult = await admin
+              .from('profiles')
+              .select('credits_videos_extra')
+              .eq('id', userId)
+              .single()
+
+            const current = profileResult.data?.credits_videos_extra || 0
+
+            await admin
+              .from('profiles')
+              .update({
+                credits_videos_extra: current + credits,
+                payment_provider: 'cakto',
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', userId)
+
+            console.log('[cakto-webhook] ' + credits + ' creditos adicionados para', email)
+          } else {
+            console.error('[cakto-webhook] creditos nao identificados, offer:', JSON.stringify(payload.data?.offer))
+          }
+        }
+        break
+      }
+
       case 'subscription_created':
       case 'subscription_renewed': {
         const planName = resolvePlanName(payload)
@@ -100,10 +172,6 @@ export async function POST(req: NextRequest) {
             updated_at: new Date().toISOString(),
           })
           .eq('id', userId)
-
-        if (!planId) {
-          console.error('[cakto-webhook] plano nao identificado, payload offer:', JSON.stringify(payload.data?.offer))
-        }
         break
       }
 
