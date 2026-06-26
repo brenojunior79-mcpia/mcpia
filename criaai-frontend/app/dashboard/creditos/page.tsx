@@ -1,223 +1,102 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+'use client'
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase-browser'
+import styles from './creditos.module.css'
 
-const admin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { persistSession: false } }
-)
+const CAKTO_PACKS = [
+  { id: 'pack10', credits: 10, price: 19.90, label: 'Pack 10', url: 'https://pay.cakto.com.br/i74jv7b_943777' },
+  { id: 'pack30', credits: 30, price: 49.90, label: 'Pack 30', url: 'https://pay.cakto.com.br/35j9btc_943780', badge: 'Mais vendido' },
+  { id: 'pack100', credits: 100, price: 149.90, label: 'Pack 100', url: 'https://pay.cakto.com.br/bjwi3d9_943781', badge: 'Melhor preco' },
+]
 
-export const runtime = 'nodejs'
-export const dynamic = 'force-dynamic'
+export default function CreditosPage() {
+  const [selected, setSelected] = useState('pack30')
+  const [loading, setLoading] = useState(false)
+  const [userEmail, setUserEmail] = useState('')
+  const supabase = createClient()
 
-const CAKTO_OFFER_TO_PLAN: Record<string, string> = {
-  'jkx9urd_929562': 'Starter',
-  'hqhmn8e': 'Pro',
-  'kbwoae2': 'Premium',
-}
+  useEffect(function() {
+    async function load() {
+      const result = await supabase.auth.getUser()
+      const email = result.data.user?.email
+      if (email) setUserEmail(email)
+    }
+    load()
+  }, [])
 
-const CAKTO_OFFER_TO_CREDITS: Record<string, number> = {
-  'i74jv7b_943777': 10,
-  '35j9btc_943780': 30,
-  'bjwi3d9_943781': 100,
-}
-
-async function getPlanIdByName(planName: string): Promise<string | null> {
-  const { data } = await admin.from('plans').select('id').eq('name', planName).maybeSingle()
-  return data?.id || null
-}
-
-function resolvePlanName(payload: any): string | null {
-  const offerId = payload.data?.offer?.id
-  if (offerId && CAKTO_OFFER_TO_PLAN[offerId]) return CAKTO_OFFER_TO_PLAN[offerId]
-  const price = payload.data?.offer?.price ?? payload.data?.baseAmount
-  if (price !== undefined && price !== null) {
-    const rounded = Math.round(Number(price) * 100) / 100
-    if (rounded === 29.9) return 'Starter'
-    if (rounded === 39.9) return 'Pro'
-    if (rounded === 69.9) return 'Premium'
+  function perCredit(price: number, credits: number) {
+    return (price / credits).toFixed(2)
   }
-  return null
-}
 
-function resolveCreditsPackage(payload: any): number | null {
-  const offerId = payload.data?.offer?.id
-  if (offerId && CAKTO_OFFER_TO_CREDITS[offerId]) return CAKTO_OFFER_TO_CREDITS[offerId]
-  const price = payload.data?.offer?.price ?? payload.data?.baseAmount
-  if (price !== undefined && price !== null) {
-    const rounded = Math.round(Number(price) * 100) / 100
-    if (rounded === 19.9) return 10
-    if (rounded === 49.9) return 30
-    if (rounded === 149.9) return 100
+  function comprar() {
+    const pack = CAKTO_PACKS.find(function(p) { return p.id === selected })
+    if (!pack) return
+    setLoading(true)
+
+    let url = pack.url
+    if (userEmail) {
+      const params = new URLSearchParams({
+        email: userEmail,
+        confirmEmail: userEmail,
+      })
+      url = pack.url + '?' + params.toString()
+    }
+
+    window.location.href = url
   }
-  return null
-}
 
-function isSubscription(payload: any): boolean {
-  return !!(payload.data?.subscription?.id)
-}
+  const atual = CAKTO_PACKS.find(function(p) { return p.id === selected })
 
-function getCustomerEmail(payload: any): string | null {
   return (
-    payload.data?.customer?.email ||
-    payload.data?.subscription?.customer?.email ||
-    payload.customer?.email ||
-    null
+    <div className={styles.page}>
+      <div className={styles.topbar}>
+        <div className={styles.title}>Comprar creditos</div>
+        <div className={styles.sub}>Adicione creditos extras sem precisar mudar de plano</div>
+      </div>
+      <div className={styles.content}>
+        <div className={styles.packs}>
+          {CAKTO_PACKS.map(function(p) {
+            return (
+              <div
+                key={p.id}
+                className={styles.pack + (selected === p.id ? ' ' + styles.selected : '')}
+                onClick={function() { setSelected(p.id) }}
+              >
+                {p.badge && <div className={styles.packBadge}>{p.badge}</div>}
+                <div className={styles.packCredits}>{p.credits}</div>
+                <div className={styles.packLabel}>creditos de video</div>
+                <div className={styles.packPrice}>R${p.price.toFixed(2).replace('.', ',')}</div>
+                <div className={styles.packPer}>R${perCredit(p.price, p.credits)} por credito</div>
+              </div>
+            )
+          })}
+        </div>
+
+        <div className={styles.infoBox}>
+          <i className="ti ti-info-circle" style={{ fontSize: 18, flexShrink: 0, color: 'var(--accent2)' }} />
+          <div>
+            <strong>Como funcionam os creditos extras?</strong>
+            <p>Os creditos sao adicionados apos a confirmacao do pagamento e somam ao seu saldo atual. Nao expiram e podem ser usados a qualquer momento.</p>
+          </div>
+        </div>
+
+        <button
+          className={styles.btnBuy}
+          onClick={comprar}
+          disabled={loading || !atual}
+        >
+          <i className="ti ti-credit-card" />
+          {loading ? 'Redirecionando...' : atual ? 'Comprar ' + atual.credits + ' creditos · R$' + atual.price.toFixed(2).replace('.', ',') : 'Carregando...'}
+        </button>
+
+        <div className={styles.guarantee}>
+          <i className="ti ti-shield-check" style={{ fontSize: 24, color: 'var(--green)', flexShrink: 0 }} />
+          <div>
+            <strong>Garantia de 7 dias</strong>
+            <p>Se nao gostar, devolvemos 100% do valor.</p>
+          </div>
+        </div>
+      </div>
+    </div>
   )
-}
-
-async function findUserIdByEmail(email: string): Promise<string | null> {
-  const { data } = await admin
-    .from('profiles')
-    .select('id')
-    .eq('email', email.toLowerCase().trim())
-    .maybeSingle()
-  return data?.id || null
-}
-
-export async function POST(req: NextRequest) {
-  try {
-    const payload = await req.json()
-
-    const secretEnv = process.env.CAKTO_WEBHOOK_SECRET
-    const incomingSecret = payload.secret || req.headers.get('x-cakto-secret') || req.nextUrl.searchParams.get('secret')
-
-    if (secretEnv && incomingSecret !== secretEnv) {
-      return NextResponse.json({ error: 'Assinatura invalida' }, { status: 401 })
-    }
-
-    const eventName: string = payload.event || payload.type || ''
-    const email = getCustomerEmail(payload)
-
-    if (!email) {
-      console.error('[cakto-webhook] sem email no payload')
-      return NextResponse.json({ received: true, warning: 'sem email' })
-    }
-
-    const userId = await findUserIdByEmail(email)
-    if (!userId) {
-      console.error('[cakto-webhook] usuario nao encontrado para email', email)
-      return NextResponse.json({ received: true, warning: 'usuario nao encontrado' })
-    }
-
-    const orderId = payload.data?.id || null
-
-    switch (eventName) {
-      case 'purchase_approved': {
-        if (isSubscription(payload)) {
-          // Compra de assinatura
-          const planName = resolvePlanName(payload)
-          const planId = planName ? await getPlanIdByName(planName) : null
-
-          await admin
-            .from('profiles')
-            .update({
-              subscription_status: 'active',
-              plan_id: planId,
-              payment_provider: 'cakto',
-              cakto_order_id: orderId,
-              credits_videos_used: 0,
-              credits_ebooks_used: 0,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', userId)
-
-          if (!planId) {
-            console.error('[cakto-webhook] plano nao identificado, offer:', JSON.stringify(payload.data?.offer))
-          }
-        } else {
-          // Compra de creditos avulsos (pagamento unico)
-          const credits = resolveCreditsPackage(payload)
-
-          if (credits) {
-            const profileResult = await admin
-              .from('profiles')
-              .select('credits_videos_extra')
-              .eq('id', userId)
-              .single()
-
-            const current = profileResult.data?.credits_videos_extra || 0
-
-            await admin
-              .from('profiles')
-              .update({
-                credits_videos_extra: current + credits,
-                payment_provider: 'cakto',
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', userId)
-
-            console.log('[cakto-webhook] ' + credits + ' creditos adicionados para', email)
-          } else {
-            console.error('[cakto-webhook] creditos nao identificados, offer:', JSON.stringify(payload.data?.offer))
-          }
-        }
-        break
-      }
-
-      case 'subscription_created':
-      case 'subscription_renewed': {
-        const planName = resolvePlanName(payload)
-        const planId = planName ? await getPlanIdByName(planName) : null
-
-        await admin
-          .from('profiles')
-          .update({
-            subscription_status: 'active',
-            plan_id: planId,
-            payment_provider: 'cakto',
-            cakto_order_id: orderId,
-            credits_videos_used: 0,
-            credits_ebooks_used: 0,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', userId)
-        break
-      }
-
-      case 'subscription_canceled': {
-        await admin
-          .from('profiles')
-          .update({
-            subscription_status: 'canceled',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', userId)
-        break
-      }
-
-      case 'subscription_renewal_refused':
-      case 'purchase_refused': {
-        await admin
-          .from('profiles')
-          .update({
-            subscription_status: 'past_due',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', userId)
-        break
-      }
-
-      case 'refund':
-      case 'chargeback': {
-        await admin
-          .from('profiles')
-          .update({
-            subscription_status: 'canceled',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', userId)
-        break
-      }
-
-      default:
-        console.log('[cakto-webhook] evento nao tratado:', eventName)
-        break
-    }
-
-    return NextResponse.json({ received: true })
-  } catch (err: any) {
-    console.error('[cakto-webhook] erro:', err)
-    return NextResponse.json({ error: err.message || 'Erro interno' }, { status: 500 })
-  }
 }
