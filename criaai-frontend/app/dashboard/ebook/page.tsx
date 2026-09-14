@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 
+const STORAGE_KEY = 'mcpia_ebook_form'
+
 interface EbookFormData {
   title: string
   topic: string
@@ -44,18 +46,19 @@ const defaultThemes: Theme[] = [
   { id: 'Marble', name: 'Marble', colorKeywords: ['Claro', 'Sofisticado'], toneKeywords: [] },
 ]
 
-export default function EbookPage() {
-  const [form, setForm] = useState<EbookFormData>({
-    title: '',
-    topic: '',
-    details: '',
-    targetAudience: '',
-    tone: 'profissional e didatico',
-    chapters: '',
-    language: 'pt-BR',
-    themeId: '',
-  })
+const defaultForm: EbookFormData = {
+  title: '',
+  topic: '',
+  details: '',
+  targetAudience: '',
+  tone: 'profissional e didatico',
+  chapters: '',
+  language: 'pt-BR',
+  themeId: '',
+}
 
+export default function EbookPage() {
+  const [form, setForm] = useState<EbookFormData>(defaultForm)
   const [credits, setCredits] = useState<CreditInfo | null>(null)
   const [ebooks, setEbooks] = useState<GeneratedEbook[]>([])
   const [themes, setThemes] = useState<Theme[]>(defaultThemes)
@@ -68,23 +71,30 @@ export default function EbookPage() {
   const supabase = createClient()
 
   useEffect(function() {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY)
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        setForm(function(prev) { return { ...prev, ...parsed } })
+      }
+    } catch (e) {}
+
     checkSubscription()
     loadUserData()
     loadThemes()
   }, [])
 
+  function saveToStorage(updatedForm: EbookFormData) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedForm))
+    } catch (e) {}
+  }
+
   async function checkSubscription() {
     const userResult = await supabase.auth.getUser()
     const user = userResult.data.user
-    if (!user) {
-      setHasSubscription(false)
-      return
-    }
-    const result = await supabase
-      .from('profiles')
-      .select('subscription_status')
-      .eq('id', user.id)
-      .single()
+    if (!user) { setHasSubscription(false); return }
+    const result = await supabase.from('profiles').select('subscription_status').eq('id', user.id).single()
     const status = result.data?.subscription_status
     setHasSubscription(status === 'active' || status === 'trialing')
   }
@@ -96,9 +106,7 @@ export default function EbookPage() {
         const data = await res.json()
         if (data.themes && data.themes.length > 0) setThemes(data.themes)
       }
-    } catch (err) {
-      console.error('Erro ao carregar temas:', err)
-    }
+    } catch (err) {}
   }
 
   async function loadUserData() {
@@ -110,15 +118,15 @@ export default function EbookPage() {
         if (data.credits) setCredits(data.credits)
         if (data.ebooks) setEbooks(data.ebooks)
       }
-    } catch (err) {
-      console.error('Erro ao carregar dados:', err)
-    } finally {
+    } catch (err) {} finally {
       setLoadingData(false)
     }
   }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
-    setForm(function(prev) { return { ...prev, [e.target.name]: e.target.value } })
+    const updated = { ...form, [e.target.name]: e.target.value }
+    setForm(updated)
+    saveToStorage(updated)
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -170,7 +178,11 @@ export default function EbookPage() {
       }
 
       setSuccess('Ebook gerado com sucesso! ' + data.creditsRemaining + ' credito(s) restante(s).')
-      setForm({ title: '', topic: '', details: '', targetAudience: '', tone: 'profissional e didatico', chapters: '', language: 'pt-BR', themeId: '' })
+      
+      const resetForm = { ...defaultForm, tone: form.tone, language: form.language, themeId: form.themeId }
+      setForm(resetForm)
+      saveToStorage(resetForm)
+      
       await loadUserData()
     } catch (err: any) {
       setError(err.message ?? 'Erro inesperado.')
@@ -181,6 +193,11 @@ export default function EbookPage() {
 
   function handleDownload(ebook: GeneratedEbook) {
     window.open(ebook.pdf_url, '_blank')
+  }
+
+  function clearForm() {
+    setForm(defaultForm)
+    try { localStorage.removeItem(STORAGE_KEY) } catch (e) {}
   }
 
   const noCredits = credits !== null && credits.used >= credits.limit
@@ -202,6 +219,14 @@ export default function EbookPage() {
     const colors = t.colorKeywords && t.colorKeywords.length > 0 ? ' · ' + t.colorKeywords.slice(0, 3).join(', ') : ''
     return { value: t.id, label: t.name + colors }
   })
+
+  if (hasSubscription === null) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#0a0f0a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: '#6b7280', fontSize: 14 }}>Carregando...</p>
+      </div>
+    )
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: '#0a0f0a', color: '#fff', fontFamily: 'inherit' }}>
@@ -278,9 +303,19 @@ export default function EbookPage() {
         )}
 
         <div style={{ background: '#0d150d', border: '1px solid #1a2e1a', borderRadius: '16px', overflow: 'hidden', marginBottom: '24px' }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid #1a2e1a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span>📋</span>
-            <span style={{ fontSize: '14px', fontWeight: 600, color: '#fff' }}>Detalhes do Ebook</span>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid #1a2e1a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>📋</span>
+              <span style={{ fontSize: '14px', fontWeight: 600, color: '#fff' }}>Detalhes do Ebook</span>
+            </div>
+            {(form.title || form.topic || form.details) && (
+              <button
+                onClick={clearForm}
+                style={{ background: 'none', border: 'none', color: '#4b5563', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+              >
+                🗑️ Limpar campos
+              </button>
+            )}
           </div>
           <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
