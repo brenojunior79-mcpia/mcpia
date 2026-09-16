@@ -7,51 +7,51 @@ const products = [
     name: 'Jovens no Altar',
     platform: 'cakto',
     category: 'Ministerio Jovem',
-    description: 'Produto voltado para ministerios jovens e igrejas evangelicas. Conteudo de alto impacto para evangelismo e formacao de lideres.',
-    audience: 'Pastores, lideres de jovens, igrejas e ministerios',
-    ageRange: '25-50 anos',
+    description: 'Guia pratico para jovens cristaos vencerem a pornografia e viverem em pureza. Alto potencial de vendas no nicho evangelico.',
+    audience: 'Jovens cristaos, pastores, lideres de jovens',
+    ageRange: '18-35 anos',
     dailySales: 'R$200 - R$500/dia',
     affiliateUrl: 'https://app.cakto.com.br/affiliate/invite/530d76d8-005e-4de4-a9e6-98b07a722e6a',
     siteUrl: 'https://www.reinoemfoco.com/cakto',
     driveUrl: 'https://drive.google.com/drive/folders/1uxe1EzH2_qGOZxgwOYyfKvQ7rCMWR2xM',
     videoUrl: '',
+    image: 'https://media.atomicatmedia.net/u/cvGVf0p6A2a9h1ulFdYoyM38xIJ3/Pictures/PudEHx9773560.png?quality=74',
     color: '#7c5cfc',
     colorBg: 'rgba(124,92,252,0.08)',
-    emoji: '⛪',
   },
   {
     id: 'escolinha-crista',
     name: 'Escolinha Crista',
     platform: 'cakto',
     category: 'Educacao Crista',
-    description: 'Material completo para escola biblica infantil. Ideal para quem quer impactar criancas com o evangelho de forma ludica e criativa.',
-    audience: 'Professores de escola biblica, pais cristaos, igrejas',
+    description: 'Atividades biblicas mensais para criancas. Material em apostila para imprimir. Ideal para pais e professores de escola biblica.',
+    audience: 'Pais cristaos, professores de EBD, igrejas',
     ageRange: '25-45 anos',
     dailySales: 'R$150 - R$400/dia',
     affiliateUrl: 'https://app.cakto.com.br/affiliate/invite/d0456f33-809c-4700-8042-663a40c4c9af',
     siteUrl: 'https://www.reinoemfoco.com/escolinha-kids',
     driveUrl: 'https://drive.google.com/drive/folders/1dvJrnH2kPqR0zAGM3jGBAbPunLctGSov',
     videoUrl: '',
+    image: 'https://media.atomicatmedia.net/u/cvGVf0p6A2a9h1ulFdYoyM38xIJ3/Pictures/YldWlp0723979.png?quality=89',
     color: '#f59e0b',
     colorBg: 'rgba(245,158,11,0.08)',
-    emoji: '📚',
   },
   {
     id: 'play-kids',
     name: 'Play Kids',
     platform: 'cakto',
     category: 'Entretenimento Cristao',
-    description: 'Plataforma de conteudo infantil cristao. Musicas, historias e atividades para criancas de forma segura e edificante.',
-    audience: 'Pais cristaos, igrejas, educadores',
+    description: '10 jogos cristaos que ensinam valores biblicos de forma divertida. Conteudo seguro e 100% biblico para criancas.',
+    audience: 'Pais cristaos, igrejas, educadores cristao',
     ageRange: '20-40 anos',
     dailySales: 'R$200 - R$500/dia',
     affiliateUrl: 'https://app.cakto.com.br/affiliate/invite/23680113-4c24-43ee-b480-d23e36dca605',
     siteUrl: 'https://www.reinoemfoco.com/play-kids',
     driveUrl: '',
     videoUrl: '',
+    image: 'https://media.atomicatmedia.net/u/cvGVf0p6A2a9h1ulFdYoyM38xIJ3/Pictures/IsEAFz9840611.png?quality=85',
     color: '#4ade80',
     colorBg: 'rgba(74,222,128,0.08)',
-    emoji: '🎮',
   },
 ]
 
@@ -60,8 +60,9 @@ export default function ProdutosAltaPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', padding: '32px 24px' }}>
-      <div style={{ maxWidth: 900, margin: '0 auto' }}>
+      <div style={{ maxWidth: 1000, margin: '0 auto' }}>
 
+        {/* Header */}
         <div style={{ marginBottom: 32 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
             <div style={{ fontSize: 28 }}>🔥</div>
@@ -72,6 +73,7 @@ export default function ProdutosAltaPage() {
           </p>
         </div>
 
+        {/* Passo a passo */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 32 }}>
           {[
             { num: '1', label: 'Escolha o produto', icon: '🎯' },
@@ -88,100 +90,121 @@ export default function ProdutosAltaPage() {
           })}
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 32 }}>
+        {/* Grid de produtos — lado a lado */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20, marginBottom: 32 }}>
           {products.map(function(product) {
             const isSelected = selected === product.id
             return (
               <div
                 key={product.id}
                 style={{
-                  background: isSelected ? product.colorBg : 'var(--surface)',
-                  border: '1px solid ' + (isSelected ? product.color + '44' : 'var(--border)'),
-                  borderRadius: 16,
+                  background: 'var(--surface)',
+                  border: '2px solid ' + (isSelected ? product.color : 'var(--border)'),
+                  borderRadius: 18,
                   overflow: 'hidden',
-                  transition: 'all 0.2s',
+                  transition: 'all 0.25s',
                   cursor: 'pointer',
+                  transform: isSelected ? 'translateY(-4px)' : 'translateY(0)',
+                  boxShadow: isSelected ? '0 16px 40px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
                 }}
                 onClick={function() { setSelected(isSelected ? null : product.id) }}
               >
-                <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                    <div style={{ width: 52, height: 52, background: product.colorBg, border: '1px solid ' + product.color + '33', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>
-                      {product.emoji}
-                    </div>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                        <span style={{ fontFamily: 'Syne, sans-serif', fontSize: 16, fontWeight: 800 }}>{product.name}</span>
-                        <span style={{ fontSize: 11, background: product.colorBg, border: '1px solid ' + product.color + '44', color: product.color, borderRadius: 99, padding: '2px 10px', fontWeight: 600 }}>{product.category}</span>
-                      </div>
-                      <p style={{ fontSize: 13, color: 'var(--muted2)', margin: 0 }}>{product.description}</p>
-                    </div>
+                {/* Imagem do produto */}
+                <div style={{ position: 'relative', height: 200, overflow: 'hidden', background: product.colorBg }}>
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }}
+                    onError={function(e: any) { e.target.style.display = 'none' }}
+                  />
+                  {/* Badge plataforma */}
+                  <div style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(0,0,0,0.7)', borderRadius: 99, padding: '4px 12px', fontSize: 11, fontWeight: 700, color: '#fff', backdropFilter: 'blur(8px)' }}>
+                    {product.platform.toUpperCase()}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 11, color: 'var(--muted2)', marginBottom: 2 }}>Potencial</div>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: '#4ade80' }}>{product.dailySales}</div>
-                    </div>
-                    <div style={{ fontSize: 20, color: 'var(--muted2)' }}>{isSelected ? '▲' : '▼'}</div>
+                  {/* Badge potencial */}
+                  <div style={{ position: 'absolute', top: 12, right: 12, background: 'rgba(74,222,128,0.9)', borderRadius: 99, padding: '4px 12px', fontSize: 11, fontWeight: 700, color: '#000' }}>
+                    {product.dailySales}
                   </div>
                 </div>
 
-                {isSelected && (
-                  <div style={{ borderTop: '1px solid var(--border)', padding: '20px 24px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
-                      <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: '14px 16px' }}>
-                        <div style={{ fontSize: 11, color: 'var(--muted2)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>Publico-alvo</div>
-                        <div style={{ fontSize: 14 }}>{product.audience}</div>
-                      </div>
-                      <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: '14px 16px' }}>
-                        <div style={{ fontSize: 11, color: 'var(--muted2)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>Faixa etaria</div>
-                        <div style={{ fontSize: 14 }}>{product.ageRange}</div>
-                      </div>
-                      <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: '14px 16px' }}>
-                        <div style={{ fontSize: 11, color: 'var(--muted2)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>Vendas diarias</div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: '#4ade80' }}>{product.dailySales}</div>
-                      </div>
+                {/* Info do produto */}
+                <div style={{ padding: '18px 20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    <span style={{ fontFamily: 'Syne, sans-serif', fontSize: 17, fontWeight: 800 }}>{product.name}</span>
+                  </div>
+                  <div style={{ fontSize: 11, background: product.colorBg, border: '1px solid ' + product.color + '44', color: product.color, borderRadius: 99, padding: '2px 10px', fontWeight: 600, display: 'inline-block', marginBottom: 10 }}>{product.category}</div>
+                  <p style={{ fontSize: 13, color: 'var(--muted2)', margin: '0 0 14px', lineHeight: 1.6 }}>{product.description}</p>
+
+                  {/* Infos rapidas */}
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+                    <div style={{ background: 'var(--surface2)', borderRadius: 8, padding: '6px 10px', fontSize: 11 }}>
+                      👥 {product.ageRange}
                     </div>
+                    <div style={{ background: 'var(--surface2)', borderRadius: 8, padding: '6px 10px', fontSize: 11 }}>
+                      🎯 {product.audience.split(',')[0]}
+                    </div>
+                  </div>
 
-                    {product.videoUrl ? (
-                      <div style={{ marginBottom: 20 }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--muted2)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Aula — Como se afiliar</div>
-                        <div style={{ position: 'relative', paddingBottom: '56.25%', borderRadius: 12, overflow: 'hidden', background: '#000' }}>
-                          <iframe
-                            src={product.videoUrl}
-                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                          />
-                        </div>
-                      </div>
-                    ) : (
-                      <div style={{ marginBottom: 20, background: 'var(--surface2)', border: '1px dashed var(--border)', borderRadius: 12, padding: '20px', textAlign: 'center' }}>
-                        <div style={{ fontSize: 24, marginBottom: 8 }}>🎬</div>
-                        <div style={{ fontSize: 13, color: 'var(--muted2)' }}>Aula em breve</div>
-                      </div>
-                    )}
-
-                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                      <a href={product.affiliateUrl} target="_blank" rel="noreferrer" onClick={function(e) { e.stopPropagation() }} style={{ flex: 1, minWidth: 160, background: 'linear-gradient(135deg, ' + product.color + ', ' + product.color + 'cc)', color: '#fff', fontWeight: 700, fontSize: 14, padding: '12px 20px', borderRadius: 12, textDecoration: 'none', textAlign: 'center', display: 'block' }}>
-                        🤝 Quero me afiliar
-                      </a>
-                      <a href={product.siteUrl} target="_blank" rel="noreferrer" onClick={function(e) { e.stopPropagation() }} style={{ flex: 1, minWidth: 160, background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: 14, padding: '12px 20px', borderRadius: 12, textDecoration: 'none', textAlign: 'center', display: 'block' }}>
-                        🌐 Ver pagina de vendas
+                  {/* Botoes */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <a
+                      href={product.affiliateUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={function(e) { e.stopPropagation() }}
+                      style={{ background: 'linear-gradient(135deg, ' + product.color + ', ' + product.color + 'bb)', color: '#fff', fontWeight: 700, fontSize: 14, padding: '11px', borderRadius: 12, textDecoration: 'none', textAlign: 'center', display: 'block' }}
+                    >
+                      🤝 Quero me afiliar
+                    </a>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <a
+                        href={product.siteUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={function(e) { e.stopPropagation() }}
+                        style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: 12, padding: '9px', borderRadius: 10, textDecoration: 'none', textAlign: 'center', display: 'block' }}
+                      >
+                        🌐 Ver site
                       </a>
                       {product.driveUrl && (
-                        <a href={product.driveUrl} target="_blank" rel="noreferrer" onClick={function(e) { e.stopPropagation() }} style={{ flex: 1, minWidth: 160, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', color: '#4ade80', fontWeight: 600, fontSize: 14, padding: '12px 20px', borderRadius: 12, textDecoration: 'none', textAlign: 'center', display: 'block' }}>
-                          📁 Material de apoio
+                        <a
+                          href={product.driveUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={function(e) { e.stopPropagation() }}
+                          style={{ flex: 1, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', color: '#4ade80', fontWeight: 600, fontSize: 12, padding: '9px', borderRadius: 10, textDecoration: 'none', textAlign: 'center', display: 'block' }}
+                        >
+                          📁 Material
                         </a>
                       )}
                     </div>
                   </div>
-                )}
+
+                  {/* Detalhes expandidos */}
+                  {isSelected && (
+                    <div style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+                      {product.videoUrl ? (
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted2)', marginBottom: 8, textTransform: 'uppercase' }}>Aula — Como se afiliar</div>
+                          <div style={{ position: 'relative', paddingBottom: '56.25%', borderRadius: 10, overflow: 'hidden', background: '#000' }}>
+                            <iframe src={product.videoUrl} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }} allowFullScreen />
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ background: 'var(--surface2)', border: '1px dashed var(--border)', borderRadius: 10, padding: '16px', textAlign: 'center' }}>
+                          <div style={{ fontSize: 20, marginBottom: 4 }}>🎬</div>
+                          <div style={{ fontSize: 12, color: 'var(--muted2)' }}>Aula de afiliacao em breve</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             )
           })}
         </div>
 
+        {/* Dica */}
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{ fontSize: 32 }}>💡</div>
           <div>
