@@ -1,6 +1,5 @@
 'use client'
 import { useState } from 'react'
-import Link from 'next/link'
 
 const products = [
   {
@@ -12,7 +11,6 @@ const products = [
     audience: 'Pastores, lideres de jovens, igrejas e ministerios',
     ageRange: '25-50 anos',
     dailySales: 'R$200 - R$500/dia',
-    commission: 'A confirmar',
     affiliateUrl: 'https://app.cakto.com.br/affiliate/invite/530d76d8-005e-4de4-a9e6-98b07a722e6a',
     siteUrl: 'https://www.reinoemfoco.com/cakto',
     driveUrl: 'https://drive.google.com/drive/folders/1uxe1EzH2_qGOZxgwOYyfKvQ7rCMWR2xM',
@@ -30,7 +28,6 @@ const products = [
     audience: 'Professores de escola biblica, pais cristaos, igrejas',
     ageRange: '25-45 anos',
     dailySales: 'R$150 - R$400/dia',
-    commission: 'A confirmar',
     affiliateUrl: 'https://app.cakto.com.br/affiliate/invite/d0456f33-809c-4700-8042-663a40c4c9af',
     siteUrl: 'https://www.reinoemfoco.com/escolinha-kids',
     driveUrl: 'https://drive.google.com/drive/folders/1dvJrnH2kPqR0zAGM3jGBAbPunLctGSov',
@@ -48,7 +45,6 @@ const products = [
     audience: 'Pais cristaos, igrejas, educadores',
     ageRange: '20-40 anos',
     dailySales: 'R$200 - R$500/dia',
-    commission: 'A confirmar',
     affiliateUrl: 'https://app.cakto.com.br/affiliate/invite/23680113-4c24-43ee-b480-d23e36dca605',
     siteUrl: 'https://www.reinoemfoco.com/play-kids',
     driveUrl: '',
@@ -62,14 +58,10 @@ const products = [
 export default function ProdutosAltaPage() {
   const [selected, setSelected] = useState<string | null>(null)
 
-  const selectedProduct = products.find(function(p) { return p.id === selected })
-
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', padding: '32px 24px' }}>
-
       <div style={{ maxWidth: 900, margin: '0 auto' }}>
 
-        {/* Header */}
         <div style={{ marginBottom: 32 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
             <div style={{ fontSize: 28 }}>🔥</div>
@@ -80,7 +72,6 @@ export default function ProdutosAltaPage() {
           </p>
         </div>
 
-        {/* Passo a passo */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 32 }}>
           {[
             { num: '1', label: 'Escolha o produto', icon: '🎯' },
@@ -97,7 +88,6 @@ export default function ProdutosAltaPage() {
           })}
         </div>
 
-        {/* Lista de produtos */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 32 }}>
           {products.map(function(product) {
             const isSelected = selected === product.id
@@ -114,7 +104,6 @@ export default function ProdutosAltaPage() {
                 }}
                 onClick={function() { setSelected(isSelected ? null : product.id) }}
               >
-                {/* Card header */}
                 <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                     <div style={{ width: 52, height: 52, background: product.colorBg, border: '1px solid ' + product.color + '33', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>
@@ -128,7 +117,7 @@ export default function ProdutosAltaPage() {
                       <p style={{ fontSize: 13, color: 'var(--muted2)', margin: 0 }}>{product.description}</p>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', align: 'center', gap: 12, flexShrink: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontSize: 11, color: 'var(--muted2)', marginBottom: 2 }}>Potencial</div>
                       <div style={{ fontSize: 14, fontWeight: 700, color: '#4ade80' }}>{product.dailySales}</div>
@@ -137,7 +126,6 @@ export default function ProdutosAltaPage() {
                   </div>
                 </div>
 
-                {/* Detalhes expandidos */}
                 {isSelected && (
                   <div style={{ borderTop: '1px solid var(--border)', padding: '20px 24px' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
@@ -155,7 +143,6 @@ export default function ProdutosAltaPage() {
                       </div>
                     </div>
 
-                    {/* Video aula */}
                     {product.videoUrl ? (
                       <div style={{ marginBottom: 20 }}>
                         <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--muted2)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Aula — Como se afiliar</div>
@@ -175,34 +162,15 @@ export default function ProdutosAltaPage() {
                       </div>
                     )}
 
-                    {/* Botoes de acao */}
                     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                      <a
-                        href={product.affiliateUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={function(e) { e.stopPropagation() }}
-                        style={{ flex: 1, minWidth: 160, background: 'linear-gradient(135deg, ' + product.color + ', ' + product.color + 'cc)', color: '#fff', fontWeight: 700, fontSize: 14, padding: '12px 20px', borderRadius: 12, textDecoration: 'none', textAlign: 'center', display: 'block' }}
-                      >
+                      <a href={product.affiliateUrl} target="_blank" rel="noreferrer" onClick={function(e) { e.stopPropagation() }} style={{ flex: 1, minWidth: 160, background: 'linear-gradient(135deg, ' + product.color + ', ' + product.color + 'cc)', color: '#fff', fontWeight: 700, fontSize: 14, padding: '12px 20px', borderRadius: 12, textDecoration: 'none', textAlign: 'center', display: 'block' }}>
                         🤝 Quero me afiliar
                       </a>
-                      <a
-                        href={product.siteUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={function(e) { e.stopPropagation() }}
-                        style={{ flex: 1, minWidth: 160, background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: 14, padding: '12px 20px', borderRadius: 12, textDecoration: 'none', textAlign: 'center', display: 'block' }}
-                      >
+                      <a href={product.siteUrl} target="_blank" rel="noreferrer" onClick={function(e) { e.stopPropagation() }} style={{ flex: 1, minWidth: 160, background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: 14, padding: '12px 20px', borderRadius: 12, textDecoration: 'none', textAlign: 'center', display: 'block' }}>
                         🌐 Ver pagina de vendas
                       </a>
                       {product.driveUrl && (
-                        <a
-                          href={product.driveUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          onClick={function(e) { e.stopPropagation() }}
-                          style={{ flex: 1, minWidth: 160, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', color: '#4ade80', fontWeight: 600, fontSize: 14, padding: '12px 20px', borderRadius: 12, textDecoration: 'none', textAlign: 'center', display: 'block' }}
-                        >
+                        <a href={product.driveUrl} target="_blank" rel="noreferrer" onClick={function(e) { e.stopPropagation() }} style={{ flex: 1, minWidth: 160, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', color: '#4ade80', fontWeight: 600, fontSize: 14, padding: '12px 20px', borderRadius: 12, textDecoration: 'none', textAlign: 'center', display: 'block' }}>
                           📁 Material de apoio
                         </a>
                       )}
@@ -219,7 +187,7 @@ export default function ProdutosAltaPage() {
           <div>
             <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Dica importante</div>
             <p style={{ fontSize: 13, color: 'var(--muted2)', margin: 0, lineHeight: 1.6 }}>
-              Use o <strong>Criador de Criativos</strong> e o <strong>Gerador de Ebook</strong> do MCP.IA para criar seu material de divulgacao e vender muito mais rapido!
+              Use o Criador de Criativos e o Gerador de Ebook do MCP.IA para criar seu material de divulgacao e vender muito mais rapido!
             </p>
           </div>
         </div>
