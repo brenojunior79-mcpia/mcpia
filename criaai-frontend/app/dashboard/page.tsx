@@ -7,10 +7,8 @@ const animations = `
 @keyframes spin { from { transform: rotate(0) } to { transform: rotate(360deg) } }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(20px) } to { opacity: 1; transform: translateY(0) } }
 @keyframes fadeDown { from { opacity: 0; transform: translateY(-16px) } to { opacity: 1; transform: translateY(0) } }
-@keyframes bgPulse { 0% { opacity: 0.5; transform: scale(1) } 100% { opacity: 1; transform: scale(1.08) } }
 @keyframes float { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(-18px) } }
 @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(124,92,252,0.3) } 50% { box-shadow: 0 0 0 10px rgba(124,92,252,0) } }
-@keyframes barFill { from { width: 0 } to { width: var(--pct) } }
 .anim-fadeUp { animation: fadeUp 0.5s ease both; }
 .anim-fadeUp-1 { animation: fadeUp 0.5s ease both 0.1s; }
 .anim-fadeUp-2 { animation: fadeUp 0.5s ease both 0.2s; }
@@ -21,6 +19,7 @@ const animations = `
 .card-hover:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,0.3); border-color: rgba(124,92,252,0.3) !important; }
 .shortcut-hover { transition: transform 0.2s, box-shadow 0.2s, background 0.2s; }
 .shortcut-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+.step-line { position: absolute; top: 28px; left: calc(50% + 28px); width: calc(100% - 56px); height: 2px; background: linear-gradient(90deg, rgba(124,92,252,0.5), rgba(124,92,252,0.1)); }
 `
 
 export default function DashboardPage() {
@@ -94,13 +93,12 @@ export default function DashboardPage() {
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: '-30%', right: '-10%', width: 500, height: 500, background: 'radial-gradient(circle, rgba(124,92,252,0.08) 0%, transparent 70%)', borderRadius: '50%', animation: 'float 8s ease-in-out infinite' }} />
         <div style={{ position: 'absolute', bottom: '-20%', left: '-10%', width: 400, height: 400, background: 'radial-gradient(circle, rgba(124,92,252,0.05) 0%, transparent 70%)', borderRadius: '50%', animation: 'float 10s ease-in-out infinite reverse' }} />
-        <div style={{ position: 'absolute', top: '40%', left: '30%', width: 300, height: 300, background: 'radial-gradient(circle, rgba(167,139,250,0.04) 0%, transparent 70%)', borderRadius: '50%', animation: 'float 12s ease-in-out infinite 2s' }} />
       </div>
 
       <div style={{ position: 'relative', zIndex: 1, padding: '32px 28px', maxWidth: 900, margin: '0 auto' }}>
 
         {/* Header */}
-        <div className="anim-fadeDown" style={{ marginBottom: 32 }}>
+        <div className="anim-fadeDown" style={{ marginBottom: 28 }}>
           <div style={{ fontSize: 26, fontFamily: 'Syne, sans-serif', fontWeight: 800, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ animation: 'pulse 2s ease infinite', display: 'inline-block' }}>👋</span>
             Ola, {firstName}!
@@ -110,9 +108,43 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* PASSO A PASSO 3 ETAPAS */}
+        <div className="anim-fadeUp" style={{ marginBottom: 28 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted2)', marginBottom: 14, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Sua jornada em 3 passos</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0, position: 'relative' }}>
+
+            {/* Linha conectora */}
+            <div style={{ position: 'absolute', top: 28, left: 'calc(16.66% + 14px)', width: 'calc(66.66% - 28px)', height: 2, background: 'linear-gradient(90deg, rgba(124,92,252,0.6), rgba(124,92,252,0.1))', zIndex: 0 }} />
+
+            {[
+              { num: 1, icon: '🎯', label: 'Escolha o produto', desc: 'Acesse Produtos em Alta e escolha o que vai vender', href: '/dashboard/produtos', color: '#7c5cfc', active: true },
+              { num: 2, icon: '📦', label: 'Prepare o material', desc: 'Gere criativos, ebooks e paginas de vendas com IA', href: '/dashboard/criativo', color: '#f59e0b', active: false },
+              { num: 3, icon: '💰', label: 'Venda no automatico', desc: 'Crie anuncios e venda enquanto dorme', href: '/dashboard/vendas', color: '#4ade80', active: false },
+            ].map(function(step) {
+              return (
+                <Link
+                  key={step.num}
+                  href={step.href}
+                  style={{ textDecoration: 'none', position: 'relative', zIndex: 1, padding: '0 8px' }}
+                >
+                  <div style={{ background: 'var(--surface)', border: '1px solid ' + step.color + '33', borderRadius: 16, padding: '20px 16px', textAlign: 'center', transition: 'all 0.2s', cursor: 'pointer' }}>
+                    <div style={{ width: 56, height: 56, background: step.color + '15', border: '2px solid ' + step.color + '44', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', fontSize: 24 }}>
+                      {step.icon}
+                    </div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: step.color, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Passo {step.num}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>{step.label}</div>
+                    <div style={{ fontSize: 11, color: 'var(--muted2)', lineHeight: 1.5 }}>{step.desc}</div>
+                    <div style={{ marginTop: 12, fontSize: 12, color: step.color, fontWeight: 600 }}>Acessar →</div>
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+
         {/* Banner sem plano */}
         {!hasSubscription && (
-          <div className="anim-fadeUp card-hover" style={{ background: 'linear-gradient(135deg, rgba(124,92,252,0.15), rgba(124,92,252,0.05))', border: '1px solid rgba(124,92,252,0.3)', borderRadius: 16, padding: '20px 24px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div className="anim-fadeUp-1 card-hover" style={{ background: 'linear-gradient(135deg, rgba(124,92,252,0.15), rgba(124,92,252,0.05))', border: '1px solid rgba(124,92,252,0.3)', borderRadius: 16, padding: '20px 24px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
             <div>
               <div style={{ fontWeight: 700, fontSize: 15, color: '#a78bfa', marginBottom: 4 }}>Voce ainda nao tem um plano ativo</div>
               <div style={{ fontSize: 13, color: 'var(--muted2)' }}>Assine agora e comece a gerar ebooks, videos e paginas com IA</div>
@@ -133,9 +165,7 @@ export default function DashboardPage() {
                   <div style={{ fontSize: 11, color: 'var(--muted2)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>Creditos de Video</div>
                   <div style={{ fontSize: 28, fontWeight: 800, fontFamily: 'Syne, sans-serif', color: 'var(--accent2)' }}>
                     {videosLimit ? (videosLimit - videosUsed) : '∞'}
-                    <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--muted2)', marginLeft: 6 }}>
-                      {videosLimit ? '/ ' + videosLimit : 'ilimitados'}
-                    </span>
+                    <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--muted2)', marginLeft: 6 }}>{videosLimit ? '/ ' + videosLimit : 'ilimitados'}</span>
                   </div>
                 </div>
                 <div style={{ width: 44, height: 44, background: 'rgba(124,92,252,0.12)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'pulse 3s ease infinite' }}>
@@ -147,9 +177,7 @@ export default function DashboardPage() {
                   <div style={{ height: '100%', width: videosPct + '%', background: videosPct >= 90 ? '#ef4444' : videosPct >= 70 ? '#f59e0b' : 'linear-gradient(90deg, var(--accent), #9b6dfc)', borderRadius: 99, transition: 'width 1s ease' }} />
                 </div>
               )}
-              <Link href="/dashboard/criativo" style={{ fontSize: 13, color: 'var(--accent2)', fontWeight: 600, textDecoration: 'none' }}>
-                Gerar video →
-              </Link>
+              <Link href="/dashboard/criativo" style={{ fontSize: 13, color: 'var(--accent2)', fontWeight: 600, textDecoration: 'none' }}>Gerar video →</Link>
             </div>
 
             <div className="anim-fadeUp-2 card-hover" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '20px 24px', position: 'relative', overflow: 'hidden' }}>
@@ -159,9 +187,7 @@ export default function DashboardPage() {
                   <div style={{ fontSize: 11, color: 'var(--muted2)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>Creditos de Ebook</div>
                   <div style={{ fontSize: 28, fontWeight: 800, fontFamily: 'Syne, sans-serif', color: 'var(--green)' }}>
                     {ebooksLimit ? (ebooksLimit - ebooksUsed) : '∞'}
-                    <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--muted2)', marginLeft: 6 }}>
-                      {ebooksLimit ? '/ ' + ebooksLimit : 'ilimitados'}
-                    </span>
+                    <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--muted2)', marginLeft: 6 }}>{ebooksLimit ? '/ ' + ebooksLimit : 'ilimitados'}</span>
                   </div>
                 </div>
                 <div style={{ width: 44, height: 44, background: 'rgba(34,197,94,0.12)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -173,9 +199,7 @@ export default function DashboardPage() {
                   <div style={{ height: '100%', width: ebooksPct + '%', background: ebooksPct >= 90 ? '#ef4444' : ebooksPct >= 70 ? '#f59e0b' : 'linear-gradient(90deg, #22c55e, #4ade80)', borderRadius: 99, transition: 'width 1s ease' }} />
                 </div>
               )}
-              <Link href="/dashboard/ebook" style={{ fontSize: 13, color: 'var(--green)', fontWeight: 600, textDecoration: 'none' }}>
-                Gerar ebook →
-              </Link>
+              <Link href="/dashboard/ebook" style={{ fontSize: 13, color: 'var(--green)', fontWeight: 600, textDecoration: 'none' }}>Gerar ebook →</Link>
             </div>
           </div>
         )}
@@ -192,7 +216,7 @@ export default function DashboardPage() {
                 <div style={{ fontSize: 16, fontWeight: 700 }}>{plan?.name || 'Starter'} <span style={{ color: 'var(--muted2)', fontWeight: 400 }}>— R${(plan?.price_monthly || 0).toFixed(2).replace('.', ',')}/mes</span></div>
               </div>
             </div>
-            <Link href="/dashboard/planos" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: 13, padding: '8px 18px', borderRadius: 10, textDecoration: 'none', transition: 'all 0.2s' }}>
+            <Link href="/dashboard/planos" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: 13, padding: '8px 18px', borderRadius: 10, textDecoration: 'none' }}>
               Gerenciar plano
             </Link>
           </div>
@@ -201,17 +225,18 @@ export default function DashboardPage() {
         {/* Atalhos rapidos */}
         <div className="anim-fadeUp-3" style={{ marginBottom: 28 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted2)', marginBottom: 14, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Criar agora</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
             {[
               { href: '/dashboard/criativo', icon: 'ti-sparkles', label: 'Criativo de video', color: 'var(--accent2)', bg: 'rgba(124,92,252,0.08)', border: 'rgba(124,92,252,0.2)' },
               { href: '/dashboard/ebook', icon: 'ti-book-2', label: 'Gerador de Ebook', color: 'var(--green)', bg: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.2)' },
               { href: '/dashboard/paginas', icon: 'ti-layout', label: 'Pagina de vendas', color: '#60a5fa', bg: 'rgba(96,165,250,0.08)', border: 'rgba(96,165,250,0.2)' },
               { href: '/dashboard/chat', icon: 'ti-message-circle', label: 'Assistente IA', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)' },
+              { href: '/dashboard/produtos', icon: 'ti-flame', label: 'Produtos em Alta', color: '#f87171', bg: 'rgba(248,113,113,0.08)', border: 'rgba(248,113,113,0.2)' },
             ].map(function(item) {
               return (
                 <Link key={item.href} href={item.href} className="shortcut-hover" style={{ background: item.bg, border: '1px solid ' + item.border, borderRadius: 14, padding: '16px 18px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 12 }}>
                   <i className={'ti ' + item.icon} style={{ fontSize: 22, color: item.color }} />
-                  <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{item.label}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{item.label}</span>
                 </Link>
               )
             })}
