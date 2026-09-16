@@ -57,6 +57,67 @@ const defaultForm: EbookFormData = {
   themeId: '',
 }
 
+function EbookMockup({ title, pdfUrl }: { title: string; pdfUrl: string }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+      {/* Mockup do ebook */}
+      <div style={{ position: 'relative', width: 160, height: 220 }}>
+        {/* Sombra do livro */}
+        <div style={{ position: 'absolute', bottom: -8, left: 8, right: -8, height: '100%', background: 'rgba(91,78,248,0.15)', borderRadius: 4, transform: 'skewY(-1deg)' }} />
+        {/* Livro principal */}
+        <div style={{
+          position: 'relative',
+          width: '100%',
+          height: '100%',
+          background: 'linear-gradient(135deg, #5b4ef8, #9b8ffc)',
+          borderRadius: 4,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 16,
+          boxShadow: '0 20px 40px rgba(91,78,248,0.3)',
+        }}>
+          {/* Lombada */}
+          <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 12, background: 'rgba(0,0,0,0.2)', borderRadius: '4px 0 0 4px' }} />
+          {/* Icone */}
+          <div style={{ fontSize: 36, marginBottom: 12 }}>📘</div>
+          {/* Titulo */}
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#fff', textAlign: 'center', lineHeight: 1.4, fontFamily: 'Syne, sans-serif' }}>
+            {title.slice(0, 40)}{title.length > 40 ? '...' : ''}
+          </div>
+          {/* Linha decorativa */}
+          <div style={{ position: 'absolute', bottom: 20, left: 20, right: 20, height: 1, background: 'rgba(255,255,255,0.3)' }} />
+          <div style={{ position: 'absolute', bottom: 12, fontSize: 9, color: 'rgba(255,255,255,0.7)', fontWeight: 600, letterSpacing: '0.1em' }}>MCP.IA</div>
+        </div>
+      </div>
+      {/* Botao de download */}
+      <a
+        href={pdfUrl}
+        target="_blank"
+        rel="noreferrer"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          background: 'linear-gradient(135deg, #5b4ef8, #9b8ffc)',
+          color: '#fff',
+          fontWeight: 700,
+          fontSize: 14,
+          padding: '12px 24px',
+          borderRadius: 12,
+          textDecoration: 'none',
+          boxShadow: '0 8px 20px rgba(91,78,248,0.3)',
+          transition: 'all 0.2s',
+        }}
+      >
+        <i className="ti ti-download" style={{ fontSize: 16 }} />
+        Baixar Ebook (PDF)
+      </a>
+    </div>
+  )
+}
+
 export default function EbookPage() {
   const [form, setForm] = useState<EbookFormData>(defaultForm)
   const [credits, setCredits] = useState<CreditInfo | null>(null)
@@ -78,16 +139,13 @@ export default function EbookPage() {
         setForm(function(prev) { return { ...prev, ...parsed } })
       }
     } catch (e) {}
-
     checkSubscription()
     loadUserData()
     loadThemes()
   }, [])
 
   function saveToStorage(updatedForm: EbookFormData) {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedForm))
-    } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedForm)) } catch (e) {}
   }
 
   async function checkSubscription() {
@@ -131,28 +189,15 @@ export default function EbookPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-
-    if (!hasSubscription) {
-      window.location.href = '/dashboard/planos'
-      return
-    }
-
-    setError(null)
-    setSuccess(null)
-    setUpgradeRequired(false)
-    setLoading(true)
-
+    if (!hasSubscription) { window.location.href = '/dashboard/planos'; return }
+    setError(null); setSuccess(null); setUpgradeRequired(false); setLoading(true)
     try {
-      const chaptersArray = form.chapters
-        ? form.chapters.split('\n').map(function(c) { return c.trim() }).filter(Boolean)
-        : []
-
+      const chaptersArray = form.chapters ? form.chapters.split('\n').map(function(c) { return c.trim() }).filter(Boolean) : []
       const res = await fetch('/api/generate-ebook', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: form.title,
-          topic: form.topic,
+          title: form.title, topic: form.topic,
           details: form.details || undefined,
           targetAudience: form.targetAudience || undefined,
           tone: form.tone || undefined,
@@ -161,38 +206,22 @@ export default function EbookPage() {
           themeId: form.themeId || undefined,
         }),
       })
-
       const data = await res.json()
-
       if (!res.ok) {
-        if (data.requiresPlan) {
-          setHasSubscription(false)
-          setError('Voce precisa de um plano ativo para gerar ebooks.')
-        } else if (data.upgradeRequired) {
-          setUpgradeRequired(true)
-          setError(data.details ?? 'Limite de creditos atingido.')
-        } else {
-          setError(data.error ?? 'Erro ao gerar ebook.')
-        }
+        if (data.requiresPlan) { setHasSubscription(false) }
+        else if (data.upgradeRequired) { setUpgradeRequired(true); setError(data.details ?? 'Limite atingido.') }
+        else { setError(data.error ?? 'Erro ao gerar ebook.') }
         return
       }
-
-      setSuccess('Ebook gerado com sucesso! ' + data.creditsRemaining + ' credito(s) restante(s).')
-      
+      setSuccess('Ebook gerado com sucesso!')
       const resetForm = { ...defaultForm, tone: form.tone, language: form.language, themeId: form.themeId }
-      setForm(resetForm)
-      saveToStorage(resetForm)
-      
+      setForm(resetForm); saveToStorage(resetForm)
       await loadUserData()
     } catch (err: any) {
       setError(err.message ?? 'Erro inesperado.')
     } finally {
       setLoading(false)
     }
-  }
-
-  function handleDownload(ebook: GeneratedEbook) {
-    window.open(ebook.pdf_url, '_blank')
   }
 
   function clearForm() {
@@ -204,133 +233,129 @@ export default function EbookPage() {
   const remaining = credits ? credits.limit - credits.used : 0
   const pct = credits ? Math.min(100, Math.round((credits.used / credits.limit) * 100)) : 0
 
-  const inputStyle: React.CSSProperties = {
-    width: '100%', background: '#0a120a', border: '1px solid #1e3a1e',
-    borderRadius: '8px', padding: '10px 12px', fontSize: '14px',
-    color: '#ffffff', outline: 'none', boxSizing: 'border-box',
-  }
-
-  const labelStyle: React.CSSProperties = {
-    display: 'block', fontSize: '12px', fontWeight: 500,
-    color: '#9ca3af', marginBottom: '6px',
-  }
-
   const themeOptions = themes.map(function(t) {
-    const colors = t.colorKeywords && t.colorKeywords.length > 0 ? ' · ' + t.colorKeywords.slice(0, 3).join(', ') : ''
+    const colors = t.colorKeywords && t.colorKeywords.length > 0 ? ' · ' + t.colorKeywords.slice(0, 2).join(', ') : ''
     return { value: t.id, label: t.name + colors }
   })
 
-  if (hasSubscription === null) {
-    return (
-      <div style={{ minHeight: '100vh', background: '#0a0f0a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: '#6b7280', fontSize: 14 }}>Carregando...</p>
-      </div>
-    )
+  const inputStyle: React.CSSProperties = {
+    width: '100%', background: 'var(--surface)', border: '1.5px solid var(--border)',
+    borderRadius: 10, padding: '10px 14px', fontSize: 14,
+    color: 'var(--text)', outline: 'none', boxSizing: 'border-box',
+    fontFamily: 'Inter, sans-serif', transition: 'border-color 0.2s, box-shadow 0.2s',
   }
 
-  return (
-    <div style={{ minHeight: '100vh', background: '#0a0f0a', color: '#fff', fontFamily: 'inherit' }}>
-      <div style={{ maxWidth: '680px', margin: '0 auto', padding: '32px 20px' }}>
+  const labelStyle: React.CSSProperties = {
+    display: 'block', fontSize: 12, fontWeight: 600,
+    color: 'var(--muted2)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em',
+  }
 
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
+  if (hasSubscription === null) return (
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <i className="ti ti-loader" style={{ fontSize: 28, color: 'var(--accent)', animation: 'spin 1s linear infinite' }} />
+    </div>
+  )
+
+  return (
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'Inter, sans-serif' }}>
+      <div style={{ maxWidth: 720, margin: '0 auto', padding: '32px 24px' }}>
+
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 28 }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-              <div style={{ width: '32px', height: '32px', background: '#1a3a1a', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>📘</div>
-              <h1 style={{ fontSize: '20px', fontWeight: 700, color: '#fff', margin: 0 }}>Ebook Builder</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+              <div style={{ width: 36, height: 36, background: 'linear-gradient(135deg, #5b4ef8, #9b8ffc)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>📘</div>
+              <h1 style={{ fontSize: 22, fontWeight: 800, fontFamily: 'Syne, sans-serif', color: 'var(--text)', margin: 0 }}>Gerador de Ebook</h1>
             </div>
-            <p style={{ fontSize: '12px', color: '#6b7280', margin: 0, paddingLeft: '42px' }}>Gerador de ebooks profissionais em PDF</p>
+            <p style={{ fontSize: 13, color: 'var(--muted2)', margin: 0, paddingLeft: 46 }}>Crie ebooks profissionais em PDF com inteligencia artificial</p>
           </div>
+
           {hasSubscription && credits && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#0f1a0f', border: '1px solid #1e3a1e', borderRadius: '12px', padding: '12px 16px' }}>
-              <div style={{ width: '32px', height: '32px', background: '#1a3a1a', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>📗</div>
-              <div>
-                <p style={{ fontSize: '11px', color: '#9ca3af', margin: '0 0 2px 0' }}>Creditos de Ebook</p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '14px', fontWeight: 600, color: remaining <= 0 ? '#f87171' : remaining <= 1 ? '#fbbf24' : '#ffffff' }}>{remaining} restantes</span>
-                  <span style={{ fontSize: '12px', color: '#4b5563' }}>/ {credits.limit} · {credits.planName}</span>
-                </div>
-                <div style={{ marginTop: '6px', height: '4px', width: '112px', background: '#1a2a1a', borderRadius: '999px', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: pct + '%', background: remaining <= 0 ? '#ef4444' : remaining <= 1 ? '#f59e0b' : '#4ade80', borderRadius: '999px' }} />
-                </div>
+            <div style={{ background: 'var(--surface)', border: '1.5px solid var(--border)', borderRadius: 14, padding: '12px 18px', boxShadow: 'var(--shadow-sm)' }}>
+              <p style={{ fontSize: 11, color: 'var(--muted2)', margin: '0 0 4px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Creditos de Ebook</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <span style={{ fontSize: 20, fontWeight: 800, fontFamily: 'Syne, sans-serif', color: remaining <= 0 ? 'var(--red)' : remaining <= 1 ? 'var(--amber)' : 'var(--accent)' }}>{remaining}</span>
+                <span style={{ fontSize: 12, color: 'var(--muted)' }}>/ {credits.limit} restantes · {credits.planName}</span>
+              </div>
+              <div style={{ height: 5, width: 140, background: 'var(--surface2)', borderRadius: 99, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: pct + '%', background: remaining <= 0 ? 'var(--red)' : remaining <= 1 ? 'var(--amber)' : 'linear-gradient(90deg, var(--accent), #9b8ffc)', borderRadius: 99 }} />
               </div>
             </div>
           )}
+
           {hasSubscription === false && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(124,92,252,0.1)', border: '1px solid rgba(124,92,252,0.3)', borderRadius: 12, padding: '10px 16px' }}>
-              <span>🔒</span>
-              <div>
-                <p style={{ fontSize: 12, color: '#a78bfa', margin: 0, fontWeight: 600 }}>Sem plano ativo</p>
-                <a href="/dashboard/planos" style={{ fontSize: 12, color: '#7c5cfc', textDecoration: 'none' }}>Assinar agora →</a>
-              </div>
+            <div style={{ background: '#eef2ff', border: '1px solid rgba(91,78,248,0.2)', borderRadius: 12, padding: '10px 16px' }}>
+              <p style={{ fontSize: 12, color: 'var(--accent)', margin: 0, fontWeight: 600 }}>🔒 Sem plano ativo</p>
+              <a href="/dashboard/planos" style={{ fontSize: 12, color: 'var(--accent)', textDecoration: 'none', fontWeight: 700 }}>Assinar agora →</a>
             </div>
           )}
         </div>
 
+        {/* Avisos */}
         {hasSubscription === false && (
-          <div style={{ display: 'flex', gap: '12px', padding: '16px', borderRadius: '12px', background: 'rgba(124,92,252,0.08)', border: '1px solid rgba(124,92,252,0.25)', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', gap: 12, padding: 16, borderRadius: 12, background: '#eef2ff', border: '1px solid rgba(91,78,248,0.2)', marginBottom: 16 }}>
             <span>🔒</span>
             <div>
-              <p style={{ fontWeight: 600, color: '#a78bfa', margin: '0 0 4px 0', fontSize: '14px' }}>Recurso exclusivo para assinantes</p>
-              <p style={{ color: '#9ca3af', margin: '0 0 8px 0', fontSize: '13px' }}>Assine um plano para gerar ebooks com IA.</p>
-              <a href="/dashboard/planos" style={{ color: '#7c5cfc', fontSize: '13px', fontWeight: 600 }}>Ver planos →</a>
+              <p style={{ fontWeight: 700, color: 'var(--accent)', margin: '0 0 4px', fontSize: 14 }}>Recurso exclusivo para assinantes</p>
+              <p style={{ color: 'var(--muted2)', margin: '0 0 8px', fontSize: 13 }}>Assine um plano para gerar ebooks com IA.</p>
+              <a href="/dashboard/planos" style={{ color: 'var(--accent)', fontSize: 13, fontWeight: 600 }}>Ver planos →</a>
             </div>
           </div>
         )}
 
         {upgradeRequired && (
-          <div style={{ display: 'flex', gap: '12px', padding: '16px', borderRadius: '12px', background: 'rgba(120,53,15,0.2)', border: '1px solid rgba(180,83,9,0.3)', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', gap: 12, padding: 16, borderRadius: 12, background: '#fffbeb', border: '1px solid rgba(217,119,6,0.2)', marginBottom: 16 }}>
             <span>⚠️</span>
             <div>
-              <p style={{ fontWeight: 600, color: '#fcd34d', margin: '0 0 4px 0', fontSize: '14px' }}>Creditos esgotados</p>
-              <p style={{ color: '#fbbf24', margin: '0 0 8px 0', fontSize: '13px' }}>{error}</p>
-              <a href="/dashboard/planos" style={{ color: '#fcd34d', fontSize: '12px', fontWeight: 500 }}>Ver planos</a>
+              <p style={{ fontWeight: 700, color: 'var(--amber)', margin: '0 0 4px', fontSize: 14 }}>Creditos esgotados</p>
+              <p style={{ color: 'var(--muted2)', margin: '0 0 8px', fontSize: 13 }}>{error}</p>
+              <a href="/dashboard/planos" style={{ color: 'var(--amber)', fontSize: 12, fontWeight: 600 }}>Ver planos</a>
             </div>
           </div>
         )}
 
         {error && !upgradeRequired && hasSubscription && (
-          <div style={{ display: 'flex', gap: '12px', padding: '16px', borderRadius: '12px', background: 'rgba(127,29,29,0.2)', border: '1px solid rgba(185,28,28,0.3)', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', gap: 12, padding: 16, borderRadius: 12, background: '#fef2f2', border: '1px solid rgba(220,38,38,0.2)', marginBottom: 16 }}>
             <span>❌</span>
-            <p style={{ color: '#fca5a5', margin: 0, fontSize: '14px' }}>{error}</p>
+            <p style={{ color: 'var(--red)', margin: 0, fontSize: 14 }}>{error}</p>
           </div>
         )}
 
         {success && (
-          <div style={{ display: 'flex', gap: '12px', padding: '16px', borderRadius: '12px', background: 'rgba(6,78,59,0.2)', border: '1px solid rgba(6,95,70,0.3)', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', gap: 12, padding: 16, borderRadius: 12, background: '#f0fdf4', border: '1px solid rgba(22,163,74,0.2)', marginBottom: 16 }}>
             <span>✅</span>
-            <p style={{ color: '#6ee7b7', margin: 0, fontSize: '14px' }}>{success}</p>
+            <p style={{ color: 'var(--green)', margin: 0, fontSize: 14 }}>{success}</p>
           </div>
         )}
 
-        <div style={{ background: '#0d150d', border: '1px solid #1a2e1a', borderRadius: '16px', overflow: 'hidden', marginBottom: '24px' }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid #1a2e1a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* Formulario */}
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 18, overflow: 'hidden', marginBottom: 28, boxShadow: 'var(--shadow-sm)' }}>
+          <div style={{ padding: '16px 22px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--surface)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span>📋</span>
-              <span style={{ fontSize: '14px', fontWeight: 600, color: '#fff' }}>Detalhes do Ebook</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Detalhes do Ebook</span>
             </div>
             {(form.title || form.topic || form.details) && (
-              <button
-                onClick={clearForm}
-                style={{ background: 'none', border: 'none', color: '#4b5563', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
-              >
-                🗑️ Limpar campos
+              <button onClick={clearForm} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'Inter, sans-serif' }}>
+                🗑️ Limpar
               </button>
             )}
           </div>
-          <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+          <div style={{ padding: '22px', display: 'flex', flexDirection: 'column', gap: 18 }}>
             <div>
-              <label style={labelStyle}>Titulo <span style={{ color: '#4ade80' }}>*</span></label>
+              <label style={labelStyle}>Titulo <span style={{ color: 'var(--accent)' }}>*</span></label>
               <input type="text" name="title" value={form.title} onChange={handleChange} placeholder="Ex: Guia Definitivo de Marketing Digital" required style={inputStyle} />
             </div>
             <div>
-              <label style={labelStyle}>Topico principal <span style={{ color: '#4ade80' }}>*</span></label>
+              <label style={labelStyle}>Topico principal <span style={{ color: 'var(--accent)' }}>*</span></label>
               <textarea name="topic" value={form.topic} onChange={handleChange} placeholder="Descreva o tema central do ebook..." required rows={2} style={{ ...inputStyle, resize: 'none' }} />
             </div>
             <div>
-              <label style={labelStyle}>Detalhamento <span style={{ color: '#6b7280', fontWeight: 400 }}>(opcional)</span></label>
-              <textarea name="details" value={form.details} onChange={handleChange} placeholder="Ex: Quero um ebook com linguagem simples, exemplos praticos..." rows={4} style={{ ...inputStyle, resize: 'none' }} />
+              <label style={labelStyle}>Detalhamento <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(opcional)</span></label>
+              <textarea name="details" value={form.details} onChange={handleChange} placeholder="Ex: Quero linguagem simples, exemplos praticos, voltado para iniciantes..." rows={3} style={{ ...inputStyle, resize: 'none' }} />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <div>
                 <label style={labelStyle}>Publico-alvo</label>
                 <input type="text" name="targetAudience" value={form.targetAudience} onChange={handleChange} placeholder="Ex: empreendedores" style={inputStyle} />
@@ -356,7 +381,7 @@ export default function EbookPage() {
               </select>
             </div>
             <div>
-              <label style={labelStyle}>Capitulos <span style={{ color: '#6b7280', fontWeight: 400 }}>(opcional · um por linha)</span></label>
+              <label style={labelStyle}>Capitulos <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(opcional · um por linha)</span></label>
               <textarea name="chapters" value={form.chapters} onChange={handleChange} placeholder={'Introducao\nCapitulo 1\nConclusao'} rows={3} style={{ ...inputStyle, resize: 'none', fontFamily: 'monospace' }} />
             </div>
             <div>
@@ -367,71 +392,81 @@ export default function EbookPage() {
                 <option value="es-ES">Espanol</option>
               </select>
             </div>
+
             <button
               onClick={handleSubmit}
               disabled={loading || (hasSubscription === true && (!form.title || !form.topic || noCredits))}
               style={{
-                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                padding: '12px', borderRadius: '12px', border: 'none',
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                padding: '13px', borderRadius: 12, border: 'none',
                 cursor: loading ? 'not-allowed' : 'pointer',
-                background: hasSubscription === false
-                  ? 'linear-gradient(135deg, #7c5cfc, #9b6dfc)'
-                  : loading || noCredits ? '#1a2e1a' : 'linear-gradient(135deg, #16a34a, #4ade80)',
-                color: hasSubscription === false ? '#fff' : loading || noCredits ? '#4ade80' : '#0a0f0a',
-                fontWeight: 700, fontSize: '14px',
+                background: hasSubscription === false ? 'linear-gradient(135deg, #5b4ef8, #9b8ffc)' : loading || noCredits ? 'var(--surface2)' : 'linear-gradient(135deg, #5b4ef8, #9b8ffc)',
+                color: loading || noCredits ? 'var(--muted2)' : '#fff',
+                fontWeight: 700, fontSize: 15, fontFamily: 'Inter, sans-serif',
+                boxShadow: loading || noCredits ? 'none' : '0 8px 20px rgba(91,78,248,0.3)',
+                transition: 'all 0.2s',
               }}
             >
-              {hasSubscription === false
-                ? 'Assinar para gerar ebooks'
-                : loading ? 'Gerando ebook — aguarde ate 3 min...' : 'Gerar Ebook com IA'
-              }
+              {hasSubscription === false ? '🔒 Assinar para gerar ebooks' : loading ? 'Gerando ebook — aguarde ate 3 min...' : '✨ Gerar Ebook com IA'}
             </button>
             {loading && (
-              <p style={{ fontSize: '12px', color: '#6b7280', textAlign: 'center', margin: 0 }}>
+              <p style={{ fontSize: 12, color: 'var(--muted2)', textAlign: 'center', margin: 0 }}>
                 Seu ebook esta sendo criado. Nao feche esta aba.
               </p>
             )}
           </div>
         </div>
 
+        {/* Lista de ebooks gerados */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-            <span style={{ fontSize: '14px', color: '#6b7280' }}>📄</span>
-            <h2 style={{ fontSize: '14px', fontWeight: 600, color: '#d1d5db', margin: 0 }}>Ebooks gerados</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+            <span style={{ fontSize: 16 }}>📚</span>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', margin: 0, fontFamily: 'Syne, sans-serif' }}>Ebooks gerados</h2>
           </div>
+
           {loadingData ? (
-            <p style={{ fontSize: '14px', color: '#6b7280', textAlign: 'center', padding: '24px 0' }}>Carregando...</p>
+            <p style={{ fontSize: 14, color: 'var(--muted2)', textAlign: 'center', padding: '24px 0' }}>Carregando...</p>
           ) : ebooks.length === 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 20px', border: '1px dashed #1a2e1a', borderRadius: '16px', textAlign: 'center' }}>
-              <span style={{ fontSize: '28px', marginBottom: '8px' }}>📚</span>
-              <p style={{ fontSize: '14px', color: '#4b5563', margin: '0 0 4px 0' }}>Nenhum ebook gerado ainda.</p>
-              <p style={{ fontSize: '12px', color: '#374151', margin: 0 }}>Preencha o formulario acima para comecar.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 20px', border: '2px dashed var(--border)', borderRadius: 16, textAlign: 'center' }}>
+              <span style={{ fontSize: 32, marginBottom: 10 }}>📚</span>
+              <p style={{ fontSize: 14, color: 'var(--muted2)', margin: '0 0 4px' }}>Nenhum ebook gerado ainda.</p>
+              <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>Preencha o formulario acima para comecar.</p>
             </div>
           ) : (
-            <div style={{ background: '#0d150d', border: '1px solid #1a2e1a', borderRadius: '16px', overflow: 'hidden' }}>
-              {ebooks.map(function(ebook, i) {
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {ebooks.map(function(ebook) {
                 return (
-                  <div key={ebook.gamma_generation_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '14px 20px', borderTop: i > 0 ? '1px solid #1a2e1a' : 'none' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                      <div style={{ width: '28px', height: '28px', background: '#1a2e1a', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>📄</div>
-                      <div style={{ minWidth: 0 }}>
-                        <p style={{ fontSize: '14px', fontWeight: 500, color: '#fff', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ebook.title}</p>
-                        {ebook.created_at && (
-                          <p style={{ fontSize: '12px', color: '#4b5563', margin: '2px 0 0 0' }}>
-                            {new Date(ebook.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                        )}
+                  <div key={ebook.gamma_generation_id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 24, boxShadow: 'var(--shadow-sm)' }}>
+
+                    {/* Mockup do ebook */}
+                    {ebook.status === 'completed' && ebook.pdf_url ? (
+                      <EbookMockup title={ebook.title} pdfUrl={ebook.pdf_url} />
+                    ) : (
+                      <div style={{ width: 160, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 120, height: 160, background: 'var(--surface2)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)' }}>
+                          <span style={{ fontSize: 32 }}>📄</span>
+                        </div>
                       </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-                      <span style={{ fontSize: '12px', color: ebook.status === 'completed' ? '#4ade80' : ebook.status === 'failed' ? '#f87171' : '#60a5fa', fontWeight: 500 }}>
-                        {ebook.status === 'completed' ? 'Concluido' : ebook.status === 'failed' ? 'Erro' : 'Processando'}
-                      </span>
-                      {ebook.status === 'completed' && (
-                        <button onClick={function() { handleDownload(ebook) }} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', background: '#1a3a1a', color: '#4ade80', fontWeight: 600, padding: '6px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer' }}>
-                          PDF
-                        </button>
+                    )}
+
+                    {/* Info */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', margin: '0 0 6px', fontFamily: 'Syne, sans-serif', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ebook.title}</p>
+                      {ebook.created_at && (
+                        <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 12px' }}>
+                          {new Date(ebook.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </p>
                       )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{
+                          fontSize: 12, fontWeight: 600,
+                          color: ebook.status === 'completed' ? 'var(--green)' : ebook.status === 'failed' ? 'var(--red)' : 'var(--accent)',
+                          background: ebook.status === 'completed' ? 'var(--green-light)' : ebook.status === 'failed' ? 'var(--red-light)' : 'var(--accent-light)',
+                          padding: '3px 10px', borderRadius: 99,
+                        }}>
+                          {ebook.status === 'completed' ? '✓ Concluido' : ebook.status === 'failed' ? '✗ Erro' : '⏳ Processando'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 )
@@ -441,6 +476,7 @@ export default function EbookPage() {
         </div>
 
       </div>
+      <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>
     </div>
   )
 }
