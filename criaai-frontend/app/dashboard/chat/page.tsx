@@ -172,19 +172,6 @@ export default function ChatPage() {
         </div>
 
         <div className={styles.inputWrap}>
-          <div className={styles.suggestions}>
-            {['Nao consigo acessar as aulas', 'Como me afilio a um produto', 'Meu Pixel nao esta funcionando', 'Quero analisar minha campanha'].map(function(s) {
-              return (
-                <button
-                  key={s}
-                  className={styles.chip}
-                  onClick={function() { setInput(s) }}
-                >
-                  {s}
-                </button>
-              )
-            })}
-          </div>
           <div className={styles.inputRow}>
             <textarea
               value={input}
