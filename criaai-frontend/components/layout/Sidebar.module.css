@@ -1,3 +1,4 @@
+/* ===== SIDEBAR ===== */
 .sidebar {
   width: 240px;
   min-height: 100vh;
@@ -9,68 +10,170 @@
   top: 0;
   height: 100vh;
   overflow-y: auto;
+  overflow-x: hidden;
   box-shadow: var(--shadow-sm);
-  animation: slideIn 0.3s ease both;
+  transition: width 0.25s ease;
+  z-index: 100;
+  flex-shrink: 0;
 }
 
+.collapsed { width: 64px !important; }
+
+/* ===== MOBILE ===== */
+.mobileToggle {
+  display: none;
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 200;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  width: 40px;
+  height: 40px;
+  font-size: 18px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(91,78,248,0.4);
+}
+
+.overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 98;
+  backdrop-filter: blur(2px);
+}
+
+@media (max-width: 768px) {
+  .mobileToggle { display: flex; }
+  .overlay { display: block; }
+  .sidebar {
+    position: fixed !important;
+    left: -260px;
+    top: 0;
+    height: 100vh;
+    z-index: 99;
+    transition: left 0.3s ease, width 0.25s ease;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+  }
+  .mobileVisible { left: 0 !important; }
+}
+
+/* ===== LOGO ===== */
 .logo {
-  padding: 18px 16px 16px;
+  padding: 18px 14px 14px;
   border-bottom: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
+  gap: 2px;
+  min-height: 90px;
 }
 
 .logoIcon {
-  font-size: 22px;
+  font-size: 20px;
   animation: floatIcon 3s ease-in-out infinite;
   display: inline-block;
   margin-bottom: 2px;
 }
 
 .logoTop {
-  font-family: 'Syne', sans-serif;
-  font-weight: 800;
-  font-size: 13px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 10px;
   color: var(--muted2);
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   line-height: 1;
+  white-space: nowrap;
 }
 
 .logoBottom {
   font-family: 'Syne', sans-serif;
   font-weight: 800;
-  font-size: 18px;
+  font-size: 15px;
   color: var(--text);
   letter-spacing: -0.3px;
-  line-height: 1.1;
+  line-height: 1.2;
   background: linear-gradient(135deg, var(--accent) 0%, #9b8ffc 60%, var(--accent) 100%);
   background-size: 200% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   animation: shimmerText 4s linear infinite;
+  white-space: nowrap;
 }
 
-@keyframes floatIcon {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  30% { transform: translateY(-4px) rotate(-5deg); }
-  70% { transform: translateY(-2px) rotate(3deg); }
+/* ===== USUARIO ABAIXO DO LOGO ===== */
+.logoUser {
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  width: 100%;
 }
 
-@keyframes shimmerText {
-  0% { background-position: 0% center; }
-  100% { background-position: 200% center; }
+.logoUserName {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
 }
 
+.logoUserPlan {
+  font-size: 10px;
+  color: var(--muted2);
+  margin-top: 1px;
+}
+
+.logoUserCredits {
+  font-size: 11px;
+  color: var(--accent2);
+  font-weight: 600;
+  margin-top: 3px;
+}
+
+/* ===== BOTAO RECOLHER ===== */
+.collapseBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: calc(100% - 20px);
+  margin: 10px;
+  padding: 8px 12px;
+  background: var(--accent-light);
+  border: 1px solid rgba(91,78,248,0.25);
+  border-radius: 10px;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.15s;
+  justify-content: center;
+}
+
+.collapseBtn:hover {
+  background: rgba(91,78,248,0.15);
+  border-color: var(--accent);
+}
+
+.collapseBtn i { font-size: 15px; }
+
+/* ===== NAV ===== */
 .nav {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 12px 10px;
+  padding: 8px 8px;
   flex: 1;
+  overflow-y: auto;
 }
 
 .navItem {
@@ -78,14 +181,15 @@
   align-items: center;
   gap: 10px;
   padding: 9px 12px;
-  border-radius: var(--radius-md);
-  font-size: 13.5px;
+  border-radius: 10px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--muted2);
   transition: all 0.15s;
   position: relative;
   text-decoration: none;
-  animation: slideIn 0.3s ease both;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .navItem:hover {
@@ -123,8 +227,9 @@
   border-radius: 0 3px 3px 0;
 }
 
+/* ===== BOTTOM ===== */
 .bottom {
-  padding: 12px 10px;
+  padding: 10px 8px;
   border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -137,7 +242,7 @@
   gap: 10px;
   padding: 10px 12px;
   background: var(--surface2);
-  border-radius: var(--radius-md);
+  border-radius: 10px;
   border: 1px solid var(--border);
 }
 
@@ -155,10 +260,7 @@
   flex-shrink: 0;
 }
 
-.userInfo {
-  flex: 1;
-  min-width: 0;
-}
+.userInfo { flex: 1; min-width: 0; }
 
 .userName {
   font-size: 12px;
@@ -169,11 +271,8 @@
   text-overflow: ellipsis;
 }
 
-.userPlan {
-  font-size: 11px;
-  color: var(--muted);
-  margin-top: 1px;
-}
+.userPlan { font-size: 10px; color: var(--muted); margin-top: 1px; }
+.userCredits { font-size: 11px; color: var(--accent2); font-weight: 600; margin-top: 2px; }
 
 .logoutBtn {
   background: none;
@@ -189,49 +288,41 @@
   flex-shrink: 0;
 }
 
-.logoutBtn:hover {
-  background: var(--surface3);
-  color: var(--red);
-}
-
+.logoutBtn:hover { background: var(--surface3); color: var(--red); }
 .logoutBtn i { font-size: 16px; }
 
 .creditsBox {
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 12px 14px;
+  border-radius: 10px;
+  padding: 10px 12px;
 }
 
 .creditsLabel {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   color: var(--muted2);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .creditsCount {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 800;
   font-family: 'Syne', sans-serif;
   color: var(--text);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
-.creditsCount span {
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--muted);
-}
+.creditsCount span { font-size: 11px; font-weight: 400; color: var(--muted); }
 
 .creditsBar {
   height: 5px;
   background: var(--surface3);
   border-radius: 99px;
   overflow: hidden;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .creditsFill {
@@ -245,7 +336,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--accent);
   text-decoration: none;
@@ -253,30 +344,27 @@
 }
 
 .addCreditsBtn:hover { opacity: 0.7; }
-.addCreditsBtn i { font-size: 13px; }
+.addCreditsBtn i { font-size: 12px; }
 
+/* ===== ITENS BLOQUEADOS ===== */
 .navItemLocked {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 9px 12px;
-  border-radius: var(--radius-md);
-  font-size: 13.5px;
+  border-radius: 10px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--muted);
   cursor: not-allowed;
-  opacity: 0.6;
+  opacity: 0.55;
   position: relative;
   user-select: none;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
-.navItemLocked i {
-  font-size: 17px;
-  width: 20px;
-  text-align: center;
-  flex-shrink: 0;
-}
-
+.navItemLocked i { font-size: 17px; width: 20px; text-align: center; flex-shrink: 0; }
 .navItemLocked span { flex: 1; }
 
 .lockBadge {
@@ -294,7 +382,16 @@
   flex: 0 !important;
 }
 
-.lockBadge i {
-  font-size: 10px;
-  width: auto;
+.lockBadge i { font-size: 10px; width: auto; }
+
+/* ===== ANIMACOES ===== */
+@keyframes floatIcon {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  30% { transform: translateY(-4px) rotate(-5deg); }
+  70% { transform: translateY(-2px) rotate(3deg); }
+}
+
+@keyframes shimmerText {
+  0% { background-position: 0% center; }
+  100% { background-position: 200% center; }
 }
