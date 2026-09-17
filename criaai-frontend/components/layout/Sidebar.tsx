@@ -20,26 +20,44 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
     router.push('/login')
   }
 
-  const navItems = [
-    { href: '/dashboard', icon: 'ti-home', label: 'Inicio' },
-    { href: '/dashboard/produtos', icon: 'ti-flame', label: 'Produtos em Alta' },
-    { href: '/dashboard/vendas', icon: 'ti-rocket', label: 'Vendendo no Automatico' },
-    { href: '/dashboard/chat', icon: 'ti-message-circle', label: 'Assistente IA' },
-    { href: '/dashboard/ebook', icon: 'ti-book-2', label: 'Gerador de Ebook' },
-    { href: '/dashboard/paginas', icon: 'ti-layout', label: 'Criador de site' },
-    { href: '/dashboard/criativo', icon: 'ti-sparkles', label: 'Criador de Criativos' },
-    { href: '/dashboard/metricas', icon: 'ti-chart-bar', label: 'Analise suas metricas' },
-    { href: '/dashboard/planos', icon: 'ti-credit-card', label: 'Planos' },
-    ...(isAdmin ? [{ href: '/dashboard/admin', icon: 'ti-shield', label: 'Admin' }] : []),
-  ]
-
   const WHATSAPP = '5537999521440'
+
+  const navItems = [
+    { href: '/dashboard', icon: 'ti-home', label: 'Inicio', locked: false },
+    { href: '/dashboard/chat', icon: 'ti-message-circle', label: 'Assistente IA', locked: false },
+    { href: '/dashboard/produtos', icon: 'ti-flame', label: 'Produtos em Alta', locked: true },
+    { href: '/dashboard/ebook', icon: 'ti-book-2', label: 'Gerador de Ebook', locked: false },
+    { href: '/dashboard/paginas', icon: 'ti-layout', label: 'Gerador de Site', locked: false },
+    { href: '/dashboard/criativo', icon: 'ti-sparkles', label: 'Gerador de Criativos', locked: false },
+    { href: '/dashboard/vendas', icon: 'ti-rocket', label: 'Vendendo no Automatico', locked: true },
+    { href: '/dashboard/metricas', icon: 'ti-chart-bar', label: 'Analisando Metricas', locked: false },
+    { href: '/dashboard/suporte', icon: 'ti-headset', label: 'Suporte Humano', locked: false },
+    { href: '/dashboard/aulas', icon: 'ti-device-tv', label: 'Aulas ao Vivo', locked: false },
+    { href: '/dashboard/planos', icon: 'ti-credit-card', label: 'Planos', locked: false },
+    ...(isAdmin ? [{ href: '/dashboard/admin', icon: 'ti-shield', label: 'Admin', locked: false }] : []),
+  ]
 
   return (
     <aside className={styles.sidebar}>
       <div className={styles.logo}>MCP<span>.IA</span></div>
+
       <nav className={styles.nav}>
         {navItems.map(function(item) {
+          if (item.locked) {
+            return (
+              <div
+                key={item.href}
+                className={styles.navItemLocked}
+                title="Em breve"
+              >
+                <i className={'ti ' + item.icon} />
+                <span>{item.label}</span>
+                <span className={styles.lockBadge}>
+                  <i className="ti ti-lock" /> Em breve
+                </span>
+              </div>
+            )
+          }
           return (
             <Link
               key={item.href}
@@ -52,15 +70,8 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
           )
         })}
       </nav>
+
       <div className={styles.bottom}>
-        <a
-          href={'https://wa.me/' + WHATSAPP + '?text=Ola, preciso de suporte no MCP.IA'}
-          target="_blank"
-          rel="noreferrer"
-          className={styles.supportBtn}
-        >
-          <i className="ti ti-brand-whatsapp" /> Suporte
-        </a>
         <div className={styles.userRow}>
           <div className={styles.userAvatar}>{user?.email?.[0].toUpperCase()}</div>
           <div className={styles.userInfo}>
@@ -74,7 +85,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
         <div className={styles.creditsBox}>
           <div className={styles.creditsLabel}>Creditos de video</div>
           <div className={styles.creditsCount}>
-            {plan?.is_unlimited ? '' : videosUsed} <span>/ {plan?.is_unlimited ? '' : videosLimit}</span>
+            {plan?.is_unlimited ? '∞' : videosUsed} <span>/ {plan?.is_unlimited ? '∞' : videosLimit}</span>
           </div>
           <div className={styles.creditsBar}>
             <div className={styles.creditsFill} style={{ width: creditPct + '%' }} />
