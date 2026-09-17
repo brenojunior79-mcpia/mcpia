@@ -11,7 +11,7 @@ export default function SuportePage() {
     function check() {
       const now = new Date()
       const hour = now.getHours()
-      const day = now.getDay() // 0=dom, 6=sab
+      const day = now.getDay()
       const weekday = day >= 1 && day <= 5
       const inHours = hour >= 9 && hour < 18
       setIsOpen(weekday && inHours)
@@ -24,7 +24,7 @@ export default function SuportePage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', padding: '32px 24px', fontFamily: 'Inter, sans-serif' }}>
-      <div style={{ maxWidth: 560, margin: '0 auto' }}>
+      <div style={{ maxWidth: 500, margin: '0 auto' }}>
 
         {/* Header */}
         <div style={{ marginBottom: 28 }}>
@@ -42,7 +42,7 @@ export default function SuportePage() {
           </div>
         </div>
 
-        {/* Status de horario */}
+        {/* Status horario */}
         <div style={{
           background: isOpen ? 'rgba(22,163,74,0.08)' : 'rgba(239,68,68,0.08)',
           border: '1px solid ' + (isOpen ? 'rgba(22,163,74,0.25)' : 'rgba(239,68,68,0.25)'),
@@ -57,53 +57,39 @@ export default function SuportePage() {
             </span>
           </div>
           <p style={{ fontSize: 13, color: 'var(--muted2)', margin: 0, lineHeight: 1.6 }}>
-            Atendimento humano disponível de <strong>segunda a sexta</strong>, das <strong>9h às 18h</strong>.
+            Atendimento disponível de <strong>segunda a sexta</strong>, das <strong>9h às 18h</strong>.
             {!isOpen && (
               <span> Fora desse horário, use o <Link href="/dashboard/chat" style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}>Assistente IA</Link> — disponível 24h!</span>
             )}
           </p>
         </div>
 
-        {/* Fora do horario - CTA para IA */}
+        {/* Fora do horario - CTA IA */}
         {!isOpen && (
           <Link href="/dashboard/chat" style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 14,
+            display: 'flex', alignItems: 'center', gap: 14,
             background: 'linear-gradient(135deg, rgba(91,78,248,0.1), rgba(91,78,248,0.04))',
             border: '1px solid rgba(91,78,248,0.2)',
-            borderRadius: 14,
-            padding: '16px 20px',
-            marginBottom: 20,
-            textDecoration: 'none',
+            borderRadius: 14, padding: '16px 20px', marginBottom: 20, textDecoration: 'none',
           }}>
             <div style={{ fontSize: 28, flexShrink: 0 }}>🤖</div>
             <div>
               <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--accent2)', marginBottom: 2 }}>Assistente IA disponível agora!</div>
-              <p style={{ fontSize: 12, color: 'var(--muted2)', margin: 0 }}>Tire suas dúvidas com nossa IA treinada. Resposta imediata, 24 horas por dia.</p>
+              <p style={{ fontSize: 12, color: 'var(--muted2)', margin: 0 }}>Tire suas dúvidas com nossa IA treinada. Resposta imediata, 24h por dia.</p>
             </div>
             <i className="ti ti-arrow-right" style={{ fontSize: 18, color: 'var(--accent2)', flexShrink: 0, marginLeft: 'auto' }} />
           </Link>
         )}
 
-        {/* Tipos de suporte */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
-          {[
-            { icon: '⚡', label: 'Resposta rápida', desc: 'Atendimento em até 2 horas no horário comercial' },
-            { icon: '🛠️', label: 'Suporte técnico', desc: 'Problemas com a plataforma e funcionalidades' },
-            { icon: '💡', label: 'Dúvidas gerais', desc: 'Como usar os recursos e tirar o máximo da IA' },
-            { icon: '💳', label: 'Financeiro', desc: 'Planos, créditos, pagamentos e reembolsos' },
-          ].map(function(item) {
-            return (
-              <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 18px', boxShadow: 'var(--shadow-sm)' }}>
-                <span style={{ fontSize: 22, flexShrink: 0 }}>{item.icon}</span>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>{item.label}</div>
-                  <div style={{ fontSize: 12, color: 'var(--muted2)' }}>{item.desc}</div>
-                </div>
-              </div>
-            )
-          })}
+        {/* Mensagem principal */}
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '28px 24px', marginBottom: 24, boxShadow: 'var(--shadow-sm)', textAlign: 'center' }}>
+          <div style={{ fontSize: 40, marginBottom: 16 }}>💬</div>
+          <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 20, fontWeight: 800, color: 'var(--text)', marginBottom: 10 }}>
+            Está com dúvida em alguma coisa?
+          </h2>
+          <p style={{ fontSize: 15, color: 'var(--muted2)', lineHeight: 1.7, margin: 0 }}>
+            Fale com a gente que vamos te ajudar agora.
+          </p>
         </div>
 
         {/* Botao WhatsApp */}
@@ -112,31 +98,20 @@ export default function SuportePage() {
           target="_blank"
           rel="noreferrer"
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 10,
-            background: '#16a34a',
-            color: '#fff',
-            fontWeight: 700,
-            fontSize: 15,
-            padding: '14px 32px',
-            borderRadius: 14,
-            textDecoration: 'none',
-            boxShadow: '0 8px 20px rgba(22,163,74,0.35)',
-            transition: 'all 0.2s',
-            width: '100%',
-            boxSizing: 'border-box' as const,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+            background: '#16a34a', color: '#fff', fontWeight: 700, fontSize: 16,
+            padding: '16px 32px', borderRadius: 14, textDecoration: 'none',
+            boxShadow: '0 8px 20px rgba(22,163,74,0.35)', width: '100%', boxSizing: 'border-box' as const,
           }}
         >
-          <i className="ti ti-brand-whatsapp" style={{ fontSize: 22 }} />
-          Falar com suporte no WhatsApp
+          <i className="ti ti-brand-whatsapp" style={{ fontSize: 24 }} />
+          Falar com suporte agora
         </a>
         <p style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'center', marginTop: 10 }}>
-          Segunda a Sexta · 9h às 18h · Fora do horário? Use o <Link href="/dashboard/chat" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>Assistente IA</Link>
+          Seg–Sex · 9h às 18h · Fora do horário? <Link href="/dashboard/chat" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>Use o Assistente IA</Link>
         </p>
 
-        <style>{`@keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(22,163,74,0.4)} 50%{box-shadow:0 0 0 6px rgba(22,163,74,0)} }`}</style>
+        <style>{`@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(22,163,74,0.4)}50%{box-shadow:0 0 0 6px rgba(22,163,74,0)}}`}</style>
       </div>
     </div>
   )
