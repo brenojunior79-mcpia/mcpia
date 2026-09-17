@@ -263,22 +263,23 @@ export default function ProdutosAltaPage() {
         </div>
 
         {/* Barra de novos produtos em breve */}
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '18px 24px', boxShadow: 'var(--shadow-sm)' }}>
+        <div style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.08), rgba(239,68,68,0.08))', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 16, padding: '18px 24px', boxShadow: '0 4px 16px rgba(239,68,68,0.1)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 16 }}>🔍</span>
+              <span style={{ fontSize: 18, animation: 'pulseEmoji 1.5s ease-in-out infinite', display: 'inline-block' }}>🔥</span>
               <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Procurando novos produtos</span>
             </div>
-            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent2)', background: 'var(--accent-light)', border: '1px solid rgba(91,78,248,0.2)', borderRadius: 99, padding: '3px 10px' }}>Em breve</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#fff', background: 'linear-gradient(135deg, #ef4444, #ec4899)', borderRadius: 99, padding: '4px 12px', boxShadow: '0 2px 8px rgba(239,68,68,0.4)' }}>🔥 Em breve</span>
           </div>
-          <div style={{ height: 8, background: 'var(--surface2)', borderRadius: 99, overflow: 'hidden' }}>
+          <div style={{ height: 10, background: 'var(--surface2)', borderRadius: 99, overflow: 'hidden' }}>
             <div style={{
               height: '100%',
-              width: '60%',
-              background: 'linear-gradient(90deg, var(--accent), #9b8ffc, var(--accent))',
-              backgroundSize: '200% 100%',
+              width: '65%',
+              background: 'linear-gradient(90deg, #f59e0b, #ef4444, #ec4899, #f59e0b)',
+              backgroundSize: '300% 100%',
               borderRadius: 99,
-              animation: 'buscando 2s ease-in-out infinite',
+              animation: 'buscando 1.8s ease-in-out infinite',
+              boxShadow: '0 0 12px rgba(239,68,68,0.5)',
             }} />
           </div>
           <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8, margin: '8px 0 0' }}>Novos produtos serao disponibilizados em breve. Fique ligado!</p>
@@ -288,6 +289,10 @@ export default function ProdutosAltaPage() {
           @keyframes buscando {
             0% { background-position: 200% center; }
             100% { background-position: -200% center; }
+          }
+          @keyframes pulseEmoji {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.3); }
           }
         `}</style>
 
