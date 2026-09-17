@@ -8,7 +8,7 @@ export default function AdminPage() {
   const [profiles, setProfiles] = useState<any[]>([])
   const [stats, setStats] = useState({ receita: 0, custo: 0, alunos: 0, videos: 0, pagantes: 0, hoje: 0 })
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState('pagantes')
+  const [filter, setFilter] = useState('todos')
   const [search, setSearch] = useState('')
   const supabase = createClient()
   const router = useRouter()
@@ -17,6 +17,12 @@ export default function AdminPage() {
     const d = new Date(dateStr)
     const now = new Date()
     return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
+  }
+
+  function formatDate(dateStr: string) {
+    if (!dateStr) return '—'
+    const d = new Date(dateStr)
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
   }
 
   useEffect(function() {
@@ -48,33 +54,15 @@ export default function AdminPage() {
     load()
   }, [])
 
-  function getMargin(profile: any) {
-    const receita = profile.plans?.price_monthly || 0
-    const custo = (profile.credits_videos_used || 0) * 0.56 + (profile.credits_ebooks_used || 0) * 1.65
-    if (receita === 0) return 0
-    return Math.round(((receita - custo) / receita) * 100)
-  }
-
-  function getRisco(profile: any) {
-    const plan = profile.plans
-    if (!plan || plan.is_unlimited) return 'ok'
-    const pct = (profile.credits_videos_used || 0) / (plan.credits_videos || 1)
-    if (pct >= 0.9) return 'alto'
-    if (pct >= 0.7) return 'medio'
-    return 'ok'
-  }
-
   const filtered = profiles.filter(function(p) {
     if (search.trim()) {
       const q = search.toLowerCase()
       const matchesSearch = (p.full_name || '').toLowerCase().includes(q) || (p.email || '').toLowerCase().includes(q)
       if (!matchesSearch) return false
     }
-    if (filter === 'risco') return getRisco(p) !== 'ok'
-    if (filter === 'ok') return getRisco(p) === 'ok'
     if (filter === 'pagantes') return p.subscription_status === 'active'
-    if (filter === 'inativos') return p.subscription_status !== 'active' && p.subscription_status !== 'trialing'
     if (filter === 'hoje') return isToday(p.created_at)
+    if (filter === 'sempagar') return p.subscription_status !== 'active' && p.subscription_status !== 'trialing'
     return true
   })
 
@@ -85,103 +73,53 @@ export default function AdminPage() {
     </div>
   )
 
+  const lucro = stats.receita - stats.custo
+
   return (
     <div className={styles.page}>
       <div className={styles.topbar}>
         <div>
           <div className={styles.title}>Painel Admin</div>
-          <div className={styles.sub}>Visao geral de todos os alunos e custos</div>
+          <div className={styles.sub}>Quem esta usando o site e quanto esta entrando</div>
         </div>
       </div>
       <div className={styles.content}>
 
-        <div className={styles.apiPanel}>
-          <div className={styles.apiCard}>
-            <div className={styles.apiHeader}>
-              <div className={styles.apiIcon} style={{ background: '#1a1a2e' }}>
-                <i className="ti ti-video" style={{ color: '#7c5cfc' }} />
-              </div>
-              <div>
-                <div className={styles.apiName}>Creatomate</div>
-                <div className={styles.apiSub}>Renders de video</div>
-              </div>
-              <a href="https://creatomate.com/projects" target="_blank" rel="noreferrer" className={styles.apiLink}>
-                <i className="ti ti-external-link" />
-              </a>
-            </div>
-            <div className={styles.apiNote}>Verifique o saldo de renders em creatomate.com</div>
-          </div>
-
-          <div className={styles.apiCard}>
-            <div className={styles.apiHeader}>
-              <div className={styles.apiIcon} style={{ background: '#0a2200' }}>
-                <i className="ti ti-brain" style={{ color: '#10a37f' }} />
-              </div>
-              <div>
-                <div className={styles.apiName}>OpenAI</div>
-                <div className={styles.apiSub}>GPT-4o · Roteiros, ebooks e paginas</div>
-              </div>
-              <a href="https://platform.openai.com/settings/organization/billing/overview" target="_blank" rel="noreferrer" className={styles.apiLink}>
-                <i className="ti ti-external-link" />
-              </a>
-            </div>
-            <div className={styles.apiNote}>Verifique o saldo em platform.openai.com</div>
-          </div>
-
-          <div className={styles.apiCard}>
-            <div className={styles.apiHeader}>
-              <div className={styles.apiIcon} style={{ background: '#1a2e1a' }}>
-                <i className="ti ti-book-2" style={{ color: '#4ade80' }} />
-              </div>
-              <div>
-                <div className={styles.apiName}>Gamma</div>
-                <div className={styles.apiSub}>Geracao de ebooks</div>
-              </div>
-              <a href="https://gamma.app" target="_blank" rel="noreferrer" className={styles.apiLink}>
-                <i className="ti ti-external-link" />
-              </a>
-            </div>
-            <div className={styles.apiNote}>Verifique o saldo em gamma.app</div>
-          </div>
-        </div>
-
+        {/* Resumo simples */}
         <div className={styles.stats}>
+          <div
+            className={styles.stat}
+            style={{ cursor: 'pointer', border: filter === 'todos' ? '1px solid var(--accent)' : undefined }}
+            onClick={function() { setFilter('todos') }}
+          >
+            <div className={styles.statLabel}>Usuarios cadastrados</div>
+            <div className={styles.statValue}>{stats.alunos}</div>
+            <div className={styles.statUp} style={{ color: 'var(--muted2)' }}>{stats.hoje} novos hoje — clique para ver todos</div>
+          </div>
           <div
             className={styles.stat}
             style={{ cursor: 'pointer', border: filter === 'pagantes' ? '1px solid var(--accent)' : undefined }}
             onClick={function() { setFilter('pagantes') }}
           >
-            <div className={styles.statLabel}>Receita mensal</div>
-            <div className={styles.statValue}>R${stats.receita.toFixed(0)}</div>
-            <div className={styles.statUp}>{stats.pagantes} alunos pagantes — clique para ver</div>
+            <div className={styles.statLabel}>Pagando agora</div>
+            <div className={styles.statValue} style={{ color: 'var(--green)' }}>{stats.pagantes}</div>
+            <div className={styles.statUp}>R${stats.receita.toFixed(0)} por mes — clique para ver</div>
           </div>
           <div className={styles.stat}>
-            <div className={styles.statLabel}>Custo total APIs</div>
-            <div className={styles.statValue} style={{ color: 'var(--red)' }}>R${stats.custo.toFixed(2)}</div>
-            <div className={styles.statUp} style={{ color: 'var(--muted2)' }}>Creatomate + OpenAI + Gamma</div>
-          </div>
-          <div className={styles.stat}>
-            <div className={styles.statLabel}>Lucro liquido</div>
-            <div className={styles.statValue} style={{ color: 'var(--green)' }}>R${(stats.receita - stats.custo).toFixed(0)}</div>
-            <div className={styles.statUp}>Margem {stats.receita > 0 ? Math.round(((stats.receita - stats.custo) / stats.receita) * 100) : 0}%</div>
-          </div>
-          <div
-            className={styles.stat}
-            style={{ cursor: 'pointer', border: filter === 'hoje' ? '1px solid var(--accent)' : undefined }}
-            onClick={function() { setFilter('hoje') }}
-          >
-            <div className={styles.statLabel}>Cadastros hoje</div>
-            <div className={styles.statValue}>{stats.hoje}</div>
-            <div className={styles.statUp}>de {stats.alunos} no total — clique para ver</div>
+            <div className={styles.statLabel}>Lucro do mes</div>
+            <div className={styles.statValue} style={{ color: lucro >= 0 ? 'var(--green)' : 'var(--red)' }}>R${lucro.toFixed(0)}</div>
+            <div className={styles.statUp} style={{ color: 'var(--muted2)' }}>Depois de pagar as ferramentas de IA (R${stats.custo.toFixed(0)})</div>
           </div>
         </div>
 
+        {/* Tabela de usuarios, simplificada */}
         <div className={styles.tableCard}>
           <div className={styles.tableHeader}>
             <div className={styles.tableTitle}>
-              {filter === 'pagantes' ? 'Alunos com plano ativo (' + stats.pagantes + ')' :
+              {filter === 'pagantes' ? 'Quem esta pagando (' + stats.pagantes + ')' :
                filter === 'hoje' ? 'Cadastrados hoje (' + stats.hoje + ')' :
-               'Alunos cadastrados'}
+               filter === 'sempagar' ? 'Sem plano pago' :
+               'Todos os usuarios (' + stats.alunos + ')'}
             </div>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
               <input
@@ -201,14 +139,14 @@ export default function AdminPage() {
                 }}
               />
               <div className={styles.filters}>
-                {['pagantes', 'hoje', 'todos', 'inativos', 'risco', 'ok'].map(function(f) {
+                {['todos', 'pagantes', 'hoje', 'sempagar'].map(function(f) {
                   return (
                     <div
                       key={f}
                       className={styles.ftab + (filter === f ? ' ' + styles.ftabOn : '')}
                       onClick={function() { setFilter(f) }}
                     >
-                      {f === 'todos' ? 'Todos' : f === 'pagantes' ? 'Pagantes' : f === 'hoje' ? 'Cadastrados hoje' : f === 'inativos' ? 'Inativos' : f === 'risco' ? 'Em risco' : 'Saudaveis'}
+                      {f === 'todos' ? 'Todos' : f === 'pagantes' ? 'Pagando' : f === 'hoje' ? 'Novos hoje' : 'Sem pagar'}
                     </div>
                   )
                 })}
@@ -218,26 +156,22 @@ export default function AdminPage() {
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>Aluno</th>
+                <th>Usuario</th>
                 <th>Plano</th>
-                <th>Status</th>
-                <th>Provedor</th>
-                <th>Receita</th>
-                <th>Custo API</th>
-                <th>Videos</th>
-                <th>Margem</th>
-                <th>Risco</th>
+                <th>Situacao</th>
+                <th>Cadastrado em</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map(function(p) {
-                const margin = getMargin(p)
-                const risco = getRisco(p)
                 const plan = p.plans
-                const videosUsed = p.credits_videos_used || 0
-                const videosLimit = plan?.is_unlimited ? '∞' : (plan?.credits_videos || 0)
-                const custo = videosUsed * 0.56 + (p.credits_ebooks_used || 0) * 1.65
                 const isPaying = p.subscription_status === 'active'
+                const situacao =
+                  isPaying ? { label: 'Pagando', color: 'var(--green)' } :
+                  p.subscription_status === 'trialing' ? { label: 'Teste gratis', color: 'var(--accent2)' } :
+                  p.subscription_status === 'past_due' ? { label: 'Pagamento atrasado', color: 'var(--amber)' } :
+                  p.subscription_status === 'canceled' ? { label: 'Cancelou', color: 'var(--muted)' } :
+                  { label: 'Sem plano', color: 'var(--muted)' }
 
                 return (
                   <tr key={p.id}>
@@ -250,28 +184,36 @@ export default function AdminPage() {
                         </div>
                       </div>
                     </td>
-                    <td><span className={styles.planBadge + ' ' + styles['plan' + (plan?.name || 'Starter')]}>{plan?.name || 'Starter'}</span></td>
+                    <td><span className={styles.planBadge + ' ' + styles['plan' + (plan?.name || 'Starter')]}>{plan?.name || 'Sem plano'}</span></td>
                     <td>
-                      <span style={{
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: isPaying ? 'var(--green)' : p.subscription_status === 'trialing' ? 'var(--accent2)' : 'var(--muted)',
-                      }}>
-                        {isPaying ? 'Ativo' : p.subscription_status === 'trialing' ? 'Trial' : p.subscription_status === 'past_due' ? 'Atrasado' : p.subscription_status === 'canceled' ? 'Cancelado' : 'Inativo'}
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: situacao.color }}>
+                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: situacao.color, display: 'inline-block' }} />
+                        {situacao.label}
                       </span>
                     </td>
-                    <td style={{ fontSize: 12, color: 'var(--muted2)', textTransform: 'capitalize' }}>{p.payment_provider || '—'}</td>
-                    <td className={styles.mono}>R${(plan?.price_monthly || 0).toFixed(0)}</td>
-                    <td className={styles.mono} style={{ color: custo > 20 ? 'var(--amber)' : 'var(--muted2)' }}>R${custo.toFixed(2)}</td>
-                    <td className={styles.mono}>{videosUsed}/{videosLimit}</td>
-                    <td><span className={styles.marginPill + ' ' + (margin >= 80 ? styles.mGood : margin >= 50 ? styles.mWarn : styles.mBad)}>{margin}%</span></td>
-                    <td><span className={styles.riskBadge + ' ' + (risco === 'ok' ? styles.riskOk : risco === 'medio' ? styles.riskMed : styles.riskHigh)}>{risco === 'ok' ? 'Ok' : risco === 'medio' ? 'Atencao' : 'Risco'}</span></td>
+                    <td style={{ fontSize: 13, color: 'var(--muted2)' }}>{formatDate(p.created_at)}</td>
                   </tr>
                 )
               })}
             </tbody>
           </table>
-          {filtered.length === 0 && <div className={styles.empty}>Nenhum aluno encontrado</div>}
+          {filtered.length === 0 && <div className={styles.empty}>Nenhum usuario encontrado</div>}
+        </div>
+
+        {/* Saldo das ferramentas de IA — resumido, no rodape */}
+        <div className={styles.apiPanel}>
+          <a href="https://creatomate.com/projects" target="_blank" rel="noreferrer" className={styles.apiPill}>
+            <i className="ti ti-video" /> Creatomate <i className="ti ti-external-link" style={{ marginLeft: 'auto', fontSize: 14 }} />
+          </a>
+          <a href="https://platform.openai.com/settings/organization/billing/overview" target="_blank" rel="noreferrer" className={styles.apiPill}>
+            <i className="ti ti-brain" /> OpenAI <i className="ti ti-external-link" style={{ marginLeft: 'auto', fontSize: 14 }} />
+          </a>
+          <a href="https://gamma.app" target="_blank" rel="noreferrer" className={styles.apiPill}>
+            <i className="ti ti-book-2" /> Gamma <i className="ti ti-external-link" style={{ marginLeft: 'auto', fontSize: 14 }} />
+          </a>
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--muted2)', textAlign: 'center', marginTop: -12 }}>
+          Clique para conferir o saldo de cada ferramenta de IA no site delas
         </div>
       </div>
     </div>
