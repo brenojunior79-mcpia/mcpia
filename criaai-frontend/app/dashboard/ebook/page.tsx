@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 
 const STORAGE_KEY = 'mcpia_ebook_form'
@@ -57,62 +57,101 @@ const defaultForm: EbookFormData = {
   themeId: '',
 }
 
-function EbookMockup({ title, pdfUrl }: { title: string; pdfUrl: string }) {
+const capaColors = [
+  { label: 'Roxo', value: 'linear-gradient(135deg,#5b4ef8,#9b8ffc)' },
+  { label: 'Azul', value: 'linear-gradient(135deg,#1d4ed8,#60a5fa)' },
+  { label: 'Verde', value: 'linear-gradient(135deg,#15803d,#4ade80)' },
+  { label: 'Laranja', value: 'linear-gradient(135deg,#ea580c,#fbbf24)' },
+  { label: 'Rosa', value: 'linear-gradient(135deg,#be185d,#f472b6)' },
+  { label: 'Escuro', value: 'linear-gradient(135deg,#111827,#374151)' },
+]
+
+const capaIcons = ['📘','📗','📕','📙','📓','📔','💡','🚀','⭐','🔥','✝️','💰']
+
+function Capa3D({ title, subtitle, gradient, icon, author }: { title: string; subtitle: string; gradient: string; icon: string; author: string }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-      {/* Mockup do ebook */}
-      <div style={{ position: 'relative', width: 160, height: 220 }}>
-        {/* Sombra do livro */}
-        <div style={{ position: 'absolute', bottom: -8, left: 8, right: -8, height: '100%', background: 'rgba(91,78,248,0.15)', borderRadius: 4, transform: 'skewY(-1deg)' }} />
-        {/* Livro principal */}
+    <div style={{ perspective: 800, display: 'inline-block' }}>
+      <div style={{
+        width: 180,
+        height: 240,
+        position: 'relative',
+        transformStyle: 'preserve-3d',
+        transform: 'rotateY(-20deg) rotateX(5deg)',
+        transition: 'transform 0.4s ease',
+        cursor: 'pointer',
+      }}
+        onMouseEnter={function(e) { (e.currentTarget as HTMLElement).style.transform = 'rotateY(-8deg) rotateX(3deg) scale(1.04)' }}
+        onMouseLeave={function(e) { (e.currentTarget as HTMLElement).style.transform = 'rotateY(-20deg) rotateX(5deg)' }}
+      >
+        {/* Frente */}
         <div style={{
-          position: 'relative',
-          width: '100%',
-          height: '100%',
-          background: 'linear-gradient(135deg, #5b4ef8, #9b8ffc)',
-          borderRadius: 4,
+          position: 'absolute',
+          inset: 0,
+          background: gradient,
+          borderRadius: '2px 8px 8px 2px',
+          boxShadow: '6px 6px 30px rgba(0,0,0,0.35)',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           padding: 16,
-          boxShadow: '0 20px 40px rgba(91,78,248,0.3)',
+          backfaceVisibility: 'hidden',
+          overflow: 'hidden',
         }}>
-          {/* Lombada */}
-          <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 12, background: 'rgba(0,0,0,0.2)', borderRadius: '4px 0 0 4px' }} />
+          {/* Brilho */}
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '40%', background: 'linear-gradient(180deg,rgba(255,255,255,0.18),transparent)', borderRadius: '2px 8px 0 0' }} />
           {/* Icone */}
-          <div style={{ fontSize: 36, marginBottom: 12 }}>📘</div>
+          <div style={{ fontSize: 42, marginBottom: 12, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}>{icon}</div>
           {/* Titulo */}
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#fff', textAlign: 'center', lineHeight: 1.4, fontFamily: 'Syne, sans-serif' }}>
-            {title.slice(0, 40)}{title.length > 40 ? '...' : ''}
+          <div style={{ fontSize: 14, fontWeight: 800, color: '#fff', textAlign: 'center', lineHeight: 1.3, fontFamily: 'Syne, sans-serif', textShadow: '0 1px 3px rgba(0,0,0,0.4)', marginBottom: 8 }}>
+            {title || 'Título do Ebook'}
           </div>
+          {subtitle && (
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.8)', textAlign: 'center', lineHeight: 1.4 }}>{subtitle}</div>
+          )}
           {/* Linha decorativa */}
-          <div style={{ position: 'absolute', bottom: 20, left: 20, right: 20, height: 1, background: 'rgba(255,255,255,0.3)' }} />
-          <div style={{ position: 'absolute', bottom: 12, fontSize: 9, color: 'rgba(255,255,255,0.7)', fontWeight: 600, letterSpacing: '0.1em' }}>MCP.IA</div>
+          <div style={{ position: 'absolute', bottom: 28, left: 16, right: 16, height: 1, background: 'rgba(255,255,255,0.3)' }} />
+          {/* Autor */}
+          <div style={{ position: 'absolute', bottom: 12, fontSize: 9, color: 'rgba(255,255,255,0.7)', fontWeight: 600, letterSpacing: '0.08em' }}>
+            {author || 'Cristão Próspero'}
+          </div>
         </div>
+        {/* Lombada */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: -18,
+          width: 18,
+          height: '100%',
+          background: gradient,
+          filter: 'brightness(0.6)',
+          transformOrigin: 'right',
+          transform: 'rotateY(-90deg)',
+          borderRadius: '4px 0 0 4px',
+        }} />
+        {/* Sombra no chao */}
+        <div style={{
+          position: 'absolute',
+          bottom: -20,
+          left: 10,
+          right: -10,
+          height: 20,
+          background: 'rgba(0,0,0,0.2)',
+          borderRadius: '50%',
+          filter: 'blur(8px)',
+          transform: 'rotateX(90deg)',
+        }} />
       </div>
-      {/* Botao de download */}
-      <a
-        href={pdfUrl}
-        target="_blank"
-        rel="noreferrer"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          background: 'linear-gradient(135deg, #5b4ef8, #9b8ffc)',
-          color: '#fff',
-          fontWeight: 700,
-          fontSize: 14,
-          padding: '12px 24px',
-          borderRadius: 12,
-          textDecoration: 'none',
-          boxShadow: '0 8px 20px rgba(91,78,248,0.3)',
-          transition: 'all 0.2s',
-        }}
-      >
-        <i className="ti ti-download" style={{ fontSize: 16 }} />
-        Baixar Ebook (PDF)
+    </div>
+  )
+}
+
+function EbookMockup({ title, pdfUrl }: { title: string; pdfUrl: string }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+      <Capa3D title={title} subtitle="" gradient="linear-gradient(135deg,#5b4ef8,#9b8ffc)" icon="📘" author="Cristão Próspero" />
+      <a href={pdfUrl} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'linear-gradient(135deg,#5b4ef8,#9b8ffc)', color: '#fff', fontWeight: 700, fontSize: 14, padding: '11px 22px', borderRadius: 12, textDecoration: 'none', boxShadow: '0 6px 16px rgba(91,78,248,0.3)' }}>
+        <i className="ti ti-download" style={{ fontSize: 16 }} /> Baixar Ebook (PDF)
       </a>
     </div>
   )
@@ -129,6 +168,14 @@ export default function EbookPage() {
   const [success, setSuccess] = useState<string | null>(null)
   const [upgradeRequired, setUpgradeRequired] = useState(false)
   const [hasSubscription, setHasSubscription] = useState<boolean | null>(null)
+
+  // Estado da capa 3D
+  const [capaTitle, setCapaTitle] = useState('')
+  const [capaSubtitle, setCapaSubtitle] = useState('')
+  const [capaAuthor, setCapaAuthor] = useState('')
+  const [capaGradient, setCapaGradient] = useState(capaColors[0].value)
+  const [capaIcon, setCapaIcon] = useState(capaIcons[0])
+
   const supabase = createClient()
 
   useEffect(function() {
@@ -152,9 +199,12 @@ export default function EbookPage() {
     const userResult = await supabase.auth.getUser()
     const user = userResult.data.user
     if (!user) { setHasSubscription(false); return }
-    const result = await supabase.from('profiles').select('subscription_status').eq('id', user.id).single()
+    const result = await supabase.from('profiles').select('subscription_status, full_name').eq('id', user.id).single()
     const status = result.data?.subscription_status
     setHasSubscription(status === 'active' || status === 'trialing')
+    if (result.data?.full_name) {
+      setCapaAuthor(result.data.full_name.split(' ')[0])
+    }
   }
 
   async function loadThemes() {
@@ -185,6 +235,7 @@ export default function EbookPage() {
     const updated = { ...form, [e.target.name]: e.target.value }
     setForm(updated)
     saveToStorage(updated)
+    if (e.target.name === 'title') setCapaTitle(e.target.value)
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -229,6 +280,10 @@ export default function EbookPage() {
     try { localStorage.removeItem(STORAGE_KEY) } catch (e) {}
   }
 
+  function downloadCapa() {
+    alert('Para baixar a capa, tire um print da visualizacao acima ou use uma ferramenta como o Canva para criar sua versao personalizada.')
+  }
+
   const noCredits = credits !== null && credits.used >= credits.limit
   const remaining = credits ? credits.limit - credits.used : 0
   const pct = credits ? Math.min(100, Math.round((credits.used / credits.limit) * 100)) : 0
@@ -242,7 +297,7 @@ export default function EbookPage() {
     width: '100%', background: 'var(--surface)', border: '1.5px solid var(--border)',
     borderRadius: 10, padding: '10px 14px', fontSize: 14,
     color: 'var(--text)', outline: 'none', boxSizing: 'border-box',
-    fontFamily: 'Inter, sans-serif', transition: 'border-color 0.2s, box-shadow 0.2s',
+    fontFamily: 'Inter, sans-serif', transition: 'border-color 0.2s',
   }
 
   const labelStyle: React.CSSProperties = {
@@ -253,6 +308,7 @@ export default function EbookPage() {
   if (hasSubscription === null) return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <i className="ti ti-loader" style={{ fontSize: 28, color: 'var(--accent)', animation: 'spin 1s linear infinite' }} />
+      <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>
     </div>
   )
 
@@ -264,7 +320,7 @@ export default function EbookPage() {
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 28 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-              <div style={{ width: 36, height: 36, background: 'linear-gradient(135deg, #5b4ef8, #9b8ffc)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>📘</div>
+              <div style={{ width: 36, height: 36, background: 'linear-gradient(135deg,#5b4ef8,#9b8ffc)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>📘</div>
               <h1 style={{ fontSize: 22, fontWeight: 800, fontFamily: 'Syne, sans-serif', color: 'var(--text)', margin: 0 }}>Gerador de Ebook</h1>
             </div>
             <p style={{ fontSize: 13, color: 'var(--muted2)', margin: 0, paddingLeft: 46 }}>Crie ebooks profissionais em PDF com inteligencia artificial</p>
@@ -275,18 +331,11 @@ export default function EbookPage() {
               <p style={{ fontSize: 11, color: 'var(--muted2)', margin: '0 0 4px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Creditos de Ebook</p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                 <span style={{ fontSize: 20, fontWeight: 800, fontFamily: 'Syne, sans-serif', color: remaining <= 0 ? 'var(--red)' : remaining <= 1 ? 'var(--amber)' : 'var(--accent)' }}>{remaining}</span>
-                <span style={{ fontSize: 12, color: 'var(--muted)' }}>/ {credits.limit} restantes · {credits.planName}</span>
+                <span style={{ fontSize: 12, color: 'var(--muted)' }}>/ {credits.limit} · {credits.planName}</span>
               </div>
               <div style={{ height: 5, width: 140, background: 'var(--surface2)', borderRadius: 99, overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: pct + '%', background: remaining <= 0 ? 'var(--red)' : remaining <= 1 ? 'var(--amber)' : 'linear-gradient(90deg, var(--accent), #9b8ffc)', borderRadius: 99 }} />
+                <div style={{ height: '100%', width: pct + '%', background: remaining <= 0 ? 'var(--red)' : remaining <= 1 ? 'var(--amber)' : 'linear-gradient(90deg,var(--accent),#9b8ffc)', borderRadius: 99 }} />
               </div>
-            </div>
-          )}
-
-          {hasSubscription === false && (
-            <div style={{ background: '#eef2ff', border: '1px solid rgba(91,78,248,0.2)', borderRadius: 12, padding: '10px 16px' }}>
-              <p style={{ fontSize: 12, color: 'var(--accent)', margin: 0, fontWeight: 600 }}>🔒 Sem plano ativo</p>
-              <a href="/dashboard/planos" style={{ fontSize: 12, color: 'var(--accent)', textDecoration: 'none', fontWeight: 700 }}>Assinar agora →</a>
             </div>
           )}
         </div>
@@ -297,7 +346,6 @@ export default function EbookPage() {
             <span>🔒</span>
             <div>
               <p style={{ fontWeight: 700, color: 'var(--accent)', margin: '0 0 4px', fontSize: 14 }}>Recurso exclusivo para assinantes</p>
-              <p style={{ color: 'var(--muted2)', margin: '0 0 8px', fontSize: 13 }}>Assine um plano para gerar ebooks com IA.</p>
               <a href="/dashboard/planos" style={{ color: 'var(--accent)', fontSize: 13, fontWeight: 600 }}>Ver planos →</a>
             </div>
           </div>
@@ -330,18 +378,17 @@ export default function EbookPage() {
 
         {/* Formulario */}
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 18, overflow: 'hidden', marginBottom: 28, boxShadow: 'var(--shadow-sm)' }}>
-          <div style={{ padding: '16px 22px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--surface)' }}>
+          <div style={{ padding: '16px 22px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span>📋</span>
-              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Detalhes do Ebook</span>
+              <span style={{ fontSize: 14, fontWeight: 700 }}>Detalhes do Ebook</span>
             </div>
-            {(form.title || form.topic || form.details) && (
-              <button onClick={clearForm} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'Inter, sans-serif' }}>
+            {(form.title || form.topic) && (
+              <button onClick={clearForm} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 12, cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>
                 🗑️ Limpar
               </button>
             )}
           </div>
-
           <div style={{ padding: '22px', display: 'flex', flexDirection: 'column', gap: 18 }}>
             <div>
               <label style={labelStyle}>Titulo <span style={{ color: 'var(--accent)' }}>*</span></label>
@@ -353,7 +400,7 @@ export default function EbookPage() {
             </div>
             <div>
               <label style={labelStyle}>Detalhamento <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(opcional)</span></label>
-              <textarea name="details" value={form.details} onChange={handleChange} placeholder="Ex: Quero linguagem simples, exemplos praticos, voltado para iniciantes..." rows={3} style={{ ...inputStyle, resize: 'none' }} />
+              <textarea name="details" value={form.details} onChange={handleChange} placeholder="Ex: Linguagem simples, exemplos praticos..." rows={3} style={{ ...inputStyle, resize: 'none' }} />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <div>
@@ -392,28 +439,108 @@ export default function EbookPage() {
                 <option value="es-ES">Espanol</option>
               </select>
             </div>
-
             <button
               onClick={handleSubmit}
               disabled={loading || (hasSubscription === true && (!form.title || !form.topic || noCredits))}
               style={{
                 width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                padding: '13px', borderRadius: 12, border: 'none',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                background: hasSubscription === false ? 'linear-gradient(135deg, #5b4ef8, #9b8ffc)' : loading || noCredits ? 'var(--surface2)' : 'linear-gradient(135deg, #5b4ef8, #9b8ffc)',
+                padding: '13px', borderRadius: 12, border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
+                background: hasSubscription === false ? 'linear-gradient(135deg,#5b4ef8,#9b8ffc)' : loading || noCredits ? 'var(--surface2)' : 'linear-gradient(135deg,#5b4ef8,#9b8ffc)',
                 color: loading || noCredits ? 'var(--muted2)' : '#fff',
                 fontWeight: 700, fontSize: 15, fontFamily: 'Inter, sans-serif',
                 boxShadow: loading || noCredits ? 'none' : '0 8px 20px rgba(91,78,248,0.3)',
-                transition: 'all 0.2s',
               }}
             >
-              {hasSubscription === false ? '🔒 Assinar para gerar ebooks' : loading ? 'Gerando ebook — aguarde ate 3 min...' : '✨ Gerar Ebook com IA'}
+              {hasSubscription === false ? '🔒 Assinar para gerar ebooks' : loading ? 'Gerando ebook — aguarde...' : '✨ Gerar Ebook com IA'}
             </button>
-            {loading && (
-              <p style={{ fontSize: 12, color: 'var(--muted2)', textAlign: 'center', margin: 0 }}>
-                Seu ebook esta sendo criado. Nao feche esta aba.
-              </p>
-            )}
+            {loading && <p style={{ fontSize: 12, color: 'var(--muted2)', textAlign: 'center', margin: 0 }}>Nao feche esta aba.</p>}
+          </div>
+        </div>
+
+        {/* ===== BLOCO CAPA 3D ===== */}
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 18, overflow: 'hidden', marginBottom: 28, boxShadow: 'var(--shadow-sm)' }}>
+          <div style={{ padding: '16px 22px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10, background: 'linear-gradient(135deg,rgba(91,78,248,0.05),transparent)' }}>
+            <span style={{ fontSize: 20 }}>🎨</span>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>Criar Capa 3D do Ebook</div>
+              <div style={{ fontSize: 11, color: 'var(--muted2)' }}>Personalize e visualize a capa do seu ebook em 3D</div>
+            </div>
+          </div>
+          <div style={{ padding: '22px', display: 'grid', gridTemplateColumns: '1fr auto', gap: 24, alignItems: 'start' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <label style={labelStyle}>Titulo da capa</label>
+                <input type="text" value={capaTitle} onChange={function(e) { setCapaTitle(e.target.value) }} placeholder={form.title || 'Titulo do seu ebook'} style={inputStyle} />
+              </div>
+              <div>
+                <label style={labelStyle}>Subtitulo <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(opcional)</span></label>
+                <input type="text" value={capaSubtitle} onChange={function(e) { setCapaSubtitle(e.target.value) }} placeholder="Ex: O guia completo para..." style={inputStyle} />
+              </div>
+              <div>
+                <label style={labelStyle}>Autor</label>
+                <input type="text" value={capaAuthor} onChange={function(e) { setCapaAuthor(e.target.value) }} placeholder="Seu nome" style={inputStyle} />
+              </div>
+              <div>
+                <label style={labelStyle}>Cor da capa</label>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {capaColors.map(function(c) {
+                    return (
+                      <div
+                        key={c.value}
+                        onClick={function() { setCapaGradient(c.value) }}
+                        style={{
+                          width: 36, height: 36, borderRadius: 10, background: c.value, cursor: 'pointer',
+                          border: capaGradient === c.value ? '3px solid var(--accent)' : '2px solid transparent',
+                          boxShadow: capaGradient === c.value ? '0 0 0 2px white, 0 0 0 4px var(--accent)' : 'var(--shadow-sm)',
+                          transition: 'all 0.15s',
+                        }}
+                        title={c.label}
+                      />
+                    )
+                  })}
+                </div>
+              </div>
+              <div>
+                <label style={labelStyle}>Icone da capa</label>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {capaIcons.map(function(ic) {
+                    return (
+                      <div
+                        key={ic}
+                        onClick={function() { setCapaIcon(ic) }}
+                        style={{
+                          width: 40, height: 40, borderRadius: 10, background: 'var(--surface2)', cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
+                          border: capaIcon === ic ? '2px solid var(--accent)' : '2px solid var(--border)',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        {ic}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Preview 3D */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, minWidth: 220 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Preview 3D</div>
+              <Capa3D
+                title={capaTitle || form.title || 'Titulo do Ebook'}
+                subtitle={capaSubtitle}
+                gradient={capaGradient}
+                icon={capaIcon}
+                author={capaAuthor}
+              />
+              <button
+                onClick={downloadCapa}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: 13, padding: '10px 18px', borderRadius: 10, cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
+              >
+                <i className="ti ti-download" style={{ fontSize: 15 }} />
+                Salvar capa
+              </button>
+            </div>
           </div>
         </div>
 
@@ -421,9 +548,8 @@ export default function EbookPage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
             <span style={{ fontSize: 16 }}>📚</span>
-            <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', margin: 0, fontFamily: 'Syne, sans-serif' }}>Ebooks gerados</h2>
+            <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0, fontFamily: 'Syne, sans-serif' }}>Ebooks gerados</h2>
           </div>
-
           {loadingData ? (
             <p style={{ fontSize: 14, color: 'var(--muted2)', textAlign: 'center', padding: '24px 0' }}>Carregando...</p>
           ) : ebooks.length === 0 ? (
@@ -437,19 +563,13 @@ export default function EbookPage() {
               {ebooks.map(function(ebook) {
                 return (
                   <div key={ebook.gamma_generation_id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 24, boxShadow: 'var(--shadow-sm)' }}>
-
-                    {/* Mockup do ebook */}
                     {ebook.status === 'completed' && ebook.pdf_url ? (
                       <EbookMockup title={ebook.title} pdfUrl={ebook.pdf_url} />
                     ) : (
-                      <div style={{ width: 160, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-                        <div style={{ width: 120, height: 160, background: 'var(--surface2)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)' }}>
-                          <span style={{ fontSize: 32 }}>📄</span>
-                        </div>
+                      <div style={{ width: 120, height: 160, background: 'var(--surface2)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)' }}>
+                        <span style={{ fontSize: 32 }}>📄</span>
                       </div>
                     )}
-
-                    {/* Info */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', margin: '0 0 6px', fontFamily: 'Syne, sans-serif', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ebook.title}</p>
                       {ebook.created_at && (
@@ -457,16 +577,9 @@ export default function EbookPage() {
                           {new Date(ebook.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </p>
                       )}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{
-                          fontSize: 12, fontWeight: 600,
-                          color: ebook.status === 'completed' ? 'var(--green)' : ebook.status === 'failed' ? 'var(--red)' : 'var(--accent)',
-                          background: ebook.status === 'completed' ? 'var(--green-light)' : ebook.status === 'failed' ? 'var(--red-light)' : 'var(--accent-light)',
-                          padding: '3px 10px', borderRadius: 99,
-                        }}>
-                          {ebook.status === 'completed' ? '✓ Concluido' : ebook.status === 'failed' ? '✗ Erro' : '⏳ Processando'}
-                        </span>
-                      </div>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: ebook.status === 'completed' ? 'var(--green)' : ebook.status === 'failed' ? 'var(--red)' : 'var(--accent)', background: ebook.status === 'completed' ? 'var(--green-light)' : ebook.status === 'failed' ? 'var(--red-light)' : 'var(--accent-light)', padding: '3px 10px', borderRadius: 99 }}>
+                        {ebook.status === 'completed' ? '✓ Concluido' : ebook.status === 'failed' ? '✗ Erro' : '⏳ Processando'}
+                      </span>
                     </div>
                   </div>
                 )
