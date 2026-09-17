@@ -27,6 +27,66 @@ interface FormState {
   customPrompt: string
 }
 
+function VideoLesson({ videoId, title, color }: { videoId: string; title: string; color: string }) {
+  const [playing, setPlaying] = useState(false)
+  const [thumb, setThumb] = useState<string | null>(null)
+
+  useEffect(function() {
+    let active = true
+    fetch('https://vimeo.com/api/oembed.json?url=' + encodeURIComponent('https://vimeo.com/' + videoId))
+      .then(function(res) { return res.ok ? res.json() : null })
+      .then(function(data) { if (active && data && data.thumbnail_url) setThumb(data.thumbnail_url) })
+      .catch(function() {})
+    return function() { active = false }
+  }, [videoId])
+
+  if (playing) {
+    return (
+      <div style={{ position: 'relative', width: '100%', paddingBottom: '56.25%', height: 0, borderRadius: 12, overflow: 'hidden', background: '#000' }}>
+        <iframe
+          src={'https://player.vimeo.com/video/' + videoId + '?title=0&byline=0&portrait=0&dnt=1&autoplay=1'}
+          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
+          allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media"
+          allowFullScreen
+          title={title}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div
+      onClick={function() { setPlaying(true) }}
+      role="button"
+      aria-label={'Assistir: ' + title}
+      style={{
+        position: 'relative', width: '100%', paddingBottom: '56.25%', height: 0, borderRadius: 12,
+        overflow: 'hidden', cursor: 'pointer',
+        background: thumb ? '#000' : 'linear-gradient(135deg,' + color + 'dd,' + color + '88)',
+        backgroundImage: thumb ? 'url(' + thumb + ')' : undefined,
+        backgroundSize: 'cover', backgroundPosition: 'center',
+      }}
+    >
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(0deg, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.15) 40%, rgba(0,0,0,0.35) 100%)' }} />
+
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{
+          width: 60, height: 60, borderRadius: '50%', background: 'rgba(255,255,255,0.95)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+        }}>
+          <div style={{ width: 0, height: 0, marginLeft: 4, borderTop: '11px solid transparent', borderBottom: '11px solid transparent', borderLeft: '18px solid ' + color }} />
+        </div>
+      </div>
+
+      <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <i className="ti ti-player-play" style={{ color: '#fff', fontSize: 13, opacity: 0.85 }} />
+        <span style={{ color: '#fff', fontSize: 12, fontWeight: 700, textShadow: '0 1px 4px rgba(0,0,0,0.6)' }}>{title}</span>
+      </div>
+    </div>
+  )
+}
+
 export default function PaginasPage() {
   const [tab, setTab] = useState<string>('criar')
   const [pages, setPages] = useState<SalesPage[]>([])
@@ -124,6 +184,19 @@ export default function PaginasPage() {
       <div className={styles.topbar}>
         <div className={styles.title}>Criador de site</div>
         <div className={styles.sub}>Crie paginas de alta conversao com IA em segundos</div>
+      </div>
+
+      <div style={{ margin: '0 24px 20px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 18, overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
+        <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--border)' }}>
+          <div style={{ width: 38, height: 38, background: 'var(--surface2)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>🎬</div>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Aula: Gerando site</div>
+            <div style={{ fontSize: 12, color: 'var(--muted2)' }}>Veja o passo a passo antes de criar a sua pagina</div>
+          </div>
+        </div>
+        <div style={{ padding: '20px' }}>
+          <VideoLesson videoId="1201837708" title="Gerando site" color="#7c5cfc" />
+        </div>
       </div>
 
       {hasSubscription === false && (
