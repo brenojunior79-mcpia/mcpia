@@ -4,6 +4,9 @@ import { createClient } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 import styles from './login.module.css'
 
+const PLATFORM_NAME = 'Plataforma do Cristao Prospero'
+const PLATFORM_SHORT = 'CristaoProspero'
+
 export default function LoginPage() {
   const [tab, setTab] = useState('login')
   const [email, setEmail] = useState('')
@@ -42,13 +45,11 @@ export default function LoginPage() {
 
   async function handleCadastro(e: React.FormEvent) {
     e.preventDefault()
-
     const whatsappDigits = whatsapp.replace(/\D/g, '')
     if (whatsappDigits.length < 10) {
       setError('Digite um numero de WhatsApp valido com DDD.')
       return
     }
-
     setLoading(true)
     setError('')
     const result = await supabase.auth.signUp({
@@ -78,21 +79,17 @@ export default function LoginPage() {
   return (
     <div className={styles.split}>
       <div className={styles.right}>
-        <div className={styles.logo}>MCP<span>.IA</span></div>
+        <div className={styles.logo}>
+          <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.05em' }}>✝️ {PLATFORM_SHORT}</span>
+        </div>
 
         <div className={styles.authBox}>
           {success ? (
             <div className={styles.successState}>
-              <div className={styles.successIcon}>
-                <i className="ti ti-check" />
-              </div>
+              <div className={styles.successIcon}><i className="ti ti-check" /></div>
               <h2>Conta criada!</h2>
-              <p>Sua conta foi criada com sucesso. Faca login para comecar a usar o MCP.IA.</p>
-              <button
-                className={styles.submitBtn}
-                style={{ marginTop: 24 }}
-                onClick={function() { setSuccess(false); setTab('login') }}
-              >
+              <p>Sua conta foi criada com sucesso. Faca login para comecar a usar a plataforma.</p>
+              <button className={styles.submitBtn} style={{ marginTop: 24 }} onClick={function() { setSuccess(false); setTab('login') }}>
                 Fazer login agora
               </button>
             </div>
@@ -116,13 +113,7 @@ export default function LoginPage() {
                   </div>
                   <div className={styles.field}>
                     <label>E-mail</label>
-                    <input
-                      type="email"
-                      value={resetEmail}
-                      onChange={function(e) { setResetEmail(e.target.value) }}
-                      placeholder="seu@email.com"
-                      required
-                    />
+                    <input type="email" value={resetEmail} onChange={function(e) { setResetEmail(e.target.value) }} placeholder="seu@email.com" required />
                   </div>
                   <button type="submit" className={styles.submitBtn} disabled={resetLoading}>
                     {resetLoading ? 'Enviando...' : 'Enviar link de redefinicao'}
@@ -133,49 +124,22 @@ export default function LoginPage() {
           ) : (
             <div>
               <div className={styles.tabs}>
-                <div
-                  className={styles.tab + (tab === 'login' ? ' ' + styles.active : '')}
-                  onClick={function() { setTab('login'); setError('') }}
-                >
-                  Entrar
-                </div>
-                <div
-                  className={styles.tab + (tab === 'cadastro' ? ' ' + styles.active : '')}
-                  onClick={function() { setTab('cadastro'); setError('') }}
-                >
-                  Criar conta
-                </div>
+                <div className={styles.tab + (tab === 'login' ? ' ' + styles.active : '')} onClick={function() { setTab('login'); setError('') }}>Entrar</div>
+                <div className={styles.tab + (tab === 'cadastro' ? ' ' + styles.active : '')} onClick={function() { setTab('cadastro'); setError('') }}>Criar conta</div>
               </div>
 
               {tab === 'login' ? (
                 <form onSubmit={handleLogin} className={styles.form}>
                   <div className={styles.field}>
                     <label>E-mail</label>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={function(e) { setEmail(e.target.value) }}
-                      placeholder="seu@email.com"
-                      required
-                    />
+                    <input type="email" value={email} onChange={function(e) { setEmail(e.target.value) }} placeholder="seu@email.com" required />
                   </div>
                   <div className={styles.field}>
                     <label>Senha</label>
-                    <input
-                      type="password"
-                      value={password}
-                      onChange={function(e) { setPassword(e.target.value) }}
-                      placeholder="sua senha"
-                      required
-                    />
+                    <input type="password" value={password} onChange={function(e) { setPassword(e.target.value) }} placeholder="sua senha" required />
                   </div>
                   <div style={{ textAlign: 'right', marginTop: -8, marginBottom: 16 }}>
-                    <span
-                      className={styles.forgotLink}
-                      onClick={function() { setShowReset(true); setResetEmail(email) }}
-                    >
-                      Esqueci minha senha
-                    </span>
+                    <span className={styles.forgotLink} onClick={function() { setShowReset(true); setResetEmail(email) }}>Esqueci minha senha</span>
                   </div>
                   {error && <div className={styles.error}>{error}</div>}
                   <button type="submit" className={styles.submitBtn} disabled={loading}>
@@ -186,43 +150,19 @@ export default function LoginPage() {
                 <form onSubmit={handleCadastro} className={styles.form}>
                   <div className={styles.field}>
                     <label>Nome completo</label>
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={function(e) { setName(e.target.value) }}
-                      placeholder="Seu nome"
-                      required
-                    />
+                    <input type="text" value={name} onChange={function(e) { setName(e.target.value) }} placeholder="Seu nome" required />
                   </div>
                   <div className={styles.field}>
                     <label>E-mail</label>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={function(e) { setEmail(e.target.value) }}
-                      placeholder="seu@email.com"
-                      required
-                    />
+                    <input type="email" value={email} onChange={function(e) { setEmail(e.target.value) }} placeholder="seu@email.com" required />
                   </div>
                   <div className={styles.field}>
                     <label>WhatsApp</label>
-                    <input
-                      type="text"
-                      value={whatsapp}
-                      onChange={function(e) { setWhatsapp(formatWhatsapp(e.target.value)) }}
-                      placeholder="(11) 91234-5678"
-                      required
-                    />
+                    <input type="text" value={whatsapp} onChange={function(e) { setWhatsapp(formatWhatsapp(e.target.value)) }} placeholder="(11) 91234-5678" required />
                   </div>
                   <div className={styles.field}>
                     <label>Senha</label>
-                    <input
-                      type="password"
-                      value={password}
-                      onChange={function(e) { setPassword(e.target.value) }}
-                      placeholder="Minimo 6 caracteres"
-                      required
-                    />
+                    <input type="password" value={password} onChange={function(e) { setPassword(e.target.value) }} placeholder="Minimo 6 caracteres" required />
                   </div>
                   {error && <div className={styles.error}>{error}</div>}
                   <button type="submit" className={styles.submitBtn} disabled={loading}>
@@ -236,13 +176,13 @@ export default function LoginPage() {
 
         {!success && !showReset && (
           <div className={styles.copySection}>
-            <div className={styles.copyBadge}>Plataforma de criacao com IA</div>
+            <div className={styles.copyBadge}>Plataforma Crista de Marketing Digital</div>
             <div className={styles.copyTitle}>
-              Seu ebook, sua pagina de vendas<br />
-              <span>e seu criativo em 5 minutos</span>
+              Venda produtos cristaos<br />
+              <span>no piloto automatico com IA</span>
             </div>
             <div className={styles.copySub}>
-              Descreva seu produto e a IA gera tudo automaticamente.
+              Crie criativos, ebooks e paginas de vendas em minutos.
             </div>
             <div className={styles.features}>
               {[
