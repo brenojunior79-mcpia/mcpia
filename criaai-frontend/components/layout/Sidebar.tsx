@@ -25,11 +25,11 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
   const navItems = [
     { href: '/dashboard', icon: 'ti-home', label: 'Inicio', locked: false },
     { href: '/dashboard/chat', icon: 'ti-message-circle', label: 'Assistente IA', locked: false },
-    { href: '/dashboard/produtos', icon: 'ti-flame', label: 'Produtos em Alta', locked: true },
+    { href: '/dashboard/produtos', icon: 'ti-flame', label: 'Produtos em Alta', locked: !isAdmin },
     { href: '/dashboard/ebook', icon: 'ti-book-2', label: 'Gerador de Ebook', locked: false },
     { href: '/dashboard/paginas', icon: 'ti-layout', label: 'Gerador de Site', locked: false },
     { href: '/dashboard/criativo', icon: 'ti-sparkles', label: 'Gerador de Criativos', locked: false },
-    { href: '/dashboard/vendas', icon: 'ti-rocket', label: 'Vendendo no Automatico', locked: true },
+    { href: '/dashboard/vendas', icon: 'ti-rocket', label: 'Vendendo no Automatico', locked: !isAdmin },
     { href: '/dashboard/metricas', icon: 'ti-chart-bar', label: 'Analisando Metricas', locked: false },
     { href: '/dashboard/suporte', icon: 'ti-headset', label: 'Suporte Humano', locked: false },
     { href: '/dashboard/aulas', icon: 'ti-device-tv', label: 'Aulas ao Vivo', locked: false },
@@ -45,11 +45,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
         {navItems.map(function(item) {
           if (item.locked) {
             return (
-              <div
-                key={item.href}
-                className={styles.navItemLocked}
-                title="Em breve"
-              >
+              <div key={item.href} className={styles.navItemLocked} title="Em breve">
                 <i className={'ti ' + item.icon} />
                 <span>{item.label}</span>
                 <span className={styles.lockBadge}>
