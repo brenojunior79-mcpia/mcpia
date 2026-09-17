@@ -82,7 +82,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
                 <div className={styles.logoUserName}>{firstName}</div>
                 <div className={styles.logoUserPlan}>{plan?.name || 'Starter'}</div>
                 <div className={styles.logoUserCredits}>
-                  🎬 {plan?.is_unlimited ? '∞' : videosRestantes} vídeos · 📘 {plan?.is_unlimited ? '∞' : ebooksRestantes} ebooks
+                  {plan?.is_unlimited ? '∞' : videosRestantes} Créditos
                 </div>
               </div>
             </>
@@ -91,10 +91,13 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
           )}
         </div>
 
-        {/* Botao recolher */}
-        <button className={styles.collapseBtn} onClick={toggleCollapse} title={collapsed ? 'Expandir menu' : 'Recolher menu'}>
+        {/* Botao recolher — apenas icone X / setas */}
+        <button
+          className={styles.collapseBtn}
+          onClick={toggleCollapse}
+          title={collapsed ? 'Expandir menu' : 'Recolher menu'}
+        >
           <i className={'ti ' + (collapsed ? 'ti-chevrons-right' : 'ti-chevrons-left')} />
-          {!collapsed && <span>Recolher menu</span>}
         </button>
 
         {/* Nav */}
@@ -102,7 +105,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
           {navItems.map(function(item) {
             if (item.locked) {
               return (
-                <div key={item.href} className={styles.navItemLocked} title={collapsed ? item.label + ' — Em breve' : 'Em breve'}>
+                <div key={item.href} className={styles.navItemLocked} title={item.label + (collapsed ? '' : ' — Em breve')}>
                   <i className={'ti ' + item.icon} />
                   {!collapsed && (
                     <>
@@ -136,7 +139,9 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
               <div className={styles.userInfo}>
                 <div className={styles.userName}>{profile?.full_name || 'Usuario'}</div>
                 <div className={styles.userPlan}>{plan?.name || 'Starter'}</div>
-                <div className={styles.userCredits}>🎬 {plan?.is_unlimited ? '∞' : videosRestantes} · 📘 {plan?.is_unlimited ? '∞' : ebooksRestantes}</div>
+                <div className={styles.userCredits}>
+                  {plan?.is_unlimited ? '∞' : videosRestantes} Créditos
+                </div>
               </div>
               <button className={styles.logoutBtn} onClick={logout} title="Sair">
                 <i className="ti ti-logout" />
