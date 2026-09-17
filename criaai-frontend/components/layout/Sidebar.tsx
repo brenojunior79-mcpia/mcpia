@@ -20,8 +20,6 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
     router.push('/login')
   }
 
-  const WHATSAPP = '5537999521440'
-
   const navItems = [
     { href: '/dashboard', icon: 'ti-home', label: 'Inicio', locked: false },
     { href: '/dashboard/chat', icon: 'ti-message-circle', label: 'Assistente IA', locked: false },
@@ -39,7 +37,9 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
 
   return (
     <aside className={styles.sidebar}>
-      <div className={styles.logo}>MCP<span>.IA</span></div>
+      <div className={styles.logo}>
+        <span style={{ fontSize: 11 }}>✝️</span> Cristao<span>Prospero</span>
+      </div>
 
       <nav className={styles.nav}>
         {navItems.map(function(item) {
