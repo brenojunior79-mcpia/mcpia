@@ -1,45 +1,54 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const lessons = [
   {
     id: 1,
-    title: 'Como criar sua conta no Gerenciador de Anuncios',
-    description: 'Passo a passo completo para criar e configurar sua conta no Meta Business Suite e ter acesso ao Gerenciador de Anuncios.',
-    duration: 'Em breve',
-    videoUrl: '',
-    icon: '🏗️',
+    title: 'Introducao',
+    description: 'Visao geral do que voce vai aprender nesse modulo, do zero ao primeiro anuncio no ar.',
+    videoId: '',
+    icon: '👋',
   },
   {
     id: 2,
-    title: 'Configurando sua primeira campanha',
-    description: 'Aprenda a configurar o objetivo certo para sua campanha, publico-alvo e orcamento diario para comecar a vender.',
-    duration: 'Em breve',
-    videoUrl: '',
-    icon: '🎯',
+    title: 'Criando pagina',
+    description: 'Passo a passo para criar sua pagina de vendas antes de comecar a anunciar.',
+    videoId: '1133546045',
+    icon: '🖥️',
   },
   {
     id: 3,
-    title: 'Criando anuncios que vendem',
-    description: 'Como usar os criativos gerados pelo MCP.IA diretamente nos seus anuncios do Facebook e Instagram.',
-    duration: 'Em breve',
-    videoUrl: '',
-    icon: '📱',
+    title: 'Criando conta no gerenciador de anuncios',
+    description: 'Como criar e configurar sua conta no Meta Business Suite para ter acesso ao Gerenciador de Anuncios.',
+    videoId: '1177382733',
+    icon: '🏗️',
   },
   {
     id: 4,
-    title: 'Publico-alvo — Como encontrar seus compradores',
-    description: 'Descubra como segmentar corretamente seu publico para vender os produtos em alta com o menor custo possivel.',
-    duration: 'Em breve',
-    videoUrl: '',
-    icon: '👥',
+    title: 'Criando pixel',
+    description: 'Aprenda a criar o Pixel da Meta para rastrear os resultados dos seus anuncios.',
+    videoId: '1133467600',
+    icon: '🎯',
   },
   {
     id: 5,
-    title: 'Analisando resultados e escalando',
+    title: 'Adicionando Pixel na plataforma',
+    description: 'Como instalar o Pixel dentro da sua plataforma de vendas para comecar a rastrear conversoes.',
+    videoId: '1133467600',
+    icon: '🔌',
+  },
+  {
+    id: 6,
+    title: 'Subindo anuncio na pratica',
+    description: 'Veja na pratica como subir seu primeiro anuncio do zero, direto no Gerenciador de Anuncios.',
+    videoId: '',
+    icon: '📤',
+  },
+  {
+    id: 7,
+    title: 'Escalando suas vendas',
     description: 'Aprenda a ler as metricas dos seus anuncios e saber quando e como escalar para vender mais.',
-    duration: 'Em breve',
-    videoUrl: '',
+    videoId: '',
     icon: '📈',
   },
 ]
@@ -68,9 +77,67 @@ const tools = [
   },
 ]
 
-export default function VendasAutoPage() {
-  const [activeLesson, setActiveLesson] = useState<number | null>(null)
+function VideoLesson({ videoId, title, color }: { videoId: string; title: string; color: string }) {
+  const [playing, setPlaying] = useState(false)
+  const [thumb, setThumb] = useState<string | null>(null)
 
+  useEffect(function() {
+    let active = true
+    fetch('https://vimeo.com/api/oembed.json?url=' + encodeURIComponent('https://vimeo.com/' + videoId))
+      .then(function(res) { return res.ok ? res.json() : null })
+      .then(function(data) { if (active && data && data.thumbnail_url) setThumb(data.thumbnail_url) })
+      .catch(function() {})
+    return function() { active = false }
+  }, [videoId])
+
+  if (playing) {
+    return (
+      <div style={{ position: 'relative', width: '100%', paddingBottom: '56.25%', height: 0, borderRadius: 12, overflow: 'hidden', background: '#000' }}>
+        <iframe
+          src={'https://player.vimeo.com/video/' + videoId + '?title=0&byline=0&portrait=0&dnt=1&autoplay=1'}
+          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
+          allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media"
+          allowFullScreen
+          title={title}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div
+      onClick={function() { setPlaying(true) }}
+      role="button"
+      aria-label={'Assistir: ' + title}
+      style={{
+        position: 'relative', width: '100%', paddingBottom: '56.25%', height: 0, borderRadius: 12,
+        overflow: 'hidden', cursor: 'pointer',
+        background: thumb ? '#000' : 'linear-gradient(135deg,' + color + 'dd,' + color + '88)',
+        backgroundImage: thumb ? 'url(' + thumb + ')' : undefined,
+        backgroundSize: 'cover', backgroundPosition: 'center',
+      }}
+    >
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(0deg, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.15) 40%, rgba(0,0,0,0.35) 100%)' }} />
+
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{
+          width: 60, height: 60, borderRadius: '50%', background: 'rgba(255,255,255,0.95)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+        }}>
+          <div style={{ width: 0, height: 0, marginLeft: 4, borderTop: '11px solid transparent', borderBottom: '11px solid transparent', borderLeft: '18px solid ' + color }} />
+        </div>
+      </div>
+
+      <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <i className="ti ti-player-play" style={{ color: '#fff', fontSize: 13, opacity: 0.85 }} />
+        <span style={{ color: '#fff', fontSize: 12, fontWeight: 700, textShadow: '0 1px 4px rgba(0,0,0,0.6)' }}>{title}</span>
+      </div>
+    </div>
+  )
+}
+
+export default function VendasAutoPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', padding: '32px 24px' }}>
       <div style={{ maxWidth: 860, margin: '0 auto' }}>
@@ -129,54 +196,40 @@ export default function VendasAutoPage() {
         {/* Aulas */}
         <div>
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted2)', marginBottom: 14, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Aulas — Do zero ao primeiro anuncio</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {lessons.map(function(lesson) {
-              const isActive = activeLesson === lesson.id
               return (
                 <div
                   key={lesson.id}
-                  style={{ background: 'var(--surface)', border: '1px solid ' + (isActive ? 'rgba(124,92,252,0.4)' : 'var(--border)'), borderRadius: 14, overflow: 'hidden', transition: 'all 0.2s' }}
+                  style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 18, overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}
                 >
-                  <div
-                    style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer' }}
-                    onClick={function() { setActiveLesson(isActive ? null : lesson.id) }}
-                  >
-                    <div style={{ width: 44, height: 44, background: isActive ? 'rgba(124,92,252,0.15)' : 'var(--surface2)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
+                  <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 16, borderBottom: '1px solid var(--border)' }}>
+                    <div style={{ width: 44, height: 44, background: 'var(--surface2)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
                       {lesson.icon}
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
                         <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent2)' }}>AULA {lesson.id}</span>
-                        {lesson.videoUrl === '' && (
+                        {lesson.videoId === '' && (
                           <span style={{ fontSize: 10, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', color: '#f59e0b', borderRadius: 99, padding: '1px 8px', fontWeight: 600 }}>Em breve</span>
                         )}
                       </div>
                       <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{lesson.title}</div>
                       <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 2 }}>{lesson.description}</div>
                     </div>
-                    <div style={{ fontSize: 18, color: 'var(--muted2)', flexShrink: 0 }}>{isActive ? '▲' : '▼'}</div>
                   </div>
 
-                  {isActive && (
-                    <div style={{ borderTop: '1px solid var(--border)', padding: '16px 20px' }}>
-                      {lesson.videoUrl ? (
-                        <div style={{ position: 'relative', paddingBottom: '56.25%', borderRadius: 12, overflow: 'hidden', background: '#000' }}>
-                          <iframe
-                            src={lesson.videoUrl}
-                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                          />
-                        </div>
-                      ) : (
-                        <div style={{ background: 'var(--surface2)', border: '1px dashed var(--border)', borderRadius: 12, padding: '32px', textAlign: 'center' }}>
-                          <div style={{ fontSize: 32, marginBottom: 8 }}>🎬</div>
-                          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Aula em producao</div>
-                          <div style={{ fontSize: 13, color: 'var(--muted2)' }}>Esta aula estara disponivel em breve. Fique de olho!</div>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  <div style={{ padding: '20px 24px' }}>
+                    {lesson.videoId ? (
+                      <VideoLesson videoId={lesson.videoId} title={lesson.title} color="#7c5cfc" />
+                    ) : (
+                      <div style={{ background: 'var(--surface2)', border: '1px dashed var(--border)', borderRadius: 12, padding: '32px', textAlign: 'center' }}>
+                        <div style={{ fontSize: 32, marginBottom: 8 }}>🎬</div>
+                        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Aula em producao</div>
+                        <div style={{ fontSize: 13, color: 'var(--muted2)' }}>Esta aula estara disponivel em breve. Fique de olho!</div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )
             })}
