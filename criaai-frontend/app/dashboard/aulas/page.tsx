@@ -9,24 +9,8 @@ export default function AulasPage() {
         <p style={{ fontSize: 15, color: 'var(--muted2)', lineHeight: 1.7, marginBottom: 28 }}>
           Em breve voce tera acesso a aulas ao vivo com especialistas em marketing digital, trafego pago e vendas de produtos digitais.
         </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 28 }}>
-          {[
-            { icon: '📱', label: 'Como criar anuncios que convertem' },
-            { icon: '🎯', label: 'Estrategias de trafego pago' },
-            { icon: '💰', label: 'Como escalar suas vendas' },
-            { icon: '🤖', label: 'Usando IA para vender mais' },
-          ].map(function(item) {
-            return (
-              <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 16px' }}>
-                <span style={{ fontSize: 20 }}>{item.icon}</span>
-                <span style={{ fontSize: 14, color: 'var(--text)', fontWeight: 500 }}>{item.label}</span>
-                <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, color: 'var(--amber)', background: 'var(--amber-light)', border: '1px solid rgba(217,119,6,0.2)', borderRadius: 99, padding: '2px 10px' }}>Em breve</span>
-              </div>
-            )
-          })}
-        </div>
         <a
-          href={'https://wa.me/5537999521440?text=Quero saber sobre as aulas ao vivo do MCP.IA'}
+          href="https://chat.whatsapp.com/EQOJkJWilLjES81OIl6UWg"
           target="_blank"
           rel="noreferrer"
           style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#16a34a', color: '#fff', fontWeight: 700, fontSize: 14, padding: '12px 24px', borderRadius: 12, textDecoration: 'none' }}
