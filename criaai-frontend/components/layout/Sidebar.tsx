@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import styles from './Sidebar.module.css'
 
@@ -12,18 +13,40 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
   const isAdmin = profile?.is_admin
   const videosUsed = profile?.credits_videos_used || 0
   const videosExtra = profile?.credits_videos_extra || 0
+  const ebooksUsed = profile?.credits_ebooks_used || 0
   const videosLimit = plan?.is_unlimited ? 999 : ((plan?.credits_videos || 0) + videosExtra)
+  const ebooksLimit = plan?.is_unlimited ? 999 : ((plan?.credits_ebooks || 0) + (profile?.credits_ebooks_extra || 0))
   const creditPct = plan?.is_unlimited ? 50 : (videosLimit ? Math.round((videosUsed / videosLimit) * 100) : 0)
+  const [collapsed, setCollapsed] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  useEffect(function() {
+    try {
+      const saved = localStorage.getItem('sidebar_collapsed')
+      if (saved === 'true') setCollapsed(true)
+    } catch (e) {}
+  }, [])
+
+  function toggleCollapse() {
+    const next = !collapsed
+    setCollapsed(next)
+    try { localStorage.setItem('sidebar_collapsed', String(next)) } catch (e) {}
+  }
 
   async function logout() {
     await supabase.auth.signOut()
     router.push('/login')
   }
 
+  const firstName = (profile?.full_name || '').split(' ')[0] || 'Usuario'
+  const videosRestantes = Math.max(0, videosLimit - videosUsed)
+  const ebooksRestantes = Math.max(0, ebooksLimit - ebooksUsed)
+
   const navItems = [
-    { href: '/dashboard', icon: 'ti-home', label: 'Inicio', locked: false },
+    { href: '/dashboard', icon: 'ti-home', label: 'Painel do Aluno', locked: false },
     { href: '/dashboard/chat', icon: 'ti-message-circle', label: 'Assistente IA', locked: false },
     { href: '/dashboard/produtos', icon: 'ti-flame', label: 'Produtos em Alta', locked: !isAdmin },
+    { href: '/dashboard/plataformas', icon: 'ti-building-store', label: 'Plataformas', locked: false },
     { href: '/dashboard/ebook', icon: 'ti-book-2', label: 'Gerador de Ebook', locked: false },
     { href: '/dashboard/paginas', icon: 'ti-layout', label: 'Gerador de Site', locked: false },
     { href: '/dashboard/criativo', icon: 'ti-sparkles', label: 'Gerador de Criativos', locked: false },
@@ -36,65 +59,111 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
   ]
 
   return (
-    <aside className={styles.sidebar}>
+    <>
+      {/* Hamburguer mobile */}
+      <button className={styles.mobileToggle} onClick={function() { setMobileOpen(!mobileOpen) }} aria-label="Menu">
+        <i className={mobileOpen ? 'ti ti-x' : 'ti ti-menu-2'} />
+      </button>
 
-      {/* Logo animado */}
-      <div className={styles.logo}>
-        <span className={styles.logoIcon}>✝️</span>
-        <div className={styles.logoTop}>Plataforma do</div>
-        <div className={styles.logoBottom}>Cristão Próspero</div>
-      </div>
+      {/* Overlay mobile */}
+      {mobileOpen && <div className={styles.overlay} onClick={function() { setMobileOpen(false) }} />}
 
-      <nav className={styles.nav}>
-        {navItems.map(function(item) {
-          if (item.locked) {
-            return (
-              <div key={item.href} className={styles.navItemLocked} title="Em breve">
-                <i className={'ti ' + item.icon} />
-                <span>{item.label}</span>
-                <span className={styles.lockBadge}>
-                  <i className="ti ti-lock" /> Em breve
-                </span>
+      {/* Sidebar */}
+      <aside className={styles.sidebar + (mobileOpen ? ' ' + styles.mobileVisible : '') + (collapsed ? ' ' + styles.collapsed : '')}>
+
+        {/* Logo + Usuario abaixo */}
+        <div className={styles.logo}>
+          {!collapsed ? (
+            <>
+              <span className={styles.logoIcon}>✝️</span>
+              <div className={styles.logoTop}>Plataforma do</div>
+              <div className={styles.logoBottom}>Cristão Próspero</div>
+              <div className={styles.logoUser}>
+                <div className={styles.logoUserName}>{firstName}</div>
+                <div className={styles.logoUserPlan}>{plan?.name || 'Starter'}</div>
+                <div className={styles.logoUserCredits}>
+                  🎬 {plan?.is_unlimited ? '∞' : videosRestantes} vídeos · 📘 {plan?.is_unlimited ? '∞' : ebooksRestantes} ebooks
+                </div>
               </div>
-            )
-          }
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={styles.navItem + (pathname === item.href ? ' ' + styles.active : '')}
-            >
-              <i className={'ti ' + item.icon} />
-              {item.label}
-            </Link>
-          )
-        })}
-      </nav>
+            </>
+          ) : (
+            <span style={{ fontSize: 22, margin: 'auto' }}>✝️</span>
+          )}
+        </div>
 
-      <div className={styles.bottom}>
-        <div className={styles.userRow}>
-          <div className={styles.userAvatar}>{user?.email?.[0].toUpperCase()}</div>
-          <div className={styles.userInfo}>
-            <div className={styles.userName}>{profile?.full_name || 'Usuario'}</div>
-            <div className={styles.userPlan}>{plan?.name || 'Starter'}</div>
+        {/* Botao recolher */}
+        <button className={styles.collapseBtn} onClick={toggleCollapse} title={collapsed ? 'Expandir menu' : 'Recolher menu'}>
+          <i className={'ti ' + (collapsed ? 'ti-chevrons-right' : 'ti-chevrons-left')} />
+          {!collapsed && <span>Recolher menu</span>}
+        </button>
+
+        {/* Nav */}
+        <nav className={styles.nav}>
+          {navItems.map(function(item) {
+            if (item.locked) {
+              return (
+                <div key={item.href} className={styles.navItemLocked} title={collapsed ? item.label + ' — Em breve' : 'Em breve'}>
+                  <i className={'ti ' + item.icon} />
+                  {!collapsed && (
+                    <>
+                      <span>{item.label}</span>
+                      <span className={styles.lockBadge}><i className="ti ti-lock" /> Em breve</span>
+                    </>
+                  )}
+                </div>
+              )
+            }
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={function() { setMobileOpen(false) }}
+                className={styles.navItem + (pathname === item.href ? ' ' + styles.active : '')}
+                title={collapsed ? item.label : ''}
+              >
+                <i className={'ti ' + item.icon} />
+                {!collapsed && item.label}
+              </Link>
+            )
+          })}
+        </nav>
+
+        {/* Bottom */}
+        {!collapsed && (
+          <div className={styles.bottom}>
+            <div className={styles.userRow}>
+              <div className={styles.userAvatar}>{user?.email?.[0].toUpperCase()}</div>
+              <div className={styles.userInfo}>
+                <div className={styles.userName}>{profile?.full_name || 'Usuario'}</div>
+                <div className={styles.userPlan}>{plan?.name || 'Starter'}</div>
+                <div className={styles.userCredits}>🎬 {plan?.is_unlimited ? '∞' : videosRestantes} · 📘 {plan?.is_unlimited ? '∞' : ebooksRestantes}</div>
+              </div>
+              <button className={styles.logoutBtn} onClick={logout} title="Sair">
+                <i className="ti ti-logout" />
+              </button>
+            </div>
+            <div className={styles.creditsBox}>
+              <div className={styles.creditsLabel}>Creditos de video</div>
+              <div className={styles.creditsCount}>
+                {plan?.is_unlimited ? '∞' : videosUsed} <span>/ {plan?.is_unlimited ? '∞' : videosLimit}</span>
+              </div>
+              <div className={styles.creditsBar}>
+                <div className={styles.creditsFill} style={{ width: creditPct + '%' }} />
+              </div>
+              <Link href="/dashboard/creditos" className={styles.addCreditsBtn}>
+                <i className="ti ti-plus" /> Adicionar creditos
+              </Link>
+            </div>
           </div>
-          <button className={styles.logoutBtn} onClick={logout}>
-            <i className="ti ti-logout" />
-          </button>
-        </div>
-        <div className={styles.creditsBox}>
-          <div className={styles.creditsLabel}>Creditos de video</div>
-          <div className={styles.creditsCount}>
-            {plan?.is_unlimited ? '∞' : videosUsed} <span>/ {plan?.is_unlimited ? '∞' : videosLimit}</span>
+        )}
+
+        {collapsed && (
+          <div style={{ padding: '10px 8px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+            <div className={styles.userAvatar}>{user?.email?.[0].toUpperCase()}</div>
+            <button className={styles.logoutBtn} onClick={logout} title="Sair"><i className="ti ti-logout" /></button>
           </div>
-          <div className={styles.creditsBar}>
-            <div className={styles.creditsFill} style={{ width: creditPct + '%' }} />
-          </div>
-          <Link href="/dashboard/creditos" className={styles.addCreditsBtn}>
-            <i className="ti ti-plus" /> Adicionar creditos
-          </Link>
-        </div>
-      </div>
-    </aside>
+        )}
+      </aside>
+    </>
   )
 }
