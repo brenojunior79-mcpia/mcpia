@@ -108,39 +108,80 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* PASSO A PASSO 3 ETAPAS */}
+        {/* PASSO A PASSO 3 ETAPAS — mapa do tesouro */}
         <div className="anim-fadeUp" style={{ marginBottom: 28 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted2)', marginBottom: 14, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Sua jornada em 3 passos</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0, position: 'relative' }}>
+          <div
+            style={{
+              position: 'relative',
+              overflow: 'hidden',
+              background: 'linear-gradient(160deg, #f1e2b8 0%, #e4c98d 45%, #d2b06d 100%)',
+              border: '2px solid #8b6b3d',
+              borderRadius: 20,
+              padding: '26px 30px 24px',
+              boxShadow: '0 10px 28px rgba(139,107,61,0.25), inset 0 0 70px rgba(139,107,61,0.18)',
+            }}
+          >
+            {/* manchas de envelhecimento do pergaminho */}
+            <div style={{
+              position: 'absolute', inset: 0, pointerEvents: 'none',
+              background: 'radial-gradient(circle at 12% 18%, rgba(139,107,61,0.18), transparent 26%), radial-gradient(circle at 88% 78%, rgba(139,107,61,0.2), transparent 30%), radial-gradient(circle at 55% 95%, rgba(139,107,61,0.12), transparent 25%), radial-gradient(circle at 95% 15%, rgba(139,107,61,0.14), transparent 22%)',
+            }} />
+            {/* bordas enroladas do pergaminho */}
+            <div style={{ position: 'absolute', left: -12, top: 6, bottom: 6, width: 22, borderRadius: 12, background: 'linear-gradient(90deg, #7a5c30, #d2b06d)', boxShadow: '2px 0 8px rgba(0,0,0,0.25)' }} />
+            <div style={{ position: 'absolute', right: -12, top: 6, bottom: 6, width: 22, borderRadius: 12, background: 'linear-gradient(270deg, #7a5c30, #d2b06d)', boxShadow: '-2px 0 8px rgba(0,0,0,0.25)' }} />
 
-            {/* Linha conectora */}
-            <div style={{ position: 'absolute', top: 28, left: 'calc(16.66% + 14px)', width: 'calc(66.66% - 28px)', height: 2, background: 'linear-gradient(90deg, rgba(124,92,252,0.6), rgba(124,92,252,0.1))', zIndex: 0 }} />
+            {/* rosa dos ventos decorativa */}
+            <svg viewBox="0 0 100 100" width={56} height={56} style={{ position: 'absolute', top: 14, right: 40, opacity: 0.55 }}>
+              <circle cx="50" cy="50" r="45" fill="none" stroke="#5c4326" strokeWidth="1.5" />
+              <polygon points="50,5 58,50 50,95 42,50" fill="#5c4326" />
+              <polygon points="5,50 50,42 95,50 50,58" fill="#5c4326" />
+              <polygon points="50,20 63,50 50,50 37,50" fill="#8b6b3d" />
+              <text x="50" y="16" fontSize="11" fontWeight="700" textAnchor="middle" fill="#5c4326">N</text>
+              <text x="50" y="97" fontSize="11" fontWeight="700" textAnchor="middle" fill="#5c4326">S</text>
+              <text x="9" y="54" fontSize="11" fontWeight="700" textAnchor="middle" fill="#5c4326">O</text>
+              <text x="91" y="54" fontSize="11" fontWeight="700" textAnchor="middle" fill="#5c4326">L</text>
+            </svg>
 
-            {[
-              { num: 1, icon: '🎯', label: 'Escolha o produto', desc: 'Acesse Produtos em Alta e escolha o que vai vender', href: '/dashboard/produtos', color: '#7c5cfc', active: true },
-              { num: 2, icon: '📦', label: 'Prepare o material', desc: 'Gere criativos, ebooks e paginas de vendas com IA', href: '/dashboard/criativo', color: '#f59e0b', active: false },
-              { num: 3, icon: '💰', label: 'Venda no automatico', desc: 'Crie anuncios e venda enquanto dorme', href: '/dashboard/vendas', color: '#4ade80', active: false },
-            ].map(function(step) {
-              return (
-                <Link
-                  key={step.num}
-                  href={step.href}
-                  style={{ textDecoration: 'none', position: 'relative', zIndex: 1, padding: '0 8px' }}
-                >
-                  <div style={{ background: 'var(--surface)', border: '1px solid ' + step.color + '33', borderRadius: 16, padding: '20px 16px', textAlign: 'center', transition: 'all 0.2s', cursor: 'pointer' }}>
-                    <div style={{ width: 56, height: 56, background: step.color + '15', border: '2px solid ' + step.color + '44', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', fontSize: 24 }}>
-                      {step.icon}
+            <div style={{ position: 'relative', fontSize: 11, fontWeight: 800, color: '#5c4326', marginBottom: 22, textTransform: 'uppercase', letterSpacing: '0.12em', display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'Syne, sans-serif' }}>
+              <span style={{ fontSize: 15 }}>🗺️</span> Sua jornada em 3 passos
+            </div>
+
+            {/* trilha pontilhada conectando os passos */}
+            <svg viewBox="0 0 900 40" preserveAspectRatio="none" style={{ position: 'absolute', top: 78, left: '16.5%', width: '67%', height: 30, zIndex: 0 }}>
+              <path d="M 0 20 Q 225 -6, 450 20 T 900 20" fill="none" stroke="#5c4326" strokeWidth="3" strokeDasharray="9 10" strokeLinecap="round" opacity="0.55" />
+            </svg>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, position: 'relative', zIndex: 1 }}>
+              {[
+                { num: 1, icon: '🎯', label: 'Escolha o produto', desc: 'Acesse Produtos em Alta e escolha o que vai vender', href: '/dashboard/produtos', color: '#7c5cfc' },
+                { num: 2, icon: '📦', label: 'Prepare o material', desc: 'Gere criativos, ebooks e paginas de vendas com IA', href: '/dashboard/criativo', color: '#c8891a' },
+                { num: 3, icon: '💰', label: 'Venda no automatico', desc: 'Crie anuncios e venda enquanto dorme', href: '/dashboard/vendas', color: '#2f9e5c' },
+              ].map(function(step) {
+                return (
+                  <Link key={step.num} href={step.href} style={{ textDecoration: 'none' }}>
+                    <div className="card-hover" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '0 6px', cursor: 'pointer' }}>
+                      <div style={{
+                        width: 60, height: 60, borderRadius: '50%', background: '#fbf3dc',
+                        border: '3px solid ' + step.color, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 26, boxShadow: '0 6px 14px rgba(92,67,38,0.3)', marginBottom: 10, position: 'relative',
+                      }}>
+                        {step.icon}
+                        {step.num === 3 && (
+                          <span style={{ position: 'absolute', top: -18, right: -8, fontSize: 20 }}>🚩</span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 10, fontWeight: 800, color: step.color, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Passo {step.num}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#3d2b16' }}>{step.label}</div>
+                      <div style={{ fontSize: 11, color: '#6b5433', lineHeight: 1.5, marginTop: 4 }}>{step.desc}</div>
+                      <div style={{ marginTop: 12, fontSize: 12, color: step.color, fontWeight: 700 }}>Acessar →</div>
                     </div>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: step.color, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Passo {step.num}</div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>{step.label}</div>
-                    <div style={{ fontSize: 11, color: 'var(--muted2)', lineHeight: 1.5 }}>{step.desc}</div>
-                    <div style={{ marginTop: 12, fontSize: 12, color: step.color, fontWeight: 600 }}>Acessar →</div>
-                  </div>
-                </Link>
-              )
-            })}
+                  </Link>
+                )
+              })}
+            </div>
           </div>
         </div>
+
 
         {/* Banner sem plano */}
         {!hasSubscription && (
