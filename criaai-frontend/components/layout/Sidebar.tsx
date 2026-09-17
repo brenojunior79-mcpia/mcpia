@@ -37,8 +37,12 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
 
   return (
     <aside className={styles.sidebar}>
+
+      {/* Logo animado */}
       <div className={styles.logo}>
-        <span style={{ fontSize: 11 }}>✝️</span> Cristao<span>Prospero</span>
+        <span className={styles.logoIcon}>✝️</span>
+        <div className={styles.logoTop}>Plataforma do</div>
+        <div className={styles.logoBottom}>Cristão Próspero</div>
       </div>
 
       <nav className={styles.nav}>
