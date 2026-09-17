@@ -8,10 +8,10 @@ const platforms = [
     description: 'Plataforma brasileira de produtos digitais. Crie sua conta gratuitamente e comece a vender ou se afiliar a produtos com alta conversao.',
     logoUrl: 'https://app.cakto.com.br/favicon.ico',
     logoFallback: 'C',
-    logoBg: '#7c5cfc',
-    color: '#7c5cfc',
-    colorBg: 'rgba(124,92,252,0.08)',
-    colorBorder: 'rgba(124,92,252,0.2)',
+    logoBg: '#22c55e',
+    color: '#22c55e',
+    colorBg: 'rgba(34,197,94,0.08)',
+    colorBorder: 'rgba(34,197,94,0.2)',
     registerUrl: 'https://app.cakto.com.br/auth/register/',
     loginUrl: 'https://sso.cakto.com.br/accounts/login/?next=https%3A%2F%2Fapp.cakto.com.br%2Fdashboard%2Fhome%2F',
     features: ['Pagamentos via Pix, cartao e boleto', 'Painel de afiliados completo', 'Checkout de alta conversao', 'Suporte brasileiro'],
@@ -118,11 +118,11 @@ function VideoLesson({ videoId, title, color }: { videoId: string; title: string
 
       <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{
-          width: 64, height: 64, borderRadius: '50%', background: 'rgba(255,255,255,0.95)',
+          width: 52, height: 52, borderRadius: '50%', background: 'rgba(255,255,255,0.95)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           boxShadow: '0 8px 24px rgba(0,0,0,0.35)', transition: 'transform 0.15s',
         }}>
-          <div style={{ width: 0, height: 0, marginLeft: 4, borderTop: '12px solid transparent', borderBottom: '12px solid transparent', borderLeft: '20px solid ' + color }} />
+          <div style={{ width: 0, height: 0, marginLeft: 3, borderTop: '10px solid transparent', borderBottom: '10px solid transparent', borderLeft: '16px solid ' + color }} />
         </div>
       </div>
 
@@ -159,19 +159,8 @@ function PlatformCard({ p }: { p: typeof platforms[number] }) {
         </div>
       </div>
 
-      <div style={{ padding: '16px 26px', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        {p.features.map(function(f) {
-          return (
-            <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, background: p.colorBg, border: '1px solid ' + p.colorBorder, borderRadius: 10, padding: '6px 12px' }}>
-              <div style={{ width: 5, height: 5, borderRadius: '50%', background: p.color, flexShrink: 0 }} />
-              <span style={{ fontSize: 12, fontWeight: 500 }}>{f}</span>
-            </div>
-          )
-        })}
-      </div>
-
       {p.videoId && (
-        <div style={{ padding: '0 26px 22px' }}>
+        <div style={{ padding: '20px 26px 22px' }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
             Aula: Cadastrando na {p.name}
           </div>
