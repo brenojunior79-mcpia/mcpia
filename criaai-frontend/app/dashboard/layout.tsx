@@ -19,7 +19,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <Sidebar profile={profile} user={user} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <Topbar profile={profile} user={user} />
-        <main style={{ flex: 1, overflow: 'auto' }}>{children}</main>
+        <main style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>{children}</main>
       </div>
     </div>
   )
