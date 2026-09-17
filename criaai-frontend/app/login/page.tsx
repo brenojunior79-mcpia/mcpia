@@ -11,7 +11,6 @@ export default function LoginPage() {
   const [whatsapp, setWhatsapp] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
   const [resetSent, setResetSent] = useState(false)
   const [showReset, setShowReset] = useState(false)
   const [resetEmail, setResetEmail] = useState('')
@@ -80,8 +79,7 @@ export default function LoginPage() {
       setLoading(false)
       return
     }
-    setSuccess(true)
-    setLoading(false)
+    router.push('/dashboard')
   }
 
   async function handleReset(e: React.FormEvent) {
@@ -148,27 +146,8 @@ export default function LoginPage() {
         {/* Caixa */}
         <div style={{ background: '#ffffff', borderRadius: 20, padding: '32px 36px', boxShadow: '0 4px 24px rgba(0,0,0,0.08)', border: '1px solid rgba(0,0,0,0.06)' }}>
 
-          {/* Conta criada com sucesso */}
-          {success ? (
-            <div style={{ textAlign: 'center', padding: '16px 0' }}>
-              <div style={{ width: 60, height: 60, background: '#f0fdf4', border: '2px solid #16a34a', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: 28 }}>✅</div>
-              <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 20, fontWeight: 800, color: '#1a1a2e', marginBottom: 8 }}>Conta criada com sucesso!</h2>
-              <p style={{ fontSize: 14, color: '#6b6880', marginBottom: 6 }}>
-                Verifique seu e-mail para confirmar o cadastro.
-              </p>
-              <p style={{ fontSize: 12, color: '#9b9aaa', marginBottom: 24 }}>
-                Não encontrou? Confira a pasta de <strong>spam</strong> ou <strong>lixo eletrônico</strong>.
-              </p>
-              <button
-                onClick={function() { setSuccess(false); setTab('login') }}
-                style={{ background: 'linear-gradient(135deg, #5b4ef8, #9b8ffc)', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 28px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
-              >
-                Ir para o login
-              </button>
-            </div>
-
-          /* Redefinir senha */
-          ) : showReset ? (
+          {/* Redefinir senha */}
+          {showReset ? (
             <div>
               <button
                 onClick={function() { setShowReset(false); setResetSent(false); setError('') }}
@@ -323,7 +302,7 @@ export default function LoginPage() {
         </div>
 
         {/* Rodape */}
-        {!success && !showReset && (
+        {!showReset && (
           <div style={{ marginTop: 24, display: 'flex', justifyContent: 'center', gap: 24, flexWrap: 'wrap' }}>
             {[
               { icon: '🎯', label: 'Criativos com IA' },
