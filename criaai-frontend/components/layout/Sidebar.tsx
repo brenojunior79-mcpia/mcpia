@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import styles from './Sidebar.module.css'
 
@@ -17,21 +17,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
   const videosLimit = plan?.is_unlimited ? 999 : ((plan?.credits_videos || 0) + videosExtra)
   const ebooksLimit = plan?.is_unlimited ? 999 : ((plan?.credits_ebooks || 0) + (profile?.credits_ebooks_extra || 0))
   const creditPct = plan?.is_unlimited ? 50 : (videosLimit ? Math.round((videosUsed / videosLimit) * 100) : 0)
-  const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
-
-  useEffect(function() {
-    try {
-      const saved = localStorage.getItem('sidebar_collapsed')
-      if (saved === 'true') setCollapsed(true)
-    } catch (e) {}
-  }, [])
-
-  function toggleCollapse() {
-    const next = !collapsed
-    setCollapsed(next)
-    try { localStorage.setItem('sidebar_collapsed', String(next)) } catch (e) {}
-  }
 
   async function logout() {
     await supabase.auth.signOut()
@@ -65,36 +51,21 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
 
       {mobileOpen && <div className={styles.overlay} onClick={function() { setMobileOpen(false) }} />}
 
-      <aside className={styles.sidebar + (mobileOpen ? ' ' + styles.mobileVisible : '') + (collapsed ? ' ' + styles.collapsed : '')}>
+      <aside className={styles.sidebar + (mobileOpen ? ' ' + styles.mobileVisible : '')}>
 
         {/* Logo */}
         <div className={styles.logo}>
-          {!collapsed ? (
-            <>
-              <img src="/logo.png" alt="Cristao Prospero" className={styles.logoIcon} style={{ width: '100%', maxWidth: 150, height: 'auto', display: 'block', marginBottom: 4, borderRadius: 8 }} />
-              <div className={styles.logoTop}>Plataforma do</div>
-              <div className={styles.logoBottom}>Cristão Próspero</div>
-              <div className={styles.logoUser}>
-                <div className={styles.logoUserName}>{firstName}</div>
-                <div className={styles.logoUserPlan}>{plan?.name || 'Starter'}</div>
-                <div className={styles.logoUserCredits}>
-                  {plan?.is_unlimited ? '∞' : videosRestantes} Créditos
-                </div>
-              </div>
-            </>
-          ) : (
-            <img src="/logo.png" alt="Cristao Prospero" style={{ width: 34, height: 'auto', margin: 'auto', display: 'block', borderRadius: 6 }} />
-          )}
+          <img src="/logo.png" alt="Cristao Prospero" className={styles.logoIcon} style={{ width: '100%', maxWidth: 150, height: 'auto', display: 'block', marginBottom: 4, borderRadius: 8 }} />
+          <div className={styles.logoTop}>Plataforma do</div>
+          <div className={styles.logoBottom}>Cristão Próspero</div>
+          <div className={styles.logoUser}>
+            <div className={styles.logoUserName}>{firstName}</div>
+            <div className={styles.logoUserPlan}>{plan?.name || 'Starter'}</div>
+            <div className={styles.logoUserCredits}>
+              {plan?.is_unlimited ? '∞' : videosRestantes} Créditos
+            </div>
+          </div>
         </div>
-
-        {/* Botao recolher - sem icone de seta, apenas toggle */}
-        <button
-          className={styles.collapseBtn}
-          onClick={toggleCollapse}
-          title={collapsed ? 'Expandir menu' : 'Recolher menu'}
-        >
-          <i className={'ti ' + (collapsed ? 'ti-layout-sidebar' : 'ti-layout-sidebar-left-collapse')} />
-        </button>
 
         {/* Nav */}
         <nav className={styles.nav}>
@@ -103,12 +74,8 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
               return (
                 <div key={item.href} className={styles.navItemLocked} title={item.label + ' — Em breve'}>
                   <i className={'ti ' + item.icon} />
-                  {!collapsed && (
-                    <>
-                      <span>{item.label}</span>
-                      <span className={styles.lockBadge}><i className="ti ti-lock" /> Em breve</span>
-                    </>
-                  )}
+                  <span>{item.label}</span>
+                  <span className={styles.lockBadge}><i className="ti ti-lock" /> Em breve</span>
                 </div>
               )
             }
@@ -118,50 +85,40 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
                 href={item.href}
                 onClick={function() { setMobileOpen(false) }}
                 className={styles.navItem + (pathname === item.href ? ' ' + styles.active : '')}
-                title={collapsed ? item.label : ''}
               >
                 <i className={'ti ' + item.icon} />
-                {!collapsed && item.label}
+                {item.label}
               </Link>
             )
           })}
         </nav>
 
         {/* Bottom */}
-        {!collapsed && (
-          <div className={styles.bottom}>
-            <div className={styles.userRow}>
-              <div className={styles.userAvatar}>{user?.email?.[0].toUpperCase()}</div>
-              <div className={styles.userInfo}>
-                <div className={styles.userName}>{profile?.full_name || 'Usuario'}</div>
-                <div className={styles.userPlan}>{plan?.name || 'Starter'}</div>
-                <div className={styles.userCredits}>{plan?.is_unlimited ? '∞' : videosRestantes} Créditos</div>
-              </div>
-              <button className={styles.logoutBtn} onClick={logout} title="Sair">
-                <i className="ti ti-logout" />
-              </button>
-            </div>
-            <div className={styles.creditsBox}>
-              <div className={styles.creditsLabel}>Creditos de video</div>
-              <div className={styles.creditsCount}>
-                {plan?.is_unlimited ? '∞' : videosUsed} <span>/ {plan?.is_unlimited ? '∞' : videosLimit}</span>
-              </div>
-              <div className={styles.creditsBar}>
-                <div className={styles.creditsFill} style={{ width: creditPct + '%' }} />
-              </div>
-              <Link href="/dashboard/creditos" className={styles.addCreditsBtn}>
-                <i className="ti ti-plus" /> Adicionar creditos
-              </Link>
-            </div>
-          </div>
-        )}
-
-        {collapsed && (
-          <div style={{ padding: '10px 8px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+        <div className={styles.bottom}>
+          <div className={styles.userRow}>
             <div className={styles.userAvatar}>{user?.email?.[0].toUpperCase()}</div>
-            <button className={styles.logoutBtn} onClick={logout} title="Sair"><i className="ti ti-logout" /></button>
+            <div className={styles.userInfo}>
+              <div className={styles.userName}>{profile?.full_name || 'Usuario'}</div>
+              <div className={styles.userPlan}>{plan?.name || 'Starter'}</div>
+              <div className={styles.userCredits}>{plan?.is_unlimited ? '∞' : videosRestantes} Créditos</div>
+            </div>
+            <button className={styles.logoutBtn} onClick={logout} title="Sair">
+              <i className="ti ti-logout" />
+            </button>
           </div>
-        )}
+          <div className={styles.creditsBox}>
+            <div className={styles.creditsLabel}>Creditos de video</div>
+            <div className={styles.creditsCount}>
+              {plan?.is_unlimited ? '∞' : videosUsed} <span>/ {plan?.is_unlimited ? '∞' : videosLimit}</span>
+            </div>
+            <div className={styles.creditsBar}>
+              <div className={styles.creditsFill} style={{ width: creditPct + '%' }} />
+            </div>
+            <Link href="/dashboard/creditos" className={styles.addCreditsBtn}>
+              <i className="ti ti-plus" /> Adicionar creditos
+            </Link>
+          </div>
+        </div>
       </aside>
     </>
   )
