@@ -40,13 +40,12 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
 
   const firstName = (profile?.full_name || '').split(' ')[0] || 'Usuario'
   const videosRestantes = Math.max(0, videosLimit - videosUsed)
-  const ebooksRestantes = Math.max(0, ebooksLimit - ebooksUsed)
 
   const navItems = [
     { href: '/dashboard', icon: 'ti-home', label: 'Painel do Aluno', locked: false },
     { href: '/dashboard/chat', icon: 'ti-message-circle', label: 'Assistente IA', locked: false },
-    { href: '/dashboard/produtos', icon: 'ti-flame', label: 'Produtos em Alta', locked: !isAdmin },
     { href: '/dashboard/plataformas', icon: 'ti-building-store', label: 'Plataformas', locked: false },
+    { href: '/dashboard/produtos', icon: 'ti-flame', label: 'Produtos em Alta', locked: !isAdmin },
     { href: '/dashboard/ebook', icon: 'ti-book-2', label: 'Gerador de Ebook', locked: false },
     { href: '/dashboard/paginas', icon: 'ti-layout', label: 'Gerador de Site', locked: false },
     { href: '/dashboard/criativo', icon: 'ti-sparkles', label: 'Gerador de Criativos', locked: false },
@@ -60,18 +59,15 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
 
   return (
     <>
-      {/* Hamburguer mobile */}
       <button className={styles.mobileToggle} onClick={function() { setMobileOpen(!mobileOpen) }} aria-label="Menu">
         <i className={mobileOpen ? 'ti ti-x' : 'ti ti-menu-2'} />
       </button>
 
-      {/* Overlay mobile */}
       {mobileOpen && <div className={styles.overlay} onClick={function() { setMobileOpen(false) }} />}
 
-      {/* Sidebar */}
       <aside className={styles.sidebar + (mobileOpen ? ' ' + styles.mobileVisible : '') + (collapsed ? ' ' + styles.collapsed : '')}>
 
-        {/* Logo + Usuario abaixo */}
+        {/* Logo */}
         <div className={styles.logo}>
           {!collapsed ? (
             <>
@@ -91,13 +87,13 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
           )}
         </div>
 
-        {/* Botao recolher — apenas icone X / setas */}
+        {/* Botao recolher - sem icone de seta, apenas toggle */}
         <button
           className={styles.collapseBtn}
           onClick={toggleCollapse}
           title={collapsed ? 'Expandir menu' : 'Recolher menu'}
         >
-          <i className={'ti ' + (collapsed ? 'ti-chevrons-right' : 'ti-chevrons-left')} />
+          <i className={'ti ' + (collapsed ? 'ti-layout-sidebar' : 'ti-layout-sidebar-left-collapse')} />
         </button>
 
         {/* Nav */}
@@ -105,7 +101,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
           {navItems.map(function(item) {
             if (item.locked) {
               return (
-                <div key={item.href} className={styles.navItemLocked} title={item.label + (collapsed ? '' : ' — Em breve')}>
+                <div key={item.href} className={styles.navItemLocked} title={item.label + ' — Em breve'}>
                   <i className={'ti ' + item.icon} />
                   {!collapsed && (
                     <>
@@ -139,9 +135,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
               <div className={styles.userInfo}>
                 <div className={styles.userName}>{profile?.full_name || 'Usuario'}</div>
                 <div className={styles.userPlan}>{plan?.name || 'Starter'}</div>
-                <div className={styles.userCredits}>
-                  {plan?.is_unlimited ? '∞' : videosRestantes} Créditos
-                </div>
+                <div className={styles.userCredits}>{plan?.is_unlimited ? '∞' : videosRestantes} Créditos</div>
               </div>
               <button className={styles.logoutBtn} onClick={logout} title="Sair">
                 <i className="ti ti-logout" />
