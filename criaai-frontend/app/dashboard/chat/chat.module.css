@@ -1,8 +1,8 @@
-.page { display: flex; flex-direction: column; height: 100vh; overflow-x: hidden; }
+.page { display: flex; flex-direction: column; height: 100vh; height: 100dvh; min-height: 0; overflow-x: hidden; }
 .topbar { padding: 20px 32px; border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0; }
 .title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; }
 .sub { font-size: 13px; color: var(--muted2); margin-top: 2px; }
-.chatWrap { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+.chatWrap { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 .messages { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 24px 32px; display: flex; flex-direction: column; gap: 16px; }
 .msg { display: flex; align-items: flex-start; gap: 10px; max-width: 100%; }
 .msgUser { flex-direction: row-reverse; }
@@ -29,7 +29,7 @@
 .sendBtn:disabled { opacity: .4; cursor: not-allowed; }
 
 @media (max-width: 700px) {
-  .topbar { padding: 14px 16px; }
+  .topbar { padding: 14px 16px 14px 60px; }
   .messages { padding: 16px; gap: 12px; }
   .bubble { max-width: 84%; }
   .inputWrap { padding: 12px 14px; }
