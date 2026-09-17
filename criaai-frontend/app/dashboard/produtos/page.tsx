@@ -98,22 +98,6 @@ const products = [
     color: '#f97316',
     colorBg: 'rgba(249,115,22,0.08)',
   },
-  {
-    id: '77-receitas',
-    name: '77 Receitas Lucrativas',
-    platform: 'kiwify',
-    category: 'Gastronomia',
-    description: 'Receitas lucrativas para empreendedores que querem vender comida. Ideal para quem quer comecar um negocio de alimentacao com baixo investimento.',
-    audience: 'Empreendedores, donas de casa, revendedores',
-    ageRange: '20-55 anos',
-    dailySales: 'R$100 - R$250/dia',
-    affiliateUrl: 'https://dashboard.kiwify.com.br/marketplace?product=0q6lmkEh',
-    siteUrl: 'https://emporiodigitalshop.com.br/77receitas/',
-    driveUrl: '',
-    image: '',
-    color: '#10b981',
-    colorBg: 'rgba(16,185,129,0.08)',
-  },
 ]
 
 const platformColors: Record<string, { bg: string; text: string; label: string }> = {
@@ -268,7 +252,7 @@ export default function ProdutosAltaPage() {
         </div>
 
         {/* Dica */}
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 16, boxShadow: 'var(--shadow-sm)' }}>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 16, boxShadow: 'var(--shadow-sm)', marginBottom: 16 }}>
           <div style={{ fontSize: 32 }}>💡</div>
           <div>
             <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Dica importante</div>
@@ -277,6 +261,35 @@ export default function ProdutosAltaPage() {
             </p>
           </div>
         </div>
+
+        {/* Barra de novos produtos em breve */}
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '18px 24px', boxShadow: 'var(--shadow-sm)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 16 }}>🔍</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Procurando novos produtos</span>
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent2)', background: 'var(--accent-light)', border: '1px solid rgba(91,78,248,0.2)', borderRadius: 99, padding: '3px 10px' }}>Em breve</span>
+          </div>
+          <div style={{ height: 8, background: 'var(--surface2)', borderRadius: 99, overflow: 'hidden' }}>
+            <div style={{
+              height: '100%',
+              width: '60%',
+              background: 'linear-gradient(90deg, var(--accent), #9b8ffc, var(--accent))',
+              backgroundSize: '200% 100%',
+              borderRadius: 99,
+              animation: 'buscando 2s ease-in-out infinite',
+            }} />
+          </div>
+          <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8, margin: '8px 0 0' }}>Novos produtos serao disponibilizados em breve. Fique ligado!</p>
+        </div>
+
+        <style>{`
+          @keyframes buscando {
+            0% { background-position: 200% center; }
+            100% { background-position: -200% center; }
+          }
+        `}</style>
 
       </div>
     </div>
