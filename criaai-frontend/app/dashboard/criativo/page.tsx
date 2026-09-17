@@ -281,7 +281,7 @@ export default function CriativoPage() {
 
           <div className={styles.field}>
             <label>Estilo do video</label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+            <div className={styles.templateGrid}>
               {TEMPLATES.map(function(t) {
                 const isSelected = templateId === t.id
                 return (
