@@ -6,12 +6,13 @@ const platforms = [
     name: 'Cakto',
     description: 'Plataforma brasileira de produtos digitais. Crie sua conta gratuitamente e comece a vender ou se afiliar a produtos com alta conversao.',
     logoUrl: 'https://app.cakto.com.br/favicon.ico',
-    logoFallback: '🛒',
+    logoFallback: 'C',
+    logoBg: '#7c5cfc',
     color: '#7c5cfc',
     colorBg: 'rgba(124,92,252,0.08)',
     colorBorder: 'rgba(124,92,252,0.2)',
-    registerUrl: 'https://app.cakto.com.br/signup',
-    loginUrl: 'https://app.cakto.com.br/login',
+    registerUrl: 'https://app.cakto.com.br/auth/register/',
+    loginUrl: 'https://sso.cakto.com.br/accounts/login/?next=https%3A%2F%2Fapp.cakto.com.br%2Fdashboard%2Fhome%2F',
     features: ['Pagamentos via Pix, cartao e boleto', 'Painel de afiliados completo', 'Checkout de alta conversao', 'Suporte brasileiro'],
     badge: 'Parceira oficial',
   },
@@ -19,8 +20,9 @@ const platforms = [
     id: 'kiwify',
     name: 'Kiwify',
     description: 'Uma das maiores plataformas de infoprodutos do Brasil. Centenas de produtos para afiliar com comissoes atrativas.',
-    logoUrl: 'https://www.kiwify.com.br/favicon.ico',
-    logoFallback: '🥝',
+    logoUrl: 'https://kiwify.com.br/favicon.ico',
+    logoFallback: 'K',
+    logoBg: '#16a34a',
     color: '#16a34a',
     colorBg: 'rgba(22,163,74,0.08)',
     colorBorder: 'rgba(22,163,74,0.2)',
@@ -33,17 +35,40 @@ const platforms = [
     id: 'logzz',
     name: 'Logzz',
     description: 'Plataforma de automacao e gestao de negocios digitais. Gerencie seus afiliados, vendas e campanhas em um so lugar.',
-    logoUrl: 'https://logzz.com.br/favicon.ico',
-    logoFallback: '⚡',
+    logoUrl: 'https://app.logzz.com.br/favicon.ico',
+    logoFallback: 'L',
+    logoBg: '#f59e0b',
     color: '#f59e0b',
     colorBg: 'rgba(245,158,11,0.08)',
     colorBorder: 'rgba(245,158,11,0.2)',
-    registerUrl: 'https://logzz.com.br/cadastro',
-    loginUrl: 'https://logzz.com.br/login',
+    registerUrl: 'https://app.logzz.com.br/cadastrar/useg02v2k',
+    loginUrl: 'https://app.logzz.com.br/login',
     features: ['Automacao de campanhas', 'Gestao de afiliados', 'CRM integrado', 'Relatorios em tempo real'],
     badge: 'Automacao',
   },
 ]
+
+function PlatformLogo({ logoUrl, fallback, bg }: { logoUrl: string; fallback: string; bg: string }) {
+  return (
+    <div style={{ width: 56, height: 56, background: bg + '22', border: '1.5px solid ' + bg + '44', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, position: 'relative' }}>
+      <img
+        src={logoUrl}
+        alt=""
+        width={34}
+        height={34}
+        style={{ objectFit: 'contain', position: 'absolute' }}
+        onError={function(e: any) {
+          e.target.style.display = 'none'
+          const next = e.target.nextElementSibling as HTMLElement
+          if (next) next.style.display = 'flex'
+        }}
+      />
+      <div style={{ width: 34, height: 34, background: bg, borderRadius: 8, display: 'none', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, color: '#fff', fontFamily: 'Syne, sans-serif', position: 'absolute' }}>
+        {fallback}
+      </div>
+    </div>
+  )
+}
 
 export default function PlataformasPage() {
   return (
@@ -61,8 +86,8 @@ export default function PlataformasPage() {
           </p>
         </div>
 
-        {/* Banner orientacao */}
-        <div style={{ background: 'linear-gradient(135deg, rgba(91,78,248,0.1), rgba(91,78,248,0.04))', border: '1px solid rgba(91,78,248,0.2)', borderRadius: 16, padding: '18px 22px', marginBottom: 28, display: 'flex', alignItems: 'center', gap: 14 }}>
+        {/* Banner */}
+        <div style={{ background: 'linear-gradient(135deg,rgba(91,78,248,0.1),rgba(91,78,248,0.04))', border: '1px solid rgba(91,78,248,0.2)', borderRadius: 16, padding: '18px 22px', marginBottom: 28, display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ fontSize: 28, flexShrink: 0 }}>📋</div>
           <div>
             <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--accent2)', marginBottom: 4 }}>Como comecar?</div>
@@ -78,24 +103,9 @@ export default function PlataformasPage() {
             return (
               <div key={p.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 18, overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
 
-                {/* Header do card */}
                 <div style={{ padding: '22px 26px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, borderBottom: '1px solid var(--border)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                    {/* Logo com fallback */}
-                    <div style={{ width: 56, height: 56, background: p.colorBg, border: '1.5px solid ' + p.colorBorder, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-                      <img
-                        src={p.logoUrl}
-                        alt={p.name}
-                        width={32}
-                        height={32}
-                        style={{ objectFit: 'contain' }}
-                        onError={function(e: any) {
-                          e.target.style.display = 'none'
-                          e.target.nextSibling.style.display = 'block'
-                        }}
-                      />
-                      <span style={{ fontSize: 24, display: 'none' }}>{p.logoFallback}</span>
-                    </div>
+                    <PlatformLogo logoUrl={p.logoUrl} fallback={p.logoFallback} bg={p.logoBg} />
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
                         <span style={{ fontFamily: 'Syne, sans-serif', fontSize: 20, fontWeight: 800 }}>{p.name}</span>
@@ -104,17 +114,16 @@ export default function PlataformasPage() {
                       <p style={{ fontSize: 13, color: 'var(--muted2)', margin: 0, maxWidth: 480, lineHeight: 1.5 }}>{p.description}</p>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
-                    <a href={p.loginUrl} target="_blank" rel="noreferrer" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: 13, padding: '10px 18px', borderRadius: 10, textDecoration: 'none' }}>
+                  <div style={{ display: 'flex', gap: 10, flexShrink: 0, flexWrap: 'wrap' }}>
+                    <a href={p.loginUrl} target="_blank" rel="noreferrer" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: 13, padding: '10px 18px', borderRadius: 10, textDecoration: 'none', display: 'inline-block' }}>
                       Entrar
                     </a>
-                    <a href={p.registerUrl} target="_blank" rel="noreferrer" style={{ background: 'linear-gradient(135deg,' + p.color + ',' + p.color + 'cc)', color: '#fff', fontWeight: 700, fontSize: 13, padding: '10px 22px', borderRadius: 10, textDecoration: 'none', boxShadow: '0 4px 12px ' + p.color + '33' }}>
+                    <a href={p.registerUrl} target="_blank" rel="noreferrer" style={{ background: 'linear-gradient(135deg,' + p.color + ',' + p.color + 'cc)', color: '#fff', fontWeight: 700, fontSize: 13, padding: '10px 22px', borderRadius: 10, textDecoration: 'none', boxShadow: '0 4px 12px ' + p.color + '33', display: 'inline-block' }}>
                       ✨ Criar conta grátis
                     </a>
                   </div>
                 </div>
 
-                {/* Features */}
                 <div style={{ padding: '16px 26px', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                   {p.features.map(function(f) {
                     return (
@@ -130,7 +139,6 @@ export default function PlataformasPage() {
           })}
         </div>
 
-        {/* Dica final */}
         <div style={{ marginTop: 24, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '18px 22px', display: 'flex', alignItems: 'center', gap: 14, boxShadow: 'var(--shadow-sm)' }}>
           <div style={{ fontSize: 28 }}>💡</div>
           <p style={{ fontSize: 13, color: 'var(--muted2)', margin: 0, lineHeight: 1.6 }}>
