@@ -17,7 +17,6 @@
   flex-shrink: 0;
 }
 
-.collapsed { width: 64px !important; }
 
 /* ===== MOBILE ===== */
 .mobileToggle {
@@ -138,33 +137,6 @@
   font-weight: 600;
   margin-top: 3px;
 }
-
-/* ===== BOTAO RECOLHER ===== */
-.collapseBtn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: calc(100% - 20px);
-  margin: 10px;
-  padding: 8px 12px;
-  background: var(--accent-light);
-  border: 1px solid rgba(91,78,248,0.25);
-  border-radius: 10px;
-  color: var(--accent);
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: 'Inter', sans-serif;
-  transition: all 0.15s;
-  justify-content: center;
-}
-
-.collapseBtn:hover {
-  background: rgba(91,78,248,0.15);
-  border-color: var(--accent);
-}
-
-.collapseBtn i { font-size: 15px; }
 
 /* ===== NAV ===== */
 .nav {
