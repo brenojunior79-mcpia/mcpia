@@ -71,7 +71,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
         <div className={styles.logo}>
           {!collapsed ? (
             <>
-              <span className={styles.logoIcon}>✝️</span>
+              <img src="/logo.png" alt="Cristao Prospero" className={styles.logoIcon} style={{ width: '100%', maxWidth: 150, height: 'auto', display: 'block', marginBottom: 4, borderRadius: 8 }} />
               <div className={styles.logoTop}>Plataforma do</div>
               <div className={styles.logoBottom}>Cristão Próspero</div>
               <div className={styles.logoUser}>
@@ -83,7 +83,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
               </div>
             </>
           ) : (
-            <span style={{ fontSize: 22, margin: 'auto' }}>✝️</span>
+            <img src="/logo.png" alt="Cristao Prospero" style={{ width: 34, height: 'auto', margin: 'auto', display: 'block', borderRadius: 6 }} />
           )}
         </div>
 
