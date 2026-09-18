@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 import styles from './paginas.module.css'
 
@@ -105,6 +106,7 @@ export default function PaginasPage() {
     customPrompt: '',
   })
   const supabase = createClient()
+  const router = useRouter()
 
   useEffect(function() {
     checkSubscription()
@@ -114,10 +116,12 @@ export default function PaginasPage() {
   async function checkSubscription() {
     const userResult = await supabase.auth.getUser()
     const user = userResult.data.user
-    if (!user) { setHasSubscription(false); return }
+    if (!user) { router.push('/login'); return }
     const result = await supabase.from('profiles').select('subscription_status').eq('id', user.id).single()
     const status = result.data?.subscription_status
-    setHasSubscription(status === 'active' || status === 'trialing')
+    const active = status === 'active' || status === 'trialing'
+    setHasSubscription(active)
+    if (!active) { router.push('/dashboard/planos') }
   }
 
   async function loadPages() {
