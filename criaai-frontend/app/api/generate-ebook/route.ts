@@ -101,31 +101,36 @@ export async function POST(req: NextRequest) {
 
     const profileResult = await supabase
       .from('profiles')
-      .select('credits_ebooks_used, credits_ebooks_extra, subscription_status, plan_id, plans(name, credits_ebooks)')
+      .select('credits_ebooks_used, credits_ebooks_extra, subscription_status, plan_id, is_admin, plans(name, credits_ebooks)')
       .eq('id', user.id)
       .single()
 
     const profile = profileResult.data
     if (!profile) return NextResponse.json({ error: 'Perfil nao encontrado.' }, { status: 404 })
 
-    const status = profile.subscription_status
-    if (status !== 'active' && status !== 'trialing') {
-      return NextResponse.json({
-        error: 'Assine um plano para usar este recurso.',
-        requiresPlan: true,
-      }, { status: 403 })
-    }
+    const isAdmin = (profile as any).is_admin === true
+    let creditsUsed = 0
 
-    const plan = (profile as any).plans
-    const creditLimit: number = (plan?.credits_ebooks ?? 0) + (profile.credits_ebooks_extra ?? 0)
-    const creditsUsed: number = profile.credits_ebooks_used ?? 0
+    if (!isAdmin) {
+      const status = profile.subscription_status
+      if (status !== 'active' && status !== 'trialing') {
+        return NextResponse.json({
+          error: 'Assine um plano para usar este recurso.',
+          requiresPlan: true,
+        }, { status: 403 })
+      }
 
-    if (creditsUsed >= creditLimit) {
-      return NextResponse.json({
-        error: 'Limite de creditos atingido.',
-        details: 'Voce usou ' + creditsUsed + ' de ' + creditLimit + ' ebooks disponiveis.',
-        upgradeRequired: true,
-      }, { status: 402 })
+      const plan = (profile as any).plans
+      const creditLimit: number = (plan?.credits_ebooks ?? 0) + (profile.credits_ebooks_extra ?? 0)
+      creditsUsed = profile.credits_ebooks_used ?? 0
+
+      if (creditsUsed >= creditLimit) {
+        return NextResponse.json({
+          error: 'Limite de creditos atingido.',
+          details: 'Voce usou ' + creditsUsed + ' de ' + creditLimit + ' ebooks disponiveis.',
+          upgradeRequired: true,
+        }, { status: 402 })
+      }
     }
 
     const body = await req.json()
@@ -144,7 +149,9 @@ export async function POST(req: NextRequest) {
     const generationId = await startGammaGeneration(prompt, title, targetAudience, tone, language, themeId || undefined)
     const result = await pollGammaUntilDone(generationId)
 
-    await supabase.from('profiles').update({ credits_ebooks_used: creditsUsed + 1 }).eq('id', user.id)
+    if (!isAdmin) {
+      await supabase.from('profiles').update({ credits_ebooks_used: creditsUsed + 1 }).eq('id', user.id)
+    }
     await supabase.from('ebooks').insert({
       user_id: user.id,
       title: title,
