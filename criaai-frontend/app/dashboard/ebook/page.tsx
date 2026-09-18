@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 
 const STORAGE_KEY = 'mcpia_ebook_form'
@@ -237,6 +238,7 @@ export default function EbookPage() {
   const [capaIcon, setCapaIcon] = useState(capaIcons[0])
 
   const supabase = createClient()
+  const router = useRouter()
 
   useEffect(function() {
     try {
@@ -258,10 +260,12 @@ export default function EbookPage() {
   async function checkSubscription() {
     const userResult = await supabase.auth.getUser()
     const user = userResult.data.user
-    if (!user) { setHasSubscription(false); return }
+    if (!user) { router.push('/login'); return }
     const result = await supabase.from('profiles').select('subscription_status, full_name').eq('id', user.id).single()
     const status = result.data?.subscription_status
-    setHasSubscription(status === 'active' || status === 'trialing')
+    const active = status === 'active' || status === 'trialing'
+    setHasSubscription(active)
+    if (!active) { router.push('/dashboard/planos'); return }
     if (result.data?.full_name) {
       setCapaAuthor(result.data.full_name.split(' ')[0])
     }
