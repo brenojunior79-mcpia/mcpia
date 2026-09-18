@@ -13,20 +13,20 @@ const plans = [
   {
     name: 'Starter',
     price: 29.90,
-    features: ['15 videos/mes', '3 ebooks/mes', 'Formatos 9:16 e 1:1', 'Copy com IA', 'Download em HD'],
-    missing: ['Painel admin', 'White label'],
+    features: ['10 videos/mes', '2 ebooks/mes', '2 sites/mes'],
+    missing: [],
   },
   {
     name: 'Pro',
     price: 39.90,
     featured: true,
-    features: ['25 videos/mes', '6 ebooks/mes', 'Todos os formatos', 'Copy com IA', 'Musica automatica', 'Painel admin'],
-    missing: ['White label'],
+    features: ['20 videos/mes', '5 ebooks/mes', '5 sites/mes'],
+    missing: [],
   },
   {
     name: 'Premium',
     price: 69.90,
-    features: ['50 videos/mes', '15 ebooks/mes', 'Todos os formatos', 'Painel admin completo', 'White label incluso', 'Suporte prioritario'],
+    features: ['30 videos/mes', '10 ebooks/mes', '10 sites/mes'],
     missing: [],
   },
 ]
