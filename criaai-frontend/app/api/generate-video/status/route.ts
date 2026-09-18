@@ -36,11 +36,13 @@ export async function GET(req: NextRequest) {
     const videoUrl: string = data.url || ''
 
     if (status === 'succeeded' && videoUrl) {
-      const profile = (await supabase.from('profiles').select('credits_videos_used').eq('id', user.id).single()).data
+      const profile = (await supabase.from('profiles').select('credits_videos_used, is_admin').eq('id', user.id).single()).data
       const used = profile?.credits_videos_used || 0
 
       await supabase.from('generations').update({ status: 'completed', output_url: videoUrl }).eq('user_id', user.id).eq('status', 'pending').contains('metadata', { renderId })
-      await supabase.from('profiles').update({ credits_videos_used: used + 1 }).eq('id', user.id)
+      if (!(profile as any)?.is_admin) {
+        await supabase.from('profiles').update({ credits_videos_used: used + 1 }).eq('id', user.id)
+      }
 
       return NextResponse.json({ status: 'completed', videoUrl })
     }
