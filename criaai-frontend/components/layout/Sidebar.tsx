@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import styles from './Sidebar.module.css'
 
@@ -18,6 +18,23 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
   const ebooksLimit = plan?.is_unlimited ? 999 : ((plan?.credits_ebooks || 0) + (profile?.credits_ebooks_extra || 0))
   const creditPct = plan?.is_unlimited ? 50 : (videosLimit ? Math.round((videosUsed / videosLimit) * 100) : 0)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [theme, setTheme] = useState<'light' | 'dark'>('light')
+
+  useEffect(function() {
+    try {
+      const saved = localStorage.getItem('mcpia_theme')
+      if (saved === 'dark' || saved === 'light') setTheme(saved)
+    } catch (e) {}
+  }, [])
+
+  function toggleTheme() {
+    const next = theme === 'dark' ? 'light' : 'dark'
+    setTheme(next)
+    try {
+      localStorage.setItem('mcpia_theme', next)
+      document.documentElement.setAttribute('data-theme', next)
+    } catch (e) {}
+  }
 
   async function logout() {
     await supabase.auth.signOut()
@@ -61,8 +78,20 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
           <div className={styles.logoUser}>
             <div className={styles.logoUserName}>{firstName}</div>
             <div className={styles.logoUserPlan}>{plan?.name || 'Starter'}</div>
-            <div className={styles.logoUserCredits}>
-              {plan?.is_unlimited ? '∞' : videosRestantes} Créditos
+            <div className={styles.logoUserCredits} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              <span>{plan?.is_unlimited ? '∞' : videosRestantes} Créditos</span>
+              <button
+                onClick={toggleTheme}
+                title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
+                style={{
+                  width: 22, height: 22, borderRadius: '50%', border: '1px solid var(--border2)',
+                  background: 'var(--surface2)', color: 'var(--muted2)', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 12,
+                  flexShrink: 0, padding: 0,
+                }}
+              >
+                <i className={'ti ' + (theme === 'dark' ? 'ti-sun' : 'ti-moon')} />
+              </button>
             </div>
           </div>
         </div>
