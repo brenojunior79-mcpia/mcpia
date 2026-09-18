@@ -185,26 +185,30 @@ export async function POST(req: NextRequest) {
 
     const profileResult = await supabase
       .from('profiles')
-      .select('credits_sites_used, credits_sites_extra, subscription_status, plans(credits_sites, is_unlimited)')
+      .select('credits_sites_used, credits_sites_extra, subscription_status, is_admin, plans(credits_sites, is_unlimited)')
       .eq('id', user.id)
       .single()
 
     const profile = profileResult.data
     if (!profile) return NextResponse.json({ error: 'Perfil nao encontrado' }, { status: 404 })
 
-    const status = profile.subscription_status
-    if (status !== 'active' && status !== 'trialing') {
-      return NextResponse.json({
-        error: 'Assine um plano para usar este recurso.',
-        requiresPlan: true,
-      }, { status: 403 })
-    }
-
-    const plan = (profile as any)?.plans
+    const isAdmin = (profile as any)?.is_admin === true
     const used = profile?.credits_sites_used || 0
-    const extra = (profile as any)?.credits_sites_extra || 0
-    const limit = (plan?.credits_sites || 0) + extra
-    if (!plan?.is_unlimited && used >= limit) return NextResponse.json({ error: 'Sem creditos de site disponiveis' }, { status: 403 })
+
+    if (!isAdmin) {
+      const status = profile.subscription_status
+      if (status !== 'active' && status !== 'trialing') {
+        return NextResponse.json({
+          error: 'Assine um plano para usar este recurso.',
+          requiresPlan: true,
+        }, { status: 403 })
+      }
+
+      const plan = (profile as any)?.plans
+      const extra = (profile as any)?.credits_sites_extra || 0
+      const limit = (plan?.credits_sites || 0) + extra
+      if (!plan?.is_unlimited && used >= limit) return NextResponse.json({ error: 'Sem creditos de site disponiveis' }, { status: 403 })
+    }
 
     const form = await req.json()
     const { productName, price, audience, benefits, bonus, guarantee, checkoutUrl, theme } = form
@@ -259,7 +263,9 @@ export async function POST(req: NextRequest) {
       form_data: { audience, benefits, bonus, guarantee, checkoutUrl, price }
     })
 
-    await supabase.from('profiles').update({ credits_sites_used: used + 1 }).eq('id', user.id)
+    if (!isAdmin) {
+      await supabase.from('profiles').update({ credits_sites_used: used + 1 }).eq('id', user.id)
+    }
 
     return NextResponse.json({ slug, url: (process.env.NEXT_PUBLIC_APP_URL || 'https://mcpia.site') + '/p/' + slug })
   } catch (err: any) {
