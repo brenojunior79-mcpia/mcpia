@@ -126,32 +126,36 @@ export async function POST(req: NextRequest) {
 
     const profileData = (await supabase
       .from('profiles')
-      .select('credits_videos_used, credits_videos_extra, subscription_status, plans(name, credits_videos, is_unlimited)')
+      .select('credits_videos_used, credits_videos_extra, subscription_status, is_admin, plans(name, credits_videos, is_unlimited)')
       .eq('id', user.id)
       .single()).data
 
     if (!profileData) return NextResponse.json({ error: 'Perfil nao encontrado' }, { status: 404 })
 
-    const status = profileData.subscription_status
-    if (status !== 'active' && status !== 'trialing') {
-      return NextResponse.json({ error: 'Assine um plano para usar este recurso.', requiresPlan: true }, { status: 403 })
-    }
+    const isAdmin = (profileData as any)?.is_admin === true
 
-    const plan = (profileData as any)?.plans
-    const isUnlimited = plan?.is_unlimited
-    const isAgency = plan?.name === 'Agency' || plan?.name === 'Premium'
-    const used = profileData.credits_videos_used || 0
-    const extraCredits = profileData.credits_videos_extra || 0
-    const limit = isUnlimited ? 999999 : ((plan?.credits_videos || 0) + extraCredits)
+    if (!isAdmin) {
+      const status = profileData.subscription_status
+      if (status !== 'active' && status !== 'trialing') {
+        return NextResponse.json({ error: 'Assine um plano para usar este recurso.', requiresPlan: true }, { status: 403 })
+      }
 
-    if (isAgency || isUnlimited) {
-      const startOfMonth = new Date()
-      startOfMonth.setDate(1)
-      startOfMonth.setHours(0, 0, 0, 0)
-      const countResult = await supabase.from('generations').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('type', 'video').gte('created_at', startOfMonth.toISOString())
-      if ((countResult.count || 0) >= AGENCY_VIDEO_LIMIT) return NextResponse.json({ error: 'Limite mensal atingido.', limitReached: true }, { status: 429 })
-    } else {
-      if (used >= limit) return NextResponse.json({ error: 'Sem creditos de video disponiveis.', limitReached: true }, { status: 403 })
+      const plan = (profileData as any)?.plans
+      const isUnlimited = plan?.is_unlimited
+      const isAgency = plan?.name === 'Agency' || plan?.name === 'Premium'
+      const used = profileData.credits_videos_used || 0
+      const extraCredits = profileData.credits_videos_extra || 0
+      const limit = isUnlimited ? 999999 : ((plan?.credits_videos || 0) + extraCredits)
+
+      if (isAgency || isUnlimited) {
+        const startOfMonth = new Date()
+        startOfMonth.setDate(1)
+        startOfMonth.setHours(0, 0, 0, 0)
+        const countResult = await supabase.from('generations').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('type', 'video').gte('created_at', startOfMonth.toISOString())
+        if ((countResult.count || 0) >= AGENCY_VIDEO_LIMIT) return NextResponse.json({ error: 'Limite mensal atingido.', limitReached: true }, { status: 429 })
+      } else {
+        if (used >= limit) return NextResponse.json({ error: 'Sem creditos de video disponiveis.', limitReached: true }, { status: 403 })
+      }
     }
 
     const searchQuery = niche || customPrompt.slice(0, 50)
