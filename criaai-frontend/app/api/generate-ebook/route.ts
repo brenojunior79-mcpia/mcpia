@@ -110,6 +110,7 @@ export async function POST(req: NextRequest) {
 
     const isAdmin = (profile as any).is_admin === true
     let creditsUsed = 0
+    let creditLimit = Infinity
 
     if (!isAdmin) {
       const status = profile.subscription_status
@@ -121,7 +122,7 @@ export async function POST(req: NextRequest) {
       }
 
       const plan = (profile as any).plans
-      const creditLimit: number = (plan?.credits_ebooks ?? 0) + (profile.credits_ebooks_extra ?? 0)
+      creditLimit = (plan?.credits_ebooks ?? 0) + (profile.credits_ebooks_extra ?? 0)
       creditsUsed = profile.credits_ebooks_used ?? 0
 
       if (creditsUsed >= creditLimit) {
