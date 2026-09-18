@@ -78,16 +78,16 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
           <div className={styles.logoUser}>
             <div className={styles.logoUserName}>{firstName}</div>
             <div className={styles.logoUserPlan}>{plan?.name || 'Starter'}</div>
-            <div className={styles.logoUserCredits} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <div className={styles.logoUserCredits} style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
               <span>{plan?.is_unlimited ? '∞' : videosRestantes} Créditos</span>
               <button
                 onClick={toggleTheme}
                 title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
                 style={{
-                  width: 22, height: 22, borderRadius: '50%', border: '1px solid var(--border2)',
-                  background: 'var(--surface2)', color: 'var(--muted2)', display: 'flex',
-                  alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 12,
-                  flexShrink: 0, padding: 0,
+                  width: 20, height: 20, borderRadius: '50%', border: '1px solid var(--border2)',
+                  background: 'var(--surface2)', color: 'var(--muted2)', display: 'inline-flex',
+                  alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 11,
+                  flexShrink: 0, padding: 0, lineHeight: 1,
                 }}
               >
                 <i className={'ti ' + (theme === 'dark' ? 'ti-sun' : 'ti-moon')} />
