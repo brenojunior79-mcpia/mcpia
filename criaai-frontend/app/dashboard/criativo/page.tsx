@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 import styles from '../dashboard.module.css'
 
@@ -91,6 +92,7 @@ export default function CriativoPage() {
   const [stats, setStats] = useState({ videos: 0, ebooks: 0, creditsUsed: 0, creditsLimit: 15 })
   const pollingRef = useRef<NodeJS.Timeout | null>(null)
   const supabase = createClient()
+  const router = useRouter()
 
   const steps = [
     'Gerando roteiro com GPT-4o...',
@@ -104,7 +106,7 @@ export default function CriativoPage() {
     async function loadProfile() {
       const userResult = await supabase.auth.getUser()
       const user = userResult.data.user
-      if (!user) return
+      if (!user) { router.push('/login'); return }
       const profileResult = await supabase
         .from('profiles')
         .select('*, plans(name, credits_videos, credits_ebooks, is_unlimited, price_monthly)')
@@ -114,7 +116,9 @@ export default function CriativoPage() {
       if (data) {
         setProfile(data)
         const status = data.subscription_status
-        setHasSubscription(status === 'active' || status === 'trialing')
+        const active = status === 'active' || status === 'trialing'
+        setHasSubscription(active)
+        if (!active) { router.push('/dashboard/planos'); return }
         const gensResult = await supabase.from('generations').select('type').eq('user_id', user.id)
         const gens = gensResult.data || []
         const videos = gens.filter(function(g) { return g.type === 'video' }).length
