@@ -185,7 +185,7 @@ export async function POST(req: NextRequest) {
 
     const profileResult = await supabase
       .from('profiles')
-      .select('credits_ebooks_used, subscription_status, plans(credits_ebooks)')
+      .select('credits_sites_used, credits_sites_extra, subscription_status, plans(credits_sites, is_unlimited)')
       .eq('id', user.id)
       .single()
 
@@ -201,9 +201,10 @@ export async function POST(req: NextRequest) {
     }
 
     const plan = (profile as any)?.plans
-    const used = profile?.credits_ebooks_used || 0
-    const limit = plan?.credits_ebooks || 3
-    if (used >= limit) return NextResponse.json({ error: 'Sem creditos de ebook disponiveis' }, { status: 403 })
+    const used = profile?.credits_sites_used || 0
+    const extra = (profile as any)?.credits_sites_extra || 0
+    const limit = (plan?.credits_sites || 0) + extra
+    if (!plan?.is_unlimited && used >= limit) return NextResponse.json({ error: 'Sem creditos de site disponiveis' }, { status: 403 })
 
     const form = await req.json()
     const { productName, price, audience, benefits, bonus, guarantee, checkoutUrl, theme } = form
@@ -258,7 +259,7 @@ export async function POST(req: NextRequest) {
       form_data: { audience, benefits, bonus, guarantee, checkoutUrl, price }
     })
 
-    await supabase.from('profiles').update({ credits_ebooks_used: used + 1 }).eq('id', user.id)
+    await supabase.from('profiles').update({ credits_sites_used: used + 1 }).eq('id', user.id)
 
     return NextResponse.json({ slug, url: (process.env.NEXT_PUBLIC_APP_URL || 'https://mcpia.site') + '/p/' + slug })
   } catch (err: any) {
