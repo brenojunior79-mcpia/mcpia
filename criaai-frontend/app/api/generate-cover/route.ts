@@ -10,25 +10,25 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
-    const { title, subtitle, niche, color, template } = await req.json()
+    const { title, niche, author } = await req.json()
 
-    const styleMap: Record<string, string> = {
-      moderno: 'dark background, neon green accents, futuristic tech style, glowing effects',
-      minimalista: 'white background, clean minimal design, elegant typography, lots of white space',
-      bold: 'vibrant colorful background, bold typography, high contrast, energetic design',
+    if (!title || !niche) {
+      return NextResponse.json({ error: 'Informe o titulo e o tema do ebook.' }, { status: 400 })
     }
 
-    const prompt = `Professional 3D ebook cover design for a book titled "${title}" about "${niche}". ${subtitle ? `Subtitle: "${subtitle}".` : ''} Style: ${styleMap[template] || styleMap.moderno}. The cover should look like a real physical book with 3D perspective, realistic shadows and depth. Show the book at a slight angle. Main color: ${color}. Professional publishing quality. No people, no faces. Text on cover should be clearly readable.`
+    const prompt = `Professional ebook cover design for a book titled "${title}", about the theme: "${niche}". Choose an illustration style, color palette and composition that best fits this specific theme. The cover should look like a real, professionally published physical book seen at a slight 3D angle, with realistic shadows and depth. The title "${title}" must be large, bold and clearly readable on the cover.${author ? ` Include the author name "${author}" in smaller text near the bottom of the cover.` : ''} High quality, professional publishing look. No people, no faces, no watermarks, no extra text besides the title${author ? ' and author name' : ''}.`
 
     const response = await openai.images.generate({
-      model: 'dall-e-3',
+      model: 'gpt-image-1',
       prompt,
       n: 1,
       size: '1024x1024',
-      quality: 'standard',
+      quality: 'medium',
     })
 
-    const imageUrl = response.data?.[0]?.url
+    const b64 = response.data?.[0]?.b64_json
+    const directUrl = response.data?.[0]?.url
+    const imageUrl = directUrl || (b64 ? `data:image/png;base64,${b64}` : null)
     if (!imageUrl) throw new Error('Imagem não gerada')
 
     return NextResponse.json({ imageUrl })
