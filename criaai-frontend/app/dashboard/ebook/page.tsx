@@ -80,7 +80,6 @@ function DeviceMockup({ device, imageUrl, loading, title }: { device: string; im
   )
 
   if (device === 'livro') {
-    const pageLines = Array.from({ length: 9 })
     return (
       <div style={{ perspective: 750, display: 'inline-block', padding: '10px 26px 26px 10px' }}>
         <div data-mockup-rotator="true" style={{
@@ -90,17 +89,6 @@ function DeviceMockup({ device, imageUrl, loading, title }: { device: string; im
           onMouseEnter={function(e) { (e.currentTarget as HTMLElement).style.transform = 'rotateY(-14deg) rotateX(1deg) scale(1.05)' }}
           onMouseLeave={function(e) { (e.currentTarget as HTMLElement).style.transform = 'rotateY(-32deg) rotateX(3deg)' }}
         >
-          {/* Bloco de paginas (miolo) */}
-          <div style={{
-            position: 'absolute', top: 3, bottom: 3, left: 4, width: 14,
-            transformOrigin: 'left', transform: 'rotateY(90deg) translateZ(-2px)',
-            background: 'linear-gradient(90deg,#fff,#f1efe8 60%,#e2ded2)',
-            display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly',
-          }}>
-            {pageLines.map(function(_, i) {
-              return <div key={i} style={{ height: 1, background: 'rgba(0,0,0,0.08)', marginLeft: 2, marginRight: 2 }} />
-            })}
-          </div>
           {/* Capa frontal */}
           <div style={{
             position: 'absolute', inset: 0, borderRadius: '1px 5px 5px 1px',
@@ -108,7 +96,7 @@ function DeviceMockup({ device, imageUrl, loading, title }: { device: string; im
             background: '#e9e9ee', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             {imageUrl ? (
-              <img src={imageUrl} alt={title || 'Capa do ebook'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img src={imageUrl} alt={title || 'Capa do ebook'} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
             ) : placeholder}
             {/* Reflexo glossy */}
             <div style={{ position: 'absolute', top: 0, left: 0, width: '55%', height: '100%', background: 'linear-gradient(115deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.05) 30%, transparent 55%)', pointerEvents: 'none', mixBlendMode: 'overlay' }} />
@@ -120,6 +108,12 @@ function DeviceMockup({ device, imageUrl, loading, title }: { device: string; im
             background: imageUrl ? 'linear-gradient(90deg,#0e0e14,#22222e)' : 'linear-gradient(90deg,#c9c8d4,#e2e1e8)',
             transformOrigin: 'right', transform: 'rotateY(-90deg)', borderRadius: '3px 0 0 3px',
             boxShadow: 'inset -2px 0 4px rgba(0,0,0,0.3)',
+          }} />
+          {/* Miolo de paginas (borda direita) */}
+          <div style={{
+            position: 'absolute', top: 2, bottom: 2, right: -6, width: 6,
+            transformOrigin: 'left', transform: 'rotateY(90deg)',
+            background: 'linear-gradient(90deg,#f4f2ea,#dedad0)',
           }} />
           {/* Sombra no chao */}
           <div style={{
@@ -169,7 +163,7 @@ function DeviceMockup({ device, imageUrl, loading, title }: { device: string; im
           </div>
 
           {imageUrl ? (
-            <img src={imageUrl} alt={title || 'Capa do ebook'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <img src={imageUrl} alt={title || 'Capa do ebook'} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
           ) : placeholder}
 
           {/* Reflexo de vidro na tela */}
