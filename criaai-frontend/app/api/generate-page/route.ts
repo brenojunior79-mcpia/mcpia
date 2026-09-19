@@ -228,9 +228,9 @@ export async function POST(req: NextRequest) {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'dall-e-3',
+          model: 'gpt-image-1',
           prompt: 'Professional product mockup for "' + productName + '" targeting ' + (audience || 'general audience') + '. Clean modern design, premium feel, no text or words, vibrant colors, studio lighting.',
-          n: 1, size: '1024x1024', quality: 'standard'
+          n: 1, size: '1024x1024', quality: 'medium'
         })
       })
     ])
@@ -238,10 +238,13 @@ export async function POST(req: NextRequest) {
     const copyData = await copyRes.json()
     const imageData = await imageRes.json()
     const copy = JSON.parse(copyData.choices?.[0]?.message?.content || '{}')
-    const dalleUrl = imageData.data?.[0]?.url || null
+    const dalleUrl: string | null = imageData.data?.[0]?.url || null
+    const dalleB64: string | null = imageData.data?.[0]?.b64_json || null
 
     let heroImageBase64: string | null = null
-    if (dalleUrl) {
+    if (dalleB64) {
+      heroImageBase64 = 'data:image/png;base64,' + dalleB64
+    } else if (dalleUrl) {
       try {
         const imgRes = await fetch(dalleUrl)
         const arrayBuffer = await imgRes.arrayBuffer()
