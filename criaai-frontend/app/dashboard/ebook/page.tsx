@@ -271,7 +271,17 @@ function Capa3D({ title, subtitle, gradient, icon, author, imageUrl }: { title: 
 function EbookMockup({ title, pdfUrl, coverImageUrl }: { title: string; pdfUrl: string; coverImageUrl?: string | null }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-      <Capa3D title={title} subtitle="" gradient="linear-gradient(135deg,#5b4ef8,#9b8ffc)" icon="📘" author="Cristão Próspero" imageUrl={coverImageUrl} />
+      {coverImageUrl ? (
+        <Capa3D title={title} subtitle="" gradient="linear-gradient(135deg,#5b4ef8,#9b8ffc)" icon="📘" author="Cristão Próspero" imageUrl={coverImageUrl} />
+      ) : (
+        <div style={{ width: 180, height: 240, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border)', boxShadow: '6px 6px 24px rgba(0,0,0,0.18)', background: '#fff' }}>
+          <iframe
+            src={pdfUrl + '#toolbar=0&navpanes=0&view=FitH'}
+            title={title || 'Preview do ebook'}
+            style={{ width: '100%', height: '100%', border: 'none' }}
+          />
+        </div>
+      )}
       <a href={pdfUrl} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'linear-gradient(135deg,#5b4ef8,#9b8ffc)', color: '#fff', fontWeight: 700, fontSize: 14, padding: '11px 22px', borderRadius: 12, textDecoration: 'none', boxShadow: '0 6px 16px rgba(91,78,248,0.3)' }}>
         <i className="ti ti-download" style={{ fontSize: 16 }} /> Baixar Ebook (PDF)
       </a>
@@ -343,6 +353,7 @@ export default function EbookPage() {
   const [form, setForm] = useState<EbookFormData>(defaultForm)
   const [credits, setCredits] = useState<CreditInfo | null>(null)
   const [ebooks, setEbooks] = useState<GeneratedEbook[]>([])
+  const [clearingList, setClearingList] = useState(false)
   const [themes, setThemes] = useState<Theme[]>(defaultThemes)
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -406,6 +417,24 @@ export default function EbookPage() {
         if (data.themes && data.themes.length > 0) setThemes(data.themes)
       }
     } catch (err) {}
+  }
+
+  async function limparEbooksGerados() {
+    if (ebooks.length === 0) return
+    const ok = window.confirm('Tem certeza que deseja apagar todos os ebooks gerados? Isso nao apaga seus creditos, apenas o historico da lista. Essa acao nao pode ser desfeita.')
+    if (!ok) return
+    setClearingList(true)
+    try {
+      const userResult = await supabase.auth.getUser()
+      const user = userResult.data.user
+      if (!user) return
+      await supabase.from('ebooks').delete().eq('user_id', user.id)
+      setEbooks([])
+    } catch (err) {
+      setCapaError('Nao foi possivel limpar a lista. Tente novamente.')
+    } finally {
+      setClearingList(false)
+    }
   }
 
   async function loadUserData() {
@@ -834,9 +863,26 @@ export default function EbookPage() {
 
         {/* Lista de ebooks gerados */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <span style={{ fontSize: 16 }}>📚</span>
-            <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0, fontFamily: 'Syne, sans-serif' }}>Ebooks gerados</h2>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 16 }}>📚</span>
+              <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0, fontFamily: 'Syne, sans-serif' }}>Ebooks gerados</h2>
+            </div>
+            {ebooks.length > 0 && (
+              <button
+                onClick={limparEbooksGerados}
+                disabled={clearingList}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6, background: 'transparent',
+                  border: '1px solid var(--border)', color: 'var(--muted2)', fontWeight: 600, fontSize: 12,
+                  padding: '7px 12px', borderRadius: 9, cursor: clearingList ? 'not-allowed' : 'pointer',
+                  fontFamily: 'Inter, sans-serif',
+                }}
+              >
+                <i className={'ti ' + (clearingList ? 'ti-loader' : 'ti-trash')} />
+                {clearingList ? 'Limpando...' : 'Limpar ebooks gerados'}
+              </button>
+            )}
           </div>
           {loadingData ? (
             <p style={{ fontSize: 14, color: 'var(--muted2)', textAlign: 'center', padding: '24px 0' }}>Carregando...</p>
