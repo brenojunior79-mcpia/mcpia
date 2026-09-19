@@ -224,6 +224,8 @@ export default function EbookPage() {
   const [ebooks, setEbooks] = useState<GeneratedEbook[]>([])
   const [themes, setThemes] = useState<Theme[]>(defaultThemes)
   const [loading, setLoading] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const progressRef = useRef<NodeJS.Timeout | null>(null)
   const [loadingData, setLoadingData] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -306,6 +308,15 @@ export default function EbookPage() {
     e.preventDefault()
     if (!hasSubscription) { window.location.href = '/dashboard/planos'; return }
     setError(null); setSuccess(null); setUpgradeRequired(false); setLoading(true)
+    setProgress(3)
+    if (progressRef.current) clearInterval(progressRef.current)
+    progressRef.current = setInterval(function() {
+      setProgress(function(p) {
+        if (p >= 92) return p
+        const step = p < 40 ? 4 : p < 70 ? 2 : 0.6
+        return Math.min(92, p + step)
+      })
+    }, 1200)
     try {
       const chaptersArray = form.chapters ? form.chapters.split('\n').map(function(c) { return c.trim() }).filter(Boolean) : []
       const res = await fetch('/api/generate-ebook', {
@@ -328,6 +339,7 @@ export default function EbookPage() {
         else { setError(data.error ?? 'Erro ao gerar ebook.') }
         return
       }
+      setProgress(100)
       setSuccess('Ebook gerado com sucesso!')
       const resetForm = { ...defaultForm, tone: form.tone, language: form.language, themeId: form.themeId }
       setForm(resetForm); saveToStorage(resetForm)
@@ -335,7 +347,8 @@ export default function EbookPage() {
     } catch (err: any) {
       setError(err.message ?? 'Erro inesperado.')
     } finally {
-      setLoading(false)
+      if (progressRef.current) { clearInterval(progressRef.current); progressRef.current = null }
+      setTimeout(function() { setLoading(false); setProgress(0) }, 400)
     }
   }
 
@@ -531,7 +544,29 @@ export default function EbookPage() {
             >
               {hasSubscription === false ? '🔒 Assinar para gerar ebooks' : loading ? 'Gerando ebook — aguarde...' : '✨ Gerar Ebook com IA'}
             </button>
-            {loading && <p style={{ fontSize: 12, color: 'var(--muted2)', textAlign: 'center', margin: 0 }}>Nao feche esta aba.</p>}
+            {loading && (
+              <div style={{ marginTop: 4 }}>
+                <div style={{ height: 8, background: 'var(--surface2)', borderRadius: 99, overflow: 'hidden', border: '1px solid var(--border)' }}>
+                  <div
+                    style={{
+                      height: '100%', width: progress + '%', borderRadius: 99,
+                      background: 'linear-gradient(90deg,#5b4ef8,#9b8ffc)',
+                      backgroundSize: '200% 100%',
+                      animation: 'ebookProgressStripe 1.4s linear infinite',
+                      transition: 'width 0.5s ease',
+                    }}
+                  />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+                  <span style={{ fontSize: 12, color: 'var(--muted2)' }}>
+                    {progress < 25 ? 'Preparando o conteudo...' : progress < 60 ? 'Escrevendo os capitulos com IA...' : progress < 92 ? 'Formatando o PDF...' : 'Quase pronto...'}
+                  </span>
+                  <span style={{ fontSize: 12, color: 'var(--accent2)', fontWeight: 700 }}>{Math.round(progress)}%</span>
+                </div>
+                <p style={{ fontSize: 12, color: 'var(--muted2)', textAlign: 'center', margin: '10px 0 0' }}>Isso pode levar alguns minutos. Nao feche esta aba.</p>
+                <style>{'@keyframes ebookProgressStripe{0%{background-position:0% 0}100%{background-position:200% 0}}'}</style>
+              </div>
+            )}
           </div>
         </div>
 
