@@ -54,7 +54,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
     { href: '/dashboard/produtos', icon: 'ti-flame', label: 'Produtos em Alta', locked: false },
     { href: '/dashboard/ebook', icon: 'ti-book-2', label: 'Gerador de Ebook', locked: false },
     { href: '/dashboard/paginas', icon: 'ti-layout', label: 'Gerador de Site', locked: false },
-    { href: '/dashboard/criativo', icon: 'ti-sparkles', label: 'Gerador de Criativos', locked: false },
+    { href: '/dashboard/criativo', icon: 'ti-sparkles', label: 'Gerador de Criativos', locked: true, lockStatus: 'Em atualizacao' },
     { href: '/dashboard/vendas', icon: 'ti-rocket', label: 'Vendendo no Automatico', locked: false },
     { href: '/dashboard/metricas', icon: 'ti-chart-bar', label: 'Analisando Metricas', locked: false },
     { href: '/dashboard/suporte', icon: 'ti-headset', label: 'Suporte Humano', locked: false },
@@ -103,11 +103,12 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
         <nav className={styles.nav}>
           {navItems.map(function(item) {
             if (item.locked) {
+              const status = (item as any).lockStatus || 'Em breve'
               return (
-                <div key={item.href} className={styles.navItemLocked} title={item.label + ' — Em breve'}>
+                <div key={item.href} className={styles.navItemLocked} title={item.label + ' — ' + status}>
                   <i className={'ti ' + item.icon} />
                   <span>{item.label}</span>
-                  <span className={styles.lockBadge}><i className="ti ti-lock" /> Em breve</span>
+                  <span className={styles.lockBadge}><i className="ti ti-lock" /> {status}</span>
                 </div>
               )
             }
