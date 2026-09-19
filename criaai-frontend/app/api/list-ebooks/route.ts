@@ -27,18 +27,21 @@ export async function GET() {
 
     const profileResult = await supabase
       .from('profiles')
-      .select('credits_ebooks_used, credits_ebooks_extra, plans(name, credits_ebooks)')
+      .select('credits_ebooks_used, credits_ebooks_extra, is_admin, plans(name, credits_ebooks)')
       .eq('id', user.id)
       .single()
 
     const profile = profileResult.data
     const plan = profile ? (profile as any).plans : null
+    const isAdmin = (profile as any)?.is_admin === true
 
-    const credits = {
-      used: profile?.credits_ebooks_used ?? 0,
-      limit: (plan?.credits_ebooks ?? 0) + (profile?.credits_ebooks_extra ?? 0),
-      planName: plan?.name ?? 'Starter',
-    }
+    const credits = isAdmin
+      ? { used: 0, limit: 999999, planName: 'Admin (ilimitado)' }
+      : {
+          used: profile?.credits_ebooks_used ?? 0,
+          limit: (plan?.credits_ebooks ?? 0) + (profile?.credits_ebooks_extra ?? 0),
+          planName: plan?.name ?? 'Starter',
+        }
 
     const ebookResult = await supabase
       .from('ebooks')
