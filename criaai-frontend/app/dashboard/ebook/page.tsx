@@ -81,7 +81,7 @@ function DeviceMockup({ device, imageUrl, loading, title }: { device: string; im
 
   if (device === 'livro') {
     return (
-      <div style={{ perspective: 750, display: 'inline-block', padding: '10px 26px 26px 10px' }}>
+      <div style={{ perspective: 750, display: 'inline-block', padding: '10px 26px 26px 18px' }}>
         <div data-mockup-rotator="true" style={{
           width: 118, height: 172, position: 'relative', transformStyle: 'preserve-3d',
           transform: 'rotateY(-32deg) rotateX(3deg)', transition: 'transform 0.4s ease',
@@ -102,13 +102,18 @@ function DeviceMockup({ device, imageUrl, loading, title }: { device: string; im
             <div style={{ position: 'absolute', top: 0, left: 0, width: '55%', height: '100%', background: 'linear-gradient(115deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.05) 30%, transparent 55%)', pointerEvents: 'none', mixBlendMode: 'overlay' }} />
             <div style={{ position: 'absolute', inset: 0, boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.08)', pointerEvents: 'none' }} />
           </div>
-          {/* Lombada */}
-          <div style={{
-            position: 'absolute', top: 0, left: -13, width: 13, height: '100%',
-            background: imageUrl ? 'linear-gradient(90deg,#0e0e14,#22222e)' : 'linear-gradient(90deg,#c9c8d4,#e2e1e8)',
-            transformOrigin: 'right', transform: 'rotateY(-90deg)', borderRadius: '3px 0 0 3px',
-            boxShadow: 'inset -2px 0 4px rgba(0,0,0,0.3)',
-          }} />
+          {/* Grampos do espiral */}
+          <div style={{ position: 'absolute', top: 6, bottom: 6, left: -5, width: 8, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', zIndex: 2 }}>
+            {Array.from({ length: 11 }).map(function(_, i) {
+              return (
+                <div key={i} style={{
+                  width: 8, height: 8, borderRadius: '50%',
+                  background: 'radial-gradient(circle at 35% 30%, #55555f, #0a0a0d 75%)',
+                  border: '1px solid #000', boxShadow: '1px 1px 2px rgba(0,0,0,0.5)',
+                }} />
+              )
+            })}
+          </div>
           {/* Miolo de paginas (borda direita) */}
           <div style={{
             position: 'absolute', top: 2, bottom: 2, right: -6, width: 6,
@@ -153,24 +158,12 @@ function DeviceMockup({ device, imageUrl, loading, title }: { device: string; im
           overflow: 'hidden', position: 'relative', background: '#000',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          {/* Barra de status */}
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 7px', zIndex: 2 }}>
-            <span style={{ fontSize: 6, color: '#fff', fontWeight: 700, textShadow: '0 1px 1px rgba(0,0,0,0.5)' }}>9:41</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <i className="ti ti-antenna-bars-5" style={{ fontSize: 7, color: '#fff' }} />
-              <i className="ti ti-battery-4" style={{ fontSize: 8, color: '#fff' }} />
-            </div>
-          </div>
-
           {imageUrl ? (
-            <img src={imageUrl} alt={title || 'Capa do ebook'} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            <img src={imageUrl} alt={title || 'Capa do ebook'} style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
           ) : placeholder}
 
           {/* Reflexo de vidro na tela */}
           <div style={{ position: 'absolute', top: 0, left: 0, width: '45%', height: '100%', background: 'linear-gradient(115deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.04) 25%, transparent 45%)', pointerEvents: 'none' }} />
-
-          {/* Indicador home (barra inferior) */}
-          <div style={{ position: 'absolute', bottom: 4, left: '50%', transform: 'translateX(-50%)', width: isTablet ? 40 : 28, height: 2.5, borderRadius: 2, background: 'rgba(255,255,255,0.65)', zIndex: 2 }} />
         </div>
       </div>
     </div>
