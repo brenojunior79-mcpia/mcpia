@@ -22,6 +22,7 @@ interface GeneratedEbook {
   gamma_generation_id: string
   title: string
   pdf_url: string
+  cover_image_url?: string | null
   created_at?: string
   status: string
 }
@@ -69,7 +70,26 @@ const capaColors = [
 
 const capaIcons = ['📘','📗','📕','📙','📓','📔','💡','🚀','⭐','🔥','✝️','💰']
 
-function Capa3D({ title, subtitle, gradient, icon, author }: { title: string; subtitle: string; gradient: string; icon: string; author: string }) {
+function Capa3D({ title, subtitle, gradient, icon, author, imageUrl }: { title: string; subtitle: string; gradient: string; icon: string; author: string; imageUrl?: string | null }) {
+  if (imageUrl) {
+    return (
+      <div style={{ display: 'inline-block', transform: 'rotate(-1.5deg)', transition: 'transform 0.3s ease' }}
+        onMouseEnter={function(e) { (e.currentTarget as HTMLElement).style.transform = 'rotate(0deg) scale(1.03)' }}
+        onMouseLeave={function(e) { (e.currentTarget as HTMLElement).style.transform = 'rotate(-1.5deg)' }}
+      >
+        <img
+          src={imageUrl}
+          alt={title || 'Capa do ebook'}
+          style={{
+            width: 220, height: 220, objectFit: 'cover', borderRadius: 12,
+            boxShadow: '10px 14px 34px rgba(0,0,0,0.35)',
+            border: '1px solid rgba(255,255,255,0.15)',
+          }}
+        />
+      </div>
+    )
+  }
+
   return (
     <div style={{ perspective: 800, display: 'inline-block' }}>
       <div style={{
@@ -147,10 +167,10 @@ function Capa3D({ title, subtitle, gradient, icon, author }: { title: string; su
   )
 }
 
-function EbookMockup({ title, pdfUrl }: { title: string; pdfUrl: string }) {
+function EbookMockup({ title, pdfUrl, coverImageUrl }: { title: string; pdfUrl: string; coverImageUrl?: string | null }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-      <Capa3D title={title} subtitle="" gradient="linear-gradient(135deg,#5b4ef8,#9b8ffc)" icon="📘" author="Cristão Próspero" />
+      <Capa3D title={title} subtitle="" gradient="linear-gradient(135deg,#5b4ef8,#9b8ffc)" icon="📘" author="Cristão Próspero" imageUrl={coverImageUrl} />
       <a href={pdfUrl} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'linear-gradient(135deg,#5b4ef8,#9b8ffc)', color: '#fff', fontWeight: 700, fontSize: 14, padding: '11px 22px', borderRadius: 12, textDecoration: 'none', boxShadow: '0 6px 16px rgba(91,78,248,0.3)' }}>
         <i className="ti ti-download" style={{ fontSize: 16 }} /> Baixar Ebook (PDF)
       </a>
@@ -229,6 +249,7 @@ export default function EbookPage() {
   const [loadingData, setLoadingData] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [lastResult, setLastResult] = useState<{ title: string; pdfUrl: string; coverImageUrl?: string | null } | null>(null)
   const [upgradeRequired, setUpgradeRequired] = useState(false)
   const [hasSubscription, setHasSubscription] = useState<boolean | null>(null)
 
@@ -341,6 +362,7 @@ export default function EbookPage() {
       }
       setProgress(100)
       setSuccess('Ebook gerado com sucesso!')
+      setLastResult({ title: form.title, pdfUrl: data.pdfUrl, coverImageUrl: data.coverImageUrl })
       const resetForm = { ...defaultForm, tone: form.tone, language: form.language, themeId: form.themeId }
       setForm(resetForm); saveToStorage(resetForm)
       await loadUserData()
@@ -461,9 +483,16 @@ export default function EbookPage() {
         )}
 
         {success && (
-          <div style={{ display: 'flex', gap: 12, padding: 16, borderRadius: 12, background: '#f0fdf4', border: '1px solid rgba(22,163,74,0.2)', marginBottom: 16 }}>
-            <span>✅</span>
-            <p style={{ color: 'var(--green)', margin: 0, fontSize: 14 }}>{success}</p>
+          <div style={{ display: 'flex', gap: 16, alignItems: 'center', padding: 16, borderRadius: 12, background: '#f0fdf4', border: '1px solid rgba(22,163,74,0.2)', marginBottom: 16, flexWrap: 'wrap' }}>
+            {lastResult && (
+              <div style={{ flexShrink: 0 }}>
+                <EbookMockup title={lastResult.title} pdfUrl={lastResult.pdfUrl} coverImageUrl={lastResult.coverImageUrl} />
+              </div>
+            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span>✅</span>
+              <p style={{ color: 'var(--green)', margin: 0, fontSize: 14 }}>{success}</p>
+            </div>
           </div>
         )}
 
@@ -677,7 +706,7 @@ export default function EbookPage() {
                 return (
                   <div key={ebook.gamma_generation_id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 24, boxShadow: 'var(--shadow-sm)' }}>
                     {ebook.status === 'completed' && ebook.pdf_url ? (
-                      <EbookMockup title={ebook.title} pdfUrl={ebook.pdf_url} />
+                      <EbookMockup title={ebook.title} pdfUrl={ebook.pdf_url} coverImageUrl={ebook.cover_image_url} />
                     ) : (
                       <div style={{ width: 120, height: 160, background: 'var(--surface2)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)' }}>
                         <span style={{ fontSize: 32 }}>📄</span>
