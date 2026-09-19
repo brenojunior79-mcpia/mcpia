@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import OpenAI from 'openai'
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
 const GAMMA_API_URL = 'https://public-api.gamma.app/v1.0/generations'
 const GAMMA_API_KEY = process.env.GAMMA_API_KEY!
@@ -150,6 +153,21 @@ export async function POST(req: NextRequest) {
     const generationId = await startGammaGeneration(prompt, title, targetAudience, tone, language, themeId || undefined)
     const result = await pollGammaUntilDone(generationId)
 
+    let coverImageUrl: string | null = null
+    try {
+      const coverPrompt = `Professional 3D ebook cover design for a book titled "${title}" about "${topic}". ${targetAudience ? `Target audience: ${targetAudience}.` : ''} Style: modern, eye-catching, matches the tone "${tone || 'motivational'}". The cover should look like a real physical book seen at a slight 3D angle, with realistic shadows and depth, like a professional book mockup. Clean composition, no people, no faces. Title text should be large, bold and clearly readable on the cover.`
+      const coverResponse = await openai.images.generate({
+        model: 'dall-e-3',
+        prompt: coverPrompt,
+        n: 1,
+        size: '1024x1024',
+        quality: 'standard',
+      })
+      coverImageUrl = coverResponse.data?.[0]?.url ?? null
+    } catch (coverErr) {
+      console.error('[generate-ebook] cover generation failed:', coverErr)
+    }
+
     if (!isAdmin) {
       await supabase.from('profiles').update({ credits_ebooks_used: creditsUsed + 1 }).eq('id', user.id)
     }
@@ -159,6 +177,7 @@ export async function POST(req: NextRequest) {
       topic: topic,
       gamma_generation_id: generationId,
       pdf_url: result.exportUrl,
+      cover_image_url: coverImageUrl,
       status: 'completed',
     })
 
@@ -166,6 +185,7 @@ export async function POST(req: NextRequest) {
       success: true,
       pdfUrl: result.exportUrl,
       gammaUrl: result.gammaUrl,
+      coverImageUrl: coverImageUrl,
       generationId: generationId,
       creditsRemaining: creditLimit - (creditsUsed + 1),
     })
