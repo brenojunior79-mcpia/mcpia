@@ -83,7 +83,7 @@ function DeviceMockup({ device, imageUrl, loading, title }: { device: string; im
     const pageLines = Array.from({ length: 9 })
     return (
       <div style={{ perspective: 750, display: 'inline-block', padding: '10px 26px 26px 10px' }}>
-        <div style={{
+        <div data-mockup-rotator="true" style={{
           width: 118, height: 172, position: 'relative', transformStyle: 'preserve-3d',
           transform: 'rotateY(-32deg) rotateX(3deg)', transition: 'transform 0.4s ease',
         }}
@@ -374,6 +374,8 @@ export default function EbookPage() {
   const [capaLoading, setCapaLoading] = useState(false)
   const [capaImageUrl, setCapaImageUrl] = useState<string | null>(null)
   const [capaError, setCapaError] = useState<string | null>(null)
+  const [salvandoMockup, setSalvandoMockup] = useState<string | null>(null)
+  const mockupRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   const supabase = createClient()
   const router = useRouter()
@@ -523,6 +525,35 @@ export default function EbookPage() {
       setCapaError(err.message ?? 'Erro inesperado ao gerar a capa.')
     } finally {
       setCapaLoading(false)
+    }
+  }
+
+  async function salvarMockup(deviceId: string) {
+    const el = mockupRefs.current[deviceId]
+    if (!el) return
+    setSalvandoMockup(deviceId)
+    try {
+      const html2canvas = (await import('html2canvas')).default
+      const rotator = el.querySelector('[data-mockup-rotator]') as HTMLElement | null
+      const prevTransform = rotator ? rotator.style.transform : null
+      if (rotator) rotator.style.transform = 'none'
+
+      const canvas = await html2canvas(el, { backgroundColor: null, scale: 3, useCORS: true })
+
+      if (rotator && prevTransform !== null) rotator.style.transform = prevTransform
+
+      const dataUrl = canvas.toDataURL('image/png')
+      const link = document.createElement('a')
+      link.href = dataUrl
+      link.download = (capaTitle || form.title || 'capa-ebook') + '-' + deviceId + '.png'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch (err) {
+      console.error('Erro ao salvar mockup:', err)
+      setCapaError('Nao foi possivel salvar a imagem. Tente novamente.')
+    } finally {
+      setSalvandoMockup(null)
     }
   }
 
@@ -787,24 +818,25 @@ export default function EbookPage() {
             {/* Preview nos 3 modelos ao mesmo tempo */}
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', justifyContent: 'center', paddingTop: 8, borderTop: '1px solid var(--border)' }}>
               {capaDevices.map(function(d) {
+                const salvando = salvandoMockup === d.id
                 return (
                   <div key={d.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: 6 }}>
                       <i className={'ti ' + d.icon} style={{ fontSize: 13 }} />
                       {d.label}
                     </div>
-                    <DeviceMockup device={d.id} imageUrl={capaImageUrl} loading={capaLoading} title={capaTitle || form.title} />
+                    <div ref={function(el) { mockupRefs.current[d.id] = el }} style={{ display: 'inline-block' }}>
+                      <DeviceMockup device={d.id} imageUrl={capaImageUrl} loading={capaLoading} title={capaTitle || form.title} />
+                    </div>
                     {capaImageUrl && (
-                      <a
-                        href={capaImageUrl}
-                        download={(capaTitle || form.title || 'capa-ebook') + '-' + d.id + '.png'}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: 12, padding: '8px 14px', borderRadius: 9, cursor: 'pointer', fontFamily: 'Inter, sans-serif', textDecoration: 'none' }}
+                      <button
+                        onClick={function() { salvarMockup(d.id) }}
+                        disabled={salvando}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: 12, padding: '8px 14px', borderRadius: 9, cursor: salvando ? 'not-allowed' : 'pointer', fontFamily: 'Inter, sans-serif' }}
                       >
-                        <i className="ti ti-download" style={{ fontSize: 13 }} />
-                        Salvar
-                      </a>
+                        <i className={'ti ' + (salvando ? 'ti-loader' : 'ti-download')} style={{ fontSize: 13, animation: salvando ? 'spinCapa 1s linear infinite' : undefined }} />
+                        {salvando ? 'Salvando...' : 'Salvar'}
+                      </button>
                     )}
                   </div>
                 )
