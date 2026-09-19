@@ -1,7 +1,7 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 
-const products = [
+const digitalProducts = [
   {
     id: 'jovens-altar',
     name: 'Jovens no Altar',
@@ -100,13 +100,253 @@ const products = [
   },
 ]
 
+const physicalProducts = [
+  {
+    id: 'progressiva-vegetal',
+    name: 'Progressiva Vegetal Creme',
+    platform: 'logzz',
+    category: 'Beleza e Cabelo',
+    description: 'Progressiva vegetal em creme, alta demanda no publico feminino. Venda direta por WhatsApp, sem necessidade de pagina de vendas.',
+    audience: 'Mulheres, saloes de beleza, revendedoras',
+    ageRange: '20-50 anos',
+    dailySales: 'Alta demanda',
+    affiliateUrl: 'https://app.logzz.com.br/loja/produto/2494',
+    driveUrl: 'https://drive.google.com/drive/folders/1xZaqXR5C61ioZEaj_vfmDbdUIvgWFrRl',
+    whatsappGroupUrl: 'https://chat.whatsapp.com/I0qU6lHleqP2tcqBJUNfjk',
+    soldViaWhatsapp: true,
+    image: 'https://logzz-s3.s3.us-east-2.amazonaws.com/uploads/files/products/prok9x6e/img_0_20251113-202321.webp',
+    color: '#14b8a6',
+    colorBg: 'rgba(20,184,166,0.08)',
+  },
+  {
+    id: 'escova-alisadora',
+    name: 'Escova Alisadora 3 em 1',
+    platform: 'logzz',
+    category: 'Beleza e Cabelo',
+    description: 'Escova alisadora eletrica 3 em 1, muito procurada para modelar, secar e alisar. Venda direta por WhatsApp.',
+    audience: 'Mulheres, saloes de beleza, revendedoras',
+    ageRange: '18-50 anos',
+    dailySales: 'Alta demanda',
+    affiliateUrl: 'https://app.logzz.com.br/loja/produto/2203',
+    driveUrl: '',
+    whatsappGroupUrl: 'https://chat.whatsapp.com/GOlEOLyoXy54dc6hOLDWAZ',
+    soldViaWhatsapp: true,
+    image: 'https://logzz-s3.s3.us-east-2.amazonaws.com/uploads/files/products/20260225-001026prommyom.jpg',
+    color: '#f43f5e',
+    colorBg: 'rgba(244,63,94,0.08)',
+  },
+  {
+    id: 'caneta-depiladora',
+    name: 'Caneta Depilador Eletrico',
+    platform: 'logzz',
+    category: 'Beleza e Cuidados',
+    description: 'Depilador eletrico portatil em formato de caneta, indolor e pratico. Venda direta por WhatsApp.',
+    audience: 'Mulheres, publico geral, revendedoras',
+    ageRange: '18-45 anos',
+    dailySales: 'Alta demanda',
+    affiliateUrl: 'https://app.logzz.com.br/loja/produto/17751',
+    driveUrl: 'https://drive.google.com/drive/folders/1ZwlHWPVCXHjW3B_4fNm1RrjdgfXZkt3k?usp=sharing',
+    whatsappGroupUrl: 'https://chat.whatsapp.com/Gt4V0wucTA28QwfwBsPZOk',
+    soldViaWhatsapp: true,
+    image: '/produtos/caneta-depiladora.png',
+    color: '#8b5cf6',
+    colorBg: 'rgba(139,92,246,0.08)',
+  },
+]
+
 const platformColors: Record<string, { bg: string; text: string; label: string }> = {
   cakto: { bg: 'rgba(124,92,252,0.12)', text: '#7c5cfc', label: 'CAKTO' },
   kiwify: { bg: 'rgba(34,197,94,0.12)', text: '#16a34a', label: 'KIWIFY' },
+  logzz: { bg: 'rgba(245,158,11,0.12)', text: '#d97706', label: 'LOGZZ' },
+}
+
+function ProductCard({ product, selected, onToggle }: { product: any; selected: boolean; onToggle: () => void }) {
+  const plat = platformColors[product.platform]
+
+  return (
+    <div
+      style={{
+        background: 'var(--surface)',
+        border: '2px solid ' + (selected ? product.color : 'var(--border)'),
+        borderRadius: 18,
+        overflow: 'hidden',
+        transition: 'all 0.25s',
+        cursor: 'pointer',
+        transform: selected ? 'translateY(-4px)' : 'translateY(0)',
+        boxShadow: selected ? '0 16px 40px rgba(0,0,0,0.12)' : 'var(--shadow-sm)',
+        flex: '0 0 290px',
+        scrollSnapAlign: 'start',
+      }}
+      onClick={onToggle}
+    >
+      {/* Imagem do produto */}
+      <div style={{ position: 'relative', height: 170, overflow: 'hidden', background: product.colorBg }}>
+        {product.image ? (
+          <img
+            src={product.image}
+            alt={product.name}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }}
+            onError={function(e: any) { e.target.style.display = 'none' }}
+          />
+        ) : (
+          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 44 }}>
+            {product.platform === 'logzz' ? '📦' : '🛒'}
+          </div>
+        )}
+        <div style={{ position: 'absolute', top: 12, left: 12, background: plat.bg, border: '1px solid ' + plat.text + '44', borderRadius: 99, padding: '3px 10px', fontSize: 10, fontWeight: 800, color: plat.text, backdropFilter: 'blur(8px)' }}>
+          {plat.label}
+        </div>
+        <div style={{ position: 'absolute', top: 12, right: 12, background: 'rgba(22,163,74,0.9)', borderRadius: 99, padding: '3px 10px', fontSize: 10, fontWeight: 700, color: '#fff' }}>
+          {product.dailySales}
+        </div>
+      </div>
+
+      {/* Info */}
+      <div style={{ padding: '16px 18px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+          <span style={{ fontFamily: 'Syne, sans-serif', fontSize: 15, fontWeight: 800 }}>{product.name}</span>
+        </div>
+        <div style={{ fontSize: 11, background: product.colorBg, border: '1px solid ' + product.color + '33', color: product.color, borderRadius: 99, padding: '2px 10px', fontWeight: 600, display: 'inline-block', marginBottom: 10 }}>
+          {product.category}
+        </div>
+        <p style={{ fontSize: 12, color: 'var(--muted2)', margin: '0 0 12px', lineHeight: 1.6 }}>{product.description}</p>
+
+        <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap' }}>
+          <div style={{ background: 'var(--surface2)', borderRadius: 8, padding: '4px 8px', fontSize: 11 }}>👥 {product.ageRange}</div>
+          <div style={{ background: 'var(--surface2)', borderRadius: 8, padding: '4px 8px', fontSize: 11 }}>🎯 {product.audience.split(',')[0]}</div>
+        </div>
+
+        {product.soldViaWhatsapp && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.2)', borderRadius: 9, padding: '7px 10px', marginBottom: 10 }}>
+            <i className="ti ti-brand-whatsapp" style={{ color: '#16a34a', fontSize: 15, flexShrink: 0 }} />
+            <span style={{ fontSize: 11, color: '#16a34a', fontWeight: 600, lineHeight: 1.4 }}>Este produto nao tem pagina de vendas — a venda e feita direto pelo WhatsApp</span>
+          </div>
+        )}
+
+        {/* Botoes */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <a
+            href={product.affiliateUrl}
+            target="_blank"
+            rel="noreferrer"
+            onClick={function(e) { e.stopPropagation() }}
+            style={{ background: 'linear-gradient(135deg, ' + product.color + ', ' + product.color + 'bb)', color: '#fff', fontWeight: 700, fontSize: 13, padding: '10px', borderRadius: 10, textDecoration: 'none', textAlign: 'center', display: 'block', boxShadow: '0 4px 12px ' + product.color + '33' }}
+          >
+            🤝 Quero me afiliar
+          </a>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {product.siteUrl && (
+              <a
+                href={product.siteUrl}
+                target="_blank"
+                rel="noreferrer"
+                onClick={function(e) { e.stopPropagation() }}
+                style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: 11, padding: '8px', borderRadius: 8, textDecoration: 'none', textAlign: 'center', display: 'block' }}
+              >
+                🌐 Ver site
+              </a>
+            )}
+            {product.whatsappGroupUrl && (
+              <a
+                href={product.whatsappGroupUrl}
+                target="_blank"
+                rel="noreferrer"
+                onClick={function(e) { e.stopPropagation() }}
+                style={{ flex: 1, background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.2)', color: '#16a34a', fontWeight: 600, fontSize: 11, padding: '8px', borderRadius: 8, textDecoration: 'none', textAlign: 'center', display: 'block' }}
+              >
+                <i className="ti ti-brand-whatsapp" style={{ marginRight: 4 }} />Grupo
+              </a>
+            )}
+            {product.driveUrl && (
+              <a
+                href={product.driveUrl}
+                target="_blank"
+                rel="noreferrer"
+                onClick={function(e) { e.stopPropagation() }}
+                style={{ flex: 1, background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', color: '#3b82f6', fontWeight: 600, fontSize: 11, padding: '8px', borderRadius: 8, textDecoration: 'none', textAlign: 'center', display: 'block' }}
+              >
+                📁 Material
+              </a>
+            )}
+          </div>
+        </div>
+
+        {selected && (
+          <div style={{ marginTop: 14, borderTop: '1px solid var(--border)', paddingTop: 14 }}>
+            <div style={{ background: 'var(--surface2)', border: '1px dashed var(--border)', borderRadius: 10, padding: '14px', textAlign: 'center' }}>
+              <div style={{ fontSize: 20, marginBottom: 4 }}>🎬</div>
+              <div style={{ fontSize: 12, color: 'var(--muted2)' }}>Aula de afiliacao em breve</div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ProductCarousel({ title, icon, products, selected, onToggle }: { title: string; icon: string; products: any[]; selected: string | null; onToggle: (id: string) => void }) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  function scroll(dir: number) {
+    const el = scrollRef.current
+    if (!el) return
+    el.scrollBy({ left: dir * 310, behavior: 'smooth' })
+  }
+
+  return (
+    <div style={{ marginBottom: 32 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 18 }}>{icon}</span>
+          <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 16, fontWeight: 800, margin: 0 }}>{title}</h2>
+          <span style={{ fontSize: 11, color: 'var(--muted2)', background: 'var(--surface2)', borderRadius: 99, padding: '2px 9px' }}>{products.length}</span>
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button
+            onClick={function() { scroll(-1) }}
+            aria-label="Anterior"
+            style={{ width: 30, height: 30, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <i className="ti ti-chevron-left" />
+          </button>
+          <button
+            onClick={function() { scroll(1) }}
+            aria-label="Proximo"
+            style={{ width: 30, height: 30, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <i className="ti ti-chevron-right" />
+          </button>
+        </div>
+      </div>
+      <div
+        ref={scrollRef}
+        style={{
+          display: 'flex', gap: 18, overflowX: 'auto', scrollSnapType: 'x mandatory',
+          paddingBottom: 10, marginBottom: -10,
+          scrollbarWidth: 'none',
+        }}
+      >
+        {products.map(function(product) {
+          return (
+            <ProductCard
+              key={product.id}
+              product={product}
+              selected={selected === product.id}
+              onToggle={function() { onToggle(product.id) }}
+            />
+          )
+        })}
+      </div>
+    </div>
+  )
 }
 
 export default function ProdutosAltaPage() {
   const [selected, setSelected] = useState<string | null>(null)
+
+  function toggle(id: string) {
+    setSelected(function(s) { return s === id ? null : id })
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', padding: '32px 24px' }}>
@@ -119,12 +359,12 @@ export default function ProdutosAltaPage() {
             <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: 24, fontWeight: 800, margin: 0 }}>Produtos em Alta</h1>
           </div>
           <p style={{ fontSize: 14, color: 'var(--muted2)', margin: 0 }}>
-            Escolha um produto, se afilie e comece a vender hoje mesmo
+            Arraste para o lado para ver mais opcoes. Escolha um produto, se afilie e comece a vender hoje mesmo
           </p>
         </div>
 
         {/* Passo a passo */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 32 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 36 }}>
           {[
             { num: '1', label: 'Escolha o produto', icon: '🎯' },
             { num: '2', label: 'Acesse o material', icon: '📦' },
@@ -140,116 +380,11 @@ export default function ProdutosAltaPage() {
           })}
         </div>
 
-        {/* Grid de produtos */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20, marginBottom: 32 }}>
-          {products.map(function(product) {
-            const isSelected = selected === product.id
-            const plat = platformColors[product.platform]
+        {/* Carrossel: Produtos Digitais */}
+        <ProductCarousel title="Produtos Digitais" icon="💻" products={digitalProducts} selected={selected} onToggle={toggle} />
 
-            return (
-              <div
-                key={product.id}
-                style={{
-                  background: 'var(--surface)',
-                  border: '2px solid ' + (isSelected ? product.color : 'var(--border)'),
-                  borderRadius: 18,
-                  overflow: 'hidden',
-                  transition: 'all 0.25s',
-                  cursor: 'pointer',
-                  transform: isSelected ? 'translateY(-4px)' : 'translateY(0)',
-                  boxShadow: isSelected ? '0 16px 40px rgba(0,0,0,0.12)' : 'var(--shadow-sm)',
-                }}
-                onClick={function() { setSelected(isSelected ? null : product.id) }}
-              >
-                {/* Imagem do produto */}
-                <div style={{ position: 'relative', height: 180, overflow: 'hidden', background: product.colorBg }}>
-                  {product.image ? (
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }}
-                      onError={function(e: any) { e.target.style.display = 'none' }}
-                    />
-                  ) : (
-                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
-                      🛒
-                    </div>
-                  )}
-                  {/* Badge plataforma */}
-                  <div style={{ position: 'absolute', top: 12, left: 12, background: plat.bg, border: '1px solid ' + plat.text + '44', borderRadius: 99, padding: '3px 10px', fontSize: 10, fontWeight: 800, color: plat.text, backdropFilter: 'blur(8px)' }}>
-                    {plat.label}
-                  </div>
-                  {/* Badge potencial */}
-                  <div style={{ position: 'absolute', top: 12, right: 12, background: 'rgba(22,163,74,0.9)', borderRadius: 99, padding: '3px 10px', fontSize: 10, fontWeight: 700, color: '#fff' }}>
-                    {product.dailySales}
-                  </div>
-                </div>
-
-                {/* Info */}
-                <div style={{ padding: '16px 18px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                    <span style={{ fontFamily: 'Syne, sans-serif', fontSize: 15, fontWeight: 800 }}>{product.name}</span>
-                  </div>
-                  <div style={{ fontSize: 11, background: product.colorBg, border: '1px solid ' + product.color + '33', color: product.color, borderRadius: 99, padding: '2px 10px', fontWeight: 600, display: 'inline-block', marginBottom: 10 }}>
-                    {product.category}
-                  </div>
-                  <p style={{ fontSize: 12, color: 'var(--muted2)', margin: '0 0 12px', lineHeight: 1.6 }}>{product.description}</p>
-
-                  {/* Infos rapidas */}
-                  <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap' }}>
-                    <div style={{ background: 'var(--surface2)', borderRadius: 8, padding: '4px 8px', fontSize: 11 }}>👥 {product.ageRange}</div>
-                    <div style={{ background: 'var(--surface2)', borderRadius: 8, padding: '4px 8px', fontSize: 11 }}>🎯 {product.audience.split(',')[0]}</div>
-                  </div>
-
-                  {/* Botoes */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <a
-                      href={product.affiliateUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={function(e) { e.stopPropagation() }}
-                      style={{ background: 'linear-gradient(135deg, ' + product.color + ', ' + product.color + 'bb)', color: '#fff', fontWeight: 700, fontSize: 13, padding: '10px', borderRadius: 10, textDecoration: 'none', textAlign: 'center', display: 'block', boxShadow: '0 4px 12px ' + product.color + '33' }}
-                    >
-                      🤝 Quero me afiliar
-                    </a>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <a
-                        href={product.siteUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={function(e) { e.stopPropagation() }}
-                        style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: 11, padding: '8px', borderRadius: 8, textDecoration: 'none', textAlign: 'center', display: 'block' }}
-                      >
-                        🌐 Ver site
-                      </a>
-                      {product.driveUrl && (
-                        <a
-                          href={product.driveUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          onClick={function(e) { e.stopPropagation() }}
-                          style={{ flex: 1, background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.2)', color: '#16a34a', fontWeight: 600, fontSize: 11, padding: '8px', borderRadius: 8, textDecoration: 'none', textAlign: 'center', display: 'block' }}
-                        >
-                          📁 Material
-                        </a>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Aula expandida */}
-                  {isSelected && (
-                    <div style={{ marginTop: 14, borderTop: '1px solid var(--border)', paddingTop: 14 }}>
-                      <div style={{ background: 'var(--surface2)', border: '1px dashed var(--border)', borderRadius: 10, padding: '14px', textAlign: 'center' }}>
-                        <div style={{ fontSize: 20, marginBottom: 4 }}>🎬</div>
-                        <div style={{ fontSize: 12, color: 'var(--muted2)' }}>Aula de afiliacao em breve</div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )
-          })}
-        </div>
+        {/* Carrossel: Produtos Fisicos */}
+        <ProductCarousel title="Produtos Fisicos" icon="📦" products={physicalProducts} selected={selected} onToggle={toggle} />
 
         {/* Dica */}
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 16, boxShadow: 'var(--shadow-sm)', marginBottom: 16 }}>
@@ -282,7 +417,7 @@ export default function ProdutosAltaPage() {
               boxShadow: '0 0 12px rgba(239,68,68,0.5)',
             }} />
           </div>
-          <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8, margin: '8px 0 0' }}>Novos produtos serao disponibilizados em breve. Fique ligado!</p>
+          <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8, margin: '8px 0 0' }}>Novos produtos digitais e fisicos serao adicionados em breve nos carrosseis. Fique ligado!</p>
         </div>
 
         <style>{`
