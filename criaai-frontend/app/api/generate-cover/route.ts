@@ -16,13 +16,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Informe o titulo e o tema do ebook.' }, { status: 400 })
     }
 
-    const prompt = `Professional ebook cover design for a book titled "${title}", about the theme: "${niche}". Choose an illustration style, color palette and composition that best fits this specific theme. The cover should look like a real, professionally published physical book seen at a slight 3D angle, with realistic shadows and depth. The title "${title}" must be large, bold and clearly readable on the cover.${author ? ` Include the author name "${author}" in smaller text near the bottom of the cover.` : ''} High quality, professional publishing look. No people, no faces, no watermarks, no extra text besides the title${author ? ' and author name' : ''}.`
+    const prompt = `A FLAT, completely two-dimensional book cover design (like a print-ready digital file, viewed straight-on with zero perspective), for a book titled "${title}", about the theme: "${niche}". Choose an illustration style, color palette and composition that best fits this specific theme. The artwork MUST fill the entire square canvas edge-to-edge, with no borders, no white margins, no background padding around it, and no depiction of a physical book, spine, pages or 3D object of any kind — it is only the flat cover artwork itself, like a poster. The title "${title}" must be large, bold and clearly readable, positioned within the cover.${author ? ` Include the author name "${author}" in smaller text near the bottom.` : ''} High quality, professional publishing illustration. No people, no faces, no watermarks, no mockup, no photo of a device or book, no extra text besides the title${author ? ' and author name' : ''}.`
 
     const response = await openai.images.generate({
       model: 'gpt-image-1',
       prompt,
       n: 1,
-      size: '1024x1024',
+      size: '1024x1536',
       quality: 'medium',
     })
 
