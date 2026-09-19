@@ -59,16 +59,100 @@ const defaultForm: EbookFormData = {
   themeId: '',
 }
 
-const capaColors = [
-  { label: 'Roxo', value: 'linear-gradient(135deg,#5b4ef8,#9b8ffc)' },
-  { label: 'Azul', value: 'linear-gradient(135deg,#1d4ed8,#60a5fa)' },
-  { label: 'Verde', value: 'linear-gradient(135deg,#15803d,#4ade80)' },
-  { label: 'Laranja', value: 'linear-gradient(135deg,#ea580c,#fbbf24)' },
-  { label: 'Rosa', value: 'linear-gradient(135deg,#be185d,#f472b6)' },
-  { label: 'Escuro', value: 'linear-gradient(135deg,#111827,#374151)' },
+const capaDevices = [
+  { id: 'celular', label: 'Celular', icon: 'ti-device-mobile' },
+  { id: 'tablet', label: 'Tablet', icon: 'ti-device-tablet' },
+  { id: 'livro', label: 'Livro', icon: 'ti-book-2' },
 ]
 
-const capaIcons = ['📘','📗','📕','📙','📓','📔','💡','🚀','⭐','🔥','✝️','💰']
+function DeviceMockup({ device, imageUrl, loading, title }: { device: string; imageUrl: string | null; loading: boolean; title: string }) {
+  if (device === 'livro') {
+    return (
+      <div style={{ perspective: 900, display: 'inline-block', padding: '10px 30px 30px 10px' }}>
+        <div style={{
+          width: 200, height: 280, position: 'relative', transformStyle: 'preserve-3d',
+          transform: 'rotateY(-25deg) rotateX(4deg)', transition: 'transform 0.4s ease',
+        }}
+          onMouseEnter={function(e) { (e.currentTarget as HTMLElement).style.transform = 'rotateY(-10deg) rotateX(2deg) scale(1.04)' }}
+          onMouseLeave={function(e) { (e.currentTarget as HTMLElement).style.transform = 'rotateY(-25deg) rotateX(4deg)' }}
+        >
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: '2px 8px 8px 2px',
+            boxShadow: '10px 14px 34px rgba(0,0,0,0.4)', overflow: 'hidden',
+            background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            {loading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, color: 'var(--muted2)' }}>
+                <i className="ti ti-loader" style={{ fontSize: 28, animation: 'spinCapa 1s linear infinite' }} />
+                <span style={{ fontSize: 11, textAlign: 'center', padding: '0 16px' }}>Gerando capa com IA...</span>
+                <style>{'@keyframes spinCapa{from{transform:rotate(0)}to{transform:rotate(360deg)}}'}</style>
+              </div>
+            ) : imageUrl ? (
+              <img src={imageUrl} alt={title || 'Capa do ebook'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, color: 'var(--muted)', padding: '0 20px', textAlign: 'center' }}>
+                <i className="ti ti-book-2" style={{ fontSize: 32 }} />
+                <span style={{ fontSize: 11 }}>A capa gerada vai aparecer aqui</span>
+              </div>
+            )}
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '35%', background: 'linear-gradient(180deg,rgba(255,255,255,0.15),transparent)', pointerEvents: 'none' }} />
+          </div>
+          {/* Lombada */}
+          <div style={{
+            position: 'absolute', top: 0, left: -16, width: 16, height: '100%',
+            background: imageUrl ? '#2a2a3e' : 'var(--surface3)', filter: 'brightness(0.65)',
+            transformOrigin: 'right', transform: 'rotateY(-90deg)', borderRadius: '4px 0 0 4px',
+          }} />
+          {/* Sombra no chao */}
+          <div style={{
+            position: 'absolute', bottom: -18, left: 10, right: -10, height: 18,
+            background: 'rgba(0,0,0,0.22)', borderRadius: '50%', filter: 'blur(9px)', transform: 'rotateX(90deg)',
+          }} />
+        </div>
+      </div>
+    )
+  }
+
+  const isTablet = device === 'tablet'
+  const width = isTablet ? 260 : 190
+  const height = isTablet ? 340 : 390
+
+  return (
+    <div style={{ display: 'inline-block' }}>
+      <div style={{
+        width: width, height: height, borderRadius: isTablet ? 24 : 32,
+        background: '#1a1a2e', padding: isTablet ? 14 : 10,
+        boxShadow: '0 20px 50px rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.2)',
+        position: 'relative', border: '2px solid #2a2a3e',
+      }}>
+        {!isTablet && (
+          <div style={{ position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)', width: 60, height: 18, background: '#1a1a2e', borderRadius: 10, zIndex: 2 }} />
+        )}
+        <div style={{
+          width: '100%', height: '100%', borderRadius: isTablet ? 14 : 20,
+          overflow: 'hidden', position: 'relative', background: 'var(--surface2)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          {loading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, color: 'var(--muted2)' }}>
+              <i className="ti ti-loader" style={{ fontSize: 28, animation: 'spinCapa 1s linear infinite' }} />
+              <span style={{ fontSize: 11, textAlign: 'center', padding: '0 16px' }}>Gerando capa com IA...</span>
+              <style>{'@keyframes spinCapa{from{transform:rotate(0)}to{transform:rotate(360deg)}}'}</style>
+            </div>
+          ) : imageUrl ? (
+            <img src={imageUrl} alt={title || 'Capa do ebook'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, color: 'var(--muted)', padding: '0 20px', textAlign: 'center' }}>
+              <i className="ti ti-photo" style={{ fontSize: 32 }} />
+              <span style={{ fontSize: 11 }}>A capa gerada vai aparecer aqui</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 
 function Capa3D({ title, subtitle, gradient, icon, author, imageUrl }: { title: string; subtitle: string; gradient: string; icon: string; author: string; imageUrl?: string | null }) {
   if (imageUrl) {
@@ -255,10 +339,11 @@ export default function EbookPage() {
 
   // Estado da capa 3D
   const [capaTitle, setCapaTitle] = useState('')
-  const [capaSubtitle, setCapaSubtitle] = useState('')
+  const [capaTema, setCapaTema] = useState('')
   const [capaAuthor, setCapaAuthor] = useState('')
-  const [capaGradient, setCapaGradient] = useState(capaColors[0].value)
-  const [capaIcon, setCapaIcon] = useState(capaIcons[0])
+  const [capaLoading, setCapaLoading] = useState(false)
+  const [capaImageUrl, setCapaImageUrl] = useState<string | null>(null)
+  const [capaError, setCapaError] = useState<string | null>(null)
 
   const supabase = createClient()
   const router = useRouter()
@@ -379,8 +464,36 @@ export default function EbookPage() {
     try { localStorage.removeItem(STORAGE_KEY) } catch (e) {}
   }
 
-  function downloadCapa() {
-    alert('Para baixar a capa, tire um print da visualizacao acima ou use uma ferramenta como o Canva para criar sua versao personalizada.')
+  async function gerarCapaComIA() {
+    const tituloFinal = capaTitle || form.title
+    if (!tituloFinal || !capaTema) {
+      setCapaError('Preencha o titulo e o tema do ebook.')
+      return
+    }
+    setCapaError(null)
+    setCapaLoading(true)
+    setCapaImageUrl(null)
+    try {
+      const res = await fetch('/api/generate-cover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: tituloFinal,
+          niche: capaTema,
+          author: capaAuthor || undefined,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setCapaError(data.error ?? 'Erro ao gerar a capa.')
+        return
+      }
+      setCapaImageUrl(data.imageUrl)
+    } catch (err: any) {
+      setCapaError(err.message ?? 'Erro inesperado ao gerar a capa.')
+    } finally {
+      setCapaLoading(false)
+    }
   }
 
   const noCredits = credits !== null && credits.used >= credits.limit
@@ -605,83 +718,67 @@ export default function EbookPage() {
             <span style={{ fontSize: 20 }}>🎨</span>
             <div>
               <div style={{ fontSize: 14, fontWeight: 700 }}>Criar Capa 3D do Ebook</div>
-              <div style={{ fontSize: 11, color: 'var(--muted2)' }}>Personalize e visualize a capa do seu ebook em 3D</div>
+              <div style={{ fontSize: 11, color: 'var(--muted2)' }}>A IA gera a arte da capa a partir do titulo e do tema do seu ebook</div>
             </div>
           </div>
-          <div style={{ padding: '22px', display: 'grid', gridTemplateColumns: '1fr auto', gap: 24, alignItems: 'start' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ padding: '22px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 480 }}>
               <div>
-                <label style={labelStyle}>Titulo da capa</label>
+                <label style={labelStyle}>Titulo do ebook</label>
                 <input type="text" value={capaTitle} onChange={function(e) { setCapaTitle(e.target.value) }} placeholder={form.title || 'Titulo do seu ebook'} style={inputStyle} />
               </div>
               <div>
-                <label style={labelStyle}>Subtitulo <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(opcional)</span></label>
-                <input type="text" value={capaSubtitle} onChange={function(e) { setCapaSubtitle(e.target.value) }} placeholder="Ex: O guia completo para..." style={inputStyle} />
+                <label style={labelStyle}>Tema / assunto do ebook</label>
+                <input type="text" value={capaTema} onChange={function(e) { setCapaTema(e.target.value) }} placeholder="Ex: emagrecimento saudavel para maes" style={inputStyle} />
               </div>
               <div>
-                <label style={labelStyle}>Autor</label>
+                <label style={labelStyle}>Autor <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(opcional)</span></label>
                 <input type="text" value={capaAuthor} onChange={function(e) { setCapaAuthor(e.target.value) }} placeholder="Seu nome" style={inputStyle} />
               </div>
-              <div>
-                <label style={labelStyle}>Cor da capa</label>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {capaColors.map(function(c) {
-                    return (
-                      <div
-                        key={c.value}
-                        onClick={function() { setCapaGradient(c.value) }}
-                        style={{
-                          width: 36, height: 36, borderRadius: 10, background: c.value, cursor: 'pointer',
-                          border: capaGradient === c.value ? '3px solid var(--accent)' : '2px solid transparent',
-                          boxShadow: capaGradient === c.value ? '0 0 0 2px white, 0 0 0 4px var(--accent)' : 'var(--shadow-sm)',
-                          transition: 'all 0.15s',
-                        }}
-                        title={c.label}
-                      />
-                    )
-                  })}
-                </div>
-              </div>
-              <div>
-                <label style={labelStyle}>Icone da capa</label>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {capaIcons.map(function(ic) {
-                    return (
-                      <div
-                        key={ic}
-                        onClick={function() { setCapaIcon(ic) }}
-                        style={{
-                          width: 40, height: 40, borderRadius: 10, background: 'var(--surface2)', cursor: 'pointer',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
-                          border: capaIcon === ic ? '2px solid var(--accent)' : '2px solid var(--border)',
-                          transition: 'all 0.15s',
-                        }}
-                      >
-                        {ic}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
+              {capaError && (
+                <p style={{ fontSize: 12, color: 'var(--red)', margin: 0 }}>{capaError}</p>
+              )}
+              <button
+                onClick={gerarCapaComIA}
+                disabled={capaLoading}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  background: capaLoading ? 'var(--surface2)' : 'linear-gradient(135deg,#5b4ef8,#9b8ffc)',
+                  color: capaLoading ? 'var(--muted2)' : '#fff', fontWeight: 700, fontSize: 14,
+                  padding: '12px 20px', borderRadius: 10, border: 'none',
+                  cursor: capaLoading ? 'not-allowed' : 'pointer', fontFamily: 'Syne, sans-serif',
+                }}
+              >
+                <i className="ti ti-sparkles" style={{ fontSize: 16 }} />
+                {capaLoading ? 'Gerando capa...' : 'Gerar Capa com IA'}
+              </button>
             </div>
 
-            {/* Preview 3D */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, minWidth: 220 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Preview 3D</div>
-              <Capa3D
-                title={capaTitle || form.title || 'Titulo do Ebook'}
-                subtitle={capaSubtitle}
-                gradient={capaGradient}
-                icon={capaIcon}
-                author={capaAuthor}
-              />
-              <button
-                onClick={downloadCapa}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: 13, padding: '10px 18px', borderRadius: 10, cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
-              >
-                <i className="ti ti-download" style={{ fontSize: 15 }} />
-                Salvar capa
-              </button>
+            {/* Preview nos 3 modelos ao mesmo tempo */}
+            <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', justifyContent: 'center', paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+              {capaDevices.map(function(d) {
+                return (
+                  <div key={d.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <i className={'ti ' + d.icon} style={{ fontSize: 13 }} />
+                      {d.label}
+                    </div>
+                    <DeviceMockup device={d.id} imageUrl={capaImageUrl} loading={capaLoading} title={capaTitle || form.title} />
+                    {capaImageUrl && (
+                      <a
+                        href={capaImageUrl}
+                        download={(capaTitle || form.title || 'capa-ebook') + '-' + d.id + '.png'}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: 12, padding: '8px 14px', borderRadius: 9, cursor: 'pointer', fontFamily: 'Inter, sans-serif', textDecoration: 'none' }}
+                      >
+                        <i className="ti ti-download" style={{ fontSize: 13 }} />
+                        Salvar
+                      </a>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </div>
         </div>
