@@ -66,47 +66,66 @@ const capaDevices = [
 ]
 
 function DeviceMockup({ device, imageUrl, loading, title }: { device: string; imageUrl: string | null; loading: boolean; title: string }) {
+  const placeholder = loading ? (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, color: '#9b9aaa' }}>
+      <i className="ti ti-loader" style={{ fontSize: 18, animation: 'spinCapa 1s linear infinite' }} />
+      <span style={{ fontSize: 8, textAlign: 'center', padding: '0 10px', lineHeight: 1.3 }}>Gerando...</span>
+      <style>{'@keyframes spinCapa{from{transform:rotate(0)}to{transform:rotate(360deg)}}'}</style>
+    </div>
+  ) : imageUrl ? null : (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: '#9b9aaa', padding: '0 12px', textAlign: 'center' }}>
+      <i className={'ti ' + (device === 'livro' ? 'ti-book-2' : 'ti-photo')} style={{ fontSize: 18 }} />
+      <span style={{ fontSize: 8, lineHeight: 1.3 }}>A capa vai aparecer aqui</span>
+    </div>
+  )
+
   if (device === 'livro') {
+    const pageLines = Array.from({ length: 9 })
     return (
-      <div style={{ perspective: 700, display: 'inline-block', padding: '8px 20px 20px 8px' }}>
+      <div style={{ perspective: 750, display: 'inline-block', padding: '10px 26px 26px 10px' }}>
         <div style={{
-          width: 120, height: 168, position: 'relative', transformStyle: 'preserve-3d',
-          transform: 'rotateY(-25deg) rotateX(4deg)', transition: 'transform 0.4s ease',
+          width: 118, height: 172, position: 'relative', transformStyle: 'preserve-3d',
+          transform: 'rotateY(-32deg) rotateX(3deg)', transition: 'transform 0.4s ease',
         }}
-          onMouseEnter={function(e) { (e.currentTarget as HTMLElement).style.transform = 'rotateY(-10deg) rotateX(2deg) scale(1.04)' }}
-          onMouseLeave={function(e) { (e.currentTarget as HTMLElement).style.transform = 'rotateY(-25deg) rotateX(4deg)' }}
+          onMouseEnter={function(e) { (e.currentTarget as HTMLElement).style.transform = 'rotateY(-14deg) rotateX(1deg) scale(1.05)' }}
+          onMouseLeave={function(e) { (e.currentTarget as HTMLElement).style.transform = 'rotateY(-32deg) rotateX(3deg)' }}
         >
+          {/* Bloco de paginas (miolo) */}
           <div style={{
-            position: 'absolute', inset: 0, borderRadius: '2px 8px 8px 2px',
-            boxShadow: '10px 14px 34px rgba(0,0,0,0.4)', overflow: 'hidden',
-            background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            position: 'absolute', top: 3, bottom: 3, left: 4, width: 14,
+            transformOrigin: 'left', transform: 'rotateY(90deg) translateZ(-2px)',
+            background: 'linear-gradient(90deg,#fff,#f1efe8 60%,#e2ded2)',
+            display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly',
           }}>
-            {loading ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, color: 'var(--muted2)' }}>
-                <i className="ti ti-loader" style={{ fontSize: 18, animation: 'spinCapa 1s linear infinite' }} />
-                <span style={{ fontSize: 8, textAlign: 'center', padding: '0 10px', lineHeight: 1.3 }}>Gerando...</span>
-                <style>{'@keyframes spinCapa{from{transform:rotate(0)}to{transform:rotate(360deg)}}'}</style>
-              </div>
-            ) : imageUrl ? (
+            {pageLines.map(function(_, i) {
+              return <div key={i} style={{ height: 1, background: 'rgba(0,0,0,0.08)', marginLeft: 2, marginRight: 2 }} />
+            })}
+          </div>
+          {/* Capa frontal */}
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: '1px 5px 5px 1px',
+            boxShadow: '2px 0 3px rgba(0,0,0,0.25)', overflow: 'hidden',
+            background: '#e9e9ee', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            {imageUrl ? (
               <img src={imageUrl} alt={title || 'Capa do ebook'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: 'var(--muted)', padding: '0 12px', textAlign: 'center' }}>
-                <i className="ti ti-book-2" style={{ fontSize: 18 }} />
-                <span style={{ fontSize: 8, lineHeight: 1.3 }}>A capa vai aparecer aqui</span>
-              </div>
-            )}
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '35%', background: 'linear-gradient(180deg,rgba(255,255,255,0.15),transparent)', pointerEvents: 'none' }} />
+            ) : placeholder}
+            {/* Reflexo glossy */}
+            <div style={{ position: 'absolute', top: 0, left: 0, width: '55%', height: '100%', background: 'linear-gradient(115deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.05) 30%, transparent 55%)', pointerEvents: 'none', mixBlendMode: 'overlay' }} />
+            <div style={{ position: 'absolute', inset: 0, boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.08)', pointerEvents: 'none' }} />
           </div>
           {/* Lombada */}
           <div style={{
-            position: 'absolute', top: 0, left: -10, width: 10, height: '100%',
-            background: imageUrl ? '#2a2a3e' : 'var(--surface3)', filter: 'brightness(0.65)',
-            transformOrigin: 'right', transform: 'rotateY(-90deg)', borderRadius: '4px 0 0 4px',
+            position: 'absolute', top: 0, left: -13, width: 13, height: '100%',
+            background: imageUrl ? 'linear-gradient(90deg,#0e0e14,#22222e)' : 'linear-gradient(90deg,#c9c8d4,#e2e1e8)',
+            transformOrigin: 'right', transform: 'rotateY(-90deg)', borderRadius: '3px 0 0 3px',
+            boxShadow: 'inset -2px 0 4px rgba(0,0,0,0.3)',
           }} />
           {/* Sombra no chao */}
           <div style={{
-            position: 'absolute', bottom: -12, left: 6, right: -6, height: 12,
-            background: 'rgba(0,0,0,0.22)', borderRadius: '50%', filter: 'blur(9px)', transform: 'rotateX(90deg)',
+            position: 'absolute', bottom: -14, left: -6, right: 8, height: 16,
+            background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.32), transparent 72%)',
+            transform: 'rotateX(90deg) translateZ(-2px)',
           }} />
         </div>
       </div>
@@ -114,39 +133,50 @@ function DeviceMockup({ device, imageUrl, loading, title }: { device: string; im
   }
 
   const isTablet = device === 'tablet'
-  const width = isTablet ? 155 : 110
-  const height = isTablet ? 200 : 225
+  const width = isTablet ? 158 : 108
+  const height = isTablet ? 208 : 222
 
   return (
-    <div style={{ display: 'inline-block' }}>
+    <div style={{ display: 'inline-block', filter: 'drop-shadow(0 16px 22px rgba(0,0,0,0.3))' }}>
       <div style={{
-        width: width, height: height, borderRadius: isTablet ? 16 : 22,
-        background: '#1a1a2e', padding: isTablet ? 8 : 6,
-        boxShadow: '0 14px 34px rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.2)',
-        position: 'relative', border: '1.5px solid #2a2a3e',
+        width: width, height: height, borderRadius: isTablet ? 18 : 20,
+        background: 'linear-gradient(155deg,#3a3a46 0%,#141419 45%,#232329 100%)',
+        padding: isTablet ? 9 : 7,
+        position: 'relative', border: '1px solid #050507',
       }}>
+        {/* Brilho lateral do aparelho */}
+        <div style={{ position: 'absolute', inset: 0, borderRadius: isTablet ? 18 : 20, boxShadow: 'inset 1px 1px 1px rgba(255,255,255,0.15), inset -1px -1px 2px rgba(0,0,0,0.6)', pointerEvents: 'none' }} />
+
         {!isTablet && (
-          <div style={{ position: 'absolute', top: 6, left: '50%', transform: 'translateX(-50%)', width: 34, height: 10, background: '#1a1a2e', borderRadius: 6, zIndex: 2 }} />
+          <div style={{ position: 'absolute', top: 7, left: '50%', transform: 'translateX(-50%)', width: 8, height: 8, borderRadius: '50%', background: 'radial-gradient(circle at 35% 35%, #444, #050505 70%)', zIndex: 3, border: '1px solid #000' }} />
         )}
+        {isTablet && (
+          <div style={{ position: 'absolute', top: 5, left: '50%', transform: 'translateX(-50%)', width: 5, height: 5, borderRadius: '50%', background: '#050505', zIndex: 3 }} />
+        )}
+
         <div style={{
-          width: '100%', height: '100%', borderRadius: isTablet ? 9 : 13,
-          overflow: 'hidden', position: 'relative', background: 'var(--surface2)',
+          width: '100%', height: '100%', borderRadius: isTablet ? 11 : 12,
+          overflow: 'hidden', position: 'relative', background: '#000',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          {loading ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, color: 'var(--muted2)' }}>
-              <i className="ti ti-loader" style={{ fontSize: 18, animation: 'spinCapa 1s linear infinite' }} />
-              <span style={{ fontSize: 8, textAlign: 'center', padding: '0 10px', lineHeight: 1.3 }}>Gerando...</span>
-              <style>{'@keyframes spinCapa{from{transform:rotate(0)}to{transform:rotate(360deg)}}'}</style>
+          {/* Barra de status */}
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 7px', zIndex: 2 }}>
+            <span style={{ fontSize: 6, color: '#fff', fontWeight: 700, textShadow: '0 1px 1px rgba(0,0,0,0.5)' }}>9:41</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <i className="ti ti-antenna-bars-5" style={{ fontSize: 7, color: '#fff' }} />
+              <i className="ti ti-battery-4" style={{ fontSize: 8, color: '#fff' }} />
             </div>
-          ) : imageUrl ? (
+          </div>
+
+          {imageUrl ? (
             <img src={imageUrl} alt={title || 'Capa do ebook'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: 'var(--muted)', padding: '0 12px', textAlign: 'center' }}>
-              <i className="ti ti-photo" style={{ fontSize: 18 }} />
-              <span style={{ fontSize: 8, lineHeight: 1.3 }}>A capa vai aparecer aqui</span>
-            </div>
-          )}
+          ) : placeholder}
+
+          {/* Reflexo de vidro na tela */}
+          <div style={{ position: 'absolute', top: 0, left: 0, width: '45%', height: '100%', background: 'linear-gradient(115deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.04) 25%, transparent 45%)', pointerEvents: 'none' }} />
+
+          {/* Indicador home (barra inferior) */}
+          <div style={{ position: 'absolute', bottom: 4, left: '50%', transform: 'translateX(-50%)', width: isTablet ? 40 : 28, height: 2.5, borderRadius: 2, background: 'rgba(255,255,255,0.65)', zIndex: 2 }} />
         </div>
       </div>
     </div>
