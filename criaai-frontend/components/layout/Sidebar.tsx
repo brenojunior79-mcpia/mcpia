@@ -23,7 +23,10 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
   useEffect(function() {
     try {
       const saved = localStorage.getItem('mcpia_theme')
-      if (saved === 'dark' || saved === 'light') setTheme(saved)
+      if (saved === 'dark' || saved === 'light') {
+        setTheme(saved)
+        document.documentElement.setAttribute('data-theme', saved)
+      }
     } catch (e) {}
   }, [])
 
