@@ -1,5 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Syne:wght@400;500;700;800&display=swap');
 
+/* Substitui a fonte de titulos (Syne) por uma bold estilo "Axis" em todo o site */
+@font-face {
+  font-family: 'Syne';
+  font-style: normal;
+  font-weight: 400 900;
+  src: url('https://cdnjs.cloudflare.com/ajax/libs/fontsource-archivo-black/5.3.0/files/archivo-black-latin-400-normal.woff2') format('woff2');
+  font-display: swap;
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
