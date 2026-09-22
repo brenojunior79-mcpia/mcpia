@@ -8,6 +8,7 @@ const lessons = [
     description: 'Visao geral de como criar seus proprios criativos manualmente.',
     videoId: '1133466432',
     icon: '👋',
+    links: [] as { label: string; url: string }[],
   },
   {
     id: 2,
@@ -15,41 +16,49 @@ const lessons = [
     description: 'De onde tirar ideias e referencias para criar bons criativos.',
     videoId: '1133466048',
     icon: '💡',
+    links: [
+      { label: 'Biblioteca de Anuncios do Facebook', url: 'https://www.facebook.com/ads/library/?active_status=all&ad_type=political_and_issue_ads&country=BR&is_targeted_country=false&media_type=all&sort_data[mode]=total_impressions&sort_data[direction]=desc' },
+    ],
   },
   {
     id: 3,
-    title: 'Formato 01',
-    description: 'Aprenda o primeiro formato de criativo manual.',
+    title: 'Modelo 01 - Noticias',
+    description: 'Aprenda o formato de criativo estilo noticia.',
     videoId: '1133466650',
-    icon: '🎬',
+    icon: '📰',
+    links: [
+      { label: 'Canva (iOS)', url: 'https://apps.apple.com/br/app/canva-editor-de-fotos-e-v%C3%ADdeo/id897446215' },
+      { label: 'Canva (Android)', url: 'https://play.google.com/store/apps/details/Canva_AI_Photo_Video_Editor?id=com.canva.editor&hl=pt_BR' },
+      { label: 'Canva (Web)', url: 'https://www.canva.com/' },
+    ],
   },
   {
     id: 4,
-    title: 'Formato 02',
-    description: 'Aprenda o segundo formato de criativo manual.',
+    title: 'Modelo 02 - Podcast',
+    description: 'Aprenda o formato de criativo estilo podcast.',
     videoId: '1133466188',
-    icon: '🎬',
+    icon: '🎙️',
+    links: [],
   },
   {
     id: 5,
-    title: 'Formato 03',
-    description: 'Aprenda o terceiro formato de criativo manual.',
+    title: 'Modelo 03 - Produtos e Resultados',
+    description: 'Aprenda o formato de criativo mostrando produtos e resultados.',
     videoId: '1133466788',
-    icon: '🎬',
+    icon: '📦',
+    links: [],
   },
   {
     id: 6,
-    title: 'Formato 04',
-    description: 'Aprenda o quarto formato de criativo manual.',
-    videoId: '1201539936',
-    icon: '🎬',
-  },
-  {
-    id: 7,
-    title: 'Formato 05',
-    description: 'Aprenda o quinto formato de criativo manual.',
+    title: 'Modelo 04 - Imagens que geram impacto',
+    description: 'Aprenda a criar imagens de impacto para seus criativos.',
     videoId: '1133466317',
-    icon: '🎬',
+    icon: '⚡',
+    links: [
+      { label: 'Leonardo AI', url: 'https://app.leonardo.ai/' },
+      { label: 'ChatGPT', url: 'https://chatgpt.com/' },
+      { label: 'Pexels', url: 'https://www.pexels.com/pt-br/' },
+    ],
   },
 ]
 
@@ -126,6 +135,28 @@ function LessonCard({ lesson }: { lesson: any }) {
       <div style={{ padding: '14px 16px' }}>
         <p style={{ fontSize: 11, color: 'var(--muted2)', margin: '0 0 12px', lineHeight: 1.5, minHeight: 33 }}>{lesson.description}</p>
         <VideoLesson videoId={lesson.videoId} title={lesson.title} color="#7c5cfc" />
+        {lesson.links && lesson.links.length > 0 && (
+          <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {lesson.links.map(function(link: any) {
+              return (
+                <a
+                  key={link.url}
+                  href={link.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600,
+                    color: 'var(--accent2)', background: 'var(--accent-glow)', border: '1px solid rgba(124,92,252,0.25)',
+                    borderRadius: 99, padding: '5px 10px', textDecoration: 'none',
+                  }}
+                >
+                  <i className="ti ti-link" style={{ fontSize: 11 }} />
+                  {link.label}
+                </a>
+              )
+            })}
+          </div>
+        )}
       </div>
     </div>
   )
