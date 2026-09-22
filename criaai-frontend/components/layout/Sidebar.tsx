@@ -55,6 +55,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
     { href: '/dashboard/ebook', icon: 'ti-book-2', label: 'Gerador de Ebook', locked: false },
     { href: '/dashboard/paginas', icon: 'ti-layout', label: 'Gerador de Site', locked: false },
     { href: '/dashboard/criativo', icon: 'ti-sparkles', label: 'Gerador de Criativos', locked: !isAdmin, lockStatus: 'Em atualizacao' },
+    { href: '/dashboard/criativos-manuais', icon: 'ti-video', label: 'Criativos Manuais', locked: false },
     { href: '/dashboard/vendas', icon: 'ti-rocket', label: 'Vendendo no Automatico', locked: false },
     { href: '/dashboard/metricas', icon: 'ti-chart-bar', label: 'Analisando Metricas', locked: false },
     { href: '/dashboard/suporte', icon: 'ti-headset', label: 'Suporte Humano', locked: false },
