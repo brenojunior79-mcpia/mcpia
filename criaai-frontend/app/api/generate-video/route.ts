@@ -10,39 +10,33 @@ const AGENCY_VIDEO_LIMIT = 100
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
 
 // Cache simples em memoria (dura enquanto a funcao ficar "quente" na Vercel)
-let cachedAvatarId: string | null = null
+let cachedDefaultAvatarId: string | null = null
 let cachedVoiceId: string | null = null
 
-async function getAvatarAndVoice(): Promise<{ avatarId: string; voiceId: string }> {
-  if (cachedAvatarId && cachedVoiceId) {
-    return { avatarId: cachedAvatarId, voiceId: cachedVoiceId }
-  }
-
-  const [avatarsRes, voicesRes] = await Promise.all([
-    fetch('https://api.heygen.com/v2/avatars', { headers: { 'X-Api-Key': HEYGEN_API_KEY } }),
-    fetch('https://api.heygen.com/v2/voices', { headers: { 'X-Api-Key': HEYGEN_API_KEY } }),
-  ])
-
-  if (!avatarsRes.ok) throw new Error('HeyGen avatars error: ' + avatarsRes.status)
-  if (!voicesRes.ok) throw new Error('HeyGen voices error: ' + voicesRes.status)
-
-  const avatarsData = await avatarsRes.json()
-  const voicesData = await voicesRes.json()
-
-  const avatars = avatarsData?.data?.avatars || []
-  const avatarId = avatars[0]?.avatar_id
+async function getDefaultAvatarId(): Promise<string> {
+  if (cachedDefaultAvatarId) return cachedDefaultAvatarId
+  const res = await fetch('https://api.heygen.com/v2/avatars', { headers: { 'X-Api-Key': HEYGEN_API_KEY } })
+  if (!res.ok) throw new Error('HeyGen avatars error: ' + res.status)
+  const data = await res.json()
+  const avatarId = data?.data?.avatars?.[0]?.avatar_id
   if (!avatarId) throw new Error('Nenhum avatar disponivel na conta HeyGen')
+  cachedDefaultAvatarId = avatarId
+  return avatarId
+}
 
-  const voices = voicesData?.data?.voices || []
+async function getDefaultVoiceId(): Promise<string> {
+  if (cachedVoiceId) return cachedVoiceId
+  const res = await fetch('https://api.heygen.com/v2/voices', { headers: { 'X-Api-Key': HEYGEN_API_KEY } })
+  if (!res.ok) throw new Error('HeyGen voices error: ' + res.status)
+  const data = await res.json()
+  const voices = data?.data?.voices || []
   const ptVoice = voices.find(function(v: any) {
     return (v.language || '').toLowerCase().includes('portuguese') || (v.language || '').toLowerCase().includes('português')
   })
   const voiceId = ptVoice?.voice_id || voices[0]?.voice_id
   if (!voiceId) throw new Error('Nenhuma voz disponivel na conta HeyGen')
-
-  cachedAvatarId = avatarId
   cachedVoiceId = voiceId
-  return { avatarId, voiceId }
+  return voiceId
 }
 
 async function getUnsplashImage(query: string): Promise<string | null> {
@@ -103,13 +97,13 @@ function getDimension(format: string): { width: number; height: number; aspect_r
 }
 
 async function createHeygenVideo(
-  script: { text1: string; text2: string; text3: string; text4: string },
+  fullScript: string,
   format: string,
-  backgroundImage: string | null
+  backgroundImage: string | null,
+  avatarId: string,
+  voiceId: string
 ): Promise<string> {
-  const { avatarId, voiceId } = await getAvatarAndVoice()
   const dimension = getDimension(format)
-  const fullScript = [script.text1, script.text2, script.text3, script.text4].join(' ')
 
   const videoInput: any = {
     character: { type: 'avatar', avatar_id: avatarId, avatar_style: 'normal' },
@@ -154,8 +148,11 @@ export async function POST(req: NextRequest) {
     const tone: string = reqBody.tone || 'lifestyle'
     const format: string = reqBody.format || '9:16'
     const customPrompt: string = reqBody.customPrompt || ''
+    const avatarIdFromReq: string = reqBody.avatarId || ''
+    const voiceIdFromReq: string = reqBody.voiceId || ''
+    const customScript: string = (reqBody.customScript || '').trim()
 
-    if (!niche && !customPrompt) return NextResponse.json({ error: 'Preencha o nicho ou descreva o criativo.' }, { status: 400 })
+    if (!niche && !customPrompt && !customScript) return NextResponse.json({ error: 'Preencha o nicho, descreva o criativo ou escreva a fala do avatar.' }, { status: 400 })
 
     const profileData = (await supabase
       .from('profiles')
@@ -191,21 +188,24 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const searchQuery = niche || customPrompt.slice(0, 50)
-    const [script, backgroundImage] = await Promise.all([
-      generateScript(niche, tone, customPrompt),
+    const searchQuery = niche || customPrompt.slice(0, 50) || 'produto'
+    const [script, backgroundImage, avatarId, voiceId] = await Promise.all([
+      customScript ? Promise.resolve({ text1: customScript, text2: '', text3: '', text4: '' }) : generateScript(niche, tone, customPrompt),
       getUnsplashImage(searchQuery),
+      avatarIdFromReq ? Promise.resolve(avatarIdFromReq) : getDefaultAvatarId(),
+      voiceIdFromReq ? Promise.resolve(voiceIdFromReq) : getDefaultVoiceId(),
     ])
-    const videoId = await createHeygenVideo(script, format, backgroundImage)
+    const fullScript = customScript || [script.text1, script.text2, script.text3, script.text4].join(' ')
+    const videoId = await createHeygenVideo(fullScript, format, backgroundImage, avatarId, voiceId)
 
     await supabase.from('generations').insert({
       user_id: user.id,
       type: 'video',
       status: 'pending',
-      niche: niche || customPrompt.slice(0, 50),
+      niche: niche || customPrompt.slice(0, 50) || 'personalizado',
       format: format,
       credits_consumed: 1,
-      metadata: { renderId: videoId, tone, customPrompt, script, provider: 'heygen' },
+      metadata: { renderId: videoId, tone, customPrompt, script, avatarId, voiceId, provider: 'heygen' },
     })
 
     return NextResponse.json({ renderId: videoId, script })
