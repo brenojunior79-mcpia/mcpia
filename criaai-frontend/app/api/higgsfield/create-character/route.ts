@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     // Se ja tem external_id, so verifica o status atual em vez de criar de novo
     if (avatar.external_id) {
       const statusRes = await fetch('https://platform.higgsfield.ai/v1/custom-references/' + avatar.external_id, {
-        headers: { 'hf-api-key': HF_API_KEY_ID, 'hf-secret': HF_API_KEY_SECRET },
+        headers: { 'Authorization': 'Key ' + HF_API_KEY_ID + ':' + HF_API_KEY_SECRET },
       })
       const statusData = await statusRes.json()
       const newStatus = statusData.status || avatar.status
@@ -49,8 +49,7 @@ export async function POST(req: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'hf-api-key': HF_API_KEY_ID,
-        'hf-secret': HF_API_KEY_SECRET,
+        'Authorization': 'Key ' + HF_API_KEY_ID + ':' + HF_API_KEY_SECRET,
       },
       body: JSON.stringify({
         name: avatar.name,
