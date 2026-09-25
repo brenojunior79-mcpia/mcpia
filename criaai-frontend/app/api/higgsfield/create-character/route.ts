@@ -37,7 +37,10 @@ export async function POST(req: NextRequest) {
       })
       const statusData = await statusRes.json()
       const newStatus = statusData.status || avatar.status
-      await supabase.from('ai_avatars').update({ status: newStatus }).eq('id', avatarId)
+      const updateResult = await supabase.from('ai_avatars').update({ status: newStatus }).eq('id', avatarId)
+      if (updateResult.error) {
+        return NextResponse.json({ error: 'Salvo na Higgsfield, mas falhou ao atualizar o banco: ' + updateResult.error.message }, { status: 500 })
+      }
       return NextResponse.json({ id: avatar.external_id, status: newStatus })
     }
 
@@ -66,7 +69,14 @@ export async function POST(req: NextRequest) {
     const externalId = createData.id
     const status = createData.status || 'not_ready'
 
-    await supabase.from('ai_avatars').update({ external_id: externalId, status: status }).eq('id', avatarId)
+    if (!externalId) {
+      return NextResponse.json({ error: 'Higgsfield nao retornou um ID valido: ' + JSON.stringify(createData) }, { status: 500 })
+    }
+
+    const updateResult = await supabase.from('ai_avatars').update({ external_id: externalId, status: status }).eq('id', avatarId)
+    if (updateResult.error) {
+      return NextResponse.json({ error: 'CUIDADO: personagem criado na Higgsfield (id ' + externalId + '), mas falhou ao salvar no banco: ' + updateResult.error.message + '. Guarde esse ID, nao clique em criar de novo.' }, { status: 500 })
+    }
 
     return NextResponse.json({ id: externalId, status: status })
   } catch (err: any) {
