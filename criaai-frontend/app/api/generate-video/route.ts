@@ -3,27 +3,56 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import OpenAI from 'openai'
 
-const CREATOMATE_API_KEY = process.env.CREATOMATE_API_KEY!
-const CREATOMATE_TEMPLATE_ID = process.env.CREATOMATE_TEMPLATE_ID!
+const HEYGEN_API_KEY = process.env.HEYGEN_API_KEY!
 const UNSPLASH_ACCESS_KEY = process.env.UNSPLASH_ACCESS_KEY!
 const AGENCY_VIDEO_LIMIT = 100
 
-const VALID_TEMPLATES = [
-  '4aefa26c-a720-4955-aaeb-975ba67a04b9',
-  'd4989be7-36ac-4efa-ab21-2ffacf51ce5c',
-  'b1530859-0435-47f3-b7c6-997edcf37631',
-]
-
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
 
-async function getUnsplashImages(query: string): Promise<string[]> {
+// Cache simples em memoria (dura enquanto a funcao ficar "quente" na Vercel)
+let cachedAvatarId: string | null = null
+let cachedVoiceId: string | null = null
+
+async function getAvatarAndVoice(): Promise<{ avatarId: string; voiceId: string }> {
+  if (cachedAvatarId && cachedVoiceId) {
+    return { avatarId: cachedAvatarId, voiceId: cachedVoiceId }
+  }
+
+  const [avatarsRes, voicesRes] = await Promise.all([
+    fetch('https://api.heygen.com/v2/avatars', { headers: { 'X-Api-Key': HEYGEN_API_KEY } }),
+    fetch('https://api.heygen.com/v2/voices', { headers: { 'X-Api-Key': HEYGEN_API_KEY } }),
+  ])
+
+  if (!avatarsRes.ok) throw new Error('HeyGen avatars error: ' + avatarsRes.status)
+  if (!voicesRes.ok) throw new Error('HeyGen voices error: ' + voicesRes.status)
+
+  const avatarsData = await avatarsRes.json()
+  const voicesData = await voicesRes.json()
+
+  const avatars = avatarsData?.data?.avatars || []
+  const avatarId = avatars[0]?.avatar_id
+  if (!avatarId) throw new Error('Nenhum avatar disponivel na conta HeyGen')
+
+  const voices = voicesData?.data?.voices || []
+  const ptVoice = voices.find(function(v: any) {
+    return (v.language || '').toLowerCase().includes('portuguese') || (v.language || '').toLowerCase().includes('português')
+  })
+  const voiceId = ptVoice?.voice_id || voices[0]?.voice_id
+  if (!voiceId) throw new Error('Nenhuma voz disponivel na conta HeyGen')
+
+  cachedAvatarId = avatarId
+  cachedVoiceId = voiceId
+  return { avatarId, voiceId }
+}
+
+async function getUnsplashImage(query: string): Promise<string | null> {
   try {
-    const url = 'https://api.unsplash.com/search/photos?query=' + encodeURIComponent(query) + '&per_page=4&orientation=portrait'
+    const url = 'https://api.unsplash.com/search/photos?query=' + encodeURIComponent(query) + '&per_page=1&orientation=portrait'
     const res = await fetch(url, { headers: { 'Authorization': 'Client-ID ' + UNSPLASH_ACCESS_KEY } })
-    if (!res.ok) return []
+    if (!res.ok) return null
     const data = await res.json()
-    return (data.results || []).map(function(img: any) { return img.urls.regular })
-  } catch { return [] }
+    return data.results?.[0]?.urls?.regular || null
+  } catch { return null }
 }
 
 async function generateScript(niche: string, tone: string, customPrompt: string) {
@@ -39,7 +68,7 @@ async function generateScript(niche: string, tone: string, customPrompt: string)
   const response = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
     messages: [
-      { role: 'system', content: 'Voce e especialista em criativos de vendas. Crie roteiros em portugues brasileiro. Retorne APENAS JSON com 4 campos: text1 (hook max 80 chars), text2 (problema max 100 chars), text3 (beneficio max 100 chars), text4 (CTA max 80 chars). Sem markdown.' },
+      { role: 'system', content: 'Voce e especialista em criativos de vendas estilo UGC. Crie um roteiro em portugues brasileiro para um avatar de IA falar direto pra camera, em um unico bloco de fala natural e continua (nao separado em cartelas), com gancho, problema, beneficio e CTA emendados como uma fala real de 20 a 30 segundos. Retorne APENAS JSON com: text1 (hook, max 80 chars), text2 (problema, max 100 chars), text3 (beneficio, max 100 chars), text4 (CTA, max 80 chars). Sem markdown.' },
       { role: 'user', content: 'Produto: ' + niche + '. Tom: ' + toneDesc + '. ' + extra },
     ],
     temperature: 0.8,
@@ -67,36 +96,45 @@ async function generateScript(niche: string, tone: string, customPrompt: string)
   }
 }
 
-async function createRender(
+function getDimension(format: string): { width: number; height: number; aspect_ratio: string } {
+  if (format === '1:1') return { width: 720, height: 720, aspect_ratio: '1:1' }
+  if (format === '16:9') return { width: 1280, height: 720, aspect_ratio: '16:9' }
+  return { width: 720, height: 1280, aspect_ratio: '9:16' }
+}
+
+async function createHeygenVideo(
   script: { text1: string; text2: string; text3: string; text4: string },
-  images: string[],
-  templateId: string
+  format: string,
+  backgroundImage: string | null
 ): Promise<string> {
-  const mods: Record<string, string> = {
-    'Text-1.text': script.text1,
-    'Text-2.text': script.text2,
-    'Text-3.text': script.text3,
-    'Text-4.text': script.text4,
+  const { avatarId, voiceId } = await getAvatarAndVoice()
+  const dimension = getDimension(format)
+  const fullScript = [script.text1, script.text2, script.text3, script.text4].join(' ')
+
+  const videoInput: any = {
+    character: { type: 'avatar', avatar_id: avatarId, avatar_style: 'normal' },
+    voice: { type: 'text', input_text: fullScript, voice_id: voiceId },
   }
-  if (images[0]) mods['Background-1.source'] = images[0]
-  if (images[1]) mods['Background-2.source'] = images[1]
-  if (images[2]) mods['Background-3.source'] = images[2]
-  if (images[3]) mods['Background-4.source'] = images[3]
 
-  const payload = JSON.stringify({ template_id: templateId, modifications: mods })
+  videoInput.background = backgroundImage
+    ? { type: 'image', url: backgroundImage }
+    : { type: 'color', value: '#f4f4f7' }
 
-  const res = await fetch('https://api.creatomate.com/v2/renders', {
+  const res = await fetch('https://api.heygen.com/v2/video/generate', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + CREATOMATE_API_KEY },
-    body: payload,
+    headers: { 'Content-Type': 'application/json', 'X-Api-Key': HEYGEN_API_KEY },
+    body: JSON.stringify({
+      video_inputs: [videoInput],
+      dimension: { width: dimension.width, height: dimension.height },
+      aspect_ratio: dimension.aspect_ratio,
+    }),
   })
 
-  if (!res.ok) throw new Error('Creatomate error ' + res.status + ': ' + await res.text())
+  if (!res.ok) throw new Error('HeyGen error ' + res.status + ': ' + await res.text())
   const data = await res.json()
-  const renders = Array.isArray(data) ? data : [data]
-  const renderId = renders[0]?.id
-  if (!renderId) throw new Error('Creatomate sem render ID')
-  return renderId
+  const videoId = data?.data?.video_id
+  if (!videoId) throw new Error('HeyGen sem video_id: ' + JSON.stringify(data))
+  return videoId
 }
 
 export async function POST(req: NextRequest) {
@@ -116,11 +154,6 @@ export async function POST(req: NextRequest) {
     const tone: string = reqBody.tone || 'lifestyle'
     const format: string = reqBody.format || '9:16'
     const customPrompt: string = reqBody.customPrompt || ''
-    const templateIdFromReq: string = reqBody.templateId || ''
-
-    const chosenTemplateId = VALID_TEMPLATES.includes(templateIdFromReq)
-      ? templateIdFromReq
-      : CREATOMATE_TEMPLATE_ID
 
     if (!niche && !customPrompt) return NextResponse.json({ error: 'Preencha o nicho ou descreva o criativo.' }, { status: 400 })
 
@@ -159,11 +192,11 @@ export async function POST(req: NextRequest) {
     }
 
     const searchQuery = niche || customPrompt.slice(0, 50)
-    const [script, images] = await Promise.all([
+    const [script, backgroundImage] = await Promise.all([
       generateScript(niche, tone, customPrompt),
-      getUnsplashImages(searchQuery)
+      getUnsplashImage(searchQuery),
     ])
-    const renderId = await createRender(script, images, chosenTemplateId)
+    const videoId = await createHeygenVideo(script, format, backgroundImage)
 
     await supabase.from('generations').insert({
       user_id: user.id,
@@ -172,10 +205,10 @@ export async function POST(req: NextRequest) {
       niche: niche || customPrompt.slice(0, 50),
       format: format,
       credits_consumed: 1,
-      metadata: { renderId, tone, customPrompt, script, provider: 'creatomate', templateId: chosenTemplateId },
+      metadata: { renderId: videoId, tone, customPrompt, script, provider: 'heygen' },
     })
 
-    return NextResponse.json({ renderId, script })
+    return NextResponse.json({ renderId: videoId, script })
   } catch (err: any) {
     console.error('[generate-video]', err)
     return NextResponse.json({ error: err.message || 'Erro interno' }, { status: 500 })
