@@ -72,17 +72,45 @@ const blocks = [
     lessons: [
       {
         id: 8,
-        title: 'Introducao as vendas de produtos fisicos',
-        description: 'Como funciona a venda de produtos fisicos por WhatsApp e o que muda em relacao aos digitais.',
-        videoId: '',
+        title: 'Introducao',
+        description: 'Visao geral de como funciona a venda de produtos fisicos.',
+        videoId: '1141148142',
         icon: '📦',
+        links: [] as { label: string; url: string }[],
       },
       {
         id: 9,
-        title: 'Anunciando produtos fisicos',
-        description: 'Como criar anuncios para produtos fisicos e direcionar o cliente para o WhatsApp de vendas.',
-        videoId: '',
+        title: 'Script de conversa',
+        description: 'Como conduzir a conversa com o cliente ate fechar a venda.',
+        videoId: '1141147901',
+        icon: '💬',
+        links: [
+          { label: 'Material da aula', url: 'https://drive.google.com/file/d/1ahfy26k-Olcl83mCypALKE6LC9D81i-p/view' },
+        ],
+      },
+      {
+        id: 10,
+        title: 'Anunciando para WhatsApp',
+        description: 'Como criar anuncios que direcionam o cliente direto para o WhatsApp de vendas.',
+        videoId: '1141148283',
         icon: '🚚',
+        links: [],
+      },
+      {
+        id: 11,
+        title: 'Metricas',
+        description: 'Como acompanhar os resultados dos seus anuncios de produtos fisicos.',
+        videoId: '1141148031',
+        icon: '📊',
+        links: [],
+      },
+      {
+        id: 12,
+        title: 'Remarketing',
+        description: 'Como reimpactar quem ja demonstrou interesse e nao comprou ainda.',
+        videoId: '1141148207',
+        icon: '🔁',
+        links: [],
       },
     ],
   },
@@ -199,6 +227,28 @@ function LessonCard({ lesson }: { lesson: any }) {
               <span style={{ fontSize: 22 }}>🎬</span>
               <span style={{ fontSize: 11, color: 'var(--muted2)', fontWeight: 600 }}>Aula em producao</span>
             </div>
+          </div>
+        )}
+        {lesson.links && lesson.links.length > 0 && (
+          <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {lesson.links.map(function(link: any) {
+              return (
+                <a
+                  key={link.url}
+                  href={link.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600,
+                    color: 'var(--accent2)', background: 'var(--accent-glow)', border: '1px solid rgba(124,92,252,0.25)',
+                    borderRadius: 99, padding: '5px 10px', textDecoration: 'none',
+                  }}
+                >
+                  <i className="ti ti-link" style={{ fontSize: 11 }} />
+                  {link.label}
+                </a>
+              )
+            })}
           </div>
         )}
       </div>
