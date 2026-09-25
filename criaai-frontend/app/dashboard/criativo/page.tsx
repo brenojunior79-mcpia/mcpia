@@ -4,19 +4,6 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 import styles from '../dashboard.module.css'
 
-const TEMPLATES = [
-  { id: 'aleatorio', label: 'Aleatorio', icon: 'ti-dice', desc: 'Sistema escolhe automaticamente' },
-  { id: '4aefa26c-a720-4955-aaeb-975ba67a04b9', label: 'Estilo 1', icon: 'ti-layout-2', desc: 'Template original' },
-  { id: 'd4989be7-36ac-4efa-ab21-2ffacf51ce5c', label: 'Estilo 2', icon: 'ti-layout-board', desc: 'Novo template' },
-  { id: 'b1530859-0435-47f3-b7c6-997edcf37631', label: 'Estilo 3', icon: 'ti-layout-grid', desc: 'Novo template' },
-]
-
-const TEMPLATE_IDS = TEMPLATES.filter(function(t) { return t.id !== 'aleatorio' }).map(function(t) { return t.id })
-
-function getRandomTemplate() {
-  return TEMPLATE_IDS[Math.floor(Math.random() * TEMPLATE_IDS.length)]
-}
-
 function VideoLesson({ videoId, title, color }: { videoId: string; title: string; color: string }) {
   const [playing, setPlaying] = useState(false)
   const [thumb, setThumb] = useState<string | null>(null)
@@ -82,7 +69,17 @@ export default function CriativoPage() {
   const [tone, setTone] = useState('lifestyle')
   const [format, setFormat] = useState('9:16')
   const [customPrompt, setCustomPrompt] = useState('')
-  const [templateId, setTemplateId] = useState('aleatorio')
+  const [customScript, setCustomScript] = useState('')
+  const [avatars, setAvatars] = useState<any[]>([])
+  const [avatarsLoading, setAvatarsLoading] = useState(true)
+  const [avatarsError, setAvatarsError] = useState(false)
+  const [selectedAvatarId, setSelectedAvatarId] = useState('')
+  const [voices, setVoices] = useState<any[]>([])
+  const [voicesLoading, setVoicesLoading] = useState(true)
+  const [voicesError, setVoicesError] = useState(false)
+  const [selectedVoiceId, setSelectedVoiceId] = useState('')
+  const [playingPreview, setPlayingPreview] = useState<string | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState(0)
   const [result, setResult] = useState('')
@@ -132,8 +129,69 @@ export default function CriativoPage() {
       }
     }
     loadProfile()
+    loadAvatars()
+    loadVoices()
     return function() { if (pollingRef.current) clearInterval(pollingRef.current) }
   }, [])
+
+  async function loadVoices() {
+    setVoicesLoading(true)
+    try {
+      const sessionResult = await supabase.auth.getSession()
+      const session = sessionResult.data.session
+      const res = await fetch('/api/heygen-voices', {
+        headers: { 'Authorization': 'Bearer ' + (session ? session.access_token : '') }
+      })
+      const data = await res.json()
+      if (data.voices && data.voices.length > 0) {
+        setVoices(data.voices)
+        setSelectedVoiceId(data.voices[0].voiceId)
+      } else {
+        setVoicesError(true)
+      }
+    } catch (e) {
+      setVoicesError(true)
+    } finally {
+      setVoicesLoading(false)
+    }
+  }
+
+  function togglePreview(voiceId: string, url: string | null) {
+    if (!url) return
+    if (playingPreview === voiceId) {
+      audioRef.current?.pause()
+      setPlayingPreview(null)
+      return
+    }
+    if (audioRef.current) audioRef.current.pause()
+    const audio = new Audio(url)
+    audioRef.current = audio
+    audio.play()
+    setPlayingPreview(voiceId)
+    audio.onended = function() { setPlayingPreview(null) }
+  }
+
+  async function loadAvatars() {
+    setAvatarsLoading(true)
+    try {
+      const sessionResult = await supabase.auth.getSession()
+      const session = sessionResult.data.session
+      const res = await fetch('/api/heygen-avatars', {
+        headers: { 'Authorization': 'Bearer ' + (session ? session.access_token : '') }
+      })
+      const data = await res.json()
+      if (data.avatars && data.avatars.length > 0) {
+        setAvatars(data.avatars)
+        setSelectedAvatarId(data.avatars[0].avatarId)
+      } else {
+        setAvatarsError(true)
+      }
+    } catch (e) {
+      setAvatarsError(true)
+    } finally {
+      setAvatarsLoading(false)
+    }
+  }
 
   async function pollStatus(renderId: string) {
     let attempts = 0
@@ -174,8 +232,8 @@ export default function CriativoPage() {
       window.location.href = '/dashboard/planos'
       return
     }
-    if (!niche && !customPrompt) {
-      alert('Preencha o nicho ou descreva o criativo!')
+    if (!niche && !customPrompt && !customScript) {
+      alert('Preencha o nicho, descreva o criativo ou escreva a fala do avatar!')
       return
     }
     setLoading(true)
@@ -183,13 +241,11 @@ export default function CriativoPage() {
     setResult('')
     setScript(null)
 
-    const chosenTemplate = templateId === 'aleatorio' ? getRandomTemplate() : templateId
-
     try {
       const res = await fetch('/api/generate-video', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ niche, tone, format, customPrompt, templateId: chosenTemplate }),
+        body: JSON.stringify({ niche, tone, format, customPrompt, avatarId: selectedAvatarId, voiceId: selectedVoiceId, customScript }),
       })
       const data = await res.json()
       if (!data.renderId) {
@@ -284,32 +340,111 @@ export default function CriativoPage() {
           </div>
 
           <div className={styles.field}>
-            <label>Estilo do video</label>
-            <div className={styles.templateGrid}>
-              {TEMPLATES.map(function(t) {
-                const isSelected = templateId === t.id
-                return (
-                  <div
-                    key={t.id}
-                    onClick={function() { setTemplateId(t.id) }}
-                    style={{
-                      background: isSelected ? 'rgba(124,92,252,0.15)' : 'var(--surface2)',
-                      border: isSelected ? '2px solid var(--accent)' : '1px solid var(--border)',
-                      borderRadius: 12,
-                      padding: '12px 10px',
-                      cursor: 'pointer',
-                      textAlign: 'center',
-                      transition: 'all 0.2s',
-                    }}
-                  >
-                    <i className={'ti ' + t.icon} style={{ fontSize: 22, color: isSelected ? 'var(--accent2)' : 'var(--muted2)', display: 'block', marginBottom: 6 }} />
-                    <div style={{ fontSize: 13, fontWeight: 600, color: isSelected ? 'var(--accent2)' : 'var(--text)' }}>{t.label}</div>
-                    <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{t.desc}</div>
-                  </div>
-                )
-              })}
-            </div>
+            <label>Escolha o avatar</label>
+            {avatarsLoading ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '20px 0', color: 'var(--muted2)', fontSize: 13 }}>
+                <i className="ti ti-loader" style={{ fontSize: 18, animation: 'spin 1s linear infinite' }} />
+                Carregando avatares...
+              </div>
+            ) : avatarsError ? (
+              <div style={{ fontSize: 13, color: 'var(--amber)', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 10, padding: '12px 14px' }}>
+                Nao foi possivel carregar os avatares agora. Um avatar padrao sera usado automaticamente.
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(84px, 1fr))', gap: 10, maxHeight: 320, overflowY: 'auto', paddingRight: 4 }}>
+                {avatars.map(function(av) {
+                  const isSelected = selectedAvatarId === av.avatarId
+                  return (
+                    <div
+                      key={av.avatarId}
+                      onClick={function() { setSelectedAvatarId(av.avatarId) }}
+                      style={{ cursor: 'pointer', textAlign: 'center' }}
+                    >
+                      <div style={{
+                        width: '100%', aspectRatio: '1', borderRadius: 12, overflow: 'hidden',
+                        border: isSelected ? '3px solid var(--accent)' : '2px solid var(--border)',
+                        boxShadow: isSelected ? '0 0 0 3px var(--accent-glow)' : 'none',
+                        position: 'relative', background: 'var(--surface2)', transition: 'all 0.15s',
+                      }}>
+                        <img src={av.previewImage} alt={av.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                        {isSelected && (
+                          <div style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <i className="ti ti-check" style={{ color: '#fff', fontSize: 12 }} />
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 11, marginTop: 4, color: isSelected ? 'var(--accent2)' : 'var(--muted2)', fontWeight: isSelected ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{av.name}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
+
+          <div className={styles.field}>
+            <label>Escolha a voz</label>
+            {voicesLoading ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '20px 0', color: 'var(--muted2)', fontSize: 13 }}>
+                <i className="ti ti-loader" style={{ fontSize: 18, animation: 'spin 1s linear infinite' }} />
+                Carregando vozes...
+              </div>
+            ) : voicesError ? (
+              <div style={{ fontSize: 13, color: 'var(--amber)', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 10, padding: '12px 14px' }}>
+                Nao foi possivel carregar as vozes agora. Uma voz padrao sera usada automaticamente.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 260, overflowY: 'auto', paddingRight: 4 }}>
+                {voices.map(function(v) {
+                  const isSelected = selectedVoiceId === v.voiceId
+                  const isPlaying = playingPreview === v.voiceId
+                  return (
+                    <div
+                      key={v.voiceId}
+                      onClick={function() { setSelectedVoiceId(v.voiceId) }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
+                        border: isSelected ? '2px solid var(--accent)' : '1px solid var(--border)',
+                        background: isSelected ? 'rgba(124,92,252,0.08)' : 'var(--surface2)',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      <button
+                        onClick={function(e) { e.stopPropagation(); togglePreview(v.voiceId, v.previewAudio) }}
+                        disabled={!v.previewAudio}
+                        style={{
+                          width: 30, height: 30, borderRadius: '50%', border: 'none', flexShrink: 0,
+                          background: v.previewAudio ? 'var(--accent)' : 'var(--surface3)',
+                          color: v.previewAudio ? '#fff' : 'var(--muted)',
+                          cursor: v.previewAudio ? 'pointer' : 'default',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}
+                      >
+                        <i className={'ti ' + (isPlaying ? 'ti-player-pause-filled' : 'ti-player-play-filled')} style={{ fontSize: 13 }} />
+                      </button>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: isSelected ? 700 : 500, color: isSelected ? 'var(--accent2)' : 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.name}</div>
+                        <div style={{ fontSize: 11, color: 'var(--muted2)' }}>{v.language}{v.gender ? ' · ' + v.gender : ''}</div>
+                      </div>
+                      {isSelected && <i className="ti ti-check" style={{ color: 'var(--accent2)', fontSize: 16, flexShrink: 0 }} />}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className={styles.field}>
+            <label>Fala do avatar <span style={{ color: 'var(--accent2)', fontSize: 12 }}>(opcional — deixe em branco pra IA escrever por voce)</span></label>
+            <textarea
+              value={customScript}
+              onChange={function(e) { setCustomScript(e.target.value) }}
+              placeholder='Ex: "Voce ja tentou de tudo pra emagrecer e nada funcionou? Esse metodo mudou minha vida em 30 dias..."'
+              rows={4}
+              style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 9, padding: '10px 14px', color: 'var(--text)', fontSize: 14, outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          <style>{'@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}'}</style>
 
           <div className={styles.field}>
             <label>Tom do criativo</label>
@@ -357,16 +492,20 @@ export default function CriativoPage() {
 
         {script && !result && (
           <div style={{ maxWidth: 700, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 20px', marginTop: 16 }}>
-            <div style={{ fontSize: 12, color: 'var(--muted2)', marginBottom: 10, fontWeight: 600 }}>ROTEIRO GERADO</div>
+            <div style={{ fontSize: 12, color: 'var(--muted2)', marginBottom: 10, fontWeight: 600 }}>{script.text2 ? 'ROTEIRO GERADO PELA IA' : 'FALA ENVIADA'}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {[script.text1, script.text2, script.text3, script.text4].map(function(text, i) {
-                return (
-                  <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                    <span style={{ background: 'var(--accent)', color: '#fff', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{['Hook', 'Problema', 'Beneficio', 'CTA'][i]}</span>
-                    <span style={{ fontSize: 14, color: 'var(--text)' }}>{text}</span>
-                  </div>
-                )
-              })}
+              {script.text2 ? (
+                [script.text1, script.text2, script.text3, script.text4].map(function(text, i) {
+                  return (
+                    <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                      <span style={{ background: 'var(--accent)', color: '#fff', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{['Hook', 'Problema', 'Beneficio', 'CTA'][i]}</span>
+                      <span style={{ fontSize: 14, color: 'var(--text)' }}>{text}</span>
+                    </div>
+                  )
+                })
+              ) : (
+                <span style={{ fontSize: 14, color: 'var(--text)' }}>{script.text1}</span>
+              )}
             </div>
           </div>
         )}
