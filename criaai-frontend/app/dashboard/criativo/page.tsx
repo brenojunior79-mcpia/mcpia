@@ -96,7 +96,7 @@ export default function CriativoPage() {
 
   const steps = [
     'Gerando roteiro com GPT-4o...',
-    'Criando video com Creatomate...',
+    'Criando avatar com IA...',
     'Processando video...',
     'Finalizando criativo...',
     'Criativo pronto!',
