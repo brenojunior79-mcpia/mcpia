@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
-const CREATOMATE_API_KEY = process.env.CREATOMATE_API_KEY!
+const HEYGEN_API_KEY = process.env.HEYGEN_API_KEY!
 
 export async function GET(req: NextRequest) {
   try {
@@ -25,17 +25,18 @@ export async function GET(req: NextRequest) {
     const renderId = req.nextUrl.searchParams.get('renderId')
     if (!renderId) return NextResponse.json({ error: 'renderId obrigatorio' }, { status: 400 })
 
-    const res = await fetch('https://api.creatomate.com/v2/renders/' + renderId, {
-      headers: { 'Authorization': 'Bearer ' + CREATOMATE_API_KEY },
+    const res = await fetch('https://api.heygen.com/v1/video_status.get?video_id=' + renderId, {
+      headers: { 'X-Api-Key': HEYGEN_API_KEY },
     })
 
-    if (!res.ok) throw new Error('Creatomate status error: ' + res.status)
+    if (!res.ok) throw new Error('HeyGen status error: ' + res.status)
 
-    const data = await res.json()
-    const status: string = data.status || 'planned'
-    const videoUrl: string = data.url || ''
+    const body = await res.json()
+    const data = body.data || {}
+    const status: string = data.status || 'processing'
+    const videoUrl: string = data.video_url || ''
 
-    if (status === 'succeeded' && videoUrl) {
+    if (status === 'completed' && videoUrl) {
       const profile = (await supabase.from('profiles').select('credits_videos_used, is_admin').eq('id', user.id).single()).data
       const used = profile?.credits_videos_used || 0
 
@@ -49,9 +50,11 @@ export async function GET(req: NextRequest) {
 
     if (status === 'failed') {
       await supabase.from('generations').update({ status: 'failed' }).eq('user_id', user.id).eq('status', 'pending').contains('metadata', { renderId })
-      return NextResponse.json({ status: 'failed', error: data.error_message || 'Geracao falhou' })
+      const errorMsg = data.error?.message || data.error?.detail || 'Geracao falhou'
+      return NextResponse.json({ status: 'failed', error: errorMsg })
     }
 
+    // pending, waiting, processing
     return NextResponse.json({ status: 'processing' })
   } catch (err: any) {
     console.error('[video-status]', err)
