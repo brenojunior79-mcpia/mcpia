@@ -39,7 +39,7 @@ const blocks = [
         id: 5,
         title: 'Adicionando Pixel na plataforma',
         description: 'Como instalar o Pixel dentro da sua plataforma de vendas para comecar a rastrear conversoes.',
-        videoId: '1133467600',
+        videoId: '1145980958',
         icon: '🔌',
       },
     ],
