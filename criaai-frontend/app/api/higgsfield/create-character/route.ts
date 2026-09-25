@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         name: avatar.name,
-        input_images: [{ type: 'url', image_url: imageUrl }],
+        input_images: [{ type: 'image_url', image_url: imageUrl }],
       }),
     })
 
