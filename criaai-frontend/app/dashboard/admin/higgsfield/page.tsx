@@ -7,6 +7,8 @@ export default function HiggsfieldAdminPage() {
   const [loading, setLoading] = useState(true)
   const [processingId, setProcessingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [testResult, setTestResult] = useState<any>(null)
+  const [testingId, setTestingId] = useState<string | null>(null)
   const supabase = createClient()
 
   useEffect(function() {
@@ -41,6 +43,27 @@ export default function HiggsfieldAdminPage() {
       setError(err.message)
     } finally {
       setProcessingId(null)
+    }
+  }
+
+  async function testScene(externalId: string) {
+    setTestingId(externalId)
+    setTestResult(null)
+    setError(null)
+    try {
+      const sessionResult = await supabase.auth.getSession()
+      const session = sessionResult.data.session
+      const res = await fetch('/api/higgsfield/test-scene', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session ? session.access_token : '') },
+        body: JSON.stringify({ customReferenceId: externalId }),
+      })
+      const data = await res.json()
+      setTestResult(data)
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setTestingId(null)
     }
   }
 
@@ -93,9 +116,30 @@ export default function HiggsfieldAdminPage() {
                   >
                     {isProcessing ? 'Aguarde...' : avatar.external_id ? 'Verificar status' : 'Criar na Higgsfield'}
                   </button>
+                  {avatar.status === 'completed' && (
+                    <button
+                      onClick={function() { testScene(avatar.external_id) }}
+                      disabled={testingId === avatar.external_id}
+                      style={{
+                        background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 700, fontSize: 13,
+                        padding: '9px 16px', borderRadius: 9, cursor: testingId === avatar.external_id ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      {testingId === avatar.external_id ? 'Testando...' : 'Testar cena (custa credito)'}
+                    </button>
+                  )}
                 </div>
               )
             })}
+          </div>
+        )}
+
+        {testResult && (
+          <div style={{ marginTop: 24, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 16 }}>
+            <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>Resposta da Higgsfield (teste de cena):</div>
+            <pre style={{ fontSize: 11, whiteSpace: 'pre-wrap', wordBreak: 'break-all', color: 'var(--muted2)' }}>
+              {JSON.stringify(testResult, null, 2)}
+            </pre>
           </div>
         )}
       </div>
