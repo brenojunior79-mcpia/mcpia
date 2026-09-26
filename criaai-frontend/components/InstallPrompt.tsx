@@ -24,7 +24,7 @@ export default function InstallPrompt() {
         return
       }
 
-      function handleBeforeInstall(e: any) {
+      const handleBeforeInstall = function(e: any) {
         e.preventDefault()
         setDeferredPrompt(e)
         setShowBanner(true)
