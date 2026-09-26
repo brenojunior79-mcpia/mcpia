@@ -111,6 +111,7 @@ export default function CriativoPage() {
         .single()
       const data = profileResult.data
       if (data) {
+        if (!data.is_admin) { router.push('/dashboard'); return }
         setProfile(data)
         const status = data.subscription_status
         const active = status === 'active' || status === 'trialing'
