@@ -73,41 +73,59 @@ export async function POST(req: NextRequest) {
 
     const subscriptionId = payload.event?.subscription?.id || null
 
+    async function grantAccess() {
+      const planName = resolvePlanName(payload)
+      const planId = planName ? await getPlanIdByName(planName) : null
+
+      await admin
+        .from('profiles')
+        .update({
+          subscription_status: 'active',
+          plan_id: planId,
+          payment_provider: 'hubla',
+          hubla_subscription_id: subscriptionId,
+          credits_videos_used: 0,
+          credits_ebooks_used: 0,
+          credits_sites_used: 0,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId)
+
+      if (!planId) {
+        console.error('[hubla-webhook] plano nao identificado, products:', JSON.stringify(payload.event?.products))
+      }
+    }
+
+    async function revokeAccess() {
+      await admin
+        .from('profiles')
+        .update({
+          subscription_status: 'canceled',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId)
+    }
+
     switch (eventType) {
-      case 'customer.member_added': {
-        const planName = resolvePlanName(payload)
-        const planId = planName ? await getPlanIdByName(planName) : null
-
-        await admin
-          .from('profiles')
-          .update({
-            subscription_status: 'active',
-            plan_id: planId,
-            payment_provider: 'hubla',
-            hubla_subscription_id: subscriptionId,
-            credits_videos_used: 0,
-            credits_ebooks_used: 0,
-            credits_sites_used: 0,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', userId)
-
-        if (!planId) {
-          console.error('[hubla-webhook] plano nao identificado, products:', JSON.stringify(payload.event?.products))
-        }
+      case 'customer.member_added':
+      case 'subscription.activated': {
+        await grantAccess()
         break
       }
 
-      case 'customer.member_removed': {
-        await admin
-          .from('profiles')
-          .update({
-            subscription_status: 'canceled',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', userId)
+      case 'customer.member_removed':
+      case 'subscription.deactivated': {
+        await revokeAccess()
         break
       }
+
+      // Eventos apenas informativos, nao mudam o acesso
+      case 'subscription.created':
+      case 'subscription.expiring':
+      case 'subscription.renewal_disabled':
+      case 'subscription.renewal_enabled':
+        console.log('[hubla-webhook] evento informativo:', eventType)
+        break
 
       default:
         console.log('[hubla-webhook] evento nao tratado:', eventType)
