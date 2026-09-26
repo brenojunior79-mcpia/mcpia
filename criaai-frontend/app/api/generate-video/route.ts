@@ -164,6 +164,13 @@ export async function POST(req: NextRequest) {
 
     const isAdmin = (profileData as any)?.is_admin === true
 
+    // O Gerador de Criativos esta temporariamente bloqueado so para admin.
+    // Quando for reaberto pros alunos, remova esse bloco e descomente a checagem de plano/creditos abaixo.
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Este recurso esta em atualizacao no momento.', moduleLocked: true }, { status: 403 })
+    }
+
+    /*
     if (!isAdmin) {
       const status = profileData.subscription_status
       if (status !== 'active' && status !== 'trialing') {
@@ -187,6 +194,7 @@ export async function POST(req: NextRequest) {
         if (used >= limit) return NextResponse.json({ error: 'Sem creditos de video disponiveis.', limitReached: true }, { status: 403 })
       }
     }
+    */
 
     const searchQuery = niche || customPrompt.slice(0, 50) || 'produto'
     const [script, backgroundImage, avatarId, voiceId] = await Promise.all([
