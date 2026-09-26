@@ -3,10 +3,10 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import styles from './planos.module.css'
 
-const CAKTO_LINKS: Record<string, string> = {
-  Starter: 'https://pay.cakto.com.br/jkx9urd_929562',
-  Pro: 'https://pay.cakto.com.br/hqhmn8e',
-  Premium: 'https://pay.cakto.com.br/kbwoae2',
+const HUBLA_LINKS: Record<string, string> = {
+  Starter: 'https://pay.hub.la/0AueQQcwJxUeV9BE1ax7',
+  Pro: 'https://pay.hub.la/16HkQulcBTksGN8AEnow',
+  Premium: 'https://pay.hub.la/TwrkZegsChmWcaJ9LO4z',
 }
 
 const plans = [
@@ -98,23 +98,14 @@ export default function PlanosPage() {
 
   function checkout(planName: string) {
     setLoading(planName)
-    const baseUrl = CAKTO_LINKS[planName]
+    const baseUrl = HUBLA_LINKS[planName]
     if (!baseUrl) {
       alert('Plano nao configurado. Tente novamente mais tarde.')
       setLoading('')
       return
     }
 
-    let url = baseUrl
-    if (userEmail) {
-      const params = new URLSearchParams({
-        email: userEmail,
-        confirmEmail: userEmail,
-      })
-      url = baseUrl + '?' + params.toString()
-    }
-
-    window.location.href = url
+    window.location.href = baseUrl
   }
 
   const timer = timeLeft && timeLeft > 0 ? formatTime(timeLeft) : null
