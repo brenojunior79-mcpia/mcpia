@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
 
     const subscriptionId = payload.event?.subscription?.id || null
 
-    async function grantAccess() {
+    const grantAccess = async function(): Promise<void> {
       const planName = resolvePlanName(payload)
       const planId = planName ? await getPlanIdByName(planName) : null
 
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    async function revokeAccess() {
+    const revokeAccess = async function(): Promise<void> {
       await admin
         .from('profiles')
         .update({
