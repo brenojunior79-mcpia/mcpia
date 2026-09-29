@@ -7,6 +7,7 @@ export default function AnunciosPage() {
   const [connection, setConnection] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
   const [disconnecting, setDisconnecting] = useState(false)
+  const [switching, setSwitching] = useState(false)
   const supabase = createClient()
 
   useEffect(function() {
@@ -31,6 +32,22 @@ export default function AnunciosPage() {
       setError('Erro ao carregar conexao')
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function selectAccount(accountId: string) {
+    setSwitching(true)
+    try {
+      const sessionResult = await supabase.auth.getSession()
+      const session = sessionResult.data.session
+      await fetch('/api/facebook/select-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session ? session.access_token : '') },
+        body: JSON.stringify({ accountId }),
+      })
+      await loadConnection()
+    } finally {
+      setSwitching(false)
     }
   }
 
@@ -85,6 +102,24 @@ export default function AnunciosPage() {
             {!connection.adAccountId && (
               <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#f59e0b' }}>
                 Nao encontramos nenhuma conta de anuncios associada a este login. Verifique se voce tem acesso a uma conta de anuncios no Gerenciador de Negocios da Meta.
+              </div>
+            )}
+
+            {connection.adAccounts && connection.adAccounts.length > 1 && (
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted2)', display: 'block', marginBottom: 6 }}>
+                  Escolha qual conta usar ({connection.adAccounts.length} encontradas)
+                </label>
+                <select
+                  value={connection.adAccountId || ''}
+                  onChange={function(e) { selectAccount(e.target.value) }}
+                  disabled={switching}
+                  style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 9, padding: '10px 12px', color: 'var(--text)', fontSize: 14 }}
+                >
+                  {connection.adAccounts.map(function(acc: any) {
+                    return <option key={acc.id} value={acc.id}>{acc.name}</option>
+                  })}
+                </select>
               </div>
             )}
 
