@@ -67,32 +67,35 @@ export async function GET(req: NextRequest) {
     // 4. Busca contas de anuncio diretas do perfil
     const adAccountsRes = await fetch('https://graph.facebook.com/' + GRAPH_VERSION + '/me/adaccounts?fields=id,name,account_status&access_token=' + accessToken)
     const adAccountsData = await adAccountsRes.json()
-    let firstAccount = adAccountsData.data?.[0]
 
-    // 4b. Se nao achou nenhuma direta, procura dentro dos Negocios (Business Manager) que o usuario administra
-    if (!firstAccount) {
-      const businessesRes = await fetch('https://graph.facebook.com/' + GRAPH_VERSION + '/me/businesses?fields=id,name&access_token=' + accessToken)
-      const businessesData = await businessesRes.json()
-      const businesses = businessesData.data || []
+    const allAccountsMap = new Map<string, { id: string; name: string }>()
+    for (const acc of (adAccountsData.data || [])) {
+      allAccountsMap.set(acc.id, { id: acc.id, name: acc.name })
+    }
 
-      for (const business of businesses) {
-        const ownedRes = await fetch('https://graph.facebook.com/' + GRAPH_VERSION + '/' + business.id + '/owned_ad_accounts?fields=id,name,account_status&access_token=' + accessToken)
-        const ownedData = await ownedRes.json()
-        if (ownedData.data?.[0]) {
-          firstAccount = ownedData.data[0]
-          break
-        }
+    // 4b. Tambem busca dentro de todos os Negocios (Business Manager) que o usuario administra
+    const businessesRes = await fetch('https://graph.facebook.com/' + GRAPH_VERSION + '/me/businesses?fields=id,name&access_token=' + accessToken)
+    const businessesData = await businessesRes.json()
+    const businesses = businessesData.data || []
 
-        const clientRes = await fetch('https://graph.facebook.com/' + GRAPH_VERSION + '/' + business.id + '/client_ad_accounts?fields=id,name,account_status&access_token=' + accessToken)
-        const clientData = await clientRes.json()
-        if (clientData.data?.[0]) {
-          firstAccount = clientData.data[0]
-          break
-        }
+    for (const business of businesses) {
+      const ownedRes = await fetch('https://graph.facebook.com/' + GRAPH_VERSION + '/' + business.id + '/owned_ad_accounts?fields=id,name,account_status&access_token=' + accessToken)
+      const ownedData = await ownedRes.json()
+      for (const acc of (ownedData.data || [])) {
+        allAccountsMap.set(acc.id, { id: acc.id, name: acc.name })
       }
 
-      console.log('[facebook-callback] businesses encontrados:', JSON.stringify(businesses))
+      const clientRes = await fetch('https://graph.facebook.com/' + GRAPH_VERSION + '/' + business.id + '/client_ad_accounts?fields=id,name,account_status&access_token=' + accessToken)
+      const clientData = await clientRes.json()
+      for (const acc of (clientData.data || [])) {
+        allAccountsMap.set(acc.id, { id: acc.id, name: acc.name })
+      }
     }
+
+    const allAccounts = Array.from(allAccountsMap.values())
+    const firstAccount = allAccounts[0]
+
+    console.log('[facebook-callback] total de contas encontradas:', allAccounts.length)
 
     console.log('[facebook-callback] adaccounts diretas:', JSON.stringify(adAccountsData))
     console.log('[facebook-callback] conta final escolhida:', JSON.stringify(firstAccount))
@@ -107,6 +110,7 @@ export async function GET(req: NextRequest) {
       token_expires_at: expiresAt,
       ad_account_id: firstAccount?.id || null,
       ad_account_name: firstAccount?.name || null,
+      ad_accounts: allAccounts,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id' })
 
