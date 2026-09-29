@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
 
   const connection = (await supabase
     .from('facebook_connections')
-    .select('fb_user_name, ad_account_id, ad_account_name, token_expires_at, created_at')
+    .select('fb_user_name, ad_account_id, ad_account_name, ad_accounts, token_expires_at, created_at')
     .eq('user_id', user.id)
     .maybeSingle()).data
 
@@ -26,6 +26,7 @@ export async function GET(req: NextRequest) {
     fbUserName: connection.fb_user_name,
     adAccountId: connection.ad_account_id,
     adAccountName: connection.ad_account_name,
+    adAccounts: connection.ad_accounts || [],
     expiresAt: connection.token_expires_at,
   })
 }
