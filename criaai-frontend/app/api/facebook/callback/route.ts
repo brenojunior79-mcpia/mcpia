@@ -5,7 +5,7 @@ import { cookies } from 'next/headers'
 const FACEBOOK_APP_ID = process.env.FACEBOOK_APP_ID!
 const FACEBOOK_APP_SECRET = process.env.FACEBOOK_APP_SECRET!
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mcpia.site'
-const GRAPH_VERSION = 'v21.0'
+const GRAPH_VERSION = 'v26.0'
 
 export async function GET(req: NextRequest) {
   const cookieStore = cookies()
@@ -61,29 +61,29 @@ export async function GET(req: NextRequest) {
     const expiresIn = longLivedData.expires_in || tokenData.expires_in || 5184000
 
     // 3. Busca dados basicos do usuario
-    const meRes = await fetch('https://graph.facebook.com/me?fields=id,name&access_token=' + accessToken)
+    const meRes = await fetch('https://graph.facebook.com/' + GRAPH_VERSION + '/me?fields=id,name&access_token=' + accessToken)
     const meData = await meRes.json()
 
     // 4. Busca contas de anuncio diretas do perfil
-    const adAccountsRes = await fetch('https://graph.facebook.com/me/adaccounts?fields=id,name,account_status&access_token=' + accessToken)
+    const adAccountsRes = await fetch('https://graph.facebook.com/' + GRAPH_VERSION + '/me/adaccounts?fields=id,name,account_status&access_token=' + accessToken)
     const adAccountsData = await adAccountsRes.json()
     let firstAccount = adAccountsData.data?.[0]
 
     // 4b. Se nao achou nenhuma direta, procura dentro dos Negocios (Business Manager) que o usuario administra
     if (!firstAccount) {
-      const businessesRes = await fetch('https://graph.facebook.com/me/businesses?fields=id,name&access_token=' + accessToken)
+      const businessesRes = await fetch('https://graph.facebook.com/' + GRAPH_VERSION + '/me/businesses?fields=id,name&access_token=' + accessToken)
       const businessesData = await businessesRes.json()
       const businesses = businessesData.data || []
 
       for (const business of businesses) {
-        const ownedRes = await fetch('https://graph.facebook.com/' + business.id + '/owned_ad_accounts?fields=id,name,account_status&access_token=' + accessToken)
+        const ownedRes = await fetch('https://graph.facebook.com/' + GRAPH_VERSION + '/' + business.id + '/owned_ad_accounts?fields=id,name,account_status&access_token=' + accessToken)
         const ownedData = await ownedRes.json()
         if (ownedData.data?.[0]) {
           firstAccount = ownedData.data[0]
           break
         }
 
-        const clientRes = await fetch('https://graph.facebook.com/' + business.id + '/client_ad_accounts?fields=id,name,account_status&access_token=' + accessToken)
+        const clientRes = await fetch('https://graph.facebook.com/' + GRAPH_VERSION + '/' + business.id + '/client_ad_accounts?fields=id,name,account_status&access_token=' + accessToken)
         const clientData = await clientRes.json()
         if (clientData.data?.[0]) {
           firstAccount = clientData.data[0]
