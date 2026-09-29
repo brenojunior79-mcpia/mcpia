@@ -4,10 +4,11 @@ import { cookies } from 'next/headers'
 
 const GRAPH_VERSION = 'v26.0'
 
-const INSIGHTS_FIELDS = [
+const INSIGHT_FIELDS = [
+  'campaign_id', 'adset_id', 'ad_id',
   'spend', 'impressions', 'clicks', 'ctr', 'cpc', 'cpm',
   'inline_link_click_ctr', 'cost_per_inline_link_click',
-  'actions', 'action_values', 'purchase_roas',
+  'actions', 'action_values',
 ].join(',')
 
 function extractAction(actions: any[] | undefined, type: string): number {
@@ -22,29 +23,41 @@ function extractActionValue(actionValues: any[] | undefined, type: string): numb
   return found ? Number(found.value) : 0
 }
 
-function shapeInsights(raw: any) {
-  if (!raw) return null
-  const purchaseCount = extractAction(raw.actions, 'omni_purchase') || extractAction(raw.actions, 'purchase')
-  const purchaseValue = extractActionValue(raw.action_values, 'omni_purchase') || extractActionValue(raw.action_values, 'purchase')
-  const landingPageViews = extractAction(raw.actions, 'landing_page_view')
-  const initiateCheckout = extractAction(raw.actions, 'initiate_checkout')
-  const roas = raw.purchase_roas?.[0]?.value ? Number(raw.purchase_roas[0].value) : (purchaseValue && raw.spend ? purchaseValue / Number(raw.spend) : 0)
+function emptyTotals() {
+  return { spend: 0, impressions: 0, clicks: 0, linkClicks: 0, landingPageViews: 0, initiateCheckout: 0, purchaseCount: 0, purchaseValue: 0 }
+}
 
-  return {
-    spend: Number(raw.spend || 0),
-    impressions: Number(raw.impressions || 0),
-    clicks: Number(raw.clicks || 0),
-    ctr: Number(raw.ctr || 0),
-    cpc: Number(raw.cpc || 0),
-    cpm: Number(raw.cpm || 0),
-    linkCtr: Number(raw.inline_link_click_ctr || 0),
-    linkCpc: Number(raw.cost_per_inline_link_click || 0),
-    landingPageViews,
-    initiateCheckout,
-    purchaseCount,
-    purchaseValue,
-    roas,
+function addRawInsightToTotals(totals: any, raw: any) {
+  totals.spend += Number(raw.spend || 0)
+  totals.impressions += Number(raw.impressions || 0)
+  totals.clicks += Number(raw.clicks || 0)
+  totals.landingPageViews += extractAction(raw.actions, 'landing_page_view')
+  totals.initiateCheckout += extractAction(raw.actions, 'initiate_checkout')
+  totals.purchaseCount += extractAction(raw.actions, 'omni_purchase') || extractAction(raw.actions, 'purchase')
+  totals.purchaseValue += extractActionValue(raw.action_values, 'omni_purchase') || extractActionValue(raw.action_values, 'purchase')
+}
+
+function finalizeTotals(totals: any) {
+  const ctr = totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : 0
+  const cpc = totals.clicks > 0 ? totals.spend / totals.clicks : 0
+  const cpm = totals.impressions > 0 ? (totals.spend / totals.impressions) * 1000 : 0
+  const roas = totals.spend > 0 ? totals.purchaseValue / totals.spend : 0
+  return { ...totals, ctr, cpc, cpm, linkCtr: ctr, linkCpc: cpc, roas }
+}
+
+async function fetchAll(url: string) {
+  let results: any[] = []
+  let nextUrl: string | null = url
+  let guard = 0
+  while (nextUrl && guard < 10) {
+    const res: Response = await fetch(nextUrl)
+    const data: any = await res.json()
+    if (data.error) return { data: results, error: data.error }
+    results = results.concat(data.data || [])
+    nextUrl = data.paging?.next || null
+    guard++
   }
+  return { data: results, error: null }
 }
 
 export async function GET(req: NextRequest) {
@@ -72,57 +85,93 @@ export async function GET(req: NextRequest) {
   const datePreset = req.nextUrl.searchParams.get('datePreset') || 'last_30d'
 
   try {
-    // Metricas gerais da conta (soma de tudo no periodo)
-    const accountInsightsRes = await fetch(
-      'https://graph.facebook.com/' + GRAPH_VERSION + '/' + adAccountId + '/insights'
-      + '?fields=' + INSIGHTS_FIELDS
-      + '&date_preset=' + datePreset
-      + '&access_token=' + accessToken
-    )
-    const accountInsightsData = await accountInsightsRes.json()
-    const accountInsights = shapeInsights(accountInsightsData.data?.[0])
+    // 1. Estrutura: campanhas, conjuntos e anuncios (3 chamadas, independente de quantos existirem)
+    const [campaignsResult, adSetsResult, adsResult, insightsResult] = await Promise.all([
+      fetchAll('https://graph.facebook.com/' + GRAPH_VERSION + '/' + adAccountId + '/campaigns?fields=id,name,status,effective_status,objective,daily_budget,lifetime_budget&limit=200&access_token=' + accessToken),
+      fetchAll('https://graph.facebook.com/' + GRAPH_VERSION + '/' + adAccountId + '/adsets?fields=id,name,campaign_id,status,effective_status,daily_budget&limit=200&access_token=' + accessToken),
+      fetchAll('https://graph.facebook.com/' + GRAPH_VERSION + '/' + adAccountId + '/ads?fields=id,name,adset_id,status,effective_status&limit=200&access_token=' + accessToken),
+      fetchAll('https://graph.facebook.com/' + GRAPH_VERSION + '/' + adAccountId + '/insights?level=ad&fields=' + INSIGHT_FIELDS + '&date_preset=' + datePreset + '&limit=200&access_token=' + accessToken),
+    ])
 
-    if (accountInsightsData.error) {
-      console.error('[facebook-campaigns] erro insights conta:', accountInsightsData.error)
+    if (campaignsResult.error) {
+      console.error('[facebook-campaigns] erro campanhas:', campaignsResult.error)
+      return NextResponse.json({ error: campaignsResult.error.message }, { status: 500 })
+    }
+    if (insightsResult.error) {
+      console.error('[facebook-campaigns] erro insights:', insightsResult.error)
     }
 
-    // Lista de campanhas
-    const campaignsRes = await fetch(
-      'https://graph.facebook.com/' + GRAPH_VERSION + '/' + adAccountId + '/campaigns'
-      + '?fields=id,name,status,effective_status,objective,daily_budget,lifetime_budget,created_time'
-      + '&limit=50'
-      + '&access_token=' + accessToken
-    )
-    const campaignsData = await campaignsRes.json()
+    console.log('[facebook-campaigns] campanhas:', campaignsResult.data.length, 'conjuntos:', adSetsResult.data.length, 'anuncios:', adsResult.data.length, 'linhas de insight:', insightsResult.data.length)
 
-    if (campaignsData.error) {
-      console.error('[facebook-campaigns] erro campanhas:', campaignsData.error)
-      return NextResponse.json({ error: campaignsData.error.message }, { status: 500 })
+    // 2. Monta um mapa de insight cru por ad_id
+    const insightsByAdId = new Map<string, any>()
+    for (const row of insightsResult.data) {
+      insightsByAdId.set(row.ad_id, row)
     }
 
-    const campaigns = campaignsData.data || []
+    // 3. Monta os anuncios, com seu insight (se houver)
+    const adsByAdSetId = new Map<string, any[]>()
+    for (const ad of adsResult.data) {
+      const rawInsight = insightsByAdId.get(ad.id)
+      const totals = emptyTotals()
+      if (rawInsight) addRawInsightToTotals(totals, rawInsight)
+      const adWithInsight = { ...ad, insights: finalizeTotals(totals) }
+      if (!adsByAdSetId.has(ad.adset_id)) adsByAdSetId.set(ad.adset_id, [])
+      adsByAdSetId.get(ad.adset_id)!.push(adWithInsight)
+    }
 
-    // Metricas de cada campanha (em paralelo)
-    const campaignsWithInsights = await Promise.all(campaigns.map(async function(campaign: any) {
-      try {
-        const insightsRes = await fetch(
-          'https://graph.facebook.com/' + GRAPH_VERSION + '/' + campaign.id + '/insights'
-          + '?fields=' + INSIGHTS_FIELDS
-          + '&date_preset=' + datePreset
-          + '&access_token=' + accessToken
-        )
-        const insightsData = await insightsRes.json()
-        const insights = shapeInsights(insightsData.data?.[0])
-        return { ...campaign, insights }
-      } catch {
-        return { ...campaign, insights: null }
+    // 4. Monta os conjuntos, somando os anuncios dele
+    const adSetsByCampaignId = new Map<string, any[]>()
+    for (const adSet of adSetsResult.data) {
+      const ads = adsByAdSetId.get(adSet.id) || []
+      const totals = emptyTotals()
+      for (const ad of ads) {
+        totals.spend += ad.insights.spend
+        totals.impressions += ad.insights.impressions
+        totals.clicks += ad.insights.clicks
+        totals.landingPageViews += ad.insights.landingPageViews
+        totals.initiateCheckout += ad.insights.initiateCheckout
+        totals.purchaseCount += ad.insights.purchaseCount
+        totals.purchaseValue += ad.insights.purchaseValue
       }
-    }))
+      const adSetWithAds = { ...adSet, ads, insights: finalizeTotals(totals) }
+      if (!adSetsByCampaignId.has(adSet.campaign_id)) adSetsByCampaignId.set(adSet.campaign_id, [])
+      adSetsByCampaignId.get(adSet.campaign_id)!.push(adSetWithAds)
+    }
+
+    // 5. Monta as campanhas, somando os conjuntos dela
+    const campaignsWithStructure = campaignsResult.data.map(function(campaign: any) {
+      const adSets = adSetsByCampaignId.get(campaign.id) || []
+      const totals = emptyTotals()
+      for (const adSet of adSets) {
+        totals.spend += adSet.insights.spend
+        totals.impressions += adSet.insights.impressions
+        totals.clicks += adSet.insights.clicks
+        totals.landingPageViews += adSet.insights.landingPageViews
+        totals.initiateCheckout += adSet.insights.initiateCheckout
+        totals.purchaseCount += adSet.insights.purchaseCount
+        totals.purchaseValue += adSet.insights.purchaseValue
+      }
+      return { ...campaign, adSets, insights: finalizeTotals(totals) }
+    })
+
+    // 6. Metricas gerais da conta = soma de todas as campanhas
+    const accountTotals = emptyTotals()
+    for (const campaign of campaignsWithStructure) {
+      accountTotals.spend += campaign.insights.spend
+      accountTotals.impressions += campaign.insights.impressions
+      accountTotals.clicks += campaign.insights.clicks
+      accountTotals.landingPageViews += campaign.insights.landingPageViews
+      accountTotals.initiateCheckout += campaign.insights.initiateCheckout
+      accountTotals.purchaseCount += campaign.insights.purchaseCount
+      accountTotals.purchaseValue += campaign.insights.purchaseValue
+    }
+    const accountInsights = finalizeTotals(accountTotals)
 
     return NextResponse.json({
       adAccountId,
       accountInsights,
-      campaigns: campaignsWithInsights,
+      campaigns: campaignsWithStructure,
     })
   } catch (err: any) {
     console.error('[facebook-campaigns] erro:', err)
