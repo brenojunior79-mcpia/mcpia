@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   const redirectUri = APP_URL + '/api/facebook/callback'
   const scopes = ['ads_management', 'ads_read', 'business_management', 'pages_show_list', 'public_profile'].join(',')
 
-  const oauthUrl = 'https://www.facebook.com/v21.0/dialog/oauth'
+  const oauthUrl = 'https://www.facebook.com/v26.0/dialog/oauth'
     + '?client_id=' + FACEBOOK_APP_ID
     + '&redirect_uri=' + encodeURIComponent(redirectUri)
     + '&scope=' + encodeURIComponent(scopes)
