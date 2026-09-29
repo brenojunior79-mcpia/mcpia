@@ -64,6 +64,7 @@ export default function AnunciosPage() {
 
   const [analyzing, setAnalyzing] = useState(false)
   const [analysis, setAnalysis] = useState<string | null>(null)
+  const [showInactive, setShowInactive] = useState(false)
 
   const supabase = createClient()
 
@@ -338,100 +339,177 @@ export default function AnunciosPage() {
                 </div>
 
                 {/* Lista de campanhas */}
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--muted2)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Suas campanhas</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--muted2)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Campanhas ativas</div>
 
                 {campaignsLoading ? (
                   <p style={{ color: 'var(--muted2)', fontSize: 13 }}>Carregando campanhas...</p>
                 ) : campaignsError ? (
                   <div style={{ fontSize: 13, color: '#ef4444', background: 'rgba(239,68,68,0.08)', borderRadius: 9, padding: '12px 16px' }}>{campaignsError}</div>
                 ) : !campaignsData?.campaigns?.length ? (
-                  <p style={{ color: 'var(--muted2)', fontSize: 13 }}>Nenhuma campanha encontrada. Crie a primeira acima.</p>
+                  <p style={{ color: 'var(--muted2)', fontSize: 13 }}>Nenhuma campanha encontrada.</p>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {campaignsData.campaigns.map(function(campaign: any) {
-                      const isActive = campaign.status === 'ACTIVE'
-                      const isExpanded = expandedId === campaign.id
-                      const isEditing = editingId === campaign.id
-                      const statusInfo = STATUS_LABELS[campaign.effective_status] || STATUS_LABELS[campaign.status] || { label: campaign.effective_status || campaign.status, color: 'var(--muted2)' }
-                      const budget = campaign.daily_budget ? formatCurrency(Number(campaign.daily_budget) / 100) + '/dia' : (campaign.lifetime_budget ? formatCurrency(Number(campaign.lifetime_budget) / 100) + ' total' : '—')
+                  <>
+                    {(function() {
+                      const active = campaignsData.campaigns.filter(function(c: any) { return c.status === 'ACTIVE' })
+                      const inactive = campaignsData.campaigns.filter(function(c: any) { return c.status !== 'ACTIVE' })
 
-                      return (
-                        <div key={campaign.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
-                          <div style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-                            {isEditing ? (
-                              <div style={{ flex: 1, minWidth: 220, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                                <input
-                                  type="text"
-                                  value={editName}
-                                  onChange={function(e) { setEditName(e.target.value) }}
-                                  style={{ flex: 1, minWidth: 140, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 10px', color: 'var(--text)', fontSize: 13 }}
-                                />
-                                <input
-                                  type="number"
-                                  value={editBudget}
-                                  onChange={function(e) { setEditBudget(e.target.value) }}
-                                  placeholder="Orcamento R$/dia"
-                                  style={{ width: 130, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 10px', color: 'var(--text)', fontSize: 13 }}
-                                />
-                                <button onClick={function() { saveEdit(campaign.id) }} disabled={savingEdit} style={{ background: '#16a34a', color: '#fff', fontWeight: 700, fontSize: 12, padding: '7px 14px', borderRadius: 8, border: 'none', cursor: 'pointer' }}>
-                                  {savingEdit ? '...' : 'Salvar'}
-                                </button>
-                                <button onClick={function() { setEditingId(null) }} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: 12, padding: '7px 14px', borderRadius: 8, cursor: 'pointer' }}>
-                                  Cancelar
-                                </button>
+                      function renderCampaign(campaign: any) {
+                        const isActive = campaign.status === 'ACTIVE'
+                        const isExpanded = expandedId === campaign.id
+                        const isEditing = editingId === campaign.id
+                        const statusInfo = STATUS_LABELS[campaign.effective_status] || STATUS_LABELS[campaign.status] || { label: campaign.effective_status || campaign.status, color: 'var(--muted2)' }
+                        const budget = campaign.daily_budget ? formatCurrency(Number(campaign.daily_budget) / 100) + '/dia' : (campaign.lifetime_budget ? formatCurrency(Number(campaign.lifetime_budget) / 100) + ' total' : '—')
+
+                        return (
+                          <div key={campaign.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+                            <div style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+                              {isEditing ? (
+                                <div style={{ flex: 1, minWidth: 220, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                  <input
+                                    type="text"
+                                    value={editName}
+                                    onChange={function(e) { setEditName(e.target.value) }}
+                                    style={{ flex: 1, minWidth: 140, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 10px', color: 'var(--text)', fontSize: 13 }}
+                                  />
+                                  <input
+                                    type="number"
+                                    value={editBudget}
+                                    onChange={function(e) { setEditBudget(e.target.value) }}
+                                    placeholder="Orcamento R$/dia"
+                                    style={{ width: 130, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 10px', color: 'var(--text)', fontSize: 13 }}
+                                  />
+                                  <button onClick={function() { saveEdit(campaign.id) }} disabled={savingEdit} style={{ background: '#16a34a', color: '#fff', fontWeight: 700, fontSize: 12, padding: '7px 14px', borderRadius: 8, border: 'none', cursor: 'pointer' }}>
+                                    {savingEdit ? '...' : 'Salvar'}
+                                  </button>
+                                  <button onClick={function() { setEditingId(null) }} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: 12, padding: '7px 14px', borderRadius: 8, cursor: 'pointer' }}>
+                                    Cancelar
+                                  </button>
+                                </div>
+                              ) : (
+                                <>
+                                  <div style={{ flex: 1, minWidth: 180 }}>
+                                    <div style={{ fontWeight: 700, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                      <i className="ti ti-speakerphone" style={{ fontSize: 13, color: 'var(--accent2)' }} />
+                                      {campaign.name}
+                                    </div>
+                                    <div style={{ fontSize: 11, color: 'var(--muted2)' }}>{campaign.objective} · {budget} · {campaign.adSets?.length || 0} conjunto(s)</div>
+                                  </div>
+                                  <div style={{ fontSize: 12, color: 'var(--muted2)', minWidth: 80 }}>
+                                    {formatCurrency(campaign.insights?.spend)}
+                                  </div>
+                                  <div style={{ fontSize: 12, color: 'var(--muted2)', minWidth: 70 }}>
+                                    ROAS {Number(campaign.insights?.roas || 0).toFixed(2)}x
+                                  </div>
+                                  <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 99, background: statusInfo.color + '1a', color: statusInfo.color }}>
+                                    {statusInfo.label}
+                                  </span>
+                                  <button
+                                    onClick={function() { setExpandedId(isExpanded ? null : campaign.id) }}
+                                    style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: 12, padding: '7px 12px', borderRadius: 9, cursor: 'pointer' }}
+                                  >
+                                    {isExpanded ? 'Ocultar' : 'Detalhes'}
+                                  </button>
+                                  <button
+                                    onClick={function() { startEdit(campaign) }}
+                                    style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: 12, padding: '7px 12px', borderRadius: 9, cursor: 'pointer' }}
+                                  >
+                                    Editar
+                                  </button>
+                                  <button
+                                    onClick={function() { toggleCampaign(campaign.id, campaign.status) }}
+                                    disabled={togglingId === campaign.id}
+                                    style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: 12, padding: '7px 14px', borderRadius: 9, cursor: togglingId === campaign.id ? 'not-allowed' : 'pointer' }}
+                                  >
+                                    {togglingId === campaign.id ? '...' : isActive ? 'Pausar' : 'Ativar'}
+                                  </button>
+                                </>
+                              )}
+                            </div>
+
+                            {isExpanded && (
+                              <div style={{ borderTop: '1px solid var(--border)', background: 'var(--surface2)' }}>
+                                <div style={{ padding: '14px 18px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 14, borderBottom: '1px solid var(--border)' }}>
+                                  <DetailRow label="CTR (link)" value={Number(campaign.insights?.linkCtr || 0).toFixed(2) + '%'} />
+                                  <DetailRow label="CPC (link)" value={formatCurrency(campaign.insights?.linkCpc)} />
+                                  <DetailRow label="CPM" value={formatCurrency(campaign.insights?.cpm)} />
+                                  <DetailRow label="Visitas na pagina" value={formatNumber(campaign.insights?.landingPageViews)} />
+                                  <DetailRow label="Checkout iniciado" value={formatNumber(campaign.insights?.initiateCheckout)} />
+                                  <DetailRow label="Vendas" value={formatNumber(campaign.insights?.purchaseCount) + ' (' + formatCurrency(campaign.insights?.purchaseValue) + ')'} />
+                                </div>
+
+                                <div style={{ padding: '12px 18px' }}>
+                                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Conjuntos de anuncios</div>
+                                  {!campaign.adSets?.length ? (
+                                    <p style={{ fontSize: 12, color: 'var(--muted2)' }}>Nenhum conjunto encontrado.</p>
+                                  ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                      {campaign.adSets.map(function(adSet: any) {
+                                        const adSetStatus = STATUS_LABELS[adSet.effective_status] || STATUS_LABELS[adSet.status] || { label: adSet.effective_status || adSet.status, color: 'var(--muted2)' }
+                                        return (
+                                          <div key={adSet.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9, padding: '10px 14px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                                              <i className="ti ti-layout-grid" style={{ fontSize: 13, color: 'var(--muted2)' }} />
+                                              <span style={{ fontSize: 13, fontWeight: 700, flex: 1, minWidth: 140 }}>{adSet.name}</span>
+                                              <span style={{ fontSize: 11, color: 'var(--muted2)' }}>{formatCurrency(adSet.insights?.spend)}</span>
+                                              <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: adSetStatus.color + '1a', color: adSetStatus.color }}>{adSetStatus.label}</span>
+                                            </div>
+                                            {adSet.ads?.length > 0 && (
+                                              <div style={{ marginTop: 8, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                                {adSet.ads.map(function(ad: any) {
+                                                  const adStatus = STATUS_LABELS[ad.effective_status] || STATUS_LABELS[ad.status] || { label: ad.effective_status || ad.status, color: 'var(--muted2)' }
+                                                  return (
+                                                    <div key={ad.id} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                                      <i className="ti ti-ad-2" style={{ fontSize: 12, color: 'var(--muted)' }} />
+                                                      <span style={{ fontSize: 12, flex: 1, minWidth: 120 }}>{ad.name}</span>
+                                                      <span style={{ fontSize: 11, color: 'var(--muted2)' }}>{formatCurrency(ad.insights?.spend)}</span>
+                                                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: adStatus.color + '1a', color: adStatus.color }}>{adStatus.label}</span>
+                                                    </div>
+                                                  )
+                                                })}
+                                              </div>
+                                            )}
+                                          </div>
+                                        )
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                            ) : (
-                              <>
-                                <div style={{ flex: 1, minWidth: 180 }}>
-                                  <div style={{ fontWeight: 700, fontSize: 14 }}>{campaign.name}</div>
-                                  <div style={{ fontSize: 11, color: 'var(--muted2)' }}>{campaign.objective} · {budget}</div>
-                                </div>
-                                <div style={{ fontSize: 12, color: 'var(--muted2)', minWidth: 80 }}>
-                                  {campaign.insights ? formatCurrency(campaign.insights.spend) : 'R$ 0,00'}
-                                </div>
-                                <div style={{ fontSize: 12, color: 'var(--muted2)', minWidth: 70 }}>
-                                  ROAS {campaign.insights ? Number(campaign.insights.roas || 0).toFixed(2) : '0.00'}x
-                                </div>
-                                <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 99, background: statusInfo.color + '1a', color: statusInfo.color }}>
-                                  {statusInfo.label}
-                                </span>
-                                <button
-                                  onClick={function() { setExpandedId(isExpanded ? null : campaign.id) }}
-                                  style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: 12, padding: '7px 12px', borderRadius: 9, cursor: 'pointer' }}
-                                >
-                                  {isExpanded ? 'Ocultar' : 'Detalhes'}
-                                </button>
-                                <button
-                                  onClick={function() { startEdit(campaign) }}
-                                  style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: 12, padding: '7px 12px', borderRadius: 9, cursor: 'pointer' }}
-                                >
-                                  Editar
-                                </button>
-                                <button
-                                  onClick={function() { toggleCampaign(campaign.id, campaign.status) }}
-                                  disabled={togglingId === campaign.id}
-                                  style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: 12, padding: '7px 14px', borderRadius: 9, cursor: togglingId === campaign.id ? 'not-allowed' : 'pointer' }}
-                                >
-                                  {togglingId === campaign.id ? '...' : isActive ? 'Pausar' : 'Ativar'}
-                                </button>
-                              </>
                             )}
                           </div>
+                        )
+                      }
 
-                          {isExpanded && campaign.insights && (
-                            <div style={{ borderTop: '1px solid var(--border)', padding: '14px 18px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 14, background: 'var(--surface2)' }}>
-                              <DetailRow label="CTR (link)" value={Number(campaign.insights.linkCtr || 0).toFixed(2) + '%'} />
-                              <DetailRow label="CPC (link)" value={formatCurrency(campaign.insights.linkCpc)} />
-                              <DetailRow label="CPM" value={formatCurrency(campaign.insights.cpm)} />
-                              <DetailRow label="Visitas na pagina" value={formatNumber(campaign.insights.landingPageViews)} />
-                              <DetailRow label="Checkout iniciado" value={formatNumber(campaign.insights.initiateCheckout)} />
-                              <DetailRow label="Vendas" value={formatNumber(campaign.insights.purchaseCount) + ' (' + formatCurrency(campaign.insights.purchaseValue) + ')'} />
+                      return (
+                        <>
+                          {!active.length ? (
+                            <p style={{ color: 'var(--muted2)', fontSize: 13, marginBottom: 16 }}>Nenhuma campanha ativa no momento.</p>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+                              {active.map(renderCampaign)}
                             </div>
                           )}
-                        </div>
+
+                          {inactive.length > 0 && (
+                            <div>
+                              <button
+                                onClick={function() { setShowInactive(!showInactive) }}
+                                style={{ background: 'transparent', border: 'none', color: 'var(--muted2)', fontWeight: 600, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, padding: '6px 0', marginBottom: showInactive ? 10 : 0 }}
+                              >
+                                <i className={'ti ' + (showInactive ? 'ti-chevron-down' : 'ti-chevron-right')} />
+                                {showInactive ? 'Ocultar' : 'Mostrar'} campanhas pausadas / outras ({inactive.length})
+                              </button>
+                              {showInactive && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                  {inactive.map(renderCampaign)}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </>
                       )
-                    })}
-                  </div>
+                    })()}
+                  </>
                 )}
               </>
             )}
