@@ -64,10 +64,38 @@ export async function GET(req: NextRequest) {
     const meRes = await fetch('https://graph.facebook.com/me?fields=id,name&access_token=' + accessToken)
     const meData = await meRes.json()
 
-    // 4. Busca a primeira conta de anuncios disponivel
+    // 4. Busca contas de anuncio diretas do perfil
     const adAccountsRes = await fetch('https://graph.facebook.com/me/adaccounts?fields=id,name,account_status&access_token=' + accessToken)
     const adAccountsData = await adAccountsRes.json()
-    const firstAccount = adAccountsData.data?.[0]
+    let firstAccount = adAccountsData.data?.[0]
+
+    // 4b. Se nao achou nenhuma direta, procura dentro dos Negocios (Business Manager) que o usuario administra
+    if (!firstAccount) {
+      const businessesRes = await fetch('https://graph.facebook.com/me/businesses?fields=id,name&access_token=' + accessToken)
+      const businessesData = await businessesRes.json()
+      const businesses = businessesData.data || []
+
+      for (const business of businesses) {
+        const ownedRes = await fetch('https://graph.facebook.com/' + business.id + '/owned_ad_accounts?fields=id,name,account_status&access_token=' + accessToken)
+        const ownedData = await ownedRes.json()
+        if (ownedData.data?.[0]) {
+          firstAccount = ownedData.data[0]
+          break
+        }
+
+        const clientRes = await fetch('https://graph.facebook.com/' + business.id + '/client_ad_accounts?fields=id,name,account_status&access_token=' + accessToken)
+        const clientData = await clientRes.json()
+        if (clientData.data?.[0]) {
+          firstAccount = clientData.data[0]
+          break
+        }
+      }
+
+      console.log('[facebook-callback] businesses encontrados:', JSON.stringify(businesses))
+    }
+
+    console.log('[facebook-callback] adaccounts diretas:', JSON.stringify(adAccountsData))
+    console.log('[facebook-callback] conta final escolhida:', JSON.stringify(firstAccount))
 
     const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString()
 
