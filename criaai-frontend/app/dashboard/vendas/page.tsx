@@ -177,24 +177,24 @@ function VideoLesson({ videoId, title, color }: { videoId: string; title: string
 
 function LessonCard({ lesson }: { lesson: any }) {
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 18, overflow: 'hidden', boxShadow: 'var(--shadow-sm)', flex: '0 0 290px', scrollSnapAlign: 'start' }}>
-      <div style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--border)' }}>
-        <div style={{ width: 40, height: 40, background: 'var(--surface2)', borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20, overflow: 'hidden', boxShadow: 'var(--shadow-sm)', flex: '0 0 340px', scrollSnapAlign: 'start' }}>
+      <div style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 14, borderBottom: '1px solid var(--border)' }}>
+        <div style={{ width: 46, height: 46, background: 'var(--surface2)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
           {lesson.icon}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent2)' }}>AULA {lesson.id}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent2)' }}>AULA {lesson.id}</span>
             {!lesson.videoId && (
-              <span style={{ fontSize: 9, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', color: '#f59e0b', borderRadius: 99, padding: '1px 7px', fontWeight: 600 }}>Em breve</span>
+              <span style={{ fontSize: 10, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', color: '#f59e0b', borderRadius: 99, padding: '1px 8px', fontWeight: 600 }}>Em breve</span>
             )}
           </div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lesson.title}</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lesson.title}</div>
         </div>
       </div>
 
-      <div style={{ padding: '14px 16px' }}>
-        <p style={{ fontSize: 11, color: 'var(--muted2)', margin: '0 0 12px', lineHeight: 1.5, minHeight: 33 }}>{lesson.description}</p>
+      <div style={{ padding: '16px 18px' }}>
+        <p style={{ fontSize: 12, color: 'var(--muted2)', margin: '0 0 14px', lineHeight: 1.55, minHeight: 36 }}>{lesson.description}</p>
         {lesson.videoId ? (
           <VideoLesson videoId={lesson.videoId} title={lesson.title} color="#7c5cfc" />
         ) : (
@@ -227,6 +227,49 @@ function LessonCard({ lesson }: { lesson: any }) {
             })}
           </div>
         )}
+
+        {lesson.id === 3 && (
+          <div style={{ marginTop: 14 }}>
+            <a
+              href="https://business.facebook.com/latest/business_home?nav_ref=bm_home_redirect&bm_redirect_migration=true"
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                background: 'linear-gradient(135deg, #7c5cfc, #9b6dfc)', color: '#fff', fontWeight: 700, fontSize: 13,
+                padding: '12px 16px', borderRadius: 11, textDecoration: 'none',
+                animation: 'pulseGerenciador 1.8s ease-in-out infinite',
+              }}
+            >
+              Abrir Gerenciador →
+            </a>
+            <p style={{ fontSize: 11, color: '#b45309', marginTop: 10, marginBottom: 8, lineHeight: 1.5 }}>
+              ⚠️ Se voce for fazer pelo celular, faca pelo navegador <strong>Google Chrome</strong>. Clique no botao para baixar no Android ou iPhone.
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <a
+                href="https://play.google.com/store/apps/details?id=com.android.chrome"
+                target="_blank"
+                rel="noreferrer"
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: '#fff', border: '1px solid rgba(245,158,11,0.35)', color: '#92400e', fontWeight: 600, fontSize: 12, padding: '9px 10px', borderRadius: 9, textDecoration: 'none' }}
+              >
+                <i className="ti ti-brand-android" style={{ fontSize: 14 }} />
+                Chrome Android
+              </a>
+              <a
+                href="https://apps.apple.com/app/google-chrome/id535886823"
+                target="_blank"
+                rel="noreferrer"
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: '#fff', border: '1px solid rgba(245,158,11,0.35)', color: '#92400e', fontWeight: 600, fontSize: 12, padding: '9px 10px', borderRadius: 9, textDecoration: 'none' }}
+              >
+                <i className="ti ti-brand-apple" style={{ fontSize: 14 }} />
+                Chrome iPhone
+              </a>
+            </div>
+          </div>
+        )}
+
+        <style>{'@keyframes pulseGerenciador{0%,100%{box-shadow:0 0 0 0 rgba(124,92,252,0.5)}50%{box-shadow:0 0 0 8px rgba(124,92,252,0)}}'}</style>
       </div>
     </div>
   )
@@ -292,39 +335,6 @@ export default function VendasAutoPage() {
           <p style={{ fontSize: 14, color: 'var(--muted2)', margin: 0 }}>
             Arraste os carrosseis para o lado para ver mais aulas. Do zero ao primeiro anuncio no ar.
           </p>
-        </div>
-
-        {/* Banner de acao rapida */}
-        <div style={{ background: 'linear-gradient(135deg, rgba(124,92,252,0.15), rgba(124,92,252,0.05))', border: '1px solid rgba(124,92,252,0.3)', borderRadius: 16, padding: '20px 24px', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-          <div>
-            <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 15, color: '#a78bfa', marginBottom: 4 }}>Pronto para comecar?</div>
-            <div style={{ fontSize: 13, color: 'var(--muted2)' }}>Configure sua conta de anuncios, pixel e pagina direto no Gerenciador de Negocios da Meta</div>
-          </div>
-          <a
-            href="https://business.facebook.com/latest/business_home?nav_ref=bm_home_redirect&bm_redirect_migration=true"
-            target="_blank"
-            rel="noreferrer"
-            style={{ background: 'linear-gradient(135deg, #7c5cfc, #9b6dfc)', color: '#fff', fontWeight: 700, fontSize: 14, padding: '12px 24px', borderRadius: 12, textDecoration: 'none', whiteSpace: 'nowrap' }}
-          >
-            Abrir Gerenciador →
-          </a>
-        </div>
-
-        {/* Aviso + botoes do Chrome */}
-        <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 14, padding: '14px 20px', marginBottom: 28, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 13, color: '#b45309', flex: 1, minWidth: 220 }}>
-            ⚠️ Pra funcionar certinho pelo celular, abra esse link usando o navegador <strong>Google Chrome</strong> (nao funciona bem no Safari ou em navegadores dentro de outros apps).
-          </span>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <a href="https://play.google.com/store/apps/details?id=com.android.chrome" target="_blank" rel="noreferrer" style={{ background: '#fff', border: '1px solid rgba(245,158,11,0.35)', color: '#92400e', fontWeight: 600, fontSize: 12, padding: '8px 14px', borderRadius: 9, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <i className="ti ti-brand-android" style={{ fontSize: 14 }} />
-              Chrome Android
-            </a>
-            <a href="https://apps.apple.com/app/google-chrome/id535886823" target="_blank" rel="noreferrer" style={{ background: '#fff', border: '1px solid rgba(245,158,11,0.35)', color: '#92400e', fontWeight: 600, fontSize: 12, padding: '8px 14px', borderRadius: 9, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <i className="ti ti-brand-apple" style={{ fontSize: 14 }} />
-              Chrome iPhone
-            </a>
-          </div>
         </div>
 
         {/* 3 blocos de aulas em carrossel */}
