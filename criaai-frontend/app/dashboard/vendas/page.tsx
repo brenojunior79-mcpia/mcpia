@@ -116,30 +116,6 @@ const blocks = [
   },
 ]
 
-const tools = [
-  {
-    name: 'Meta Business Suite',
-    description: 'Gerencie suas paginas, anuncios e resultados em um so lugar.',
-    url: 'https://business.facebook.com',
-    icon: '📘',
-    color: '#1877f2',
-  },
-  {
-    name: 'Gerenciador de Anuncios',
-    description: 'Crie e acompanhe suas campanhas no Facebook e Instagram.',
-    url: 'https://www.facebook.com/adsmanager',
-    icon: '📊',
-    color: '#7c5cfc',
-  },
-  {
-    name: 'Meta Pixel Helper',
-    description: 'Extensao para verificar se seu pixel esta instalado corretamente.',
-    url: 'https://chromewebstore.google.com/detail/meta-pixel-helper/fdgfkebogiimcoedlicjlajpkdmockpc',
-    icon: '🔍',
-    color: '#4ade80',
-  },
-]
-
 function VideoLesson({ videoId, title, color }: { videoId: string; title: string; color: string }) {
   const [playing, setPlaying] = useState(false)
   const [thumb, setThumb] = useState<string | null>(null)
@@ -319,13 +295,13 @@ export default function VendasAutoPage() {
         </div>
 
         {/* Banner de acao rapida */}
-        <div style={{ background: 'linear-gradient(135deg, rgba(124,92,252,0.15), rgba(124,92,252,0.05))', border: '1px solid rgba(124,92,252,0.3)', borderRadius: 16, padding: '20px 24px', marginBottom: 28, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+        <div style={{ background: 'linear-gradient(135deg, rgba(124,92,252,0.15), rgba(124,92,252,0.05))', border: '1px solid rgba(124,92,252,0.3)', borderRadius: 16, padding: '20px 24px', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div>
             <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 15, color: '#a78bfa', marginBottom: 4 }}>Pronto para comecar?</div>
-            <div style={{ fontSize: 13, color: 'var(--muted2)' }}>Acesse o Gerenciador de Anuncios e coloque seu primeiro anuncio no ar hoje</div>
+            <div style={{ fontSize: 13, color: 'var(--muted2)' }}>Configure sua conta de anuncios, pixel e pagina direto no Gerenciador de Negocios da Meta</div>
           </div>
           <a
-            href="https://www.facebook.com/adsmanager"
+            href="https://business.facebook.com/latest/business_home?nav_ref=bm_home_redirect&bm_redirect_migration=true"
             target="_blank"
             rel="noreferrer"
             style={{ background: 'linear-gradient(135deg, #7c5cfc, #9b6dfc)', color: '#fff', fontWeight: 700, fontSize: 14, padding: '12px 24px', borderRadius: 12, textDecoration: 'none', whiteSpace: 'nowrap' }}
@@ -334,27 +310,20 @@ export default function VendasAutoPage() {
           </a>
         </div>
 
-        {/* Ferramentas */}
-        <div style={{ marginBottom: 36 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted2)', marginBottom: 14, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Ferramentas essenciais</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
-            {tools.map(function(tool) {
-              return (
-                <a
-                  key={tool.name}
-                  href={tool.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 18px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 14, transition: 'all 0.2s' }}
-                >
-                  <div style={{ fontSize: 28, flexShrink: 0 }}>{tool.icon}</div>
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>{tool.name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--muted2)' }}>{tool.description}</div>
-                  </div>
-                </a>
-              )
-            })}
+        {/* Aviso + botoes do Chrome */}
+        <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 14, padding: '14px 20px', marginBottom: 28, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 13, color: '#b45309', flex: 1, minWidth: 220 }}>
+            ⚠️ Pra funcionar certinho pelo celular, abra esse link usando o navegador <strong>Google Chrome</strong> (nao funciona bem no Safari ou em navegadores dentro de outros apps).
+          </span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <a href="https://play.google.com/store/apps/details?id=com.android.chrome" target="_blank" rel="noreferrer" style={{ background: '#fff', border: '1px solid rgba(245,158,11,0.35)', color: '#92400e', fontWeight: 600, fontSize: 12, padding: '8px 14px', borderRadius: 9, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <i className="ti ti-brand-android" style={{ fontSize: 14 }} />
+              Chrome Android
+            </a>
+            <a href="https://apps.apple.com/app/google-chrome/id535886823" target="_blank" rel="noreferrer" style={{ background: '#fff', border: '1px solid rgba(245,158,11,0.35)', color: '#92400e', fontWeight: 600, fontSize: 12, padding: '8px 14px', borderRadius: 9, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <i className="ti ti-brand-apple" style={{ fontSize: 14 }} />
+              Chrome iPhone
+            </a>
           </div>
         </div>
 
