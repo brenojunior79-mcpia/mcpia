@@ -6,7 +6,7 @@ const platforms = [
     id: 'cakto',
     name: 'Cakto',
     description: 'Plataforma brasileira de produtos digitais. Crie sua conta gratuitamente e comece a vender ou se afiliar a produtos com alta conversao.',
-    logoUrl: 'https://app.cakto.com.br/favicon.ico',
+    logoUrl: 'https://www.google.com/s2/favicons?domain=cakto.com.br&sz=128',
     logoFallback: 'C',
     logoBg: '#22c55e',
     color: '#22c55e',
@@ -14,6 +14,8 @@ const platforms = [
     colorBorder: 'rgba(34,197,94,0.2)',
     registerUrl: 'https://app.cakto.com.br/auth/register/',
     loginUrl: 'https://sso.cakto.com.br/accounts/login/?next=https%3A%2F%2Fapp.cakto.com.br%2Fdashboard%2Fhome%2F',
+    androidUrl: 'https://play.google.com/store/apps/details?id=br.com.cakto',
+    iosUrl: 'https://apps.apple.com/br/app/cakto/id6470703573',
     features: ['Pagamentos via Pix, cartao e boleto', 'Painel de afiliados completo', 'Checkout de alta conversao', 'Suporte brasileiro'],
     badge: 'Parceira oficial',
     videoId: '1141473630',
@@ -22,7 +24,7 @@ const platforms = [
     id: 'kiwify',
     name: 'Kiwify',
     description: 'Uma das maiores plataformas de infoprodutos do Brasil. Centenas de produtos para afiliar com comissoes atrativas.',
-    logoUrl: 'https://kiwify.com.br/favicon.ico',
+    logoUrl: 'https://www.google.com/s2/favicons?domain=kiwify.com.br&sz=128',
     logoFallback: 'K',
     logoBg: '#16a34a',
     color: '#16a34a',
@@ -30,6 +32,8 @@ const platforms = [
     colorBorder: 'rgba(22,163,74,0.2)',
     registerUrl: 'https://dashboard.kiwify.com.br/signup',
     loginUrl: 'https://dashboard.kiwify.com.br/login',
+    androidUrl: 'https://play.google.com/store/apps/details?id=app.mobile.kiwify',
+    iosUrl: 'https://apps.apple.com/us/app/kiwify/id1533272574',
     features: ['Marketplace com milhares de produtos', 'Comissoes de ate 80%', 'Pagamento rapido', 'Relatorios detalhados'],
     badge: 'Mais produtos',
     videoId: '1133465792',
@@ -38,7 +42,7 @@ const platforms = [
     id: 'logzz',
     name: 'Logzz',
     description: 'Plataforma de automacao e gestao de negocios digitais. Gerencie seus afiliados, vendas e campanhas em um so lugar.',
-    logoUrl: 'https://app.logzz.com.br/favicon.ico',
+    logoUrl: 'https://www.google.com/s2/favicons?domain=logzz.com.br&sz=128',
     logoFallback: 'L',
     logoBg: '#f59e0b',
     color: '#f59e0b',
@@ -46,6 +50,8 @@ const platforms = [
     colorBorder: 'rgba(245,158,11,0.2)',
     registerUrl: 'https://app.logzz.com.br/cadastrar/useg02v2k',
     loginUrl: 'https://app.logzz.com.br/login',
+    androidUrl: 'https://play.google.com/store/apps/details?id=br.com.logzz.app',
+    iosUrl: 'https://apps.apple.com/us/app/logzz/id6445955986',
     features: ['Automacao de campanhas', 'Gestao de afiliados', 'CRM integrado', 'Relatorios em tempo real'],
     badge: 'Automacao',
     videoId: '1141470290',
@@ -150,12 +156,24 @@ function PlatformCard({ p }: { p: typeof platforms[number] }) {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 10, flexShrink: 0, flexWrap: 'wrap' }}>
-          <a href={p.loginUrl} target="_blank" rel="noreferrer" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: 13, padding: '10px 18px', borderRadius: 10, textDecoration: 'none', display: 'inline-block' }}>
+          <a href={p.loginUrl} target="_blank" rel="noreferrer" style={{ background: 'var(--surface2)', border: '1.5px solid ' + p.color, color: 'var(--text)', fontWeight: 600, fontSize: 13, padding: '10px 18px', borderRadius: 10, textDecoration: 'none', display: 'inline-block' }}>
             Entrar
           </a>
           <a href={p.registerUrl} target="_blank" rel="noreferrer" style={{ background: 'linear-gradient(135deg,' + p.color + ',' + p.color + 'cc)', color: '#fff', fontWeight: 700, fontSize: 13, padding: '10px 22px', borderRadius: 10, textDecoration: 'none', boxShadow: '0 4px 12px ' + p.color + '33', display: 'inline-block' }}>
             ✨ Criar conta grátis
           </a>
+          {p.androidUrl && (
+            <a href={p.androidUrl} target="_blank" rel="noreferrer" style={{ background: 'var(--surface2)', border: '1.5px solid ' + p.color, color: 'var(--text)', fontWeight: 600, fontSize: 13, padding: '10px 16px', borderRadius: 10, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <i className="ti ti-brand-android" style={{ fontSize: 15, color: '#3ddc84' }} />
+              App Android
+            </a>
+          )}
+          {p.iosUrl && (
+            <a href={p.iosUrl} target="_blank" rel="noreferrer" style={{ background: 'var(--surface2)', border: '1.5px solid ' + p.color, color: 'var(--text)', fontWeight: 600, fontSize: 13, padding: '10px 16px', borderRadius: 10, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <i className="ti ti-brand-apple" style={{ fontSize: 15 }} />
+              App iPhone
+            </a>
+          )}
         </div>
       </div>
 
