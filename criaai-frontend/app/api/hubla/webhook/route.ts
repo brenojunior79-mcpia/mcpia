@@ -77,6 +77,16 @@ export async function POST(req: NextRequest) {
       const planName = resolvePlanName(payload)
       const planId = planName ? await getPlanIdByName(planName) : null
 
+      // Log sempre (nao so quando falha), pra conseguirmos conferir se o plano batido
+      // realmente corresponde ao que a pessoa comprou, mesmo quando parece ter dado certo.
+      console.log(
+        '[hubla-webhook] GRANT email:', email,
+        '| planName resolvido:', planName,
+        '| planId:', planId,
+        '| products cru:', JSON.stringify(payload.event?.products),
+        '| subscription cru:', JSON.stringify(payload.event?.subscription)
+      )
+
       await admin
         .from('profiles')
         .update({
