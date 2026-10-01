@@ -52,6 +52,7 @@ const platforms = [
     loginUrl: 'https://app.kaiross.com.br/login',
     features: ['Produtos fisicos com entrega gerenciada', 'Pagamentos integrados', 'Acompanhamento de pedidos', 'Painel de vendas'],
     badge: 'Produtos Fisicos',
+    videoId: '1232189621',
   },
 ]
 
