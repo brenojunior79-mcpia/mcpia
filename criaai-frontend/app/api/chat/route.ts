@@ -749,6 +749,15 @@ export async function POST(req: NextRequest) {
     const data = await response.json()
     const reply = data.choices?.[0]?.message?.content || 'Não consegui gerar uma resposta. Tente novamente.'
 
+    // Salva a mensagem do aluno (a ultima do array) e a resposta do Junior, pra permitir monitoramento depois
+    const lastUserMessage = messages?.[messages.length - 1]
+    if (lastUserMessage?.content) {
+      await supabase.from('chat_messages').insert([
+        { user_id: user.id, role: 'user', content: lastUserMessage.content },
+        { user_id: user.id, role: 'assistant', content: reply },
+      ])
+    }
+
     return NextResponse.json({ reply })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
