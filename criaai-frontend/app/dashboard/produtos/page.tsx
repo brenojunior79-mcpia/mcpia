@@ -174,7 +174,7 @@ const physicalProducts = [
 const platformColors: Record<string, { bg: string; text: string; label: string }> = {
   cakto: { bg: 'rgba(124,92,252,0.12)', text: '#7c5cfc', label: 'CAKTO' },
   kiwify: { bg: 'rgba(34,197,94,0.12)', text: '#16a34a', label: 'KIWIFY' },
-  kaiross: { bg: 'rgba(14,165,233,0.12)', text: '#0284c7', label: 'KAIROSS' },
+  kaiross: { bg: 'rgba(249,115,22,0.12)', text: '#ea580c', label: 'KAIROSS' },
 }
 
 function ProductCard({ product, selected, onToggle }: { product: any; selected: boolean; onToggle: () => void }) {
