@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 
 function formatDate(iso: string) {
@@ -14,9 +14,59 @@ export default function ConversasAdminPage() {
   const [messages, setMessages] = useState<any[]>([])
   const [messagesLoading, setMessagesLoading] = useState(false)
   const supabase = createClient()
+  const selectedUserIdRef = useRef<string | null>(null)
+  const knownUserIdsRef = useRef<Set<string>>(new Set())
+
+  useEffect(function() { selectedUserIdRef.current = selectedUserId }, [selectedUserId])
 
   useEffect(function() {
     loadStudents()
+
+    const channel = supabase
+      .channel('chat_messages_live')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'chat_messages' },
+        function(payload: any) {
+          const newMsg = payload.new
+
+          // Se a conversa aberta agora e a desse aluno, acrescenta a mensagem na hora
+          if (selectedUserIdRef.current === newMsg.user_id) {
+            setMessages(function(prev) { return [...prev, newMsg] })
+          }
+
+          // Atualiza (ou cria) a linha desse aluno na lista da esquerda, trazendo pro topo
+          setStudents(function(prev) {
+            const existing = prev.find(function(s) { return s.userId === newMsg.user_id })
+            const updatedEntry = {
+              userId: newMsg.user_id,
+              name: existing?.name || 'Novo aluno',
+              email: existing?.email || '',
+              lastMessage: newMsg.content,
+              lastAt: newMsg.created_at,
+            }
+            const rest = prev.filter(function(s) { return s.userId !== newMsg.user_id })
+            return [updatedEntry, ...rest]
+          })
+
+          // Se for um aluno novo (nunca visto nessa sessao), busca o nome/email dele uma vez
+          if (!knownUserIdsRef.current.has(newMsg.user_id)) {
+            knownUserIdsRef.current.add(newMsg.user_id)
+            supabase.from('profiles').select('full_name, email').eq('id', newMsg.user_id).single().then(function(res) {
+              if (res.data) {
+                setStudents(function(prev) {
+                  return prev.map(function(s) {
+                    return s.userId === newMsg.user_id ? { ...s, name: res.data.full_name || 'Sem nome', email: res.data.email || '' } : s
+                  })
+                })
+              }
+            })
+          }
+        }
+      )
+      .subscribe()
+
+    return function() { supabase.removeChannel(channel) }
   }, [])
 
   async function loadStudents() {
@@ -42,7 +92,9 @@ export default function ConversasAdminPage() {
           })
         }
       }
-      setStudents(Array.from(byUser.values()))
+      const studentList = Array.from(byUser.values())
+      setStudents(studentList)
+      knownUserIdsRef.current = new Set(studentList.map(function(s) { return s.userId }))
     } finally {
       setLoading(false)
     }
