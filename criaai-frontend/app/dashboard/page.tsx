@@ -153,7 +153,7 @@ export default function DashboardPage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, position: 'relative', zIndex: 1 }}>
               {[
-                { num: 1, icon: '🎯', label: 'Escolha o produto', desc: 'Acesse Produtos em Alta e escolha o que vai vender', href: '/dashboard/produtos', color: '#7c5cfc' },
+                { num: 1, icon: '🎯', label: 'Plataformas e Produtos', desc: 'Cadastre-se nas plataformas parceiras e escolha o produto que vai vender', href: '/dashboard/plataformas', color: '#7c5cfc' },
                 { num: 2, icon: '📦', label: 'Prepare o material', desc: 'Assista as aulas de criativos manuais. O material do produto tambem pode estar na descricao dele, em Produtos em Alta', href: '/dashboard/criativos-manuais', color: '#c8891a' },
                 { num: 3, icon: '💰', label: 'Venda no automatico', desc: 'Crie anuncios e venda enquanto dorme', href: '/dashboard/vendas', color: '#2f9e5c' },
               ].map(function(step) {
