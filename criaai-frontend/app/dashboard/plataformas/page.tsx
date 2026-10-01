@@ -39,22 +39,19 @@ const platforms = [
     videoId: '1133465792',
   },
   {
-    id: 'logzz',
-    name: 'Logzz',
-    description: 'Plataforma de automacao e gestao de negocios digitais. Gerencie seus afiliados, vendas e campanhas em um so lugar.',
-    logoUrl: 'https://www.google.com/s2/favicons?domain=logzz.com.br&sz=128',
-    logoFallback: 'L',
-    logoBg: '#f59e0b',
-    color: '#f59e0b',
-    colorBg: 'rgba(245,158,11,0.08)',
-    colorBorder: 'rgba(245,158,11,0.2)',
-    registerUrl: 'https://app.logzz.com.br/cadastrar/useg02v2k',
-    loginUrl: 'https://app.logzz.com.br/login',
-    androidUrl: 'https://play.google.com/store/apps/details?id=br.com.logzz.app',
-    iosUrl: 'https://apps.apple.com/us/app/logzz/id6445955986',
-    features: ['Automacao de campanhas', 'Gestao de afiliados', 'CRM integrado', 'Relatorios em tempo real'],
-    badge: 'Automacao',
-    videoId: '1141470290',
+    id: 'kaiross',
+    name: 'Kaiross',
+    description: 'Plataforma de produtos fisicos com entrega gerenciada. Venda, acompanhe pedidos e receba pagamentos em um so lugar.',
+    logoUrl: 'https://app.kaiross.com.br/_next/image?url=%2FLOGO-MENU.png&w=256&q=75',
+    logoFallback: 'K',
+    logoBg: '#0ea5e9',
+    color: '#0ea5e9',
+    colorBg: 'rgba(14,165,233,0.08)',
+    colorBorder: 'rgba(14,165,233,0.2)',
+    registerUrl: 'https://app.kaiross.com.br/signup',
+    loginUrl: 'https://app.kaiross.com.br/login',
+    features: ['Produtos fisicos com entrega gerenciada', 'Pagamentos integrados', 'Acompanhamento de pedidos', 'Painel de vendas'],
+    badge: 'Produtos Fisicos',
   },
 ]
 
@@ -173,6 +170,12 @@ function PlatformCard({ p }: { p: typeof platforms[number] }) {
               <i className="ti ti-brand-apple" style={{ fontSize: 15 }} />
               App iPhone
             </a>
+          )}
+          {!p.androidUrl && !p.iosUrl && (
+            <span style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', color: '#f59e0b', fontWeight: 600, fontSize: 12, padding: '10px 16px', borderRadius: 10, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <i className="ti ti-clock" style={{ fontSize: 14 }} />
+              App em breve
+            </span>
           )}
         </div>
       </div>
