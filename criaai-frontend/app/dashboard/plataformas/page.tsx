@@ -142,7 +142,7 @@ function PlatformCard({ p }: { p: typeof platforms[number] }) {
   return (
     <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 18, overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
 
-      <div style={{ padding: '22px 26px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, borderBottom: '1px solid var(--border)' }}>
+      <div style={{ padding: '22px 26px', borderBottom: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <PlatformLogo logoUrl={p.logoUrl} fallback={p.logoFallback} bg={p.logoBg} />
           <div>
@@ -153,32 +153,33 @@ function PlatformCard({ p }: { p: typeof platforms[number] }) {
             <p style={{ fontSize: 13, color: 'var(--muted2)', margin: 0, maxWidth: 480, lineHeight: 1.5 }}>{p.description}</p>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 10, flexShrink: 0, flexWrap: 'wrap' }}>
-          <a href={p.loginUrl} target="_blank" rel="noreferrer" style={{ background: 'var(--surface2)', border: '1.5px solid ' + p.color, color: 'var(--text)', fontWeight: 600, fontSize: 13, padding: '10px 18px', borderRadius: 10, textDecoration: 'none', display: 'inline-block' }}>
-            Entrar
+      </div>
+
+      <div style={{ padding: '18px 26px', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <a href={p.loginUrl} target="_blank" rel="noreferrer" style={{ width: '100%', boxSizing: 'border-box', textAlign: 'center', background: 'var(--surface2)', border: '1.5px solid ' + p.color, color: 'var(--text)', fontWeight: 600, fontSize: 14, padding: '12px 18px', borderRadius: 10, textDecoration: 'none' }}>
+          Entrar
+        </a>
+        <a href={p.registerUrl} target="_blank" rel="noreferrer" style={{ width: '100%', boxSizing: 'border-box', textAlign: 'center', background: 'linear-gradient(135deg,' + p.color + ',' + p.color + 'cc)', color: '#fff', fontWeight: 700, fontSize: 14, padding: '12px 18px', borderRadius: 10, textDecoration: 'none', boxShadow: '0 4px 12px ' + p.color + '33' }}>
+          ✨ Criar conta grátis
+        </a>
+        {p.androidUrl && (
+          <a href={p.androidUrl} target="_blank" rel="noreferrer" style={{ width: '100%', boxSizing: 'border-box', background: 'var(--surface2)', border: '1.5px solid ' + p.color, color: 'var(--text)', fontWeight: 600, fontSize: 14, padding: '12px 18px', borderRadius: 10, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <i className="ti ti-brand-android" style={{ fontSize: 16, color: '#3ddc84' }} />
+            App Android
           </a>
-          <a href={p.registerUrl} target="_blank" rel="noreferrer" style={{ background: 'linear-gradient(135deg,' + p.color + ',' + p.color + 'cc)', color: '#fff', fontWeight: 700, fontSize: 13, padding: '10px 22px', borderRadius: 10, textDecoration: 'none', boxShadow: '0 4px 12px ' + p.color + '33', display: 'inline-block' }}>
-            ✨ Criar conta grátis
+        )}
+        {p.iosUrl && (
+          <a href={p.iosUrl} target="_blank" rel="noreferrer" style={{ width: '100%', boxSizing: 'border-box', background: 'var(--surface2)', border: '1.5px solid ' + p.color, color: 'var(--text)', fontWeight: 600, fontSize: 14, padding: '12px 18px', borderRadius: 10, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <i className="ti ti-brand-apple" style={{ fontSize: 16 }} />
+            App iPhone
           </a>
-          {p.androidUrl && (
-            <a href={p.androidUrl} target="_blank" rel="noreferrer" style={{ background: 'var(--surface2)', border: '1.5px solid ' + p.color, color: 'var(--text)', fontWeight: 600, fontSize: 13, padding: '10px 16px', borderRadius: 10, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <i className="ti ti-brand-android" style={{ fontSize: 15, color: '#3ddc84' }} />
-              App Android
-            </a>
-          )}
-          {p.iosUrl && (
-            <a href={p.iosUrl} target="_blank" rel="noreferrer" style={{ background: 'var(--surface2)', border: '1.5px solid ' + p.color, color: 'var(--text)', fontWeight: 600, fontSize: 13, padding: '10px 16px', borderRadius: 10, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <i className="ti ti-brand-apple" style={{ fontSize: 15 }} />
-              App iPhone
-            </a>
-          )}
-          {!p.androidUrl && !p.iosUrl && (
-            <span style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', color: '#f59e0b', fontWeight: 600, fontSize: 12, padding: '10px 16px', borderRadius: 10, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <i className="ti ti-clock" style={{ fontSize: 14 }} />
-              App em breve
-            </span>
-          )}
-        </div>
+        )}
+        {!p.androidUrl && !p.iosUrl && (
+          <span style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', color: '#f59e0b', fontWeight: 600, fontSize: 13, padding: '12px 18px', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <i className="ti ti-clock" style={{ fontSize: 15 }} />
+            App em breve
+          </span>
+        )}
       </div>
 
       {p.videoId && (
