@@ -122,9 +122,22 @@ export default function ChatPage() {
   return (
     <div className={styles.page}>
       <div className={styles.topbar}>
-        <div>
-          <div className={styles.title}>Junior — Suporte</div>
-          <div className={styles.sub}>Duvidas sobre aulas, plataformas, anuncios, Pixel, metricas ou pagamentos</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <img
+              src="/avatar-junior/junior.svg"
+              alt="Junior"
+              style={{ width: 44, height: 44, borderRadius: '50%', display: 'block' }}
+            />
+            <span style={{
+              position: 'absolute', bottom: 0, right: 0, width: 12, height: 12, borderRadius: '50%',
+              background: '#22c55e', border: '2px solid var(--surface)',
+            }} />
+          </div>
+          <div>
+            <div className={styles.title}>Junior</div>
+            <div className={styles.sub}>Sou o Junior e estou online para te ajudar</div>
+          </div>
         </div>
         {messages.length > 1 && (
           <button
@@ -142,7 +155,7 @@ export default function ChatPage() {
             return (
               <div key={i} className={styles.msg + ' ' + (msg.role === 'user' ? styles.msgUser : styles.msgBot)}>
                 {msg.role === 'assistant' && (
-                  <div className={styles.avatar}><i className="ti ti-sparkles" /></div>
+                  <div className={styles.avatar}><img src="/avatar-junior/junior.svg" alt="Junior" style={{ width: '100%', height: '100%', borderRadius: '50%' }} /></div>
                 )}
                 <div className={styles.bubble}>
                   <div className={styles.bubbleText}>{msg.content}</div>
@@ -160,7 +173,7 @@ export default function ChatPage() {
           })}
           {loading && (
             <div className={styles.msg + ' ' + styles.msgBot}>
-              <div className={styles.avatar}><i className="ti ti-sparkles" /></div>
+              <div className={styles.avatar}><img src="/avatar-junior/junior.svg" alt="Junior" style={{ width: '100%', height: '100%', borderRadius: '50%' }} /></div>
               <div className={styles.bubble}>
                 <div className={styles.typing}>
                   <span /><span /><span />
