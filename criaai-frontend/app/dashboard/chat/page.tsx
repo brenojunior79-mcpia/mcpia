@@ -6,6 +6,7 @@ import styles from './chat.module.css'
 interface Message {
   role: 'user' | 'assistant'
   content: string
+  imageUrl?: string
 }
 
 const STORAGE_KEY = 'mcpia_chat_history'
@@ -25,7 +26,9 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState<number | null>(null)
   const [hydrated, setHydrated] = useState(false)
+  const [pendingImage, setPendingImage] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
 
   useEffect(function() {
@@ -74,11 +77,13 @@ export default function ChatPage() {
   }, [messages])
 
   async function send() {
-    if (!input.trim() || loading) return
-    const userMsg: Message = { role: 'user', content: input.trim() }
+    if ((!input.trim() && !pendingImage) || loading) return
+    const userMsg: Message = { role: 'user', content: input.trim(), imageUrl: pendingImage || undefined }
     const newMessages = [...messages, userMsg]
     setMessages(newMessages)
     setInput('')
+    const imageToSend = pendingImage
+    setPendingImage(null)
     setLoading(true)
 
     try {
@@ -93,7 +98,8 @@ export default function ChatPage() {
         body: JSON.stringify({
           messages: newMessages.filter(function(m, idx) {
             return m.role !== 'assistant' || idx > 0
-          }),
+          }).map(function(m) { return { role: m.role, content: m.content } }),
+          imageBase64: imageToSend,
         }),
       })
       const data = await res.json()
@@ -106,6 +112,23 @@ export default function ChatPage() {
       })
     }
     setLoading(false)
+  }
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, selecione uma imagem (print da tela).')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert('A imagem precisa ter no maximo 5MB.')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = function() { setPendingImage(reader.result as string) }
+    reader.readAsDataURL(file)
+    e.target.value = ''
   }
 
   function copyText(text: string, idx: number) {
@@ -158,7 +181,10 @@ export default function ChatPage() {
                   <div className={styles.avatar}><img src="/avatar-junior/junior.svg" alt="Junior" style={{ width: '100%', height: '100%', borderRadius: '50%' }} /></div>
                 )}
                 <div className={styles.bubble}>
-                  <div className={styles.bubbleText}>{msg.content}</div>
+                  {msg.imageUrl && (
+                    <img src={msg.imageUrl} alt="Print enviado" style={{ maxWidth: '100%', borderRadius: 10, marginBottom: msg.content ? 8 : 0, display: 'block' }} />
+                  )}
+                  {msg.content && <div className={styles.bubbleText}>{msg.content}</div>}
                   {msg.role === 'assistant' && i > 0 && (
                     <button className={styles.copyBtn} onClick={function() { copyText(msg.content, i) }}>
                       {copied === i
@@ -185,7 +211,35 @@ export default function ChatPage() {
         </div>
 
         <div className={styles.inputWrap}>
+          {pendingImage && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 10px' }}>
+              <img src={pendingImage} alt="Preview" style={{ width: 44, height: 44, borderRadius: 8, objectFit: 'cover' }} />
+              <span style={{ fontSize: 12, color: 'var(--muted2)', flex: 1 }}>Print anexado</span>
+              <button
+                onClick={function() { setPendingImage(null) }}
+                style={{ background: 'none', border: 'none', color: 'var(--muted2)', cursor: 'pointer', fontSize: 16, padding: 4 }}
+                aria-label="Remover imagem"
+              >
+                <i className="ti ti-x" />
+              </button>
+            </div>
+          )}
           <div className={styles.inputRow}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileSelect}
+              style={{ display: 'none' }}
+            />
+            <button
+              onClick={function() { fileInputRef.current?.click() }}
+              style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, width: 42, height: 42, flexShrink: 0, color: 'var(--muted2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17 }}
+              aria-label="Anexar print"
+              title="Anexar um print da tela"
+            >
+              <i className="ti ti-paperclip" />
+            </button>
             <textarea
               value={input}
               onChange={function(e) { setInput(e.target.value) }}
@@ -195,11 +249,11 @@ export default function ChatPage() {
                   send()
                 }
               }}
-              placeholder="Conte o que esta acontecendo, que eu te ajudo..."
+              placeholder="Conte o que esta acontecendo, ou anexe um print..."
               className={styles.input}
               rows={2}
             />
-            <button className={styles.sendBtn} onClick={send} disabled={loading || !input.trim()}>
+            <button className={styles.sendBtn} onClick={send} disabled={loading || (!input.trim() && !pendingImage)}>
               <i className="ti ti-send" />
             </button>
           </div>
