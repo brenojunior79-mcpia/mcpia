@@ -34,13 +34,27 @@ export default function AdminPage() {
       const profileResult = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
       if (!profileResult.data?.is_admin) { router.push('/dashboard'); return }
 
-      const allResult = await supabase
-        .from('profiles')
-        .select('*, plans(name, price_monthly, credits_videos, credits_ebooks, is_unlimited)')
-        .order('created_at', { ascending: false })
+      // O Supabase devolve no maximo 1000 linhas por consulta, entao busca em blocos ate acabar
+      const PAGE_SIZE = 1000
+      let allProfiles: any[] = []
+      let from = 0
+      let fetchFailed = false
+      while (true) {
+        const pageResult = await supabase
+          .from('profiles')
+          .select('*, plans(name, price_monthly, credits_videos, credits_ebooks, is_unlimited)')
+          .order('created_at', { ascending: false })
+          .order('id', { ascending: true })
+          .range(from, from + PAGE_SIZE - 1)
 
-      const allProfiles = allResult.data
-      if (allProfiles) {
+        if (pageResult.error) { console.error('Erro ao carregar perfis:', pageResult.error); fetchFailed = true; break }
+        const rows = pageResult.data || []
+        allProfiles = allProfiles.concat(rows)
+        if (rows.length < PAGE_SIZE) break
+        from += PAGE_SIZE
+      }
+
+      if (!fetchFailed) {
         setProfiles(allProfiles)
         const pagantes = allProfiles.filter(function(p) { return p.subscription_status === 'active' })
         const hoje = allProfiles.filter(function(p) { return isToday(p.created_at) })
