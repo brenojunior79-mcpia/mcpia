@@ -11,7 +11,7 @@ const blocks = [
         id: 1,
         title: 'Introducao',
         description: 'Visao geral do que voce vai aprender nesse modulo, do zero ao primeiro anuncio no ar.',
-        videoId: '',
+        videoId: '1233834722',
         icon: '👋',
       },
       {
@@ -53,7 +53,7 @@ const blocks = [
         id: 6,
         title: 'Subindo anuncio na pratica',
         description: 'Veja na pratica como subir seu primeiro anuncio do zero, direto no Gerenciador de Anuncios.',
-        videoId: '',
+        videoId: '1233834672',
         icon: '📤',
       },
       {
@@ -266,6 +266,24 @@ function LessonCard({ lesson }: { lesson: any }) {
                 Chrome iPhone
               </a>
             </div>
+          </div>
+        )}
+
+        {lesson.id === 6 && (
+          <div style={{ marginTop: 14 }}>
+            <a
+              href="https://adsmanager.facebook.com/adsmanager/manage/campaigns"
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                background: 'linear-gradient(135deg, #7c5cfc, #9b6dfc)', color: '#fff', fontWeight: 700, fontSize: 13,
+                padding: '12px 16px', borderRadius: 11, textDecoration: 'none',
+                animation: 'pulseGerenciador 1.8s ease-in-out infinite',
+              }}
+            >
+              Abrir Gerenciador de Anuncios →
+            </a>
           </div>
         )}
 
