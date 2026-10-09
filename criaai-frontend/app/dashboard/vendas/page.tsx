@@ -114,6 +114,27 @@ const blocks = [
       },
     ],
   },
+  {
+    id: 'restricao',
+    title: 'Tomou restricao? Vamos solicitar analise',
+    icon: '🛡️',
+    lessons: [
+      {
+        id: 13,
+        title: '5 coisas para evitar bloqueios',
+        description: 'Os 5 cuidados que ajudam a manter sua conta de anuncios protegida e evitar novos bloqueios.',
+        videoId: '1155004255',
+        icon: '⚠️',
+      },
+      {
+        id: 14,
+        title: 'Solicitando analise para ativar sua conta de novo',
+        description: 'Passo a passo para pedir a analise da Meta e reativar sua conta depois de uma restricao.',
+        videoId: '1155004367',
+        icon: '🔓',
+      },
+    ],
+  },
 ]
 
 function VideoLesson({ videoId, title, color }: { videoId: string; title: string; color: string }) {
