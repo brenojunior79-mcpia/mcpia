@@ -364,6 +364,7 @@ export default function EbookPage() {
   const [lastResult, setLastResult] = useState<{ title: string; pdfUrl: string; coverImageUrl?: string | null } | null>(null)
   const [upgradeRequired, setUpgradeRequired] = useState(false)
   const [hasSubscription, setHasSubscription] = useState<boolean | null>(null)
+  const [isFree, setIsFree] = useState(false)
 
   // Estado da capa 3D
   const [capaTitle, setCapaTitle] = useState('')
@@ -399,11 +400,14 @@ export default function EbookPage() {
     const userResult = await supabase.auth.getUser()
     const user = userResult.data.user
     if (!user) { router.push('/login'); return }
-    const result = await supabase.from('profiles').select('subscription_status, full_name').eq('id', user.id).single()
+    const result = await supabase.from('profiles').select('subscription_status, full_name, credits_ebooks_used, is_admin').eq('id', user.id).single()
     const status = result.data?.subscription_status
     const active = status === 'active' || status === 'trialing'
-    setHasSubscription(active)
-    if (!active) { router.push('/dashboard/planos'); return }
+    const admin = result.data?.is_admin === true
+    // Sem plano: o primeiro ebook e gratis. Depois disso precisa assinar.
+    const free = !active && !admin && (result.data?.credits_ebooks_used || 0) < 1
+    setIsFree(free)
+    setHasSubscription(active || admin || free)
     if (result.data?.full_name) {
       setCapaAuthor(result.data.full_name.split(' ')[0])
     }
@@ -499,6 +503,7 @@ export default function EbookPage() {
       const resetForm = { ...defaultForm, tone: form.tone, language: form.language, themeId: form.themeId }
       setForm(resetForm); saveToStorage(resetForm)
       await loadUserData()
+      await checkSubscription()
     } catch (err: any) {
       setError(err.message ?? 'Erro inesperado.')
     } finally {
@@ -648,7 +653,8 @@ export default function EbookPage() {
           <div style={{ display: 'flex', gap: 12, padding: 16, borderRadius: 12, background: '#eef2ff', border: '1px solid rgba(91,78,248,0.2)', marginBottom: 16 }}>
             <span>🔒</span>
             <div>
-              <p style={{ fontWeight: 700, color: 'var(--accent)', margin: '0 0 4px', fontSize: 14 }}>Recurso exclusivo para assinantes</p>
+              <p style={{ fontWeight: 700, color: 'var(--accent)', margin: '0 0 4px', fontSize: 14 }}>Seu ebook gratis ja foi usado</p>
+              <p style={{ color: 'var(--muted2)', margin: '0 0 8px', fontSize: 13 }}>Para gerar mais ebooks, assine um plano.</p>
               <a href="/dashboard/planos" style={{ color: 'var(--accent)', fontSize: 13, fontWeight: 600 }}>Ver planos →</a>
             </div>
           </div>
@@ -761,7 +767,7 @@ export default function EbookPage() {
                 boxShadow: loading || noCredits ? 'none' : '0 8px 20px rgba(91,78,248,0.3)',
               }}
             >
-              {hasSubscription === false ? '🔒 Assinar para gerar ebooks' : loading ? 'Gerando ebook — aguarde...' : '✨ Gerar Ebook com IA'}
+              {hasSubscription === false ? '🔒 Assinar um plano para gerar mais ebooks' : loading ? 'Gerando ebook — aguarde...' : isFree ? '✨ Gere o seu primeiro ebook' : '✨ Gerar Ebook com IA'}
             </button>
             {loading && (
               <div style={{ marginTop: 4 }}>
