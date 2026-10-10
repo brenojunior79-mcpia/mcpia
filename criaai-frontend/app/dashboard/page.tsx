@@ -19,6 +19,8 @@ const animations = `
 .card-hover:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,0.3); border-color: rgba(124,92,252,0.3) !important; }
 .shortcut-hover { transition: transform 0.2s, box-shadow 0.2s, background 0.2s; }
 .shortcut-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+.result-card { transition: transform 0.25s, box-shadow 0.25s; }
+.result-card:hover { transform: translateY(-4px) scale(1.01); box-shadow: 0 16px 36px rgba(0,0,0,0.2); }
 .news-card { transition: transform 0.25s, box-shadow 0.25s; }
 .news-card:hover { transform: translateY(-4px); box-shadow: 0 16px 36px rgba(0,0,0,0.18); }
 @keyframes newsBorder { 0% { background-position: 0% 50% } 100% { background-position: 200% 50% } }
@@ -43,9 +45,39 @@ const NEWS_PRODUCTS = [
   { name: '700 Receitas de Bolos e Tortas', image: 'https://vida-nova-oficial.com/wp-content/uploads/2024/04/Design_sem_nome__41_-removebg.png', color: '#f97316', fit: 'contain' },
 ]
 
+// Prints de resultados de alunos: coloque as imagens em public/resultados/ com os nomes resultado-1, resultado-2 e resultado-3
+// (aceita .png, .jpg, .jpeg ou .webp). Se uma imagem nao existir, ela simplesmente nao aparece.
+const RESULT_IDS = [1, 2, 3]
+const RESULT_EXTS = ['png', 'jpg', 'jpeg', 'webp']
+
+function ResultImage({ id, onOpen, onLoaded, delay }: { id: number; onOpen: (src: string) => void; onLoaded: () => void; delay: number }) {
+  const [extIdx, setExtIdx] = useState(0)
+  const [loaded, setLoaded] = useState(false)
+  const failed = extIdx >= RESULT_EXTS.length
+  if (failed) return null
+  const src = '/resultados/resultado-' + id + '.' + RESULT_EXTS[extIdx]
+  return (
+    <div
+      className="result-card"
+      onClick={function() { if (loaded) onOpen(src) }}
+      style={{ display: loaded ? 'block' : 'none', animation: 'fadeUp 0.6s ease both ' + delay + 's', borderRadius: 16, overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'zoom-in', position: 'relative' }}
+    >
+      <img
+        src={src}
+        alt={'Resultado de aluno ' + id}
+        onLoad={function() { setLoaded(true); onLoaded() }}
+        onError={function() { setExtIdx(extIdx + 1) }}
+        style={{ width: '100%', height: 'auto', display: 'block' }}
+      />
+    </div>
+  )
+}
+
 export default function DashboardPage() {
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [zoomSrc, setZoomSrc] = useState<string | null>(null)
+  const [resultsLoaded, setResultsLoaded] = useState(0)
   const supabase = createClient()
 
   useEffect(function() {
@@ -240,6 +272,29 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+
+
+        {/* RESULTADOS RECENTES DE ALUNOS */}
+        <div className="anim-fadeUp-2" style={{ marginBottom: 28 }}>
+          <div style={{ display: resultsLoaded > 0 ? 'flex' : 'none', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <span style={{ fontSize: 22, display: 'inline-block', animation: 'newsPop 1.8s ease-in-out infinite' }}>💰</span>
+            <div style={{ fontSize: 18, fontWeight: 800, fontFamily: 'Syne, sans-serif', color: 'var(--text)' }}>Resultados recentes de alunos</div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14, alignItems: 'start' }}>
+            {RESULT_IDS.map(function(id, idx) {
+              return <ResultImage key={id} id={id} delay={0.1 + idx * 0.15} onOpen={setZoomSrc} onLoaded={function() { setResultsLoaded(function(n) { return n + 1 }) }} />
+            })}
+          </div>
+        </div>
+
+        {zoomSrc && (
+          <div
+            onClick={function() { setZoomSrc(null) }}
+            style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, cursor: 'zoom-out', animation: 'fadeUp 0.25s ease both' }}
+          >
+            <img src={zoomSrc} alt="Resultado de aluno" style={{ maxWidth: '100%', maxHeight: '100%', borderRadius: 12, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }} />
+          </div>
+        )}
 
       </div>
     </div>
