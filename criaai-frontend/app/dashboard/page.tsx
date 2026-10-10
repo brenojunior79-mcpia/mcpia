@@ -21,6 +21,8 @@ const animations = `
 .shortcut-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
 .result-card { transition: transform 0.25s, box-shadow 0.25s; }
 .result-card:hover { transform: translateY(-4px) scale(1.01); box-shadow: 0 16px 36px rgba(0,0,0,0.2); }
+.link-btn { transition: transform 0.2s, box-shadow 0.2s; }
+.link-btn:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(0,0,0,0.18); }
 .news-card { transition: transform 0.25s, box-shadow 0.25s; }
 .news-card:hover { transform: translateY(-4px); box-shadow: 0 16px 36px rgba(0,0,0,0.18); }
 @keyframes newsBorder { 0% { background-position: 0% 50% } 100% { background-position: 200% 50% } }
@@ -283,6 +285,31 @@ export default function DashboardPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14, alignItems: 'start' }}>
             {RESULT_IDS.map(function(id, idx) {
               return <ResultImage key={id} id={id} delay={0.1 + idx * 0.15} onOpen={setZoomSrc} onLoaded={function() { setResultsLoaded(function(n) { return n + 1 }) }} />
+            })}
+          </div>
+        </div>
+
+
+        {/* LINKS: GRUPOS E SUPORTE */}
+        <div className="anim-fadeUp-3" style={{ marginBottom: 28 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+            {[
+              { href: 'https://chat.whatsapp.com/EQOJkJWilLjES81OIl6UWg', icon: 'ti-bell-ringing', label: 'Grupo de avisos', sub: 'Entre no grupo do WhatsApp', color: '#16a34a' },
+              { href: 'https://chat.whatsapp.com/FMK11OpmjIPIO24ByPNME6', icon: 'ti-messages', label: 'Grupo de depoimentos', sub: 'Veja os resultados dos alunos', color: '#0ea5e9' },
+              { href: 'https://wa.me/553791348869', icon: 'ti-headset', label: 'Suporte', sub: 'Fale com a gente no WhatsApp', color: '#7c5cfc' },
+            ].map(function(item) {
+              return (
+                <a key={item.href} href={item.href} target="_blank" rel="noopener noreferrer" className="link-btn" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px', borderRadius: 16, background: 'var(--surface)', border: '1px solid ' + item.color + '55' }}>
+                  <div style={{ width: 46, height: 46, borderRadius: 14, background: item.color + '1f', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <i className={'ti ' + item.icon} style={{ fontSize: 24, color: item.color }} />
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{item.label}</div>
+                    <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 2 }}>{item.sub}</div>
+                  </div>
+                  <i className="ti ti-external-link" style={{ marginLeft: 'auto', fontSize: 16, color: item.color, flexShrink: 0 }} />
+                </a>
+              )
             })}
           </div>
         </div>
