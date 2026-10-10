@@ -1,247 +1,353 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
-import Link from 'next/link'
+import styles from './paginas.module.css'
 
-const animations = `
-@keyframes spin { from { transform: rotate(0) } to { transform: rotate(360deg) } }
-@keyframes fadeUp { from { opacity: 0; transform: translateY(20px) } to { opacity: 1; transform: translateY(0) } }
-@keyframes fadeDown { from { opacity: 0; transform: translateY(-16px) } to { opacity: 1; transform: translateY(0) } }
-@keyframes float { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(-18px) } }
-@keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(124,92,252,0.3) } 50% { box-shadow: 0 0 0 10px rgba(124,92,252,0) } }
-.anim-fadeUp { animation: fadeUp 0.5s ease both; }
-.anim-fadeUp-1 { animation: fadeUp 0.5s ease both 0.1s; }
-.anim-fadeUp-2 { animation: fadeUp 0.5s ease both 0.2s; }
-.anim-fadeUp-3 { animation: fadeUp 0.5s ease both 0.3s; }
-.anim-fadeUp-4 { animation: fadeUp 0.5s ease both 0.4s; }
-.anim-fadeDown { animation: fadeDown 0.5s ease both; }
-.card-hover { transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s; }
-.card-hover:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,0.3); border-color: rgba(124,92,252,0.3) !important; }
-.shortcut-hover { transition: transform 0.2s, box-shadow 0.2s, background 0.2s; }
-.shortcut-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
-.news-card { transition: transform 0.25s, box-shadow 0.25s; }
-.news-card:hover { transform: translateY(-4px); box-shadow: 0 16px 36px rgba(0,0,0,0.18); }
-@keyframes newsBorder { 0% { background-position: 0% 50% } 100% { background-position: 200% 50% } }
-@keyframes newsShine { 0% { transform: translateX(-120%) skewX(-18deg) } 60%, 100% { transform: translateX(260%) skewX(-18deg) } }
-@keyframes newsFloatA { 0%, 100% { transform: translateY(0) rotate(-5deg) } 50% { transform: translateY(-9px) rotate(-3deg) } }
-@keyframes newsFloatB { 0%, 100% { transform: translateY(-6px) rotate(5deg) } 50% { transform: translateY(5px) rotate(3deg) } }
-@keyframes newsPop { 0%, 100% { transform: scale(1) } 50% { transform: scale(1.12) } }
-@keyframes newsRing { 0% { transform: scale(0.8); opacity: 0.7 } 100% { transform: scale(1.7); opacity: 0 } }
-.step-line { position: absolute; top: 28px; left: calc(50% + 28px); width: calc(100% - 56px); height: 2px; background: linear-gradient(90deg, rgba(124,92,252,0.5), rgba(124,92,252,0.1)); }
-`
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mcpia.site'
 
-const NEWS_PLATFORM = {
-  name: 'Kaiross',
-  tag: 'Produtos fisicos com entrega gerenciada',
-  image: 'https://app.kaiross.com.br/_next/image?url=%2FLOGO-MENU.png&w=256&q=75',
-  color: '#f97316',
-  href: '/dashboard/plataformas',
+interface SalesPage {
+  id: string
+  slug: string
+  product_name: string
+  theme: string
+  views: number
+  created_at: string
+  active: boolean
 }
 
-const NEWS_PRODUCTS = [
-  { name: 'Manual Biblico Digital', image: 'https://excelenciacrista.com.br/wp-content/uploads/2026/01/5-1-1024x1024.png', color: '#3b82f6', fit: 'cover' },
-  { name: '700 Receitas de Bolos e Tortas', image: 'https://vida-nova-oficial.com/wp-content/uploads/2024/04/Design_sem_nome__41_-removebg.png', color: '#f97316', fit: 'contain' },
-]
+interface FormState {
+  productName: string
+  price: string
+  audience: string
+  benefits: string[]
+  bonus: string
+  guarantee: string
+  checkoutUrl: string
+  theme: string
+  customPrompt: string
+}
 
-export default function DashboardPage() {
-  const [profile, setProfile] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+function VideoLesson({ videoId, title, color }: { videoId: string; title: string; color: string }) {
+  const [playing, setPlaying] = useState(false)
+  const [thumb, setThumb] = useState<string | null>(null)
 
   useEffect(function() {
-    async function load() {
-      const userResult = await supabase.auth.getUser()
-      const user = userResult.data.user
-      if (!user) return
+    let active = true
+    fetch('https://vimeo.com/api/oembed.json?url=' + encodeURIComponent('https://vimeo.com/' + videoId))
+      .then(function(res) { return res.ok ? res.json() : null })
+      .then(function(data) { if (active && data && data.thumbnail_url) setThumb(data.thumbnail_url) })
+      .catch(function() {})
+    return function() { active = false }
+  }, [videoId])
 
-      const profileResult = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('id', user.id)
-        .single()
-
-      if (profileResult.data) setProfile(profileResult.data)
-      setLoading(false)
-    }
-    load()
-  }, [])
-
-  const firstName = (profile?.full_name || '').split(' ')[0] || 'Bem-vindo'
-
-  if (loading) return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <i className="ti ti-loader" style={{ fontSize: 32, color: 'var(--accent2)', animation: 'spin 1s linear infinite' }} />
-      <style>{animations}</style>
-    </div>
-  )
+  if (playing) {
+    return (
+      <div style={{ position: 'relative', width: '100%', paddingBottom: '56.25%', height: 0, borderRadius: 12, overflow: 'hidden', background: '#000' }}>
+        <iframe
+          src={'https://player.vimeo.com/video/' + videoId + '?title=0&byline=0&portrait=0&dnt=1&autoplay=1'}
+          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
+          allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media"
+          allowFullScreen
+          title={title}
+        />
+      </div>
+    )
+  }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative', overflow: 'hidden' }}>
-      <style>{animations}</style>
+    <div
+      onClick={function() { setPlaying(true) }}
+      role="button"
+      aria-label={'Assistir: ' + title}
+      style={{
+        position: 'relative', width: '100%', paddingBottom: '56.25%', height: 0, borderRadius: 12,
+        overflow: 'hidden', cursor: 'pointer',
+        background: thumb ? '#000' : 'linear-gradient(135deg,' + color + 'dd,' + color + '88)',
+        backgroundImage: thumb ? 'url(' + thumb + ')' : undefined,
+        backgroundSize: 'cover', backgroundPosition: 'center',
+      }}
+    >
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(0deg, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.15) 40%, rgba(0,0,0,0.35) 100%)' }} />
 
-      {/* Background animado */}
-      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: '-30%', right: '-10%', width: 500, height: 500, background: 'radial-gradient(circle, rgba(124,92,252,0.08) 0%, transparent 70%)', borderRadius: '50%', animation: 'float 8s ease-in-out infinite' }} />
-        <div style={{ position: 'absolute', bottom: '-20%', left: '-10%', width: 400, height: 400, background: 'radial-gradient(circle, rgba(124,92,252,0.05) 0%, transparent 70%)', borderRadius: '50%', animation: 'float 10s ease-in-out infinite reverse' }} />
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{
+          width: 60, height: 60, borderRadius: '50%', background: 'rgba(255,255,255,0.95)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+        }}>
+          <div style={{ width: 0, height: 0, marginLeft: 4, borderTop: '11px solid transparent', borderBottom: '11px solid transparent', borderLeft: '18px solid ' + color }} />
+        </div>
       </div>
 
-      <div style={{ position: 'relative', zIndex: 1, padding: '32px 28px', maxWidth: 900, margin: '0 auto' }}>
+      <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <i className="ti ti-player-play" style={{ color: '#fff', fontSize: 13, opacity: 0.85 }} />
+        <span style={{ color: '#fff', fontSize: 12, fontWeight: 700, textShadow: '0 1px 4px rgba(0,0,0,0.6)' }}>{title}</span>
+      </div>
+    </div>
+  )
+}
 
-        {/* Header */}
-        <div className="anim-fadeDown" style={{ marginBottom: 28 }}>
-          <div style={{ fontSize: 26, fontFamily: 'Syne, sans-serif', fontWeight: 800, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ animation: 'pulse 2s ease infinite', display: 'inline-block' }}>👋</span>
-            Ola, {firstName}!
-          </div>
-          <div style={{ fontSize: 14, color: 'var(--muted2)' }}>
-            Aqui esta um resumo da sua conta no MCP.IA
+export default function PaginasPage() {
+  const [tab, setTab] = useState<string>('criar')
+  const [pages, setPages] = useState<SalesPage[]>([])
+  const [loading, setLoading] = useState<boolean>(false)
+  const [result, setResult] = useState<{ slug: string; url: string } | null>(null)
+  const [hasSubscription, setHasSubscription] = useState<boolean | null>(null)
+  const [form, setForm] = useState<FormState>({
+    productName: '',
+    price: '',
+    audience: '',
+    benefits: ['', '', ''],
+    bonus: '',
+    guarantee: '',
+    checkoutUrl: '',
+    theme: 'light',
+    customPrompt: '',
+  })
+  const supabase = createClient()
+  const router = useRouter()
+
+  useEffect(function() {
+    checkSubscription()
+    if (tab === 'minhas') loadPages()
+  }, [tab])
+
+  async function checkSubscription() {
+    const userResult = await supabase.auth.getUser()
+    const user = userResult.data.user
+    if (!user) { router.push('/login'); return }
+    const result = await supabase.from('profiles').select('subscription_status').eq('id', user.id).single()
+    const status = result.data?.subscription_status
+    const active = status === 'active' || status === 'trialing'
+    setHasSubscription(active)
+    if (!active) { router.push('/dashboard/planos') }
+  }
+
+  async function loadPages() {
+    const userResult = await supabase.auth.getUser()
+    const user = userResult.data.user
+    if (!user) return
+    const res = await supabase.from('sales_pages').select('id, slug, product_name, theme, views, created_at, active').eq('user_id', user.id).order('created_at', { ascending: false })
+    setPages((res.data as SalesPage[]) || [])
+  }
+
+  function setField(key: string, value: string) {
+    setForm(function(f) { return Object.assign({}, f, { [key]: value }) })
+  }
+
+  function setBenefit(i: number, value: string) {
+    const b = [...form.benefits]
+    b[i] = value
+    setForm(function(f) { return Object.assign({}, f, { benefits: b }) })
+  }
+
+  function addBenefit() {
+    if (form.benefits.length < 7) {
+      setForm(function(f) { return Object.assign({}, f, { benefits: [...f.benefits, ''] }) })
+    }
+  }
+
+  async function gerar() {
+    if (!hasSubscription) {
+      window.location.href = '/dashboard/planos'
+      return
+    }
+    const benefits = form.benefits.filter(function(b) { return b.trim() })
+    if (!form.productName || !form.price || !form.audience || benefits.length < 2) {
+      alert('Preencha: nome, preco, publico-alvo e pelo menos 2 beneficios.')
+      return
+    }
+    setLoading(true)
+    setResult(null)
+    const sessionResult = await supabase.auth.getSession()
+    const session = sessionResult.data.session
+    const res = await fetch('/api/generate-page', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session ? session.access_token : '') },
+      body: JSON.stringify(Object.assign({}, form, { benefits: benefits })),
+    })
+    const data = await res.json()
+    setLoading(false)
+    if (data.requiresPlan) {
+      window.location.href = '/dashboard/planos'
+    } else if (data.url) {
+      setResult(data)
+    } else {
+      alert('Erro: ' + (data.error || 'Tente novamente'))
+    }
+  }
+
+  async function toggleActive(id: string, active: boolean) {
+    await supabase.from('sales_pages').update({ active: !active }).eq('id', id)
+    loadPages()
+  }
+
+  return (
+    <div className={styles.page}>
+      <div className={styles.topbar}>
+        <div className={styles.title}>Criador de site</div>
+        <div className={styles.sub}>Crie paginas de alta conversao com IA em segundos</div>
+      </div>
+
+      <div style={{ margin: '0 24px 20px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 18, overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
+        <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--border)' }}>
+          <div style={{ width: 38, height: 38, background: 'var(--surface2)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>🎬</div>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Aula: Gerando site</div>
+            <div style={{ fontSize: 12, color: 'var(--muted2)' }}>Veja o passo a passo antes de criar a sua pagina</div>
           </div>
         </div>
+        <div style={{ padding: '20px' }}>
+          <VideoLesson videoId="1201837708" title="Gerando site" color="#7c5cfc" />
+        </div>
+      </div>
 
-        {/* PASSO A PASSO 3 ETAPAS — mapa do tesouro */}
-        <div className="anim-fadeUp" style={{ marginBottom: 28 }}>
-          <div
-            style={{
-              position: 'relative',
-              overflow: 'hidden',
-              background: 'linear-gradient(160deg, #f1e2b8 0%, #e4c98d 45%, #d2b06d 100%)',
-              border: '2px solid #8b6b3d',
-              borderRadius: 20,
-              padding: '26px 30px 24px',
-              boxShadow: '0 10px 28px rgba(139,107,61,0.25), inset 0 0 70px rgba(139,107,61,0.18)',
-            }}
-          >
-            {/* manchas de envelhecimento do pergaminho */}
-            <div style={{
-              position: 'absolute', inset: 0, pointerEvents: 'none',
-              background: 'radial-gradient(circle at 12% 18%, rgba(139,107,61,0.18), transparent 26%), radial-gradient(circle at 88% 78%, rgba(139,107,61,0.2), transparent 30%), radial-gradient(circle at 55% 95%, rgba(139,107,61,0.12), transparent 25%), radial-gradient(circle at 95% 15%, rgba(139,107,61,0.14), transparent 22%)',
-            }} />
-            {/* bordas enroladas do pergaminho */}
-            <div style={{ position: 'absolute', left: -12, top: 6, bottom: 6, width: 22, borderRadius: 12, background: 'linear-gradient(90deg, #7a5c30, #d2b06d)', boxShadow: '2px 0 8px rgba(0,0,0,0.25)' }} />
-            <div style={{ position: 'absolute', right: -12, top: 6, bottom: 6, width: 22, borderRadius: 12, background: 'linear-gradient(270deg, #7a5c30, #d2b06d)', boxShadow: '-2px 0 8px rgba(0,0,0,0.25)' }} />
+      {hasSubscription === false && (
+        <div style={{ margin: '0 24px 16px', display: 'flex', gap: 12, padding: 16, borderRadius: 12, background: 'rgba(124,92,252,0.08)', border: '1px solid rgba(124,92,252,0.25)' }}>
+          <span>🔒</span>
+          <div>
+            <p style={{ fontWeight: 600, color: '#a78bfa', margin: '0 0 4px 0', fontSize: 14 }}>Recurso exclusivo para assinantes</p>
+            <p style={{ color: '#9ca3af', margin: '0 0 8px 0', fontSize: 13 }}>Assine um plano para criar paginas de vendas com IA.</p>
+            <a href="/dashboard/planos" style={{ color: '#7c5cfc', fontSize: 13, fontWeight: 600 }}>Ver planos</a>
+          </div>
+        </div>
+      )}
 
-            {/* rosa dos ventos decorativa */}
-            <svg viewBox="0 0 100 100" width={56} height={56} style={{ position: 'absolute', top: 14, right: 40, opacity: 0.55 }}>
-              <circle cx="50" cy="50" r="45" fill="none" stroke="#5c4326" strokeWidth="1.5" />
-              <polygon points="50,5 58,50 50,95 42,50" fill="#5c4326" />
-              <polygon points="5,50 50,42 95,50 50,58" fill="#5c4326" />
-              <polygon points="50,20 63,50 50,50 37,50" fill="#8b6b3d" />
-              <text x="50" y="16" fontSize="11" fontWeight="700" textAnchor="middle" fill="#5c4326">N</text>
-              <text x="50" y="97" fontSize="11" fontWeight="700" textAnchor="middle" fill="#5c4326">S</text>
-              <text x="9" y="54" fontSize="11" fontWeight="700" textAnchor="middle" fill="#5c4326">O</text>
-              <text x="91" y="54" fontSize="11" fontWeight="700" textAnchor="middle" fill="#5c4326">L</text>
-            </svg>
+      <div className={styles.tabs}>
+        <div className={styles.tab + (tab === 'criar' ? ' ' + styles.active : '')} onClick={function() { setTab('criar') }}>Criar pagina</div>
+        <div className={styles.tab + (tab === 'minhas' ? ' ' + styles.active : '')} onClick={function() { setTab('minhas') }}>Minhas paginas</div>
+      </div>
 
-            <div style={{ position: 'relative', fontSize: 11, fontWeight: 800, color: '#5c4326', marginBottom: 22, textTransform: 'uppercase', letterSpacing: '0.12em', display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'Syne, sans-serif' }}>
-              <span style={{ fontSize: 15 }}>🗺️</span> Sua jornada em 3 passos
+      {tab === 'criar' && (
+        <div className={styles.content}>
+          {result ? (
+            <div className={styles.successBox}>
+              <div className={styles.successIcon}><i className="ti ti-check" /></div>
+              <h2>Pagina criada!</h2>
+              <p>Sua pagina esta publicada e pronta para receber visitas.</p>
+              <a href={result.url} target="_blank" rel="noreferrer" className={styles.pageUrl}>
+                <i className="ti ti-external-link" /> {result.url}
+              </a>
+              <div className={styles.successActions}>
+                <button className={styles.btnCopy} onClick={function() { navigator.clipboard.writeText(result!.url) }}>
+                  <i className="ti ti-copy" /> Copiar link
+                </button>
+                <button className={styles.btnNew} onClick={function() { setResult(null) }}>
+                  <i className="ti ti-plus" /> Criar outra
+                </button>
+              </div>
             </div>
-
-            {/* trilha pontilhada conectando os passos */}
-            <svg viewBox="0 0 900 40" preserveAspectRatio="none" style={{ position: 'absolute', top: 78, left: '16.5%', width: '67%', height: 30, zIndex: 0 }}>
-              <path d="M 0 20 Q 225 -6, 450 20 T 900 20" fill="none" stroke="#5c4326" strokeWidth="3" strokeDasharray="9 10" strokeLinecap="round" opacity="0.55" />
-            </svg>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, position: 'relative', zIndex: 1 }}>
-              {[
-                { num: 1, icon: '🎯', label: 'Plataformas e Produtos', desc: 'Cadastre-se nas plataformas parceiras e escolha o produto que vai vender', href: '/dashboard/plataformas', color: '#7c5cfc' },
-                { num: 2, icon: '📦', label: 'Prepare o material', desc: 'Assista as aulas de criativos manuais. O material do produto tambem pode estar na descricao dele, em Produtos em Alta', href: '/dashboard/criativos-manuais', color: '#c8891a' },
-                { num: 3, icon: '💰', label: 'Venda no automatico', desc: 'Crie anuncios e venda enquanto dorme', href: '/dashboard/vendas', color: '#2f9e5c' },
-              ].map(function(step) {
-                return (
-                  <Link key={step.num} href={step.href} style={{ textDecoration: 'none' }}>
-                    <div className="card-hover" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '0 6px', cursor: 'pointer' }}>
-                      <div style={{
-                        width: 60, height: 60, borderRadius: '50%', background: '#fbf3dc',
-                        border: '3px solid ' + step.color, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 26, boxShadow: '0 6px 14px rgba(92,67,38,0.3)', marginBottom: 10, position: 'relative',
-                      }}>
-                        {step.icon}
-                        {step.num === 3 && (
-                          <span style={{ position: 'absolute', top: -18, right: -8, fontSize: 20 }}>🚩</span>
-                        )}
-                      </div>
-                      <div style={{ fontSize: 10, fontWeight: 800, color: step.color, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Passo {step.num}</div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#3d2b16' }}>{step.label}</div>
-                      <div style={{ fontSize: 11, color: '#6b5433', lineHeight: 1.5, marginTop: 4 }}>{step.desc}</div>
-                      <div style={{ marginTop: 12, fontSize: 12, color: step.color, fontWeight: 700 }}>Acessar →</div>
+          ) : (
+            <div className={styles.form}>
+              <div className={styles.section}>
+                <div className={styles.sectionTitle}>Sobre o produto</div>
+                <div className={styles.field}>
+                  <label>Nome do produto *</label>
+                  <input type="text" value={form.productName} onChange={function(e) { setField('productName', e.target.value) }} placeholder="Ex: Curso de Trafego Pago" />
+                </div>
+                <div className={styles.row}>
+                  <div className={styles.field}>
+                    <label>Preco (R$) *</label>
+                    <input type="text" value={form.price} onChange={function(e) { setField('price', e.target.value) }} placeholder="297" />
+                  </div>
+                  <div className={styles.field}>
+                    <label>Link do checkout</label>
+                    <input type="url" value={form.checkoutUrl} onChange={function(e) { setField('checkoutUrl', e.target.value) }} placeholder="https://pay.hotmart.com/..." />
+                  </div>
+                </div>
+                <div className={styles.field}>
+                  <label>Publico-alvo *</label>
+                  <input type="text" value={form.audience} onChange={function(e) { setField('audience', e.target.value) }} placeholder="Ex: Empreendedores que querem vender mais no Instagram" />
+                </div>
+              </div>
+              <div className={styles.section}>
+                <div className={styles.sectionTitle}>Beneficios *</div>
+                <div className={styles.sub2}>Minimo 2, maximo 7.</div>
+                {form.benefits.map(function(b, i) {
+                  return (
+                    <div key={i} className={styles.benefitRow}>
+                      <span className={styles.benefitNum}>{i + 1}</span>
+                      <input type="text" value={b} onChange={function(e) { setBenefit(i, e.target.value) }} placeholder={'Beneficio ' + (i + 1)} />
                     </div>
-                  </Link>
+                  )
+                })}
+                {form.benefits.length < 7 && (
+                  <button className={styles.btnAddBenefit} onClick={addBenefit}><i className="ti ti-plus" /> Adicionar beneficio</button>
+                )}
+              </div>
+              <div className={styles.section}>
+                <div className={styles.sectionTitle}>Extras (opcional)</div>
+                <div className={styles.field}>
+                  <label>Bonus</label>
+                  <input type="text" value={form.bonus} onChange={function(e) { setField('bonus', e.target.value) }} placeholder="Ex: Planilha de controle de anuncios" />
+                </div>
+                <div className={styles.field}>
+                  <label>Garantia</label>
+                  <input type="text" value={form.guarantee} onChange={function(e) { setField('guarantee', e.target.value) }} placeholder="Ex: 7 dias de garantia incondicional" />
+                </div>
+                <div className={styles.field}>
+                  <label>Instrucoes para a IA (opcional)</label>
+                  <textarea value={form.customPrompt} onChange={function(e) { setField('customPrompt', e.target.value) }} placeholder="Ex: Tom emocional, foco em maes solteiras..." rows={4} style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 9, padding: '10px 14px', color: 'var(--text)', fontSize: 14, outline: 'none', resize: 'vertical' }} />
+                </div>
+              </div>
+              <div className={styles.section}>
+                <div className={styles.sectionTitle}>Tema visual</div>
+                <div className={styles.themes}>
+                  <div className={styles.themeOpt + (form.theme === 'light' ? ' ' + styles.themeOn : '')} onClick={function() { setField('theme', 'light') }}>Claro</div>
+                  <div className={styles.themeOpt + (form.theme === 'dark' ? ' ' + styles.themeOn : '')} onClick={function() { setField('theme', 'dark') }}>Escuro</div>
+                </div>
+              </div>
+              <button
+                className={styles.btnGerar}
+                onClick={gerar}
+                disabled={loading}
+                style={{ background: hasSubscription === false ? 'linear-gradient(135deg, #7c5cfc, #9b6dfc)' : undefined }}
+              >
+                <i className="ti ti-wand" />
+                {hasSubscription === false ? 'Assinar para criar paginas' : loading ? 'Gerando sua pagina...' : 'Gerar pagina com IA'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'minhas' && (
+        <div className={styles.content}>
+          {pages.length === 0 ? (
+            <div className={styles.empty}>
+              <i className="ti ti-layout" style={{ fontSize: 40, color: 'var(--muted)' }} />
+              <p>Nenhuma pagina criada ainda</p>
+              <button className={styles.btnNew} onClick={function() { setTab('criar') }}>Criar primeira pagina</button>
+            </div>
+          ) : (
+            <div className={styles.pageList}>
+              {pages.map(function(p: SalesPage) {
+                return (
+                  <div key={p.id} className={styles.pageCard}>
+                    <div className={styles.pageCardLeft}>
+                      <div className={styles.pageName}>{p.product_name}</div>
+                      <a href={APP_URL + '/p/' + p.slug} target="_blank" rel="noreferrer" className={styles.pageLink}>
+                        <i className="ti ti-external-link" /> /p/{p.slug}
+                      </a>
+                    </div>
+                    <div className={styles.pageCardRight}>
+                      <div className={styles.pageViews}><i className="ti ti-eye" /> {p.views} views</div>
+                      <button className={styles.statusBtn + ' ' + (p.active ? styles.statusOn : styles.statusOff)} onClick={function() { toggleActive(p.id, p.active) }}>
+                        {p.active ? 'Ativa' : 'Pausada'}
+                      </button>
+                      <a href={'/dashboard/paginas/editor/' + p.id} className={styles.copyBtn} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✏️</a>
+                      <button className={styles.copyBtn} onClick={function() { navigator.clipboard.writeText(APP_URL + '/p/' + p.slug) }}>
+                        <i className="ti ti-copy" />
+                      </button>
+                    </div>
+                  </div>
                 )
               })}
             </div>
-          </div>
+          )}
         </div>
-
-
-        {/* NOVIDADES DA SEMANA */}
-        <div className="anim-fadeUp-1" style={{ marginBottom: 28 }}>
-          <div style={{
-            borderRadius: 22, padding: 2,
-            background: 'linear-gradient(90deg, #7c5cfc, #f97316, #22c55e, #7c5cfc)',
-            backgroundSize: '200% 100%', animation: 'newsBorder 5s linear infinite',
-          }}>
-            <div style={{ position: 'relative', overflow: 'hidden', background: 'var(--surface)', borderRadius: 20, padding: '22px 22px 24px' }}>
-              <div style={{ position: 'absolute', top: -60, right: -40, width: 220, height: 220, background: 'radial-gradient(circle, rgba(124,92,252,0.14) 0%, transparent 70%)', pointerEvents: 'none' }} />
-
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-                <span style={{ fontSize: 22, display: 'inline-block', animation: 'newsPop 1.6s ease-in-out infinite' }}>🔥</span>
-                <div style={{ fontSize: 18, fontWeight: 800, fontFamily: 'Syne, sans-serif', color: 'var(--text)' }}>Novidades da semana</div>
-                <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', color: '#fff', background: 'linear-gradient(135deg, #ef4444, #f97316)', padding: '4px 10px', borderRadius: 99, animation: 'newsPop 1.6s ease-in-out infinite' }}>NOVO</span>
-              </div>
-
-              <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14 }}>
-
-                {/* Nova plataforma */}
-                <Link href={NEWS_PLATFORM.href} style={{ textDecoration: 'none' }}>
-                  <div className="news-card" style={{ position: 'relative', overflow: 'hidden', height: '100%', minHeight: 200, borderRadius: 16, padding: '20px 20px 18px', background: 'linear-gradient(145deg, ' + NEWS_PLATFORM.color + '22, ' + NEWS_PLATFORM.color + '08)', border: '1px solid ' + NEWS_PLATFORM.color + '55', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', cursor: 'pointer' }}>
-                    <div style={{ position: 'absolute', top: 0, bottom: 0, width: 60, left: 0, background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)', animation: 'newsShine 4s ease-in-out infinite', pointerEvents: 'none' }} />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                      <div style={{ position: 'relative', width: 78, height: 78, flexShrink: 0 }}>
-                        <div style={{ position: 'absolute', inset: 0, borderRadius: 20, border: '2px solid ' + NEWS_PLATFORM.color, animation: 'newsRing 2.2s ease-out infinite' }} />
-                        <div style={{ position: 'relative', width: 78, height: 78, borderRadius: 20, background: '#fff', border: '2px solid ' + NEWS_PLATFORM.color, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', animation: 'float 4s ease-in-out infinite', boxShadow: '0 10px 24px ' + NEWS_PLATFORM.color + '55' }}>
-                          <img src={NEWS_PLATFORM.image} alt={NEWS_PLATFORM.name} style={{ width: '82%', height: '82%', objectFit: 'contain' }} />
-                        </div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: NEWS_PLATFORM.color, marginBottom: 4 }}>Nova plataforma liberada</div>
-                        <div style={{ fontSize: 20, fontWeight: 800, fontFamily: 'Syne, sans-serif', color: 'var(--text)' }}>{NEWS_PLATFORM.name}</div>
-                        <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 2 }}>{NEWS_PLATFORM.tag}</div>
-                      </div>
-                    </div>
-                    <div style={{ marginTop: 16, fontSize: 13, fontWeight: 700, color: NEWS_PLATFORM.color }}>Conferir plataforma →</div>
-                  </div>
-                </Link>
-
-                {/* Novos produtos */}
-                <Link href="/dashboard/produtos" style={{ textDecoration: 'none' }}>
-                  <div className="news-card" style={{ position: 'relative', overflow: 'hidden', height: '100%', minHeight: 200, borderRadius: 16, padding: '20px 20px 18px', background: 'linear-gradient(145deg, rgba(34,197,94,0.14), rgba(34,197,94,0.04))', border: '1px solid rgba(34,197,94,0.4)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', cursor: 'pointer' }}>
-                    <div style={{ position: 'absolute', top: 0, bottom: 0, width: 60, left: 0, background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)', animation: 'newsShine 4s ease-in-out 1.5s infinite', pointerEvents: 'none' }} />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                      <div style={{ position: 'relative', width: 120, height: 84, flexShrink: 0 }}>
-                        {NEWS_PRODUCTS.map(function(prod, idx) {
-                          return (
-                            <div key={prod.name} style={{ position: 'absolute', top: idx === 0 ? 0 : 6, left: idx === 0 ? 0 : 44, width: 74, height: 74, borderRadius: 16, background: '#fff', border: '2px solid ' + prod.color, overflow: 'hidden', boxShadow: '0 10px 22px rgba(0,0,0,0.22)', animation: (idx === 0 ? 'newsFloatA 3.6s' : 'newsFloatB 4.2s') + ' ease-in-out infinite', zIndex: idx + 1 }}>
-                              <img src={prod.image} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: prod.fit as any }} />
-                            </div>
-                          )
-                        })}
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#16a34a', marginBottom: 4 }}>Novos produtos</div>
-                        <div style={{ fontSize: 20, fontWeight: 800, fontFamily: 'Syne, sans-serif', color: 'var(--text)', lineHeight: 1.15 }}>2 novos produtos liberados</div>
-                        <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 2 }}>Confira!</div>
-                      </div>
-                    </div>
-                    <div style={{ marginTop: 16, fontSize: 13, fontWeight: 700, color: '#16a34a' }}>Ver produtos →</div>
-                  </div>
-                </Link>
-
-              </div>
-            </div>
-          </div>
-        </div>
-
-      </div>
+      )}
     </div>
   )
 }
