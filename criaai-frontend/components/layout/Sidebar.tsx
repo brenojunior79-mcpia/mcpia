@@ -44,10 +44,12 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
     router.push('/login')
   }
 
-  // Nos primeiros 7 dias depois do cadastro: Ebook e Site ficam "Em atualizacao" e Planos fica oculto (admin sempre ve)
+  // Nos primeiros 7 dias depois do cadastro: Site fica "Em atualizacao" e Planos fica oculto (admin sempre ve)
   const HIDDEN_DAYS = 7
   const HIDDEN_NEW_USER = ['/dashboard/planos']
   const createdAt = profile?.created_at ? new Date(profile.created_at).getTime() : 0
+  // Menus ocultos para todos (inclusive admin). Para voltar, remova o item daqui.
+  const HIDDEN_FOR_ALL = ['/dashboard/anuncios']
   const isNewUser = !isAdmin && createdAt > 0 && (Date.now() - createdAt) < HIDDEN_DAYS * 24 * 60 * 60 * 1000
 
   const firstName = (profile?.full_name || '').split(' ')[0] || 'Usuario'
@@ -58,7 +60,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
     { href: '/dashboard/chat', icon: 'ti-message-circle', label: 'Assistente IA', locked: false },
     { href: '/dashboard/plataformas', icon: 'ti-building-store', label: 'Plataformas', locked: false },
     { href: '/dashboard/produtos', icon: 'ti-flame', label: 'Produtos em Alta', locked: false },
-    { href: '/dashboard/ebook', icon: 'ti-book-2', label: 'Gerador de Ebook', locked: isNewUser, lockStatus: 'Em atualizacao' },
+    { href: '/dashboard/ebook', icon: 'ti-book-2', label: 'Gerador de Ebook', locked: false },
     { href: '/dashboard/paginas', icon: 'ti-layout', label: 'Gerador de Site', locked: isNewUser, lockStatus: 'Em atualizacao' },
     { href: '/dashboard/criativo', icon: 'ti-sparkles', label: 'Gerador de Criativos', locked: !isAdmin, lockStatus: 'Em atualizacao' },
     { href: '/dashboard/criativos-manuais', icon: 'ti-video', label: 'Criativos Manuais', locked: false },
@@ -109,7 +111,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
 
         {/* Nav */}
         <nav className={styles.nav}>
-          {navItems.filter(function(item) { return !(isNewUser && HIDDEN_NEW_USER.indexOf(item.href) !== -1) }).map(function(item) {
+          {navItems.filter(function(item) { return HIDDEN_FOR_ALL.indexOf(item.href) === -1 && !(isNewUser && HIDDEN_NEW_USER.indexOf(item.href) !== -1) }).map(function(item) {
             if (item.locked) {
               const status = (item as any).lockStatus || 'Em breve'
               return (
