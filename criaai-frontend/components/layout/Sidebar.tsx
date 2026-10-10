@@ -51,6 +51,9 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
   // Menus ocultos para todos (inclusive admin). Para voltar, remova o item daqui.
   const HIDDEN_FOR_ALL = ['/dashboard/anuncios']
   const isNewUser = !isAdmin && createdAt > 0 && (Date.now() - createdAt) < HIDDEN_DAYS * 24 * 60 * 60 * 1000
+  // Nos 7 primeiros dias, quem ainda nao tem plano nao ve nada sobre planos/creditos
+  const hasActivePlan = profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing'
+  const hidePlans = isNewUser && !hasActivePlan
 
   const firstName = (profile?.full_name || '').split(' ')[0] || 'Usuario'
   const videosRestantes = Math.max(0, videosLimit - videosUsed)
@@ -61,7 +64,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
     { href: '/dashboard/plataformas', icon: 'ti-building-store', label: 'Plataformas', locked: false },
     { href: '/dashboard/produtos', icon: 'ti-flame', label: 'Produtos em Alta', locked: false },
     { href: '/dashboard/ebook', icon: 'ti-book-2', label: 'Gerador de Ebook', locked: false },
-    { href: '/dashboard/paginas', icon: 'ti-layout', label: 'Gerador de Site', locked: isNewUser, lockStatus: 'Em atualizacao' },
+    { href: '/dashboard/paginas', icon: 'ti-layout', label: 'Gerador de Site', locked: hidePlans, lockStatus: 'Em atualizacao' },
     { href: '/dashboard/criativo', icon: 'ti-sparkles', label: 'Gerador de Criativos', locked: !isAdmin, lockStatus: 'Em atualizacao' },
     { href: '/dashboard/criativos-manuais', icon: 'ti-video', label: 'Criativos Manuais', locked: false },
     { href: '/dashboard/vendas', icon: 'ti-rocket', label: 'Vendendo no Automatico', locked: false },
@@ -111,7 +114,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
 
         {/* Nav */}
         <nav className={styles.nav}>
-          {navItems.filter(function(item) { return HIDDEN_FOR_ALL.indexOf(item.href) === -1 && !(isNewUser && HIDDEN_NEW_USER.indexOf(item.href) !== -1) }).map(function(item) {
+          {navItems.filter(function(item) { return HIDDEN_FOR_ALL.indexOf(item.href) === -1 && !(hidePlans && HIDDEN_NEW_USER.indexOf(item.href) !== -1) }).map(function(item) {
             if (item.locked) {
               const status = (item as any).lockStatus || 'Em breve'
               return (
@@ -142,13 +145,14 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
             <div className={styles.userAvatar}>{user?.email?.[0].toUpperCase()}</div>
             <div className={styles.userInfo}>
               <div className={styles.userName}>{profile?.full_name || 'Usuario'}</div>
-              <div className={styles.userPlan}>{plan?.name || 'Starter'}</div>
-              <div className={styles.userCredits}>{plan?.is_unlimited ? '∞' : videosRestantes} Créditos</div>
+              {!hidePlans && <div className={styles.userPlan}>{plan?.name || 'Starter'}</div>}
+              {!hidePlans && <div className={styles.userCredits}>{plan?.is_unlimited ? '∞' : videosRestantes} Créditos</div>}
             </div>
             <button className={styles.logoutBtn} onClick={logout} title="Sair">
               <i className="ti ti-logout" />
             </button>
           </div>
+          {!hidePlans && (
           <div className={styles.creditsBox}>
             <div className={styles.creditsLabel}>Creditos de video</div>
             <div className={styles.creditsCount}>
@@ -161,6 +165,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
               <i className="ti ti-plus" /> Adicionar creditos
             </Link>
           </div>
+          )}
         </div>
       </aside>
     </>
