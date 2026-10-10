@@ -93,9 +93,9 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
           <div className={styles.logoBottom}>Cristão Próspero</div>
           <div className={styles.logoUser}>
             <div className={styles.logoUserName}>{firstName}</div>
-            <div className={styles.logoUserPlan}>{plan?.name || 'Starter'}</div>
+            {!hidePlans && <div className={styles.logoUserPlan}>{plan?.name || 'Starter'}</div>}
             <div className={styles.logoUserCredits} style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-              <span>{plan?.is_unlimited ? '∞' : videosRestantes} Créditos</span>
+              {!hidePlans && <span>{plan?.is_unlimited ? '∞' : videosRestantes} Créditos</span>}
               <button
                 onClick={toggleTheme}
                 title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
