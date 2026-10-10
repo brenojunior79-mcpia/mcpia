@@ -19,14 +19,32 @@ const animations = `
 .card-hover:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,0.3); border-color: rgba(124,92,252,0.3) !important; }
 .shortcut-hover { transition: transform 0.2s, box-shadow 0.2s, background 0.2s; }
 .shortcut-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+.news-card { transition: transform 0.25s, box-shadow 0.25s; }
+.news-card:hover { transform: translateY(-4px); box-shadow: 0 16px 36px rgba(0,0,0,0.18); }
+@keyframes newsBorder { 0% { background-position: 0% 50% } 100% { background-position: 200% 50% } }
+@keyframes newsShine { 0% { transform: translateX(-120%) skewX(-18deg) } 60%, 100% { transform: translateX(260%) skewX(-18deg) } }
+@keyframes newsFloatA { 0%, 100% { transform: translateY(0) rotate(-5deg) } 50% { transform: translateY(-9px) rotate(-3deg) } }
+@keyframes newsFloatB { 0%, 100% { transform: translateY(-6px) rotate(5deg) } 50% { transform: translateY(5px) rotate(3deg) } }
+@keyframes newsPop { 0%, 100% { transform: scale(1) } 50% { transform: scale(1.12) } }
+@keyframes newsRing { 0% { transform: scale(0.8); opacity: 0.7 } 100% { transform: scale(1.7); opacity: 0 } }
 .step-line { position: absolute; top: 28px; left: calc(50% + 28px); width: calc(100% - 56px); height: 2px; background: linear-gradient(90deg, rgba(124,92,252,0.5), rgba(124,92,252,0.1)); }
 `
 
+const NEWS_PLATFORM = {
+  name: 'Kaiross',
+  tag: 'Produtos fisicos com entrega gerenciada',
+  image: 'https://app.kaiross.com.br/_next/image?url=%2FLOGO-MENU.png&w=256&q=75',
+  color: '#f97316',
+  href: '/dashboard/plataformas',
+}
+
+const NEWS_PRODUCTS = [
+  { name: 'Manual Biblico Digital', image: 'https://excelenciacrista.com.br/wp-content/uploads/2026/01/5-1-1024x1024.png', color: '#3b82f6', fit: 'cover' },
+  { name: '700 Receitas de Bolos e Tortas', image: 'https://vida-nova-oficial.com/wp-content/uploads/2024/04/Design_sem_nome__41_-removebg.png', color: '#f97316', fit: 'contain' },
+]
+
 export default function DashboardPage() {
   const [profile, setProfile] = useState<any>(null)
-  const [stats, setStats] = useState({ videos: 0, ebooks: 0, paginas: 0 })
-  const [recentGenerations, setRecentGenerations] = useState<any[]>([])
-  const [recentEbooks, setRecentEbooks] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
@@ -38,45 +56,17 @@ export default function DashboardPage() {
 
       const profileResult = await supabase
         .from('profiles')
-        .select('*, plans(name, credits_videos, credits_ebooks, is_unlimited, price_monthly)')
+        .select('full_name')
         .eq('id', user.id)
         .single()
 
-      const data = profileResult.data
-      if (data) setProfile(data)
-
-      const gensResult = await supabase
-        .from('generations')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(20)
-
-      const gens = gensResult.data || []
-      const videos = gens.filter(function(g) { return g.type === 'video' })
-      const ebooks = gens.filter(function(g) { return g.type === 'ebook' })
-
-      setStats({ videos: videos.length, ebooks: ebooks.length, paginas: 0 })
-      setRecentGenerations(videos.slice(0, 3))
-      setRecentEbooks(ebooks.slice(0, 3))
+      if (profileResult.data) setProfile(profileResult.data)
       setLoading(false)
     }
     load()
   }, [])
 
-  const plan = profile?.plans
-  const hasSubscription = profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing'
-  const videosUsed = profile?.credits_videos_used || 0
-  const videosLimit = plan?.is_unlimited ? null : ((plan?.credits_videos || 0) + (profile?.credits_videos_extra || 0))
-  const ebooksUsed = profile?.credits_ebooks_used || 0
-  const ebooksLimit = plan?.is_unlimited ? null : ((plan?.credits_ebooks || 0) + (profile?.credits_ebooks_extra || 0))
-  const videosPct = videosLimit ? Math.min(100, Math.round((videosUsed / videosLimit) * 100)) : 0
-  const ebooksPct = ebooksLimit ? Math.min(100, Math.round((ebooksUsed / ebooksLimit) * 100)) : 0
   const firstName = (profile?.full_name || '').split(' ')[0] || 'Bem-vindo'
-
-  function formatDate(d: string) {
-    return new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
-  }
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -183,188 +173,73 @@ export default function DashboardPage() {
         </div>
 
 
-        {/* Banner sem plano */}
-        {!hasSubscription && (
-          <div className="anim-fadeUp-1 card-hover" style={{ background: 'linear-gradient(135deg, rgba(124,92,252,0.15), rgba(124,92,252,0.05))', border: '1px solid rgba(124,92,252,0.3)', borderRadius: 16, padding: '20px 24px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 15, color: '#a78bfa', marginBottom: 4 }}>Voce ainda nao tem um plano ativo</div>
-              <div style={{ fontSize: 13, color: 'var(--muted2)' }}>Assine agora e comece a gerar ebooks, videos e paginas com IA</div>
-            </div>
-            <Link href="/dashboard/planos" style={{ background: 'linear-gradient(135deg, #7c5cfc, #9b6dfc)', color: '#fff', fontWeight: 700, fontSize: 14, padding: '10px 24px', borderRadius: 12, textDecoration: 'none', whiteSpace: 'nowrap', boxShadow: '0 4px 16px rgba(124,92,252,0.4)' }}>
-              Ver planos
-            </Link>
-          </div>
-        )}
+        {/* NOVIDADES DA SEMANA */}
+        <div className="anim-fadeUp-1" style={{ marginBottom: 28 }}>
+          <div style={{
+            borderRadius: 22, padding: 2,
+            background: 'linear-gradient(90deg, #7c5cfc, #f97316, #22c55e, #7c5cfc)',
+            backgroundSize: '200% 100%', animation: 'newsBorder 5s linear infinite',
+          }}>
+            <div style={{ position: 'relative', overflow: 'hidden', background: 'var(--surface)', borderRadius: 20, padding: '22px 22px 24px' }}>
+              <div style={{ position: 'absolute', top: -60, right: -40, width: 220, height: 220, background: 'radial-gradient(circle, rgba(124,92,252,0.14) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
-        {/* Creditos */}
-        {hasSubscription && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
-            <div className="anim-fadeUp-1 card-hover" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '20px 24px', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', top: 0, right: 0, width: 80, height: 80, background: 'radial-gradient(circle, rgba(124,92,252,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <div>
-                  <div style={{ fontSize: 11, color: 'var(--muted2)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>Creditos de Video</div>
-                  <div style={{ fontSize: 28, fontWeight: 800, fontFamily: 'Syne, sans-serif', color: 'var(--accent2)' }}>
-                    {videosLimit ? (videosLimit - videosUsed) : '∞'}
-                    <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--muted2)', marginLeft: 6 }}>{videosLimit ? '/ ' + videosLimit : 'ilimitados'}</span>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+                <span style={{ fontSize: 22, display: 'inline-block', animation: 'newsPop 1.6s ease-in-out infinite' }}>🔥</span>
+                <div style={{ fontSize: 18, fontWeight: 800, fontFamily: 'Syne, sans-serif', color: 'var(--text)' }}>Novidades da semana</div>
+                <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', color: '#fff', background: 'linear-gradient(135deg, #ef4444, #f97316)', padding: '4px 10px', borderRadius: 99, animation: 'newsPop 1.6s ease-in-out infinite' }}>NOVO</span>
+              </div>
+
+              <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14 }}>
+
+                {/* Nova plataforma */}
+                <Link href={NEWS_PLATFORM.href} style={{ textDecoration: 'none' }}>
+                  <div className="news-card" style={{ position: 'relative', overflow: 'hidden', height: '100%', minHeight: 200, borderRadius: 16, padding: '20px 20px 18px', background: 'linear-gradient(145deg, ' + NEWS_PLATFORM.color + '22, ' + NEWS_PLATFORM.color + '08)', border: '1px solid ' + NEWS_PLATFORM.color + '55', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', cursor: 'pointer' }}>
+                    <div style={{ position: 'absolute', top: 0, bottom: 0, width: 60, left: 0, background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)', animation: 'newsShine 4s ease-in-out infinite', pointerEvents: 'none' }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                      <div style={{ position: 'relative', width: 78, height: 78, flexShrink: 0 }}>
+                        <div style={{ position: 'absolute', inset: 0, borderRadius: 20, border: '2px solid ' + NEWS_PLATFORM.color, animation: 'newsRing 2.2s ease-out infinite' }} />
+                        <div style={{ position: 'relative', width: 78, height: 78, borderRadius: 20, background: '#fff', border: '2px solid ' + NEWS_PLATFORM.color, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', animation: 'float 4s ease-in-out infinite', boxShadow: '0 10px 24px ' + NEWS_PLATFORM.color + '55' }}>
+                          <img src={NEWS_PLATFORM.image} alt={NEWS_PLATFORM.name} style={{ width: '82%', height: '82%', objectFit: 'contain' }} />
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: NEWS_PLATFORM.color, marginBottom: 4 }}>Nova plataforma liberada</div>
+                        <div style={{ fontSize: 20, fontWeight: 800, fontFamily: 'Syne, sans-serif', color: 'var(--text)' }}>{NEWS_PLATFORM.name}</div>
+                        <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 2 }}>{NEWS_PLATFORM.tag}</div>
+                      </div>
+                    </div>
+                    <div style={{ marginTop: 16, fontSize: 13, fontWeight: 700, color: NEWS_PLATFORM.color }}>Conferir plataforma →</div>
                   </div>
-                </div>
-                <div style={{ width: 44, height: 44, background: 'rgba(124,92,252,0.12)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'pulse 3s ease infinite' }}>
-                  <i className="ti ti-video" style={{ fontSize: 22, color: 'var(--accent2)' }} />
-                </div>
-              </div>
-              {videosLimit && (
-                <div style={{ height: 6, background: 'var(--surface2)', borderRadius: 99, overflow: 'hidden', marginBottom: 12 }}>
-                  <div style={{ height: '100%', width: videosPct + '%', background: videosPct >= 90 ? '#ef4444' : videosPct >= 70 ? '#f59e0b' : 'linear-gradient(90deg, var(--accent), #9b6dfc)', borderRadius: 99, transition: 'width 1s ease' }} />
-                </div>
-              )}
-              <Link href="/dashboard/criativo" style={{ fontSize: 13, color: 'var(--accent2)', fontWeight: 600, textDecoration: 'none' }}>Gerar video →</Link>
-            </div>
-
-            <div className="anim-fadeUp-2 card-hover" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '20px 24px', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', top: 0, right: 0, width: 80, height: 80, background: 'radial-gradient(circle, rgba(34,197,94,0.1) 0%, transparent 70%)', pointerEvents: 'none' }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <div>
-                  <div style={{ fontSize: 11, color: 'var(--muted2)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>Creditos de Ebook</div>
-                  <div style={{ fontSize: 28, fontWeight: 800, fontFamily: 'Syne, sans-serif', color: 'var(--green)' }}>
-                    {ebooksLimit ? (ebooksLimit - ebooksUsed) : '∞'}
-                    <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--muted2)', marginLeft: 6 }}>{ebooksLimit ? '/ ' + ebooksLimit : 'ilimitados'}</span>
-                  </div>
-                </div>
-                <div style={{ width: 44, height: 44, background: 'rgba(34,197,94,0.12)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <i className="ti ti-book-2" style={{ fontSize: 22, color: 'var(--green)' }} />
-                </div>
-              </div>
-              {ebooksLimit && (
-                <div style={{ height: 6, background: 'var(--surface2)', borderRadius: 99, overflow: 'hidden', marginBottom: 12 }}>
-                  <div style={{ height: '100%', width: ebooksPct + '%', background: ebooksPct >= 90 ? '#ef4444' : ebooksPct >= 70 ? '#f59e0b' : 'linear-gradient(90deg, #22c55e, #4ade80)', borderRadius: 99, transition: 'width 1s ease' }} />
-                </div>
-              )}
-              <Link href="/dashboard/ebook" style={{ fontSize: 13, color: 'var(--green)', fontWeight: 600, textDecoration: 'none' }}>Gerar ebook →</Link>
-            </div>
-          </div>
-        )}
-
-        {/* Plano atual */}
-        {hasSubscription && (
-          <div className="anim-fadeUp-2 card-hover" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '20px 24px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <div style={{ width: 44, height: 44, background: 'rgba(124,92,252,0.1)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <i className="ti ti-credit-card" style={{ fontSize: 22, color: 'var(--accent2)' }} />
-              </div>
-              <div>
-                <div style={{ fontSize: 11, color: 'var(--muted2)', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>Plano atual</div>
-                <div style={{ fontSize: 16, fontWeight: 700 }}>{plan?.name || 'Starter'} <span style={{ color: 'var(--muted2)', fontWeight: 400 }}>— R${(plan?.price_monthly || 0).toFixed(2).replace('.', ',')}/mes</span></div>
-              </div>
-            </div>
-            <Link href="/dashboard/planos" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: 13, padding: '8px 18px', borderRadius: 10, textDecoration: 'none' }}>
-              Gerenciar plano
-            </Link>
-          </div>
-        )}
-
-        {/* Atalhos rapidos */}
-        <div className="anim-fadeUp-3" style={{ marginBottom: 28 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted2)', marginBottom: 14, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Criar agora</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
-            {[
-              { href: '/dashboard/criativo', icon: 'ti-sparkles', label: 'Criativo de video', color: 'var(--accent2)', bg: 'rgba(124,92,252,0.08)', border: 'rgba(124,92,252,0.2)' },
-              { href: '/dashboard/ebook', icon: 'ti-book-2', label: 'Gerador de Ebook', color: 'var(--green)', bg: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.2)' },
-              { href: '/dashboard/paginas', icon: 'ti-layout', label: 'Pagina de vendas', color: '#60a5fa', bg: 'rgba(96,165,250,0.08)', border: 'rgba(96,165,250,0.2)' },
-              { href: '/dashboard/chat', icon: 'ti-message-circle', label: 'Assistente IA', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)' },
-              { href: '/dashboard/produtos', icon: 'ti-flame', label: 'Produtos em Alta', color: '#f87171', bg: 'rgba(248,113,113,0.08)', border: 'rgba(248,113,113,0.2)' },
-            ].map(function(item) {
-              return (
-                <Link key={item.href} href={item.href} className="shortcut-hover" style={{ background: item.bg, border: '1px solid ' + item.border, borderRadius: 14, padding: '16px 18px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <i className={'ti ' + item.icon} style={{ fontSize: 22, color: item.color }} />
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{item.label}</span>
                 </Link>
-              )
-            })}
+
+                {/* Novos produtos */}
+                <Link href="/dashboard/produtos" style={{ textDecoration: 'none' }}>
+                  <div className="news-card" style={{ position: 'relative', overflow: 'hidden', height: '100%', minHeight: 200, borderRadius: 16, padding: '20px 20px 18px', background: 'linear-gradient(145deg, rgba(34,197,94,0.14), rgba(34,197,94,0.04))', border: '1px solid rgba(34,197,94,0.4)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', cursor: 'pointer' }}>
+                    <div style={{ position: 'absolute', top: 0, bottom: 0, width: 60, left: 0, background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)', animation: 'newsShine 4s ease-in-out 1.5s infinite', pointerEvents: 'none' }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                      <div style={{ position: 'relative', width: 120, height: 84, flexShrink: 0 }}>
+                        {NEWS_PRODUCTS.map(function(prod, idx) {
+                          return (
+                            <div key={prod.name} style={{ position: 'absolute', top: idx === 0 ? 0 : 6, left: idx === 0 ? 0 : 44, width: 74, height: 74, borderRadius: 16, background: '#fff', border: '2px solid ' + prod.color, overflow: 'hidden', boxShadow: '0 10px 22px rgba(0,0,0,0.22)', animation: (idx === 0 ? 'newsFloatA 3.6s' : 'newsFloatB 4.2s') + ' ease-in-out infinite', zIndex: idx + 1 }}>
+                              <img src={prod.image} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: prod.fit as any }} />
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#16a34a', marginBottom: 4 }}>Novos produtos</div>
+                        <div style={{ fontSize: 20, fontWeight: 800, fontFamily: 'Syne, sans-serif', color: 'var(--text)', lineHeight: 1.15 }}>2 novos produtos liberados</div>
+                        <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 2 }}>Confira!</div>
+                      </div>
+                    </div>
+                    <div style={{ marginTop: 16, fontSize: 13, fontWeight: 700, color: '#16a34a' }}>Ver produtos →</div>
+                  </div>
+                </Link>
+
+              </div>
+            </div>
           </div>
         </div>
-
-        {/* Ultimos videos */}
-        {recentGenerations.length > 0 && (
-          <div className="anim-fadeUp-4" style={{ marginBottom: 24 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Ultimos criativos</div>
-              <Link href="/dashboard/historico" style={{ fontSize: 13, color: 'var(--accent2)', textDecoration: 'none' }}>Ver todos →</Link>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {recentGenerations.map(function(g) {
-                return (
-                  <div key={g.id} className="card-hover" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ width: 36, height: 36, background: 'rgba(124,92,252,0.1)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <i className="ti ti-video" style={{ fontSize: 16, color: 'var(--accent2)' }} />
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 14, fontWeight: 600 }}>{g.niche || 'Sem titulo'}</div>
-                        <div style={{ fontSize: 12, color: 'var(--muted2)' }}>{formatDate(g.created_at)}</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: g.status === 'completed' ? 'var(--green)' : g.status === 'pending' ? 'var(--accent2)' : '#f87171' }}>
-                        {g.status === 'completed' ? 'Pronto' : g.status === 'pending' ? 'Processando' : 'Falhou'}
-                      </span>
-                      {g.output_url && (
-                        <a href={g.output_url} download style={{ fontSize: 12, color: 'var(--accent2)', textDecoration: 'none', fontWeight: 600 }}>Baixar</a>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Ultimos ebooks */}
-        {recentEbooks.length > 0 && (
-          <div className="anim-fadeUp-4" style={{ marginBottom: 24 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Ultimos ebooks</div>
-              <Link href="/dashboard/historico" style={{ fontSize: 13, color: 'var(--green)', textDecoration: 'none' }}>Ver todos →</Link>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {recentEbooks.map(function(g) {
-                return (
-                  <div key={g.id} className="card-hover" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ width: 36, height: 36, background: 'rgba(34,197,94,0.1)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <i className="ti ti-book-2" style={{ fontSize: 16, color: 'var(--green)' }} />
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 14, fontWeight: 600 }}>{g.title || g.niche || 'Sem titulo'}</div>
-                        <div style={{ fontSize: 12, color: 'var(--muted2)' }}>{formatDate(g.created_at)}</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: g.status === 'completed' ? 'var(--green)' : '#f87171' }}>
-                        {g.status === 'completed' ? 'Pronto' : 'Processando'}
-                      </span>
-                      {g.output_url && (
-                        <a href={g.output_url} download style={{ fontSize: 12, color: 'var(--green)', textDecoration: 'none', fontWeight: 600 }}>Baixar</a>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Estado vazio */}
-        {recentGenerations.length === 0 && recentEbooks.length === 0 && hasSubscription && (
-          <div className="anim-fadeUp-4" style={{ background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: 16, padding: '48px 24px', textAlign: 'center' }}>
-            <i className="ti ti-sparkles" style={{ fontSize: 44, color: 'var(--accent2)', display: 'block', marginBottom: 16, animation: 'pulse 2s ease infinite' }} />
-            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Comece a criar agora!</div>
-            <div style={{ fontSize: 14, color: 'var(--muted2)', marginBottom: 24, maxWidth: 360, margin: '0 auto 24px' }}>Use os atalhos acima para gerar seu primeiro criativo, ebook ou pagina de vendas.</div>
-            <Link href="/dashboard/criativo" style={{ background: 'linear-gradient(135deg, var(--accent), #9b6dfc)', color: '#fff', fontWeight: 700, fontSize: 14, padding: '12px 28px', borderRadius: 12, textDecoration: 'none', boxShadow: '0 4px 16px rgba(124,92,252,0.4)' }}>
-              Criar primeiro criativo
-            </Link>
-          </div>
-        )}
 
       </div>
     </div>
