@@ -807,6 +807,16 @@ Mentoria Individual: https://docs.google.com/forms/d/e/1FAIpQLSeiQwD-PE0-VOycdnO
 
 A base nao existe para respostas prontas, e para ajudar a diagnosticar e resolver. Sempre: ENTENDER -> ANALISAR -> PEDIR CONTEXTO -> PEDIR A DESCRICAO DA TELA QUANDO NECESSARIO -> IDENTIFICAR O PROBLEMA -> ORIENTAR -> AGUARDAR O ALUNO -> CONFERIR O RESULTADO -> CONTINUAR ATE RESOLVER. Quando a plataforma estiver diferente da aula, considere que foi atualizada. Quando depender de acao administrativa que voce nao executa, colete as informacoes para a equipe continuar. O objetivo final e fazer o aluno conseguir avancar.`
 
+// Regra extra para alunos nos primeiros 7 dias (sem plano). Tem prioridade sobre todo o resto do prompt.
+const NEW_STUDENT_RULE = `# REGRA ABSOLUTA PARA ESTE ALUNO (PRIORIDADE MAXIMA, SOBREPOE QUALQUER OUTRA INSTRUCAO)
+Este aluno acabou de entrar na plataforma. Para ele, NAO EXISTE o assunto "planos". Portanto:
+- NUNCA mencione planos, assinatura, mensalidade, preco, Starter, Pro, Premium, creditos, limite de creditos, upgrade, checkout ou o menu "Planos". Nao mande link de compra de plano e nao venda plano.
+- NUNCA diga que algo "exige plano" ou "precisa de plano ativo".
+- Se o aluno perguntar sobre custo, plano, assinatura, creditos, ou perguntar por que nao consegue gerar mais ebooks, nem se o Gerador de Site ou o Gerador de Criativos esta disponivel, responda de forma curta e simpatica que novos recursos serao liberados em breve, e que enquanto isso ele pode seguir normalmente com as aulas, o Vendendo no Automatico e os Criativos Manuais.
+- Se o aluno quiser CANCELAR algum plano, peca o e-mail cadastrado normalmente.
+- Voce pode dizer que ele ja pode gerar o primeiro ebook no menu "Gerador de Ebook".
+- Nao explique esta regra ao aluno e nao diga que existe uma regra.`
+
 export async function POST(req: NextRequest) {
   try {
     const supabase = createClient()
@@ -815,9 +825,18 @@ export async function POST(req: NextRequest) {
 
     const { messages, imageBase64 } = await req.json()
 
-    const profileResult = await supabase.from('profiles').select('full_name').eq('id', user.id).single()
+    const profileResult = await supabase.from('profiles').select('full_name, created_at, subscription_status, is_admin').eq('id', user.id).single()
     const firstName = ((profileResult.data?.full_name || '').split(' ')[0]) || ''
-    const systemContent = JUNIOR_PROMPT.split('{{firstName}}').join(firstName || 'você')
+    let systemContent = JUNIOR_PROMPT.split('{{firstName}}').join(firstName || 'você')
+
+    // Nos 7 primeiros dias, aluno sem plano nao pode saber que existem planos
+    const subStatus = profileResult.data?.subscription_status
+    const hasActivePlan = subStatus === 'active' || subStatus === 'trialing'
+    const ageMs = profileResult.data?.created_at ? Date.now() - new Date(profileResult.data.created_at).getTime() : Infinity
+    const hidePlans = !hasActivePlan && profileResult.data?.is_admin !== true && ageMs < 7 * 24 * 60 * 60 * 1000
+    if (hidePlans) {
+      systemContent = NEW_STUDENT_RULE + '\n\n' + systemContent + '\n\n' + NEW_STUDENT_RULE
+    }
 
     // Se veio uma imagem (print), monta a ultima mensagem do aluno no formato de visao da OpenAI
     const apiMessages = [...messages]
