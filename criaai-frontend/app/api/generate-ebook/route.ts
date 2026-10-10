@@ -86,6 +86,9 @@ function buildGammaPrompt(title: string, topic: string, details?: string, chapte
   return lines.join('\n')
 }
 
+// Quantos ebooks quem ainda nao tem plano pode gerar de graca
+const FREE_EBOOKS = 1
+
 export async function POST(req: NextRequest) {
   try {
     const cookieStore = cookies()
@@ -114,23 +117,29 @@ export async function POST(req: NextRequest) {
 
     if (!isAdmin) {
       const status = profile.subscription_status
-      if (status !== 'active' && status !== 'trialing') {
-        return NextResponse.json({
-          error: 'Assine um plano para usar este recurso.',
-          requiresPlan: true,
-        }, { status: 403 })
-      }
-
-      const plan = (profile as any).plans
-      creditLimit = (plan?.credits_ebooks ?? 0) + (profile.credits_ebooks_extra ?? 0)
+      const hasPlan = status === 'active' || status === 'trialing'
       creditsUsed = profile.credits_ebooks_used ?? 0
 
-      if (creditsUsed >= creditLimit) {
-        return NextResponse.json({
-          error: 'Limite de creditos atingido.',
-          details: 'Voce usou ' + creditsUsed + ' de ' + creditLimit + ' ebooks disponiveis.',
-          upgradeRequired: true,
-        }, { status: 402 })
+      if (hasPlan) {
+        const plan = (profile as any).plans
+        creditLimit = (plan?.credits_ebooks ?? 0) + (profile.credits_ebooks_extra ?? 0)
+
+        if (creditsUsed >= creditLimit) {
+          return NextResponse.json({
+            error: 'Limite de creditos atingido.',
+            details: 'Voce usou ' + creditsUsed + ' de ' + creditLimit + ' ebooks disponiveis.',
+            upgradeRequired: true,
+          }, { status: 402 })
+        }
+      } else {
+        // Sem plano: o primeiro ebook e gratuito. A partir do segundo, precisa assinar.
+        creditLimit = FREE_EBOOKS
+        if (creditsUsed >= FREE_EBOOKS) {
+          return NextResponse.json({
+            error: 'Seu ebook gratuito ja foi usado. Assine um plano para gerar mais.',
+            requiresPlan: true,
+          }, { status: 403 })
+        }
       }
     }
 
