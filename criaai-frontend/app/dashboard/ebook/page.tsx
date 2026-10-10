@@ -365,6 +365,7 @@ export default function EbookPage() {
   const [upgradeRequired, setUpgradeRequired] = useState(false)
   const [hasSubscription, setHasSubscription] = useState<boolean | null>(null)
   const [isFree, setIsFree] = useState(false)
+  const [hidePlans, setHidePlans] = useState(false)
 
   // Estado da capa 3D
   const [capaTitle, setCapaTitle] = useState('')
@@ -400,13 +401,16 @@ export default function EbookPage() {
     const userResult = await supabase.auth.getUser()
     const user = userResult.data.user
     if (!user) { router.push('/login'); return }
-    const result = await supabase.from('profiles').select('subscription_status, full_name, credits_ebooks_used, is_admin').eq('id', user.id).single()
+    const result = await supabase.from('profiles').select('subscription_status, full_name, credits_ebooks_used, is_admin, created_at').eq('id', user.id).single()
     const status = result.data?.subscription_status
     const active = status === 'active' || status === 'trialing'
     const admin = result.data?.is_admin === true
     // Sem plano: o primeiro ebook e gratis. Depois disso precisa assinar.
     const free = !active && !admin && (result.data?.credits_ebooks_used || 0) < 1
     setIsFree(free)
+    // Nos 7 primeiros dias, quem nao tem plano nao ve nada sobre planos
+    const ageMs = result.data?.created_at ? Date.now() - new Date(result.data.created_at).getTime() : Infinity
+    setHidePlans(!active && !admin && ageMs < 7 * 24 * 60 * 60 * 1000)
     setHasSubscription(active || admin || free)
     if (result.data?.full_name) {
       setCapaAuthor(result.data.full_name.split(' ')[0])
@@ -464,7 +468,7 @@ export default function EbookPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!hasSubscription) { window.location.href = '/dashboard/planos'; return }
+    if (!hasSubscription) { if (!hidePlans) window.location.href = '/dashboard/planos'; return }
     setError(null); setSuccess(null); setUpgradeRequired(false); setLoading(true)
     setProgress(3)
     if (progressRef.current) clearInterval(progressRef.current)
@@ -620,7 +624,7 @@ export default function EbookPage() {
             <p style={{ fontSize: 13, color: 'var(--muted2)', margin: 0, paddingLeft: 46 }}>Crie ebooks profissionais em PDF com inteligencia artificial</p>
           </div>
 
-          {hasSubscription && credits && (
+          {hasSubscription && credits && !hidePlans && (
             <div style={{ background: 'var(--surface)', border: '1.5px solid var(--border)', borderRadius: 14, padding: '12px 18px', boxShadow: 'var(--shadow-sm)' }}>
               <p style={{ fontSize: 11, color: 'var(--muted2)', margin: '0 0 4px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Creditos de Ebook</p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
@@ -649,7 +653,17 @@ export default function EbookPage() {
         </div>
 
         {/* Avisos */}
-        {hasSubscription === false && (
+        {hasSubscription === false && hidePlans && (
+          <div style={{ display: 'flex', gap: 12, padding: 16, borderRadius: 12, background: '#ecfdf5', border: '1px solid rgba(22,163,74,0.25)', marginBottom: 16 }}>
+            <span>🎉</span>
+            <div>
+              <p style={{ fontWeight: 700, color: '#15803d', margin: '0 0 4px', fontSize: 14 }}>Seu primeiro ebook está pronto!</p>
+              <p style={{ color: 'var(--muted2)', margin: 0, fontSize: 13 }}>Novos recursos serão liberados em breve para você gerar mais ebooks.</p>
+            </div>
+          </div>
+        )}
+
+        {hasSubscription === false && !hidePlans && (
           <div style={{ display: 'flex', gap: 12, padding: 16, borderRadius: 12, background: '#eef2ff', border: '1px solid rgba(91,78,248,0.2)', marginBottom: 16 }}>
             <span>🔒</span>
             <div>
@@ -757,17 +771,17 @@ export default function EbookPage() {
             </div>
             <button
               onClick={handleSubmit}
-              disabled={loading || (hasSubscription === true && (!form.title || !form.topic || noCredits))}
+              disabled={loading || (hasSubscription === false && hidePlans) || (hasSubscription === true && (!form.title || !form.topic || noCredits))}
               style={{
                 width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                 padding: '13px', borderRadius: 12, border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
-                background: hasSubscription === false ? 'linear-gradient(135deg,#5b4ef8,#9b8ffc)' : loading || noCredits ? 'var(--surface2)' : 'linear-gradient(135deg,#5b4ef8,#9b8ffc)',
-                color: loading || noCredits ? 'var(--muted2)' : '#fff',
+                background: hasSubscription === false && hidePlans ? 'var(--surface2)' : hasSubscription === false ? 'linear-gradient(135deg,#5b4ef8,#9b8ffc)' : loading || noCredits ? 'var(--surface2)' : 'linear-gradient(135deg,#5b4ef8,#9b8ffc)',
+                color: loading || noCredits || (hasSubscription === false && hidePlans) ? 'var(--muted2)' : '#fff',
                 fontWeight: 700, fontSize: 15, fontFamily: 'Inter, sans-serif',
-                boxShadow: loading || noCredits ? 'none' : '0 8px 20px rgba(91,78,248,0.3)',
+                boxShadow: loading || noCredits || (hasSubscription === false && hidePlans) ? 'none' : '0 8px 20px rgba(91,78,248,0.3)',
               }}
             >
-              {hasSubscription === false ? '🔒 Assinar um plano para gerar mais ebooks' : loading ? 'Gerando ebook — aguarde...' : isFree ? '✨ Gere o seu primeiro ebook' : '✨ Gerar Ebook com IA'}
+              {hasSubscription === false && hidePlans ? '🔒 Novos ebooks em breve' : hasSubscription === false ? '🔒 Assinar um plano para gerar mais ebooks' : loading ? 'Gerando ebook — aguarde...' : isFree ? '✨ Gere o seu primeiro ebook' : '✨ Gerar Ebook com IA'}
             </button>
             {loading && (
               <div style={{ marginTop: 4 }}>
