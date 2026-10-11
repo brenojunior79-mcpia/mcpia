@@ -8,6 +8,9 @@ export default function AdminPage() {
   const [profiles, setProfiles] = useState<any[]>([])
   const [stats, setStats] = useState({ receita: 0, custo: 0, alunos: 0, videos: 0, pagantes: 0, hoje: 0 })
   const [installs, setInstalls] = useState<any>(null)
+  const [pushPeople, setPushPeople] = useState(0)
+  const PAGE_STEP = 20
+  const [visible, setVisible] = useState(PAGE_STEP)
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('todos')
   const [search, setSearch] = useState('')
@@ -69,10 +72,27 @@ export default function AdminPage() {
         const inst = await supabase.rpc('app_install_stats')
         if (!inst.error && inst.data) setInstalls(inst.data)
       } catch (e) {}
+      // Alunos que ativaram as notificacoes (pessoas diferentes, nao aparelhos)
+      try {
+        const ids: Record<string, boolean> = {}
+        let pFrom = 0
+        while (true) {
+          const pr = await supabase.from('push_subscriptions').select('user_id').order('id', { ascending: true }).range(pFrom, pFrom + 999)
+          if (pr.error) break
+          const rows = pr.data || []
+          rows.forEach(function(r: any) { ids[r.user_id] = true })
+          if (rows.length < 1000) break
+          pFrom += 1000
+        }
+        setPushPeople(Object.keys(ids).length)
+      } catch (e) {}
       setLoading(false)
     }
     load()
   }, [])
+
+  // Ao trocar o filtro ou a busca, volta a mostrar so os primeiros
+  useEffect(function() { setVisible(PAGE_STEP) }, [filter, search])
 
   const filtered = profiles.filter(function(p) {
     if (search.trim()) {
@@ -146,6 +166,7 @@ export default function AdminPage() {
             <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{installs ? installs.ios : 0}</b><br />iPhone</div>
             <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{installs ? installs.computador : 0}</b><br />Computador</div>
             <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{installs ? installs.ativos7 : 0}</b><br />Abriram o app (7 dias)</div>
+            <div><b style={{ color: 'var(--accent)', fontSize: 18 }}>{pushPeople}</b><br />Ativaram notificações</div>
           </div>
         </div>
 
@@ -200,7 +221,7 @@ export default function AdminPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(function(p) {
+              {filtered.slice(0, visible).map(function(p) {
                 const plan = p.plans
                 const isPaying = p.subscription_status === 'active'
                 const situacao =
@@ -235,6 +256,29 @@ export default function AdminPage() {
             </tbody>
           </table>
           {filtered.length === 0 && <div className={styles.empty}>Nenhum usuario encontrado</div>}
+          {filtered.length > visible && (
+            <div style={{ padding: '16px 20px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 13, color: 'var(--muted2)' }}>Mostrando {Math.min(visible, filtered.length)} de {filtered.length}</span>
+              <button
+                onClick={function() { setVisible(visible + PAGE_STEP) }}
+                style={{ padding: '9px 18px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+              >
+                Ver mais
+              </button>
+              <button
+                onClick={function() { setVisible(filtered.length) }}
+                style={{ padding: '9px 12px', borderRadius: 10, border: 'none', background: 'none', color: 'var(--muted2)', fontSize: 13, cursor: 'pointer' }}
+              >
+                Ver todos
+              </button>
+            </div>
+          )}
+          {filtered.length > 0 && filtered.length <= visible && filtered.length > PAGE_STEP && (
+            <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border)', textAlign: 'center', fontSize: 13, color: 'var(--muted2)' }}>
+              Mostrando todos os {filtered.length}
+              <button onClick={function() { setVisible(PAGE_STEP) }} style={{ marginLeft: 12, border: 'none', background: 'none', color: 'var(--accent)', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>Mostrar menos</button>
+            </div>
+          )}
         </div>
 
         {/* Saldo das ferramentas de IA — resumido, no rodape */}
