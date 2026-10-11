@@ -7,6 +7,7 @@ import styles from './admin.module.css'
 export default function AdminPage() {
   const [profiles, setProfiles] = useState<any[]>([])
   const [stats, setStats] = useState({ receita: 0, custo: 0, alunos: 0, videos: 0, pagantes: 0, hoje: 0 })
+  const [installs, setInstalls] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('todos')
   const [search, setSearch] = useState('')
@@ -63,6 +64,11 @@ export default function AdminPage() {
         const videos = allProfiles.reduce(function(a, p) { return a + (p.credits_videos_used || 0) }, 0)
         setStats({ receita, custo, alunos: allProfiles.length, videos, pagantes: pagantes.length, hoje: hoje.length })
       }
+      // Instalacoes do app (PWA). Se a tabela ainda nao existir, o card mostra zero.
+      try {
+        const inst = await supabase.rpc('app_install_stats')
+        if (!inst.error && inst.data) setInstalls(inst.data)
+      } catch (e) {}
       setLoading(false)
     }
     load()
@@ -123,6 +129,23 @@ export default function AdminPage() {
             <div className={styles.statLabel}>Lucro do mes</div>
             <div className={styles.statValue} style={{ color: lucro >= 0 ? 'var(--green)' : 'var(--red)' }}>R${lucro.toFixed(0)}</div>
             <div className={styles.statUp} style={{ color: 'var(--muted2)' }}>Depois de pagar as ferramentas de IA (R${stats.custo.toFixed(0)})</div>
+          </div>
+        </div>
+
+        {/* Instalacoes do app */}
+        <div className={styles.stat} style={{ marginBottom: 28, display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
+          <div style={{ minWidth: 150 }}>
+            <div className={styles.statLabel}><i className="ti ti-device-mobile" /> Instalaram o app</div>
+            <div className={styles.statValue} style={{ color: 'var(--accent)' }}>{installs ? installs.total : 0}</div>
+            <div className={styles.statUp} style={{ color: 'var(--muted2)' }}>
+              {installs ? installs.hoje : 0} hoje · {installs ? installs.ultimos7 : 0} nos ultimos 7 dias
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 22, flexWrap: 'wrap', fontSize: 13, color: 'var(--muted2)' }}>
+            <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{installs ? installs.android : 0}</b><br />Android</div>
+            <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{installs ? installs.ios : 0}</b><br />iPhone</div>
+            <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{installs ? installs.computador : 0}</b><br />Computador</div>
+            <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{installs ? installs.ativos7 : 0}</b><br />Abriram o app (7 dias)</div>
           </div>
         </div>
 
