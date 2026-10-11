@@ -875,6 +875,42 @@ export async function POST(req: NextRequest) {
       systemContent = NEW_STUDENT_RULE + '\n\n' + systemContent + '\n\n' + NEW_STUDENT_RULE
     }
 
+    // Salva a mensagem do aluno (e a resposta do Junior, se houver) para o monitoramento
+    const saveConversation = async function(replyText: string | null) {
+      const lastUserMessage = messages?.[messages.length - 1]
+      const userContentToSave = (lastUserMessage?.content || '') + (imageBase64 ? ' [imagem anexada]' : '')
+
+      // Guarda o print numa pasta privada (so o admin consegue ver) para poder consultar depois
+      let imagePath: string | null = null
+      if (imageBase64 && typeof imageBase64 === 'string') {
+        try {
+          const match = imageBase64.match(/^data:(image\/(?:png|jpeg|webp|gif));base64,(.+)$/)
+          if (match) {
+            const ext = match[1] === 'image/jpeg' ? 'jpg' : match[1].split('/')[1]
+            const path = user!.id + '/' + Date.now() + '.' + ext
+            const upload = await supabase.storage.from('chat-prints').upload(path, Buffer.from(match[2], 'base64'), { contentType: match[1], upsert: false })
+            if (upload.error) console.error('[chat] erro ao salvar print:', upload.error.message)
+            else imagePath = path
+          }
+        } catch (e) {
+          console.error('[chat] erro ao salvar print:', e)
+        }
+      }
+
+      if (userContentToSave.trim()) {
+        const rows: any[] = [{ user_id: user!.id, role: 'user', content: userContentToSave.trim(), image_path: imagePath }]
+        if (replyText) rows.push({ user_id: user!.id, role: 'assistant', content: replyText, image_path: null })
+        await supabase.from('chat_messages').insert(rows)
+      }
+    }
+
+    // Se um atendente humano assumiu a conversa, o Junior nao responde: so guarda a mensagem do aluno
+    const takeoverResult = await supabase.from('chat_takeovers').select('active').eq('user_id', user.id).maybeSingle()
+    if (takeoverResult.data?.active === true) {
+      await saveConversation(null)
+      return NextResponse.json({ reply: null, human: true })
+    }
+
     // Se veio uma imagem (print), monta a ultima mensagem do aluno no formato de visao da OpenAI
     const apiMessages = [...messages]
     if (imageBase64 && apiMessages.length > 0) {
@@ -909,15 +945,7 @@ export async function POST(req: NextRequest) {
     const data = await response.json()
     const reply = data.choices?.[0]?.message?.content || 'Não consegui gerar uma resposta. Tente novamente.'
 
-    // Salva a mensagem do aluno (a ultima do array) e a resposta do Junior, pra permitir monitoramento depois
-    const lastUserMessage = messages?.[messages.length - 1]
-    const userContentToSave = (lastUserMessage?.content || '') + (imageBase64 ? ' [imagem anexada]' : '')
-    if (userContentToSave.trim()) {
-      await supabase.from('chat_messages').insert([
-        { user_id: user.id, role: 'user', content: userContentToSave.trim() },
-        { user_id: user.id, role: 'assistant', content: reply },
-      ])
-    }
+    await saveConversation(reply)
 
     return NextResponse.json({ reply })
   } catch (err: any) {
