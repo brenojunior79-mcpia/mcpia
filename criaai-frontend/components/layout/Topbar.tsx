@@ -22,15 +22,39 @@ export default function Topbar({ profile, user }: { profile: any, user: any }) {
     setDate(now.toLocaleDateString('pt-BR', options))
 
     // Notificacoes de exemplo (substituir por tabela real depois)
-    setNotifications([
+    // O "lido" fica salvo no navegador, para nao voltar como nao lido ao atualizar a pagina
+    const base: Notification[] = [
       { id: '1', title: 'Bem-vindo!', message: 'Sua conta foi criada com sucesso. Explore os recursos da plataforma!', read: false, created_at: new Date().toISOString() },
       { id: '2', title: 'Novo produto disponivel', message: 'O produto Pack AEG foi adicionado em Produtos em Alta. Confira!', read: false, created_at: new Date().toISOString() },
-    ])
+    ]
+    const readIds = loadReadIds()
+    setNotifications(base.map(function(n) { return readIds.indexOf(n.id) !== -1 ? { ...n, read: true } : n }))
   }, [])
+
+  const storageKey = 'mcpia_notif_read_' + (user?.id || 'anon')
+
+  function loadReadIds(): string[] {
+    try {
+      const raw = localStorage.getItem(storageKey)
+      const arr = raw ? JSON.parse(raw) : []
+      return Array.isArray(arr) ? arr : []
+    } catch (e) { return [] }
+  }
+
+  function saveReadIds(ids: string[]) {
+    try { localStorage.setItem(storageKey, JSON.stringify(ids)) } catch (e) {}
+  }
+
+  function markRead(ids: string[]) {
+    const merged = loadReadIds()
+    ids.forEach(function(id) { if (merged.indexOf(id) === -1) merged.push(id) })
+    saveReadIds(merged)
+  }
 
   const unread = notifications.filter(function(n) { return !n.read }).length
 
   function markAllRead() {
+    markRead(notifications.map(function(n) { return n.id }))
     setNotifications(function(prev) {
       return prev.map(function(n) { return { ...n, read: true } })
     })
@@ -154,6 +178,7 @@ export default function Topbar({ profile, user }: { profile: any, user: any }) {
                         background: n.read ? 'transparent' : 'rgba(91,78,248,0.04)',
                         cursor: 'pointer',
                       }} onClick={function() {
+                        markRead([n.id])
                         setNotifications(function(prev) {
                           return prev.map(function(item) { return item.id === n.id ? { ...item, read: true } : item })
                         })
