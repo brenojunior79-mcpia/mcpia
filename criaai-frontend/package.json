@@ -18,12 +18,14 @@
     "react": "^18",
     "react-dom": "^18",
     "stripe": "^15.7.0",
-    "openai": "^4.47.0"
+    "openai": "^4.47.0",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "typescript": "^5"
+    "typescript": "^5",
+    "@types/web-push": "^3.6.4"
   }
 }
