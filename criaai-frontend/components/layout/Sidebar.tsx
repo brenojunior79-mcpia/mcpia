@@ -74,6 +74,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
     { href: '/dashboard/planos', icon: 'ti-credit-card', label: 'Planos', locked: false },
     ...(isAdmin ? [{ href: '/dashboard/admin', icon: 'ti-shield', label: 'Admin', locked: false }] : []),
     ...(isAdmin ? [{ href: '/dashboard/admin/conversas', icon: 'ti-message-2', label: 'Conversas (Junior)', locked: false }] : []),
+    ...(isAdmin ? [{ href: '/dashboard/admin/notificacoes', icon: 'ti-bell-ringing', label: 'Notificacoes (envio)', locked: false }] : []),
   ]
 
   return (
