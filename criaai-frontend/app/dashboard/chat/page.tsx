@@ -4,12 +4,15 @@ import { createClient } from '@/lib/supabase-browser'
 import styles from './chat.module.css'
 
 interface Message {
+  id?: string
   role: 'user' | 'assistant'
   content: string
   imageUrl?: string
+  human?: boolean
 }
 
 const STORAGE_KEY = 'mcpia_chat_history'
+const ADMIN_SEEN_KEY = 'mcpia_chat_admin_seen'
 
 function buildWelcome(firstName: string): Message {
   const name = firstName ? ', ' + firstName : ''
@@ -27,6 +30,7 @@ export default function ChatPage() {
   const [copied, setCopied] = useState<number | null>(null)
   const [hydrated, setHydrated] = useState(false)
   const [pendingImage, setPendingImage] = useState<string | null>(null)
+  const [humanActive, setHumanActive] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
@@ -34,15 +38,18 @@ export default function ChatPage() {
   useEffect(function() {
     async function init() {
       let name = ''
+      let currentUserId: string | null = null
       try {
         const userResult = await supabase.auth.getUser()
         const user = userResult.data.user
         if (user) {
+          currentUserId = user.id
           const profileResult = await supabase.from('profiles').select('full_name').eq('id', user.id).single()
           name = ((profileResult.data?.full_name || '').split(' ')[0]) || ''
         }
       } catch (e) {}
       setFirstName(name)
+      if (currentUserId) startHumanSync(currentUserId)
 
       try {
         const saved = localStorage.getItem(STORAGE_KEY)
@@ -62,6 +69,43 @@ export default function ChatPage() {
     }
     init()
   }, [])
+
+  // Mensagens de um atendente humano: busca as que chegaram enquanto o aluno estava fora e escuta as novas
+  function addHumanMessage(row: any) {
+    setMessages(function(prev) {
+      if (prev.some(function(m) { return m.id === row.id })) return prev
+      return [...prev, { id: row.id, role: 'assistant', content: row.content, human: true }]
+    })
+    try { localStorage.setItem(ADMIN_SEEN_KEY, row.created_at) } catch (e) {}
+  }
+
+  async function startHumanSync(userId: string) {
+    try {
+      let since = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+      try { since = localStorage.getItem(ADMIN_SEEN_KEY) || since } catch (e) {}
+      const missed = await supabase
+        .from('chat_messages')
+        .select('id, content, created_at')
+        .eq('user_id', userId)
+        .eq('role', 'admin')
+        .gt('created_at', since)
+        .order('created_at', { ascending: true })
+      if (missed.data) missed.data.forEach(addHumanMessage)
+
+      const status = await supabase.from('chat_takeovers').select('active').eq('user_id', userId).maybeSingle()
+      setHumanActive(status.data?.active === true)
+
+      supabase
+        .channel('chat_human_' + userId)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: 'user_id=eq.' + userId }, function(payload: any) {
+          if (payload.new && payload.new.role === 'admin') addHumanMessage(payload.new)
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_takeovers', filter: 'user_id=eq.' + userId }, function(payload: any) {
+          if (payload.new) setHumanActive(payload.new.active === true)
+        })
+        .subscribe()
+    } catch (e) {}
+  }
 
   useEffect(function() {
     if (!hydrated) return
@@ -103,9 +147,13 @@ export default function ChatPage() {
         }),
       })
       const data = await res.json()
-      setMessages(function(prev) {
-        return [...prev, { role: 'assistant', content: data.reply || 'Erro ao gerar resposta.' }]
-      })
+      if (data.human) {
+        setHumanActive(true)
+      } else {
+        setMessages(function(prev) {
+          return [...prev, { role: 'assistant', content: data.reply || 'Erro ao gerar resposta.' }]
+        })
+      }
     } catch {
       setMessages(function(prev) {
         return [...prev, { role: 'assistant', content: 'Erro ao conectar. Tente novamente.' }]
@@ -173,19 +221,29 @@ export default function ChatPage() {
       </div>
 
       <div className={styles.chatWrap}>
+        {humanActive && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 32px', background: 'rgba(22,163,74,0.1)', borderBottom: '1px solid rgba(22,163,74,0.25)', color: 'var(--text)', fontSize: 13 }}>
+            <i className="ti ti-user-check" style={{ fontSize: 18, color: 'var(--green)' }} />
+            <span>Um atendente da equipe está cuidando da sua conversa. Pode mandar sua mensagem por aqui que ele responde.</span>
+          </div>
+        )}
         <div className={styles.messages}>
           {messages.map(function(msg, i) {
             return (
               <div key={i} className={styles.msg + ' ' + (msg.role === 'user' ? styles.msgUser : styles.msgBot)}>
-                {msg.role === 'assistant' && (
+                {msg.role === 'assistant' && !msg.human && (
                   <div className={styles.avatar}><img src="/avatar-junior/junior.svg" alt="Junior" style={{ width: '100%', height: '100%', borderRadius: '50%' }} /></div>
                 )}
+                {msg.human && (
+                  <div className={styles.avatar} style={{ background: 'var(--green)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}><i className="ti ti-user" /></div>
+                )}
                 <div className={styles.bubble}>
+                  {msg.human && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--green)' }}>Atendimento da equipe</div>}
                   {msg.imageUrl && (
                     <img src={msg.imageUrl} alt="Print enviado" style={{ maxWidth: '100%', borderRadius: 10, marginBottom: msg.content ? 8 : 0, display: 'block' }} />
                   )}
                   {msg.content && <div className={styles.bubbleText}>{msg.content}</div>}
-                  {msg.role === 'assistant' && i > 0 && (
+                  {msg.role === 'assistant' && !msg.human && i > 0 && (
                     <button className={styles.copyBtn} onClick={function() { copyText(msg.content, i) }}>
                       {copied === i
                         ? <><i className="ti ti-check" /> Copiado!</>
