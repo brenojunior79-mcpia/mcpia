@@ -1,24 +1,24 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// Renova o login do aluno de forma silenciosa.
+// IMPORTANTE: o login fica guardado em mais de um "pedaço" de cookie. Todos precisam voltar juntos
+// para o navegador, senao o login quebra depois da primeira renovacao e a pessoa cai na tela de login.
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({ request: { headers: request.headers } })
+  let response = NextResponse.next({ request })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) { return request.cookies.get(name)?.value },
-        set(name: string, value: string, options: any) {
-          request.cookies.set({ name, value, ...options })
-          response = NextResponse.next({ request: { headers: request.headers } })
-          response.cookies.set({ name, value, ...options })
+        getAll() {
+          return request.cookies.getAll()
         },
-        remove(name: string, options: any) {
-          request.cookies.set({ name, value: '', ...options })
-          response = NextResponse.next({ request: { headers: request.headers } })
-          response.cookies.set({ name, value: '', ...options })
+        setAll(cookiesToSet: { name: string, value: string, options?: any }[]) {
+          cookiesToSet.forEach(function(c) { request.cookies.set(c.name, c.value) })
+          response = NextResponse.next({ request })
+          cookiesToSet.forEach(function(c) { response.cookies.set(c.name, c.value, c.options) })
         },
       },
     }
