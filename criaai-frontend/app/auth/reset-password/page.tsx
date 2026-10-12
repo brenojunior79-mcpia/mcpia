@@ -9,8 +9,21 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [noSession, setNoSession] = useState(false)
   const supabase = createClient()
   const router = useRouter()
+
+  // Sem sessao = o link nao funcionou neste navegador (ou expirou). Avisamos em vez de mostrar erro tecnico.
+  useEffect(function() {
+    async function check() {
+      let linkError = false
+      try { linkError = window.location.search.indexOf('erro=link') !== -1 } catch (e) {}
+      const u = await supabase.auth.getUser()
+      if (!u.data?.user) setNoSession(true)
+      else if (linkError) setNoSession(false)
+    }
+    check()
+  }, [])
 
   async function handleReset(e: React.FormEvent) {
     e.preventDefault()
@@ -26,7 +39,10 @@ export default function ResetPasswordPage() {
     setError('')
     const result = await supabase.auth.updateUser({ password })
     if (result.error) {
-      setError(result.error.message)
+      const m = result.error.message || ''
+      if (m.indexOf('session missing') !== -1) setNoSession(true)
+      else if (m.indexOf('same as the old') !== -1) setError('A nova senha precisa ser diferente da antiga.')
+      else setError('Não foi possível salvar a senha. Tente novamente.')
       setLoading(false)
       return
     }
@@ -49,6 +65,19 @@ export default function ResetPasswordPage() {
             </div>
             <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 20, fontWeight: 800, marginBottom: 8 }}>Senha redefinida!</h2>
             <p style={{ fontSize: 14, color: 'var(--muted2)' }}>Redirecionando para o dashboard...</p>
+          </div>
+        ) : noSession ? (
+          <div style={{ textAlign: 'center' }}>
+            <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 20, fontWeight: 800, marginBottom: 10 }}>Esse link não funcionou</h2>
+            <p style={{ fontSize: 14, color: 'var(--muted2)', lineHeight: 1.6, marginBottom: 18 }}>
+              O link para trocar a senha expirou ou foi aberto em outro aparelho ou navegador. Peça um novo link e abra no mesmo celular ou computador em que você pediu.
+            </p>
+            <button
+              onClick={function() { router.push('/login') }}
+              style={{ width: '100%', padding: '14px 16px', borderRadius: 12, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #5b4ef8, #ec4899)', color: '#fff', fontWeight: 800, fontSize: 15 }}
+            >
+              Pedir novo link
+            </button>
           </div>
         ) : (
           <div>
