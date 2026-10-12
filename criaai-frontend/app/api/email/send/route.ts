@@ -42,6 +42,8 @@ export async function POST(req: NextRequest) {
     const apiKey = process.env.RESEND_API_KEY
     if (!apiKey) return NextResponse.json({ error: 'A chave RESEND_API_KEY ainda não foi colocada na Vercel.' }, { status: 500 })
     const from = process.env.EMAIL_FROM || 'Cristão Próspero <novidades@mcpia.site>'
+    // Opcional: para onde vão as respostas dos alunos (ajuda a reputação do e-mail)
+    const replyTo = process.env.EMAIL_REPLY_TO || ''
 
     const body = await req.json()
     const subject = String(body.subject || '').trim()
@@ -108,10 +110,12 @@ export async function POST(req: NextRequest) {
       const messages = chunk.map(function(t) {
         const unsub = SITE_URL + '/api/email/unsubscribe?u=' + t.id
         const mail = buildEmail({ subject, message, buttonText, buttonUrl, imageUrl, imageLink, name: t.name, unsubscribeUrl: unsub })
-        return {
+        const msg: any = {
           from, to: [t.email], subject, html: mail.html, text: mail.text,
           headers: { 'List-Unsubscribe': '<' + unsub + '>', 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
         }
+        if (replyTo) msg.reply_to = replyTo
+        return msg
       })
       const r = await sendBatch(apiKey, messages)
       if (r.ok) sent += chunk.length
