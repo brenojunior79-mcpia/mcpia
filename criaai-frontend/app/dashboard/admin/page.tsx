@@ -8,6 +8,7 @@ export default function AdminPage() {
   const [profiles, setProfiles] = useState<any[]>([])
   const [stats, setStats] = useState({ receita: 0, custo: 0, alunos: 0, videos: 0, pagantes: 0, hoje: 0 })
   const [installs, setInstalls] = useState<any>(null)
+  const [emailStats, setEmailStats] = useState<any>(null)
   const [pushPeople, setPushPeople] = useState(0)
   const PAGE_STEP = 20
   const [visible, setVisible] = useState(PAGE_STEP)
@@ -71,6 +72,11 @@ export default function AdminPage() {
       try {
         const inst = await supabase.rpc('app_install_stats')
         if (!inst.error && inst.data) setInstalls(inst.data)
+      } catch (e) {}
+      // E-mails abertos. Se o arquivo T1 ainda nao foi rodado, o card mostra zero.
+      try {
+        const es = await supabase.rpc('email_open_stats')
+        if (!es.error && es.data) setEmailStats(es.data)
       } catch (e) {}
       // Alunos que ativaram as notificacoes (pessoas diferentes, nao aparelhos)
       try {
@@ -167,6 +173,21 @@ export default function AdminPage() {
             <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{installs ? installs.computador : 0}</b><br />Computador</div>
             <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{installs ? installs.ativos7 : 0}</b><br />Abriram o app (7 dias)</div>
             <div><b style={{ color: 'var(--accent)', fontSize: 18 }}>{pushPeople}</b><br />Ativaram notificações</div>
+          </div>
+        </div>
+
+        {/* E-mails abertos */}
+        <div className={styles.stat} style={{ marginBottom: 28, display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
+          <div style={{ minWidth: 150 }}>
+            <div className={styles.statLabel}><i className="ti ti-mail-opened" /> E-mails abertos</div>
+            <div className={styles.statValue} style={{ color: 'var(--accent)' }}>{emailStats ? emailStats.pessoas : 0}</div>
+            <div className={styles.statUp} style={{ color: 'var(--muted2)' }}>
+              {emailStats && emailStats.enviados > 0 ? Math.round((emailStats.pessoas / emailStats.enviados) * 100) : 0}% de {emailStats ? emailStats.enviados : 0} enviados · {emailStats ? emailStats.hoje : 0} hoje
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 22, flexWrap: 'wrap', fontSize: 13, color: 'var(--muted2)' }}>
+            <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{emailStats && emailStats.ultimo ? emailStats.ultimo.abertos + ' de ' + emailStats.ultimo.enviados : '0'}</b><br />Último envio{emailStats && emailStats.ultimo ? ': ' + emailStats.ultimo.assunto : ''}</div>
+            <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{emailStats ? emailStats.abertos : 0}</b><br />Aberturas (todos os envios)</div>
           </div>
         </div>
 

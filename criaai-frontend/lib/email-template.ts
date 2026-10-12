@@ -39,6 +39,7 @@ export function buildEmail(opts: {
   imageLink?: string
   name?: string
   unsubscribeUrl: string
+  openPixelUrl?: string
 }): { html: string, text: string } {
   const name = opts.name || ''
   const body = formatBody(opts.message, name)
@@ -68,7 +69,9 @@ export function buildEmail(opts: {
     '<tr><td style="padding:18px 28px 26px;border-top:1px solid #eceef6;font-size:12px;line-height:1.5;color:#8a8ea8;">' +
     'Você recebeu este e-mail porque tem cadastro na Plataforma do Cristão Próspero.<br>' +
     'Se não quiser mais receber, <a href="' + esc(opts.unsubscribeUrl) + '" style="color:#8a8ea8;">clique aqui para sair da lista</a>.' +
-    '</td></tr></table></td></tr></table></body></html>'
+    '</td></tr></table>' +
+    (opts.openPixelUrl ? '<img src="' + esc(opts.openPixelUrl) + '" width="1" height="1" alt="" style="display:block;border:0;width:1px;height:1px;">' : '') +
+    '</td></tr></table></body></html>'
 
   const plain = opts.message.split('{{nome}}').join(name || 'aluno').replace(/\*\*(.+?)\*\*/g, '$1') +
     (btnUrl && btnText ? '\n\n' + btnText + ': ' + btnUrl : '') +

@@ -98,6 +98,13 @@ export async function POST(req: NextRequest) {
 
     if (targets.length === 0) return NextResponse.json({ error: 'Nenhum aluno para receber esse envio.' }, { status: 400 })
 
+    // O envio ganha um numero proprio antes de sair, para contar as aberturas
+    const broadcastId = crypto.randomUUID()
+    // O registro do envio e criado antes, para as primeiras aberturas ja serem contadas
+    const created = await supabase.from('email_broadcasts').insert({
+      id: broadcastId, subject, audience, sent_by: user.id, total: targets.length, sent_count: 0, failed_count: 0,
+    })
+    if (created.error) return NextResponse.json({ error: 'Erro ao registrar o envio: ' + created.error.message }, { status: 500 })
     const started = Date.now()
     let sent = 0
     let failed = 0
@@ -109,7 +116,8 @@ export async function POST(req: NextRequest) {
       const chunk = targets.slice(i, i + BATCH)
       const messages = chunk.map(function(t) {
         const unsub = SITE_URL + '/api/email/unsubscribe?u=' + t.id
-        const mail = buildEmail({ subject, message, buttonText, buttonUrl, imageUrl, imageLink, name: t.name, unsubscribeUrl: unsub })
+        const openPixelUrl = SITE_URL + '/api/email/open?b=' + broadcastId + '&u=' + t.id
+        const mail = buildEmail({ subject, message, buttonText, buttonUrl, imageUrl, imageLink, name: t.name, unsubscribeUrl: unsub, openPixelUrl })
         const msg: any = {
           from, to: [t.email], subject, html: mail.html, text: mail.text,
           headers: { 'List-Unsubscribe': '<' + unsub + '>', 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
@@ -127,9 +135,11 @@ export async function POST(req: NextRequest) {
     }
 
     const notSent = targets.length - processed
-    await supabase.from('email_broadcasts').insert({
-      subject, audience, sent_by: user.id, total: targets.length, sent_count: sent, failed_count: failed + notSent,
-    })
+    if (sent === 0) {
+      await supabase.from('email_broadcasts').delete().eq('id', broadcastId)
+    } else {
+      await supabase.from('email_broadcasts').update({ sent_count: sent, failed_count: failed + notSent }).eq('id', broadcastId)
+    }
 
     if (sent === 0) {
       return NextResponse.json({ error: 'Nenhum e-mail foi enviado. ' + (firstError || '') }, { status: 502 })

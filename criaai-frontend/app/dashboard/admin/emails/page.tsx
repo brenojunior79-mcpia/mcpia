@@ -30,6 +30,7 @@ export default function EmailsPage() {
   const [loading, setLoading] = useState(true)
   const [people, setPeople] = useState<any[]>([])
   const [history, setHistory] = useState<any[]>([])
+  const [opens, setOpens] = useState<Record<string, number>>({})
   const [adminName, setAdminName] = useState('')
   const [subject, setSubject] = useState('')
   const [message, setMessage] = useState('')
@@ -64,6 +65,10 @@ export default function EmailsPage() {
     setPeople(all)
     const h = await supabase.from('email_broadcasts').select('*').order('created_at', { ascending: false }).limit(20)
     setHistory(h.data || [])
+    try {
+      const es = await supabase.rpc('email_open_stats')
+      if (!es.error && es.data && es.data.por_envio) setOpens(es.data.por_envio)
+    } catch (e) {}
   }
 
   useEffect(function() {
@@ -314,6 +319,7 @@ export default function EmailsPage() {
                     <th style={{ padding: '10px 18px' }}>Assunto</th>
                     <th style={{ padding: '10px 18px' }}>Público</th>
                     <th style={{ padding: '10px 18px' }}>Enviados</th>
+                    <th style={{ padding: '10px 18px' }}>Abriram</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -325,6 +331,7 @@ export default function EmailsPage() {
                         <td style={{ padding: '10px 18px' }}>{h.subject}</td>
                         <td style={{ padding: '10px 18px' }}>{aud ? aud.label : h.audience}</td>
                         <td style={{ padding: '10px 18px' }}>{h.sent_count} de {h.total}{h.failed_count ? ' (' + h.failed_count + ' não enviados)' : ''}</td>
+                        <td style={{ padding: '10px 18px', whiteSpace: 'nowrap' }}>{opens[h.id] || 0}{h.sent_count > 0 ? ' (' + Math.round(((opens[h.id] || 0) / h.sent_count) * 100) + '%)' : ''}</td>
                       </tr>
                     )
                   })}
