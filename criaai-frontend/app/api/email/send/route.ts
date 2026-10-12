@@ -48,12 +48,18 @@ export async function POST(req: NextRequest) {
     const message = String(body.message || '').trim()
     const buttonText = String(body.buttonText || '').trim()
     const buttonUrl = String(body.buttonUrl || '').trim()
+    const imageUrl = String(body.imageUrl || '').trim()
+    const imageLink = String(body.imageLink || '').trim()
     const audience = String(body.audience || 'teste')
 
     if (!subject || subject.length > 120) return NextResponse.json({ error: 'O assunto precisa ter entre 1 e 120 letras.' }, { status: 400 })
     if (!message || message.length > 5000) return NextResponse.json({ error: 'A mensagem precisa ter entre 1 e 5000 letras.' }, { status: 400 })
     if (AUDIENCES.indexOf(audience) === -1) return NextResponse.json({ error: 'Público inválido.' }, { status: 400 })
     if (buttonUrl && !normalizeButtonUrl(buttonUrl)) return NextResponse.json({ error: 'O link do botão precisa começar com https:// ou com /' }, { status: 400 })
+    // A imagem precisa ser uma das enviadas pela propria plataforma
+    const imagePrefix = (process.env.NEXT_PUBLIC_SUPABASE_URL || '') + '/storage/v1/object/public/email-images/'
+    if (imageUrl && (imageUrl.indexOf(imagePrefix) !== 0 || /[\s"'<>]/.test(imageUrl))) return NextResponse.json({ error: 'Imagem inválida. Envie a imagem de novo.' }, { status: 400 })
+    if (imageLink && !normalizeButtonUrl(imageLink)) return NextResponse.json({ error: 'O link da imagem precisa começar com https:// ou com /' }, { status: 400 })
     if (buttonUrl && !buttonText) return NextResponse.json({ error: 'Escreva o texto do botão ou deixe o link vazio.' }, { status: 400 })
 
     // Quem vai receber
@@ -101,7 +107,7 @@ export async function POST(req: NextRequest) {
       const chunk = targets.slice(i, i + BATCH)
       const messages = chunk.map(function(t) {
         const unsub = SITE_URL + '/api/email/unsubscribe?u=' + t.id
-        const mail = buildEmail({ subject, message, buttonText, buttonUrl, name: t.name, unsubscribeUrl: unsub })
+        const mail = buildEmail({ subject, message, buttonText, buttonUrl, imageUrl, imageLink, name: t.name, unsubscribeUrl: unsub })
         return {
           from, to: [t.email], subject, html: mail.html, text: mail.text,
           headers: { 'List-Unsubscribe': '<' + unsub + '>', 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
