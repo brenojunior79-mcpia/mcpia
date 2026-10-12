@@ -37,6 +37,12 @@ export default function EmailsPage() {
   const [customLink, setCustomLink] = useState('')
   const [buttonText, setButtonText] = useState('')
   const [audience, setAudience] = useState('teste')
+  const [imageUrl, setImageUrl] = useState('')
+  const [imagePath, setImagePath] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const [imageError, setImageError] = useState('')
+  const [imageLinkChoice, setImageLinkChoice] = useState('')
+  const [customImageLink, setCustomImageLink] = useState('')
   const [sending, setSending] = useState(false)
   const [result, setResult] = useState<{ ok: boolean, text: string } | null>(null)
 
@@ -75,6 +81,39 @@ export default function EmailsPage() {
   }, [])
 
   const buttonUrl = linkChoice === 'outro' ? customLink.trim() : linkChoice
+  const imageLink = imageLinkChoice === 'botao' ? buttonUrl : imageLinkChoice === 'outro' ? customImageLink.trim() : imageLinkChoice
+
+  async function uploadImage(file: File | null | undefined) {
+    setImageError('')
+    if (!file) return
+    const okTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+    if (okTypes.indexOf(file.type) === -1) { setImageError('Use uma imagem JPG, PNG, WEBP ou GIF.'); return }
+    if (file.size > 2 * 1024 * 1024) { setImageError('A imagem tem mais de 2 MB. Diminua o tamanho e tente de novo.'); return }
+    setUploading(true)
+    try {
+      const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : file.type === 'image/gif' ? 'gif' : 'jpg'
+      const path = Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.' + ext
+      const up = await supabase.storage.from('email-images').upload(path, file, { contentType: file.type, cacheControl: '31536000' })
+      if (up.error) {
+        setImageError('Não foi possível enviar a imagem: ' + up.error.message + (/bucket/i.test(up.error.message) ? ' (rode o arquivo R1-imagens-email.sql no Supabase)' : ''))
+      } else {
+        const pub = supabase.storage.from('email-images').getPublicUrl(path)
+        // se havia outra imagem, apaga a anterior
+        if (imagePath) { try { await supabase.storage.from('email-images').remove([imagePath]) } catch (e) {} }
+        setImagePath(path)
+        setImageUrl(pub.data.publicUrl)
+      }
+    } catch (e) {
+      setImageError('Erro ao enviar a imagem. Tente de novo.')
+    }
+    setUploading(false)
+  }
+
+  async function removeImage() {
+    const old = imagePath
+    setImageUrl(''); setImagePath(''); setImageError(''); setImageLinkChoice(''); setCustomImageLink('')
+    if (old) { try { await supabase.storage.from('email-images').remove([old]) } catch (e) {} }
+  }
 
   function countFor(aud: string) {
     if (aud === 'teste') return 1
@@ -95,6 +134,8 @@ export default function EmailsPage() {
     message: message || 'A mensagem do e-mail vai aparecer aqui.\n\nUse {{nome}} para colocar o primeiro nome do aluno.',
     buttonText: buttonText,
     buttonUrl: buttonUrl,
+    imageUrl: imageUrl,
+    imageLink: imageLink,
     name: adminName || 'Maria',
     unsubscribeUrl: 'https://mcpia.site/api/email/unsubscribe?u=exemplo',
   })
@@ -111,7 +152,7 @@ export default function EmailsPage() {
       const res = await fetch('/api/email/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject: subject.trim(), message: message.trim(), buttonText: buttonText.trim(), buttonUrl: buttonUrl, audience }),
+        body: JSON.stringify({ subject: subject.trim(), message: message.trim(), buttonText: buttonText.trim(), buttonUrl: buttonUrl, imageUrl: imageUrl, imageLink: imageLink, audience }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -120,7 +161,7 @@ export default function EmailsPage() {
         let t = 'Enviado para ' + data.sent + ' aluno(s).'
         if (data.failed || data.notSent) t += ' ' + ((data.failed || 0) + (data.notSent || 0)) + ' não foram enviados' + (data.firstError ? ' (' + data.firstError + ')' : '') + '.'
         setResult({ ok: !(data.failed || data.notSent), text: t })
-        if (audience !== 'teste') { setSubject(''); setMessage('') }
+        if (audience !== 'teste') { setSubject(''); setMessage(''); setImageUrl(''); setImagePath(''); setImageLinkChoice(''); setCustomImageLink('') }
         await loadAll()
       }
     } catch (e) {
@@ -182,6 +223,37 @@ export default function EmailsPage() {
             <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 6 }}>
               Use <b>{'{{nome}}'}</b> para o primeiro nome do aluno e <b>**texto**</b> para negrito. Linha em branco separa parágrafos.
             </div>
+
+            <label style={{ ...label, marginTop: 14 }}>Imagem no topo (opcional)</label>
+            {imageUrl ? (
+              <div style={{ border: '1px solid var(--border)', borderRadius: 12, padding: 10, background: 'var(--surface2)' }}>
+                <img src={imageUrl} alt="" style={{ width: '100%', maxHeight: 180, objectFit: 'cover', borderRadius: 8, display: 'block' }} />
+                <div style={{ display: 'flex', gap: 10, marginTop: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <button onClick={removeImage} style={{ padding: '7px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--red)', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Remover imagem</button>
+                  <span style={{ fontSize: 12, color: 'var(--muted2)' }}>Ao clicar na imagem:</span>
+                  <select style={{ ...input, width: 'auto', padding: '7px 10px', fontSize: 12 }} value={imageLinkChoice} onChange={function(e) { setImageLinkChoice(e.target.value) }}>
+                    <option value="">Não abre nada</option>
+                    <option value="botao">Mesmo link do botão</option>
+                    {LINKS.filter(function(l) { return l.value !== '' && l.value !== 'outro' }).map(function(l) { return <option key={l.value} value={l.value}>{l.label}</option> })}
+                    <option value="outro">Outro link (digitar)</option>
+                  </select>
+                </div>
+                {imageLinkChoice === 'outro' && (
+                  <input style={{ ...input, marginTop: 8 }} value={customImageLink} onChange={function(e) { setCustomImageLink(e.target.value) }} placeholder="https://..." />
+                )}
+                {imageLinkChoice === 'botao' && !buttonUrl && (
+                  <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 6 }}>Escolha um botão abaixo para a imagem usar o mesmo link.</div>
+                )}
+              </div>
+            ) : (
+              <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '18px 12px', borderRadius: 12, border: '2px dashed var(--border)', background: 'var(--surface2)', color: 'var(--muted2)', fontSize: 13, fontWeight: 600, cursor: uploading ? 'wait' : 'pointer' }}>
+                <i className="ti ti-photo-up" style={{ fontSize: 20 }} />
+                {uploading ? 'Enviando imagem...' : 'Escolher imagem do computador'}
+                <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={uploading} style={{ display: 'none' }} onChange={function(e) { uploadImage(e.target.files && e.target.files[0]); e.target.value = '' }} />
+              </label>
+            )}
+            {imageError && <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 6 }}>{imageError}</div>}
+            <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 6 }}>JPG, PNG, WEBP ou GIF, até 2 MB. Largura ideal: 1200 px (fica com 600 px no e-mail).</div>
 
             <label style={{ ...label, marginTop: 14 }}>Botão (opcional)</label>
             <select style={input} value={linkChoice} onChange={function(e) { setLinkChoice(e.target.value) }}>
