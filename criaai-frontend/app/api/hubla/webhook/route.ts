@@ -46,6 +46,13 @@ async function findUserIdByEmail(email: string): Promise<string | null> {
   return data?.id || null
 }
 
+// Guarda um historico simples do que a Hubla avisou e do que fizemos (para o admin conferir).
+async function logEvent(eventType: string, email: string | null, userId: string | null, action: string, note: string): Promise<void> {
+  try {
+    await admin.from('hubla_events').insert({ event_type: eventType, email, user_id: userId, action, note: note.slice(0, 300) })
+  } catch (e) {}
+}
+
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.json()
@@ -62,12 +69,14 @@ export async function POST(req: NextRequest) {
 
     if (!email) {
       console.error('[hubla-webhook] sem email no payload')
+      await logEvent(eventType, null, null, 'ignorado', 'sem email no aviso')
       return NextResponse.json({ received: true, warning: 'sem email' })
     }
 
     const userId = await findUserIdByEmail(email)
     if (!userId) {
       console.error('[hubla-webhook] usuario nao encontrado para email', email)
+      await logEvent(eventType, email, null, 'ignorado', 'aluno nao encontrado na plataforma')
       return NextResponse.json({ received: true, warning: 'usuario nao encontrado' })
     }
 
@@ -120,12 +129,32 @@ export async function POST(req: NextRequest) {
       case 'customer.member_added':
       case 'subscription.activated': {
         await grantAccess()
+        await logEvent(eventType, email, userId, 'liberado', 'plano: ' + (resolvePlanName(payload) || 'nao identificado'))
         break
       }
 
       case 'customer.member_removed':
       case 'subscription.deactivated': {
         await revokeAccess()
+        await logEvent(eventType, email, userId, 'removido', 'assinatura encerrada')
+        break
+      }
+
+      // Reembolso concluido: tira o acesso. (A Hubla tambem manda "invoice.status_updated" junto; so tratamos este.)
+      case 'invoice.refunded': {
+        const refundedSub: string | null = payload.event?.invoice?.subscriptionId || payload.event?.subscriptions?.[0]?.id || null
+        const prof = await admin.from('profiles').select('hubla_subscription_id, is_admin').eq('id', userId).maybeSingle()
+        if (prof.data?.is_admin) {
+          await logEvent(eventType, email, userId, 'ignorado', 'conta admin')
+          break
+        }
+        // Se o aluno ja comprou de novo (outra assinatura), um reembolso antigo nao pode tirar o plano novo
+        if (refundedSub && prof.data?.hubla_subscription_id && refundedSub !== prof.data.hubla_subscription_id) {
+          await logEvent(eventType, email, userId, 'ignorado', 'reembolso de uma assinatura antiga; o plano atual foi mantido')
+          break
+        }
+        await revokeAccess()
+        await logEvent(eventType, email, userId, 'removido', 'reembolso')
         break
       }
 
@@ -139,6 +168,7 @@ export async function POST(req: NextRequest) {
 
       default:
         console.log('[hubla-webhook] evento nao tratado:', eventType)
+        await logEvent(eventType, email, userId, 'ignorado', 'evento sem acao')
         break
     }
 

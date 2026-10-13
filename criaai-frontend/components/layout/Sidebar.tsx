@@ -76,6 +76,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
     ...(isAdmin ? [{ href: '/dashboard/admin/conversas', icon: 'ti-message-2', label: 'Conversas (Junior)', locked: false }] : []),
     ...(isAdmin ? [{ href: '/dashboard/admin/notificacoes', icon: 'ti-bell-ringing', label: 'Notificacoes (envio)', locked: false }] : []),
     ...(isAdmin ? [{ href: '/dashboard/admin/emails', icon: 'ti-mail', label: 'E-mails (envio)', locked: false }] : []),
+    ...(isAdmin ? [{ href: '/dashboard/admin/pagamentos', icon: 'ti-credit-card-refund', label: 'Pagamentos (Hubla)', locked: false }] : []),
   ]
 
   return (
