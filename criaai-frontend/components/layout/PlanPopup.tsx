@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
+import { createClient } from '@/lib/supabase-browser'
 
 // Pop-up para quem tem mais de 7 dias de cadastro e ainda nao tem plano ativo.
 // Aparece no primeiro acesso do dia e so volta a aparecer depois de 3 dias (por aluno, neste navegador). Admin nunca ve.
@@ -9,6 +10,13 @@ const SHOW_EVERY_DAYS = 3
 const COUPON = 'FE10'
 // Checkout direto do plano Pro (mesmo link da pagina de planos)
 const PRO_CHECKOUT = 'https://pay.hub.la/16HkQulcBTksGN8AEnow'
+
+// Avisa a plataforma o que o aluno fez com o pop-up (para o card de estatisticas do admin). Erros sao ignorados.
+function track(event: string) {
+  try {
+    createClient().rpc('popup_event', { p_event: event }).then(function() {}, function() {})
+  } catch (e) {}
+}
 
 function dayNumber(ms: number) {
   // numero do dia no fuso do navegador (para comparar "dias" e nao horas)
@@ -64,26 +72,31 @@ export default function PlanPopup({ profile, user }: { profile: any, user: any }
     const t = setTimeout(function() {
       setPieces(makePieces())
       setOpen(true)
+      track('shown')
       // marca como mostrado agora, assim nao volta a aparecer ao atualizar a pagina
       try { localStorage.setItem(key, String(Date.now())) } catch (e) {}
     }, 1500)
     return function() { clearTimeout(t) }
   }, [eligible, pathname, key])
 
+  // Fechar sem aceitar (X, "Agora nao" ou clique fora) conta como recusa
   function close() {
+    track('dismissed')
     setOpen(false)
   }
 
   function copyCoupon() {
     try {
       navigator.clipboard.writeText(COUPON)
+      track('copied')
       setCopied(true)
       setTimeout(function() { setCopied(false) }, 2000)
     } catch (e) {}
   }
 
   function goPlans() {
-    close()
+    track('accepted')
+    setOpen(false)
     window.location.href = PRO_CHECKOUT
   }
 

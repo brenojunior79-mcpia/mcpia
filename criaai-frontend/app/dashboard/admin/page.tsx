@@ -12,6 +12,7 @@ export default function AdminPage() {
   const [presence, setPresence] = useState<any>(null)
   const [showOnline, setShowOnline] = useState(false)
   const [heat, setHeat] = useState<any>(null)
+  const [popup, setPopup] = useState<any>(null)
   const [pushPeople, setPushPeople] = useState(0)
   const PAGE_STEP = 20
   const [visible, setVisible] = useState(PAGE_STEP)
@@ -112,6 +113,17 @@ export default function AdminPage() {
     loadPresence()
     const t = setInterval(loadPresence, 30000)
     return function() { alive = false; clearInterval(t) }
+  }, [])
+
+  // Estatisticas do pop-up do cupom. Se o arquivo Y1 ainda nao foi rodado, o card mostra zero.
+  useEffect(function() {
+    async function loadPopup() {
+      try {
+        const r = await supabase.rpc('popup_stats')
+        if (!r.error && r.data) setPopup(r.data)
+      } catch (e) {}
+    }
+    loadPopup()
   }, [])
 
   // Dias e horarios de maior acesso (ultimos 30 dias). Se o arquivo V1 ainda nao foi rodado, o grafico fica vazio.
@@ -352,6 +364,25 @@ export default function AdminPage() {
                   </div>
                 )
               })}
+            </div>
+          )}
+        </div>
+
+        {/* Cupom FE10 */}
+        <div className={styles.stat} style={{ marginBottom: 28, display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
+          <div style={{ minWidth: 150 }}>
+            <div className={styles.statLabel}><i className="ti ti-ticket" /> Cupom FE10 (10% no Pro)</div>
+            <div className={styles.statValue} style={{ color: 'var(--accent)' }}>{popup ? popup.pessoas : 0}</div>
+            <div className={styles.statUp} style={{ color: 'var(--muted2)' }}>pessoas viram o pop-up{popup && popup.vezes > popup.pessoas ? ' (' + popup.vezes + ' vezes no total)' : ''}</div>
+          </div>
+          <div style={{ display: 'flex', gap: 22, flexWrap: 'wrap', fontSize: 13, color: 'var(--muted2)' }}>
+            <div><b style={{ color: 'var(--green)', fontSize: 18 }}>{popup ? popup.aceitaram : 0}</b><br />Aceitaram (foram ao checkout)</div>
+            <div><b style={{ color: 'var(--red)', fontSize: 18 }}>{popup ? popup.recusaram : 0}</b><br />Recusaram (fecharam)</div>
+            <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{popup ? popup.copiaram : 0}</b><br />Copiaram o cupom</div>
+          </div>
+          {(!popup || !popup.pessoas) && (
+            <div style={{ width: '100%', fontSize: 12, color: 'var(--muted2)' }}>
+              A contagem começa a partir do momento em que esta atualização entrou no ar. Os pop-ups que já apareceram antes não foram registrados.
             </div>
           )}
         </div>

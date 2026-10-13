@@ -266,6 +266,9 @@ export default function LoginPage() {
               /* Formulario Cadastro */
               ) : (
                 <form onSubmit={handleCadastro}>
+                  <div style={{ background: 'rgba(91,78,248,0.08)', border: '1px solid rgba(91,78,248,0.3)', borderRadius: 12, padding: '12px 14px', marginBottom: 18, fontSize: 13, lineHeight: 1.5, color: '#5b4ef8', fontWeight: 600 }}>
+                    ⚠️ Faça o cadastro com o <b>mesmo e-mail que você usou na compra</b>. É assim que liberamos o seu acesso.
+                  </div>
                   <div style={{ marginBottom: 16 }}>
                     <label style={labelStyle}>Nome completo</label>
                     <input type="text" value={name} onChange={function(e) { setName(e.target.value) }} placeholder="Seu nome completo" required style={inputStyle} />
@@ -273,6 +276,7 @@ export default function LoginPage() {
                   <div style={{ marginBottom: 16 }}>
                     <label style={labelStyle}>E-mail</label>
                     <input type="email" value={email} onChange={function(e) { setEmail(e.target.value) }} placeholder="seu@email.com" required style={inputStyle} />
+                    <p style={{ fontSize: 11, color: '#9b9aaa', margin: '6px 0 0' }}>O mesmo e-mail da sua compra.</p>
                   </div>
                   <div style={{ marginBottom: 16 }}>
                     <label style={labelStyle}>WhatsApp <span style={{ color: '#9b9aaa', fontWeight: 400, textTransform: 'none', fontSize: 11 }}>(com DDD)</span></label>
