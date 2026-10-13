@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
 
     const subscriptionId = payload.event?.subscription?.id || null
 
-    const grantAccess = async function(): Promise<void> {
+    const grantAccess = async function(): Promise<boolean> {
       const planName = resolvePlanName(payload)
       const planId = planName ? await getPlanIdByName(planName) : null
 
@@ -95,6 +95,12 @@ export async function POST(req: NextRequest) {
         '| products cru:', JSON.stringify(payload.event?.products),
         '| subscription cru:', JSON.stringify(payload.event?.subscription)
       )
+
+      // Produto que nao e plano da plataforma (Estrutura Express, Mentoria...): nao mexe em nada do aluno
+      if (!planId) {
+        console.error('[hubla-webhook] produto nao e plano da plataforma, ignorado. products:', JSON.stringify(payload.event?.products))
+        return false
+      }
 
       await admin
         .from('profiles')
@@ -110,13 +116,17 @@ export async function POST(req: NextRequest) {
           updated_at: new Date().toISOString(),
         })
         .eq('id', userId)
-
-      if (!planId) {
-        console.error('[hubla-webhook] plano nao identificado, products:', JSON.stringify(payload.event?.products))
-      }
+      return true
     }
 
-    const revokeAccess = async function(): Promise<void> {
+    const revokeAccess = async function(): Promise<boolean> {
+      // Cancelamento de outro produto (Express/Mentoria) ou de uma assinatura antiga nao tira o plano atual
+      const cur = await admin.from('profiles').select('hubla_subscription_id, is_admin').eq('id', userId).maybeSingle()
+      if (cur.data?.is_admin) return false
+      const sameSub = !!subscriptionId && subscriptionId === cur.data?.hubla_subscription_id
+      if (subscriptionId && cur.data?.hubla_subscription_id && !sameSub) return false
+      if (!sameSub && !resolvePlanName(payload)) return false
+
       await admin
         .from('profiles')
         .update({
@@ -124,20 +134,21 @@ export async function POST(req: NextRequest) {
           updated_at: new Date().toISOString(),
         })
         .eq('id', userId)
+      return true
     }
 
     switch (eventType) {
       case 'customer.member_added':
       case 'subscription.activated': {
-        await grantAccess()
-        await logEvent(eventType, email, userId, 'liberado', 'plano: ' + (resolvePlanName(payload) || 'nao identificado'))
+        const ok = await grantAccess()
+        await logEvent(eventType, email, userId, ok ? 'liberado' : 'ignorado', ok ? 'plano: ' + resolvePlanName(payload) : 'produto não é plano da plataforma (nada alterado)')
         break
       }
 
       case 'customer.member_removed':
       case 'subscription.deactivated': {
-        await revokeAccess()
-        await logEvent(eventType, email, userId, 'removido', 'assinatura encerrada')
+        const ok = await revokeAccess()
+        await logEvent(eventType, email, userId, ok ? 'removido' : 'ignorado', ok ? 'assinatura encerrada' : 'não era o plano atual (nada alterado)')
         break
       }
 
