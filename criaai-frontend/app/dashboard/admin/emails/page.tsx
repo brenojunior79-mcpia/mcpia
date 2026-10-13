@@ -20,6 +20,25 @@ const AUDIENCES = [
   { value: 'todos', label: 'Todos os alunos' },
   { value: 'sem_plano', label: 'Quem não tem plano' },
   { value: 'com_plano', label: 'Quem tem plano' },
+  { value: 'inativos_14_30', label: 'Sumiram há 14 a 30 dias (comece por aqui)' },
+  { value: 'inativos_30', label: 'Sumiram há mais de 30 dias' },
+  { value: 'inativos_14', label: 'Sem acessar há mais de 14 dias (todos)' },
+]
+
+// Modelos prontos de mensagem (preenchem assunto, texto e botao; voce pode editar depois)
+const TEMPLATES = [
+  {
+    nome: 'Saudades (quem sumiu)',
+    subject: 'Estou com saudades de você! Bora prosperar?',
+    message: 'Oi, {{nome}}!\n\nFaz um tempinho que você não aparece por aqui e eu fiquei com saudades. 🙏\n\nA sua plataforma continua te esperando, com tudo organizado para você dar o próximo passo: as **aulas**, os **produtos em alta** e o **Júnior**, nosso assistente, para tirar as suas dúvidas.\n\nQue tal entrar hoje e avançar só um pouquinho? Um passo por dia já coloca você em movimento.\n\nDeus abençoe, e bora prosperar!\n\nEquipe Cristão Próspero',
+    buttonText: 'Voltar para a plataforma',
+  },
+  {
+    nome: 'Convite para a aula ao vivo',
+    subject: 'Tem aula ao vivo e a sua vaga está te esperando',
+    message: 'Oi, {{nome}}!\n\nSentimos a sua falta nas nossas aulas. 🙏\n\nEntre na plataforma e veja o horário da próxima **aula ao vivo**. É uma ótima hora para tirar dúvidas e retomar de onde parou.\n\nEstamos te esperando!\n\nEquipe Cristão Próspero',
+    buttonText: 'Ver aulas ao vivo',
+  },
 ]
 
 function hasPlan(status: any) { return status === 'active' || status === 'trialing' }
@@ -29,6 +48,7 @@ export default function EmailsPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [people, setPeople] = useState<any[]>([])
+  const [inactive, setInactive] = useState<Record<string, Record<string, boolean>>>({})
   const [history, setHistory] = useState<any[]>([])
   const [opens, setOpens] = useState<Record<string, number>>({})
   const [adminName, setAdminName] = useState('')
@@ -53,7 +73,7 @@ export default function EmailsPage() {
     while (true) {
       const r = await supabase
         .from('profiles')
-        .select('id, email, subscription_status, email_unsubscribed')
+        .select('id, email, subscription_status, email_unsubscribed, refunded_at')
         .order('id', { ascending: true })
         .range(from, from + 999)
       if (r.error) break
@@ -63,6 +83,18 @@ export default function EmailsPage() {
       from += 1000
     }
     setPeople(all)
+    // Quem nao acessa ha X dias (se o arquivo Z1 ainda nao foi rodado, esses publicos ficam com 0)
+    const ranges: Record<string, [number, number | null]> = { inativos_14: [14, null], inativos_14_30: [14, 30], inativos_30: [30, null] }
+    const next: Record<string, Record<string, boolean>> = {}
+    for (const key of Object.keys(ranges)) {
+      try {
+        const ir = await supabase.rpc('email_inactive_users', { p_min_days: ranges[key][0], p_max_days: ranges[key][1] })
+        const set: Record<string, boolean> = {}
+        if (!ir.error) (ir.data || []).forEach(function(r: any) { set[r.user_id] = true })
+        next[key] = set
+      } catch (e) { next[key] = {} }
+    }
+    setInactive(next)
     const h = await supabase.from('email_broadcasts').select('*').order('created_at', { ascending: false }).limit(20)
     setHistory(h.data || [])
     try {
@@ -123,7 +155,8 @@ export default function EmailsPage() {
   function countFor(aud: string) {
     if (aud === 'teste') return 1
     return people.filter(function(p: any) {
-      if (p.email_unsubscribed || !p.email) return false
+      if (p.email_unsubscribed || !p.email || p.refunded_at) return false
+      if (aud.indexOf('inativos_') === 0) return !!(inactive[aud] && inactive[aud][p.id])
       if (aud === 'sem_plano') return !hasPlan(p.subscription_status)
       if (aud === 'com_plano') return hasPlan(p.subscription_status)
       return true
@@ -219,6 +252,25 @@ export default function EmailsPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 18, marginBottom: 28 }}>
           <div className={styles.tableCard} style={{ padding: 20 }}>
             <div className={styles.tableTitle} style={{ marginBottom: 16 }}>Novo e-mail</div>
+
+            <label style={label}>Modelos prontos</label>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+              {TEMPLATES.map(function(t) {
+                return (
+                  <button
+                    key={t.nome}
+                    type="button"
+                    onClick={function() {
+                      if ((subject || message) && !window.confirm('Isso troca o assunto e o texto que você já escreveu. Continuar?')) return
+                      setSubject(t.subject); setMessage(t.message); setButtonText(t.buttonText); setLinkChoice(t.nome.indexOf('aula') !== -1 ? '/dashboard/aulas' : '/dashboard')
+                    }}
+                    style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    {t.nome}
+                  </button>
+                )
+              })}
+            </div>
 
             <label style={label}>Assunto ({subject.length}/120)</label>
             <input style={input} maxLength={120} value={subject} onChange={function(e) { setSubject(e.target.value) }} placeholder="Ex: Hoje tem aula ao vivo às 20h 🔴" />

@@ -5,7 +5,9 @@ import { buildEmail, firstNameOf, normalizeButtonUrl, SITE_URL } from '@/lib/ema
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-const AUDIENCES = ['teste', 'todos', 'sem_plano', 'com_plano']
+const AUDIENCES = ['teste', 'todos', 'sem_plano', 'com_plano', 'inativos_14', 'inativos_14_30', 'inativos_30']
+// Quem nao acessa ha X dias: [minimo, maximo]
+const INACTIVE_RANGES: Record<string, [number, number | null]> = { inativos_14: [14, null], inativos_14_30: [14, 30], inativos_30: [30, null] }
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const BATCH = 100            // o Resend aceita ate 100 e-mails por chamada
 const PAUSE_MS = 650         // limite padrao do Resend: 2 chamadas por segundo
@@ -75,7 +77,7 @@ export async function POST(req: NextRequest) {
       while (true) {
         const page = await supabase
           .from('profiles')
-          .select('id, email, full_name, subscription_status, email_unsubscribed')
+          .select('id, email, full_name, subscription_status, email_unsubscribed, refunded_at')
           .order('id', { ascending: true })
           .range(fromRow, fromRow + 999)
         if (page.error) {
@@ -87,8 +89,19 @@ export async function POST(req: NextRequest) {
         if (rows.length < 1000) break
         fromRow += 1000
       }
+      // Quem nao acessa ha X dias
+      let inactiveIds: Record<string, boolean> | null = null
+      if (INACTIVE_RANGES[audience]) {
+        const range = INACTIVE_RANGES[audience]
+        const ir = await supabase.rpc('email_inactive_users', { p_min_days: range[0], p_max_days: range[1] })
+        if (ir.error) return NextResponse.json({ error: 'Não foi possível listar os alunos inativos: ' + ir.error.message + ' (rode o arquivo Z1-alunos-inativos.sql no Supabase)' }, { status: 500 })
+        inactiveIds = {}
+        ;(ir.data || []).forEach(function(r: any) { if (inactiveIds) inactiveIds[r.user_id] = true })
+      }
       targets = all.filter(function(p: any) {
         if (p.email_unsubscribed) return false
+        if (p.refunded_at) return false
+        if (inactiveIds && !inactiveIds[p.id]) return false
         if (!p.email || !EMAIL_RE.test(p.email)) return false
         if (audience === 'sem_plano') return !hasPlan(p.subscription_status)
         if (audience === 'com_plano') return hasPlan(p.subscription_status)
