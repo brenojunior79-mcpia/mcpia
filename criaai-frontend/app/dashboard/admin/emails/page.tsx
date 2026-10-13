@@ -66,6 +66,12 @@ export default function EmailsPage() {
   const [customImageLink, setCustomImageLink] = useState('')
   const [sending, setSending] = useState(false)
   const [result, setResult] = useState<{ ok: boolean, text: string } | null>(null)
+  const [detailId, setDetailId] = useState('')
+  const [detail, setDetail] = useState<any>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [detailError, setDetailError] = useState('')
+  const [detailFilter, setDetailFilter] = useState('todos')
+  const [resuming, setResuming] = useState(false)
 
   async function loadAll() {
     let all: any[] = []
@@ -206,6 +212,71 @@ export default function EmailsPage() {
       setResult({ ok: false, text: 'Erro de conexão. Tente de novo.' })
     }
     setSending(false)
+  }
+
+  async function openDetail(id: string) {
+    if (detailId === id) { setDetailId(''); setDetail(null); return }
+    setDetailId(id)
+    setDetail(null)
+    setDetailError('')
+    setDetailFilter('todos')
+    setDetailLoading(true)
+    try {
+      const r = await supabase.rpc('email_broadcast_detail', { p_broadcast: id })
+      if (r.error) setDetailError('Não foi possível carregar os detalhes: ' + r.error.message + ' (rode o arquivo AA1-detalhes-dos-envios.sql no Supabase)')
+      else setDetail(r.data)
+    } catch (e) {
+      setDetailError('Erro de conexão. Tente de novo.')
+    }
+    setDetailLoading(false)
+  }
+
+  // Manda so para quem ainda nao recebeu esse envio (nao repete para quem ja recebeu)
+  async function resumeBroadcast(id: string, hasStored: boolean) {
+    setResult(null)
+    if (!hasStored && (!subject.trim() || !message.trim())) {
+      setResult({ ok: false, text: 'Esse envio é antigo e não guardou o texto. Escreva o mesmo assunto e a mesma mensagem acima (pode usar um modelo pronto) e clique de novo em "Continuar envio".' })
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
+    if (!window.confirm('Enviar agora para quem ainda não recebeu esse e-mail? Quem já recebeu não recebe de novo.')) return
+    setResuming(true)
+    try {
+      const res = await fetch('/api/email/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(hasStored
+          ? { resumeBroadcastId: id }
+          : { resumeBroadcastId: id, subject: subject.trim(), message: message.trim(), buttonText: buttonText.trim(), buttonUrl: buttonUrl, imageUrl: imageUrl, imageLink: imageLink }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setResult({ ok: false, text: data.error || 'Não foi possível continuar o envio.' })
+      } else {
+        let t = 'Enviado para mais ' + data.sent + ' aluno(s).'
+        if (data.failed || data.notSent) t += ' Ainda faltam ' + ((data.failed || 0) + (data.notSent || 0)) + (data.firstError ? ' (' + data.firstError + ')' : '') + '. Clique em "Continuar envio" de novo.'
+        setResult({ ok: !(data.failed || data.notSent), text: t })
+        await loadAll()
+        const r = await supabase.rpc('email_broadcast_detail', { p_broadcast: id })
+        if (!r.error) setDetail(r.data)
+      }
+    } catch (e) {
+      setResult({ ok: false, text: 'Erro de conexão. Tente de novo.' })
+    }
+    setResuming(false)
+  }
+
+  function downloadCsv(rows: any[]) {
+    const esc = function(v: any) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"' }
+    const statusLabel = function(r: any) { return r.status === 'sent' ? (r.abriu ? 'Abriu' : 'Recebeu, não abriu') : r.status === 'failed' ? 'Falhou' : 'Não enviado' }
+    const csv = ['Nome,E-mail,Situação,Aberturas', ...rows.map(function(r) { return [esc(r.nome), esc(r.email), esc(statusLabel(r)), esc(r.aberturas)].join(',') })].join('\n')
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'envio-de-email.csv'
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   function fmt(d: string) {
@@ -372,6 +443,7 @@ export default function EmailsPage() {
                     <th style={{ padding: '10px 18px' }}>Público</th>
                     <th style={{ padding: '10px 18px' }}>Enviados</th>
                     <th style={{ padding: '10px 18px' }}>Abriram</th>
+                    <th style={{ padding: '10px 18px' }}></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -384,6 +456,11 @@ export default function EmailsPage() {
                         <td style={{ padding: '10px 18px' }}>{aud ? aud.label : h.audience}</td>
                         <td style={{ padding: '10px 18px' }}>{h.sent_count} de {h.total}{h.failed_count ? ' (' + h.failed_count + ' não enviados)' : ''}</td>
                         <td style={{ padding: '10px 18px', whiteSpace: 'nowrap' }}>{opens[h.id] || 0}{h.sent_count > 0 ? ' (' + Math.round(((opens[h.id] || 0) / h.sent_count) * 100) + '%)' : ''}</td>
+                        <td style={{ padding: '10px 18px', whiteSpace: 'nowrap' }}>
+                          <button onClick={function() { openDetail(h.id) }} style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid var(--border)', background: detailId === h.id ? 'var(--accent)' : 'var(--surface2)', color: detailId === h.id ? '#fff' : 'var(--text)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                            {detailId === h.id ? 'Fechar' : 'Ver detalhes'}
+                          </button>
+                        </td>
                       </tr>
                     )
                   })}
@@ -392,6 +469,117 @@ export default function EmailsPage() {
             </div>
           )}
         </div>
+
+        {/* Detalhes do envio escolhido */}
+        {detailId && (
+          <div className={styles.tableCard} style={{ marginTop: 18, padding: 20 }}>
+            <div className={styles.tableTitle} style={{ marginBottom: 14 }}>
+              Detalhes do envio{(function() { const hh = history.filter(function(x: any) { return x.id === detailId })[0]; return hh ? ': ' + hh.subject : '' })()}
+            </div>
+            {detailLoading && <div style={{ fontSize: 13, color: 'var(--muted2)' }}>Carregando...</div>}
+            {detailError && <div style={{ fontSize: 13, color: 'var(--red)' }}>{detailError}</div>}
+            {detail && (function() {
+              const hh = history.filter(function(x: any) { return x.id === detailId })[0]
+              const hasStored = !!(hh && hh.message)
+              const linhas: any[] = detail.linhas || []
+              const recebidos = detail.enviados || 0
+              const abriram = linhas.filter(function(r: any) { return r.status === 'sent' && r.abriu }).length
+              const naoAbriram = linhas.filter(function(r: any) { return r.status === 'sent' && !r.abriu }).length
+              const faltam = (detail.faltam || 0) + (detail.falharam || 0)
+              const pct = function(n: number) { return recebidos > 0 ? Math.round((n / recebidos) * 100) + '%' : '0%' }
+              const shown = linhas.filter(function(r: any) {
+                if (detailFilter === 'abriram') return r.status === 'sent' && r.abriu
+                if (detailFilter === 'nao_abriram') return r.status === 'sent' && !r.abriu
+                if (detailFilter === 'faltam') return r.status !== 'sent'
+                return true
+              })
+              if (detail.total === 0) return (
+                <div style={{ fontSize: 13, color: 'var(--muted2)', lineHeight: 1.6 }}>
+                  Esse envio não guardou a lista de quem recebeu. Só os envios novos guardam esse detalhe.
+                </div>
+              )
+              const tile = function(valor: any, nome: string, cor: string) {
+                return (
+                  <div style={{ flex: '1 1 110px', background: 'var(--surface2)', borderRadius: 12, padding: '10px 12px' }}>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: cor }}>{valor}</div>
+                    <div style={{ fontSize: 11, color: 'var(--muted2)' }}>{nome}</div>
+                  </div>
+                )
+              }
+              const chip = function(key: string, nome: string, n: number) {
+                const on = detailFilter === key
+                return (
+                  <button key={key} onClick={function() { setDetailFilter(key) }} style={{ padding: '7px 12px', borderRadius: 20, border: '1px solid var(--border)', background: on ? 'var(--accent)' : 'var(--surface2)', color: on ? '#fff' : 'var(--text)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                    {nome} ({n})
+                  </button>
+                )
+              }
+              return (
+                <div>
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+                    {tile(recebidos, 'Receberam o e-mail', 'var(--text)')}
+                    {tile(abriram + ' (' + pct(abriram) + ')', 'Abriram', 'var(--green)')}
+                    {tile(naoAbriram + ' (' + pct(naoAbriram) + ')', 'Receberam e não abriram', 'var(--muted2)')}
+                    {tile(faltam, 'Ainda não receberam', faltam > 0 ? 'var(--red)' : 'var(--text)')}
+                  </div>
+                  {faltam > 0 && (
+                    <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 12, padding: '12px 14px', marginBottom: 16 }}>
+                      <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.6, marginBottom: 10 }}>
+                        <b>{faltam} aluno(s) ainda não receberam.</b> O envio parou antes de terminar.
+                        {hh && hh.last_error ? ' Motivo: ' + hh.last_error + '.' : ''} Use o botão abaixo para mandar só para eles. <b>Não envie de novo pelo formulário</b>, ou quem já recebeu receberia duas vezes.
+                      </div>
+                      <button
+                        onClick={function() { resumeBroadcast(detailId, hasStored) }}
+                        disabled={resuming}
+                        style={{ padding: '10px 16px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #5b4ef8, #ec4899)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: resuming ? 'default' : 'pointer', opacity: resuming ? 0.6 : 1 }}
+                      >
+                        {resuming ? 'Enviando...' : 'Continuar envio para ' + faltam + ' aluno(s)'}
+                      </button>
+                      {!hasStored && <div style={{ fontSize: 11, color: 'var(--muted2)', marginTop: 8 }}>Esse envio é antigo e não guardou o texto: antes de clicar, escreva o mesmo assunto e a mesma mensagem no formulário acima.</div>}
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12, alignItems: 'center' }}>
+                    {chip('todos', 'Todos', linhas.length)}
+                    {chip('abriram', 'Abriram', abriram)}
+                    {chip('nao_abriram', 'Não abriram', naoAbriram)}
+                    {chip('faltam', 'Não receberam', faltam)}
+                    <button onClick={function() { downloadCsv(shown) }} style={{ marginLeft: 'auto', padding: '7px 12px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                      Baixar lista (Excel)
+                    </button>
+                  </div>
+                  <div style={{ maxHeight: 420, overflow: 'auto', border: '1px solid var(--border)', borderRadius: 12 }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                      <thead>
+                        <tr style={{ textAlign: 'left', color: 'var(--muted2)', position: 'sticky', top: 0, background: 'var(--surface)' }}>
+                          <th style={{ padding: '8px 14px' }}>Aluno</th>
+                          <th style={{ padding: '8px 14px' }}>Situação</th>
+                          <th style={{ padding: '8px 14px' }}>Abriu</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {shown.map(function(r: any) {
+                          const rotulo = r.status === 'sent' ? (r.abriu ? 'Abriu' : 'Recebeu, não abriu') : r.status === 'failed' ? 'Falhou' : 'Ainda não enviado'
+                          const cor = r.status === 'sent' ? (r.abriu ? 'var(--green)' : 'var(--muted2)') : 'var(--red)'
+                          return (
+                            <tr key={r.id} style={{ borderTop: '1px solid var(--border)' }}>
+                              <td style={{ padding: '8px 14px' }}><b style={{ color: 'var(--text)' }}>{r.nome}</b><div style={{ fontSize: 11, color: 'var(--muted2)' }}>{r.email}</div></td>
+                              <td style={{ padding: '8px 14px', color: cor, fontWeight: 600, whiteSpace: 'nowrap' }}>{rotulo}</td>
+                              <td style={{ padding: '8px 14px', color: 'var(--muted2)', whiteSpace: 'nowrap' }}>{r.abriu ? fmt(r.primeira) + (r.aberturas > 1 ? ' · ' + r.aberturas + 'x' : '') : '—'}</td>
+                            </tr>
+                          )
+                        })}
+                        {shown.length === 0 && <tr><td colSpan={3} style={{ padding: 16, textAlign: 'center', color: 'var(--muted2)' }}>Ninguém nessa lista.</td></tr>}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--muted2)', marginTop: 10, lineHeight: 1.5 }}>
+                    "Abriu" é aproximado: quem bloqueia imagens não aparece, e alguns aplicativos de e-mail (como o do iPhone) marcam como aberto sem a pessoa abrir.
+                  </div>
+                </div>
+              )
+            })()}
+          </div>
+        )}
 
       </div>
     </div>
