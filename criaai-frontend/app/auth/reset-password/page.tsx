@@ -13,14 +13,17 @@ export default function ResetPasswordPage() {
   const supabase = createClient()
   const router = useRouter()
 
-  // Sem sessao = o link nao funcionou neste navegador (ou expirou). Avisamos em vez de mostrar erro tecnico.
+  const [tokenHash, setTokenHash] = useState('')
+
+  // Link vindo do e-mail: guardamos o codigo e so o usamos ao salvar a senha.
+  // Sem codigo e sem sessao = o link nao funcionou neste navegador (ou expirou): avisamos em vez de mostrar erro tecnico.
   useEffect(function() {
     async function check() {
-      let linkError = false
-      try { linkError = window.location.search.indexOf('erro=link') !== -1 } catch (e) {}
+      let th = ''
+      try { th = new URLSearchParams(window.location.search).get('token_hash') || '' } catch (e) {}
+      if (th) { setTokenHash(th); return }
       const u = await supabase.auth.getUser()
       if (!u.data?.user) setNoSession(true)
-      else if (linkError) setNoSession(false)
     }
     check()
   }, [])
@@ -37,6 +40,11 @@ export default function ResetPasswordPage() {
     }
     setLoading(true)
     setError('')
+    if (tokenHash) {
+      const v = await supabase.auth.verifyOtp({ type: 'recovery', token_hash: tokenHash })
+      if (v.error) { setNoSession(true); setLoading(false); return }
+      setTokenHash('')
+    }
     const result = await supabase.auth.updateUser({ password })
     if (result.error) {
       const m = result.error.message || ''
