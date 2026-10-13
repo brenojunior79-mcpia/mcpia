@@ -150,6 +150,19 @@ export default function AdminPage() {
   const heatHasData = dayTotals.some(function(n) { return n > 0 })
   const bestDay = dayTotals.indexOf(Math.max(...dayTotals))
   const bestHour = hourTotals.indexOf(Math.max(...hourTotals))
+  const hourMax = Math.max(1, ...hourTotals)
+  const allTotal = Math.max(1, hourTotals.reduce(function(a, b) { return a + b }, 0))
+  const periods = [
+    { nome: 'Madrugada', faixa: '0h às 5h', de: 0, ate: 5 },
+    { nome: 'Manhã', faixa: '6h às 11h', de: 6, ate: 11 },
+    { nome: 'Tarde', faixa: '12h às 17h', de: 12, ate: 17 },
+    { nome: 'Noite', faixa: '18h às 23h', de: 18, ate: 23 },
+  ].map(function(pe) {
+    let sum = 0
+    for (let h = pe.de; h <= pe.ate; h++) sum += hourTotals[h]
+    return { nome: pe.nome, faixa: pe.faixa, sum: sum, pct: Math.round((sum / allTotal) * 100) }
+  })
+  const bestPeriod = periods.map(function(pe) { return pe.sum }).indexOf(Math.max(...periods.map(function(pe) { return pe.sum })))
 
   // Reembolsos (quem teve o acesso encerrado por reembolso)
   const refunded = profiles.filter(function(p: any) { return !!p.refunded_at }).sort(function(a: any, b: any) { return new Date(b.refunded_at).getTime() - new Date(a.refunded_at).getTime() })
@@ -274,65 +287,80 @@ export default function AdminPage() {
 
         {/* Dias e horarios de maior acesso */}
         <div className={styles.stat} style={{ marginBottom: 28 }}>
-          <div className={styles.statLabel}><i className="ti ti-chart-bar" /> Dias e horários de maior acesso</div>
+          <div className={styles.statLabel}><i className="ti ti-chart-bar" /> Quando os alunos mais acessam</div>
           {!heatHasData ? (
             <div style={{ fontSize: 13, color: 'var(--muted2)', marginTop: 10, lineHeight: 1.6 }}>
               Ainda sem dados. O gráfico começa a se formar a partir de hoje, conforme os alunos usam a plataforma.
             </div>
           ) : (
             <div>
-              <div style={{ fontSize: 13, color: 'var(--muted2)', margin: '8px 0 14px' }}>
-                Melhor dia: <b style={{ color: 'var(--text)' }}>{DIAS_LONGO[bestDay]}</b> · Melhor horário: <b style={{ color: 'var(--text)' }}>{bestHour}h</b> · últimos 30 dias (horário de Brasília)
-              </div>
-
-              {/* Mapa de calor: cada quadrado e um dia da semana em um horario. Quanto mais escuro, mais alunos. */}
-              <div style={{ overflowX: 'auto', paddingBottom: 6 }}>
-                <div style={{ minWidth: 560 }}>
-                  <div style={{ display: 'flex', marginLeft: 36, marginBottom: 4 }}>
-                    {Array.from({ length: 24 }).map(function(_, h) {
-                      return <div key={h} style={{ flex: 1, fontSize: 10, color: 'var(--muted2)', textAlign: 'center' }}>{h % 3 === 0 ? h + 'h' : ''}</div>
-                    })}
-                  </div>
-                  {grid.map(function(row, d) {
-                    return (
-                      <div key={d} style={{ display: 'flex', alignItems: 'center', marginBottom: 2 }}>
-                        <div style={{ width: 36, fontSize: 11, color: 'var(--muted2)' }}>{DIAS[d]}</div>
-                        {row.map(function(v, h) {
-                          return (
-                            <div
-                              key={h}
-                              title={DIAS_LONGO[d] + ', ' + h + 'h: ' + v + (v === 1 ? ' aluno' : ' alunos')}
-                              style={{ flex: 1, height: 22, margin: '0 1px', borderRadius: 4, background: v > 0 ? 'rgba(91,78,248,' + (0.15 + 0.85 * (v / heatMax)).toFixed(2) + ')' : 'var(--surface2)' }}
-                            />
-                          )
-                        })}
-                      </div>
-                    )
-                  })}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, marginLeft: 36, fontSize: 11, color: 'var(--muted2)' }}>
-                    menos
-                    {[0.15, 0.35, 0.55, 0.78, 1].map(function(a, i) {
-                      return <span key={i} style={{ width: 18, height: 10, borderRadius: 3, background: 'rgba(91,78,248,' + a + ')', display: 'inline-block' }} />
-                    })}
-                    mais alunos
-                  </div>
+              {/* Resposta direta */}
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', margin: '12px 0 20px' }}>
+                <div style={{ flex: '1 1 160px', background: 'rgba(91,78,248,0.08)', border: '1px solid rgba(91,78,248,0.25)', borderRadius: 12, padding: '12px 14px' }}>
+                  <div style={{ fontSize: 11, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '.05em', fontWeight: 700 }}>Melhor dia</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', textTransform: 'capitalize' }}>{DIAS_LONGO[bestDay]}</div>
+                </div>
+                <div style={{ flex: '1 1 160px', background: 'rgba(91,78,248,0.08)', border: '1px solid rgba(91,78,248,0.25)', borderRadius: 12, padding: '12px 14px' }}>
+                  <div style={{ fontSize: 11, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '.05em', fontWeight: 700 }}>Melhor horário</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>{bestHour}h às {(bestHour + 1) % 24}h</div>
                 </div>
               </div>
 
-              {/* Total por dia da semana */}
-              <div style={{ marginTop: 18 }}>
-                {dayTotals.map(function(t, d) {
+              {/* Por periodo do dia */}
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted2)', marginBottom: 8 }}>Por período do dia</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 22 }}>
+                {periods.map(function(pe, i) {
+                  const isBest = i === bestPeriod
                   return (
-                    <div key={d} title={DIAS_LONGO[d] + ': ' + t + ' acessos'} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, fontSize: 12 }}>
-                      <div style={{ width: 36, color: 'var(--muted2)' }}>{DIAS[d]}</div>
-                      <div style={{ flex: 1, background: 'var(--surface2)', borderRadius: 4, height: 10, overflow: 'hidden' }}>
-                        <div style={{ width: Math.round((t / dayMax) * 100) + '%', height: '100%', background: d === bestDay ? '#5b4ef8' : 'rgba(91,78,248,0.45)', borderRadius: 4 }} />
-                      </div>
-                      <div style={{ width: 44, textAlign: 'right', color: 'var(--text)', fontWeight: 600 }}>{t}</div>
+                    <div key={pe.nome} style={{ borderRadius: 12, padding: '10px 6px', textAlign: 'center', background: isBest ? '#5b4ef8' : 'var(--surface2)', color: isBest ? '#fff' : 'var(--text)' }}>
+                      <div style={{ fontSize: 20, fontWeight: 800 }}>{pe.pct}%</div>
+                      <div style={{ fontSize: 12, fontWeight: 700 }}>{pe.nome}</div>
+                      <div style={{ fontSize: 10, opacity: 0.75 }}>{pe.faixa}</div>
                     </div>
                   )
                 })}
-                <div style={{ fontSize: 11, color: 'var(--muted2)', marginTop: 4 }}>Acessos por dia da semana: cada aluno conta 1 vez por hora em que esteve na plataforma.</div>
+              </div>
+
+              {/* Por dia da semana */}
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted2)', marginBottom: 8 }}>Por dia da semana</div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 130, marginBottom: 6 }}>
+                {dayTotals.map(function(t, d) {
+                  const isBest = d === bestDay
+                  return (
+                    <div key={d} title={DIAS_LONGO[d] + ': ' + t + ' acessos'} style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center' }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: isBest ? '#5b4ef8' : 'var(--muted2)', marginBottom: 3 }}>{t}</div>
+                      <div style={{ width: '100%', maxWidth: 44, height: Math.max(4, Math.round((t / dayMax) * 100)) + '%', background: isBest ? '#5b4ef8' : 'rgba(91,78,248,0.3)', borderRadius: '6px 6px 0 0' }} />
+                    </div>
+                  )
+                })}
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 22 }}>
+                {DIAS.map(function(nome, d) {
+                  return <div key={d} style={{ flex: 1, textAlign: 'center', fontSize: 12, fontWeight: d === bestDay ? 800 : 500, color: d === bestDay ? 'var(--text)' : 'var(--muted2)' }}>{nome}</div>
+                })}
+              </div>
+
+              {/* Por hora */}
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted2)', marginBottom: 8 }}>Por hora do dia</div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 110, marginBottom: 6 }}>
+                {hourTotals.map(function(t, h) {
+                  const isBest = h === bestHour
+                  return (
+                    <div key={h} title={h + 'h: ' + t + ' acessos'} style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center' }}>
+                      {isBest && <div style={{ fontSize: 10, fontWeight: 700, color: '#5b4ef8', marginBottom: 2 }}>{t}</div>}
+                      <div style={{ width: '100%', height: Math.max(3, Math.round((t / hourMax) * 100)) + '%', background: isBest ? '#5b4ef8' : 'rgba(91,78,248,0.3)', borderRadius: '3px 3px 0 0' }} />
+                    </div>
+                  )
+                })}
+              </div>
+              <div style={{ display: 'flex', gap: 2 }}>
+                {hourTotals.map(function(_, h) {
+                  return <div key={h} style={{ flex: 1, textAlign: 'center', fontSize: 9, color: 'var(--muted2)' }}>{h % 3 === 0 ? h + 'h' : ''}</div>
+                })}
+              </div>
+
+              <div style={{ fontSize: 11, color: 'var(--muted2)', marginTop: 14, lineHeight: 1.5 }}>
+                Últimos 30 dias, horário de Brasília. Cada aluno conta 1 acesso por hora em que esteve na plataforma. Passe o dedo ou o mouse nas barras para ver o número.
               </div>
             </div>
           )}
