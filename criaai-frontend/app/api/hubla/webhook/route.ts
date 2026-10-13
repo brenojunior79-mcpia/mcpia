@@ -106,6 +106,7 @@ export async function POST(req: NextRequest) {
           credits_videos_used: 0,
           credits_ebooks_used: 0,
           credits_sites_used: 0,
+          refunded_at: null, // se comprou de novo, o bloqueio por reembolso sai
           updated_at: new Date().toISOString(),
         })
         .eq('id', userId)
@@ -153,7 +154,7 @@ export async function POST(req: NextRequest) {
           await logEvent(eventType, email, userId, 'ignorado', 'reembolso de uma assinatura antiga; o plano atual foi mantido')
           break
         }
-        await revokeAccess()
+        await admin.from('profiles').update({ subscription_status: 'canceled', refunded_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', userId)
         await logEvent(eventType, email, userId, 'removido', 'reembolso')
         break
       }

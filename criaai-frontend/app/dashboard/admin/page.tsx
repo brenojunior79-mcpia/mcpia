@@ -139,6 +139,11 @@ export default function AdminPage() {
   const bestDay = dayTotals.indexOf(Math.max(...dayTotals))
   const bestHour = hourTotals.indexOf(Math.max(...hourTotals))
 
+  // Reembolsos (quem teve o acesso encerrado por reembolso)
+  const refunded = profiles.filter(function(p: any) { return !!p.refunded_at }).sort(function(a: any, b: any) { return new Date(b.refunded_at).getTime() - new Date(a.refunded_at).getTime() })
+  const refunded7 = refunded.filter(function(p: any) { return Date.now() - new Date(p.refunded_at).getTime() < 7 * 24 * 60 * 60 * 1000 }).length
+  const refunded30 = refunded.filter(function(p: any) { return Date.now() - new Date(p.refunded_at).getTime() < 30 * 24 * 60 * 60 * 1000 }).length
+
   function pageLabel(path: string) {
     if (!path) return 'Painel'
     const map: Record<string, string> = {
@@ -317,6 +322,36 @@ export default function AdminPage() {
                 })}
                 <div style={{ fontSize: 11, color: 'var(--muted2)', marginTop: 4 }}>Acessos por dia da semana: cada aluno conta 1 vez por hora em que esteve na plataforma.</div>
               </div>
+            </div>
+          )}
+        </div>
+
+        {/* Reembolsos */}
+        <div className={styles.stat} style={{ marginBottom: 28 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
+            <div style={{ minWidth: 150 }}>
+              <div className={styles.statLabel}><i className="ti ti-receipt-refund" /> Reembolsos</div>
+              <div className={styles.statValue} style={{ color: refunded.length > 0 ? 'var(--red)' : 'var(--text)' }}>{refunded.length}</div>
+              <div className={styles.statUp} style={{ color: 'var(--muted2)' }}>acessos encerrados por reembolso</div>
+            </div>
+            <div style={{ display: 'flex', gap: 22, flexWrap: 'wrap', fontSize: 13, color: 'var(--muted2)' }}>
+              <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{refunded7}</b><br />Últimos 7 dias</div>
+              <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{refunded30}</b><br />Últimos 30 dias</div>
+            </div>
+            <a href="/dashboard/admin/pagamentos" style={{ marginLeft: 'auto', padding: '8px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
+              Ver pagamentos
+            </a>
+          </div>
+          {refunded.length > 0 && (
+            <div style={{ marginTop: 14, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+              {refunded.slice(0, 5).map(function(p: any) {
+                return (
+                  <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '6px 0', fontSize: 13 }}>
+                    <span style={{ color: 'var(--text)', fontWeight: 600 }}>{p.full_name || 'Sem nome'} <span style={{ color: 'var(--muted2)', fontWeight: 400 }}>· {p.email}</span></span>
+                    <span style={{ color: 'var(--muted2)', whiteSpace: 'nowrap' }}>{formatDate(p.refunded_at)}</span>
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>

@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
       const f = await admin.from('profiles').select('id, is_admin, subscription_status').eq('email', email).maybeSingle()
       if (!f.data) { notFound.push(email); continue }
       if (f.data.is_admin) { skipped.push(email); continue }
-      const u = await admin.from('profiles').update({ subscription_status: 'canceled', updated_at: new Date().toISOString() }).eq('id', f.data.id)
+      const u = await admin.from('profiles').update({ subscription_status: 'canceled', refunded_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', f.data.id)
       if (u.error) { skipped.push(email); continue }
       removed.push(email)
       try {
