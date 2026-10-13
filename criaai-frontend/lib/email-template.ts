@@ -6,7 +6,9 @@ function esc(s: string) {
 }
 
 export function firstNameOf(full: string | null | undefined) {
-  return ((full || '').trim().split(' ')[0]) || ''
+  const first = ((full || '').trim().split(/\s+/)[0]) || ''
+  // "ELVIS" ou "elvis" vira "Elvis"
+  return first ? first.charAt(0).toUpperCase() + first.slice(1).toLowerCase() : ''
 }
 
 // Aceita somente https:// ou caminho dentro da plataforma (/dashboard/...)
