@@ -11,6 +11,7 @@ export default function AdminPage() {
   const [emailStats, setEmailStats] = useState<any>(null)
   const [presence, setPresence] = useState<any>(null)
   const [showOnline, setShowOnline] = useState(false)
+  const [heat, setHeat] = useState<any>(null)
   const [pushPeople, setPushPeople] = useState(0)
   const PAGE_STEP = 20
   const [visible, setVisible] = useState(PAGE_STEP)
@@ -112,6 +113,31 @@ export default function AdminPage() {
     const t = setInterval(loadPresence, 30000)
     return function() { alive = false; clearInterval(t) }
   }, [])
+
+  // Dias e horarios de maior acesso (ultimos 30 dias). Se o arquivo V1 ainda nao foi rodado, o grafico fica vazio.
+  useEffect(function() {
+    async function loadHeat() {
+      try {
+        const r = await supabase.rpc('presence_heatmap', { p_days: 30 })
+        if (!r.error && r.data) setHeat(r.data)
+      } catch (e) {}
+    }
+    loadHeat()
+  }, [])
+
+  const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+  const DIAS_LONGO = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado']
+  const grid: number[][] = []
+  for (let d = 0; d < 7; d++) { grid.push([]); for (let h = 0; h < 24; h++) grid[d].push(0) }
+  if (heat && heat.celulas) heat.celulas.forEach(function(c: any) { if (grid[c.dow]) grid[c.dow][c.hora] = Number(c.alunos) || 0 })
+  const heatMax = Math.max(1, ...grid.map(function(row) { return Math.max(...row) }))
+  const dayTotals = grid.map(function(row) { return row.reduce(function(a, b) { return a + b }, 0) })
+  const hourTotals: number[] = []
+  for (let h = 0; h < 24; h++) hourTotals.push(grid.reduce(function(a, row) { return a + row[h] }, 0))
+  const dayMax = Math.max(1, ...dayTotals)
+  const heatHasData = dayTotals.some(function(n) { return n > 0 })
+  const bestDay = dayTotals.indexOf(Math.max(...dayTotals))
+  const bestHour = hourTotals.indexOf(Math.max(...hourTotals))
 
   function pageLabel(path: string) {
     if (!path) return 'Painel'
@@ -225,6 +251,72 @@ export default function AdminPage() {
                   </div>
                 )
               })}
+            </div>
+          )}
+        </div>
+
+        {/* Dias e horarios de maior acesso */}
+        <div className={styles.stat} style={{ marginBottom: 28 }}>
+          <div className={styles.statLabel}><i className="ti ti-chart-bar" /> Dias e horários de maior acesso</div>
+          {!heatHasData ? (
+            <div style={{ fontSize: 13, color: 'var(--muted2)', marginTop: 10, lineHeight: 1.6 }}>
+              Ainda sem dados. O gráfico começa a se formar a partir de hoje, conforme os alunos usam a plataforma.
+            </div>
+          ) : (
+            <div>
+              <div style={{ fontSize: 13, color: 'var(--muted2)', margin: '8px 0 14px' }}>
+                Melhor dia: <b style={{ color: 'var(--text)' }}>{DIAS_LONGO[bestDay]}</b> · Melhor horário: <b style={{ color: 'var(--text)' }}>{bestHour}h</b> · últimos 30 dias (horário de Brasília)
+              </div>
+
+              {/* Mapa de calor: cada quadrado e um dia da semana em um horario. Quanto mais escuro, mais alunos. */}
+              <div style={{ overflowX: 'auto', paddingBottom: 6 }}>
+                <div style={{ minWidth: 560 }}>
+                  <div style={{ display: 'flex', marginLeft: 36, marginBottom: 4 }}>
+                    {Array.from({ length: 24 }).map(function(_, h) {
+                      return <div key={h} style={{ flex: 1, fontSize: 10, color: 'var(--muted2)', textAlign: 'center' }}>{h % 3 === 0 ? h + 'h' : ''}</div>
+                    })}
+                  </div>
+                  {grid.map(function(row, d) {
+                    return (
+                      <div key={d} style={{ display: 'flex', alignItems: 'center', marginBottom: 2 }}>
+                        <div style={{ width: 36, fontSize: 11, color: 'var(--muted2)' }}>{DIAS[d]}</div>
+                        {row.map(function(v, h) {
+                          return (
+                            <div
+                              key={h}
+                              title={DIAS_LONGO[d] + ', ' + h + 'h: ' + v + (v === 1 ? ' aluno' : ' alunos')}
+                              style={{ flex: 1, height: 22, margin: '0 1px', borderRadius: 4, background: v > 0 ? 'rgba(91,78,248,' + (0.15 + 0.85 * (v / heatMax)).toFixed(2) + ')' : 'var(--surface2)' }}
+                            />
+                          )
+                        })}
+                      </div>
+                    )
+                  })}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, marginLeft: 36, fontSize: 11, color: 'var(--muted2)' }}>
+                    menos
+                    {[0.15, 0.35, 0.55, 0.78, 1].map(function(a, i) {
+                      return <span key={i} style={{ width: 18, height: 10, borderRadius: 3, background: 'rgba(91,78,248,' + a + ')', display: 'inline-block' }} />
+                    })}
+                    mais alunos
+                  </div>
+                </div>
+              </div>
+
+              {/* Total por dia da semana */}
+              <div style={{ marginTop: 18 }}>
+                {dayTotals.map(function(t, d) {
+                  return (
+                    <div key={d} title={DIAS_LONGO[d] + ': ' + t + ' acessos'} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, fontSize: 12 }}>
+                      <div style={{ width: 36, color: 'var(--muted2)' }}>{DIAS[d]}</div>
+                      <div style={{ flex: 1, background: 'var(--surface2)', borderRadius: 4, height: 10, overflow: 'hidden' }}>
+                        <div style={{ width: Math.round((t / dayMax) * 100) + '%', height: '100%', background: d === bestDay ? '#5b4ef8' : 'rgba(91,78,248,0.45)', borderRadius: 4 }} />
+                      </div>
+                      <div style={{ width: 44, textAlign: 'right', color: 'var(--text)', fontWeight: 600 }}>{t}</div>
+                    </div>
+                  )
+                })}
+                <div style={{ fontSize: 11, color: 'var(--muted2)', marginTop: 4 }}>Acessos por dia da semana: cada aluno conta 1 vez por hora em que esteve na plataforma.</div>
+              </div>
             </div>
           )}
         </div>
