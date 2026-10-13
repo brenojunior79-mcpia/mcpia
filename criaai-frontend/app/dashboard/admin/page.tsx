@@ -9,6 +9,8 @@ export default function AdminPage() {
   const [stats, setStats] = useState({ receita: 0, custo: 0, alunos: 0, videos: 0, pagantes: 0, hoje: 0 })
   const [installs, setInstalls] = useState<any>(null)
   const [emailStats, setEmailStats] = useState<any>(null)
+  const [presence, setPresence] = useState<any>(null)
+  const [showOnline, setShowOnline] = useState(false)
   const [pushPeople, setPushPeople] = useState(0)
   const PAGE_STEP = 20
   const [visible, setVisible] = useState(PAGE_STEP)
@@ -97,6 +99,37 @@ export default function AdminPage() {
     load()
   }, [])
 
+  // Alunos online agora: atualiza sozinho a cada 30 segundos. Se o arquivo U1 ainda nao foi rodado, o card mostra zero.
+  useEffect(function() {
+    let alive = true
+    async function loadPresence() {
+      try {
+        const r = await supabase.rpc('presence_stats')
+        if (alive && !r.error && r.data) setPresence(r.data)
+      } catch (e) {}
+    }
+    loadPresence()
+    const t = setInterval(loadPresence, 30000)
+    return function() { alive = false; clearInterval(t) }
+  }, [])
+
+  function pageLabel(path: string) {
+    if (!path) return 'Painel'
+    const map: Record<string, string> = {
+      '/dashboard': 'Painel', '/dashboard/chat': 'Assistente IA', '/dashboard/plataformas': 'Plataformas', '/dashboard/produtos': 'Produtos em Alta',
+      '/dashboard/ebook': 'Gerador de Ebook', '/dashboard/paginas': 'Gerador de Site', '/dashboard/criativo': 'Gerador de Criativos',
+      '/dashboard/criativos-manuais': 'Criativos Manuais', '/dashboard/vendas': 'Vendendo no Automático', '/dashboard/anuncios': 'Gerenciador de Anúncios',
+      '/dashboard/suporte': 'Suporte Humano', '/dashboard/aulas': 'Aulas ao Vivo', '/dashboard/planos': 'Planos', '/dashboard/creditos': 'Créditos',
+    }
+    return map[path] || path.replace('/dashboard/', '')
+  }
+
+  function agoLabel(iso: string) {
+    const secs = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000))
+    if (secs < 60) return 'agora'
+    return 'há ' + Math.round(secs / 60) + ' min'
+  }
+
   // Ao trocar o filtro ou a busca, volta a mostrar so os primeiros
   useEffect(function() { setVisible(PAGE_STEP) }, [filter, search])
 
@@ -156,6 +189,44 @@ export default function AdminPage() {
             <div className={styles.statValue} style={{ color: lucro >= 0 ? 'var(--green)' : 'var(--red)' }}>R${lucro.toFixed(0)}</div>
             <div className={styles.statUp} style={{ color: 'var(--muted2)' }}>Depois de pagar as ferramentas de IA (R${stats.custo.toFixed(0)})</div>
           </div>
+        </div>
+
+        {/* Online agora */}
+        <div className={styles.stat} style={{ marginBottom: 28 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
+            <div style={{ minWidth: 150 }}>
+              <div className={styles.statLabel}>
+                <span style={{ display: 'inline-block', width: 9, height: 9, borderRadius: '50%', background: '#22c55e', marginRight: 6 }} />
+                Online agora
+              </div>
+              <div className={styles.statValue} style={{ color: 'var(--green)' }}>{presence ? presence.agora : 0}</div>
+              <div className={styles.statUp} style={{ color: 'var(--muted2)' }}>Atualiza sozinho a cada 30 segundos</div>
+            </div>
+            <div style={{ display: 'flex', gap: 22, flexWrap: 'wrap', fontSize: 13, color: 'var(--muted2)' }}>
+              <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{presence ? presence.ultimos15 : 0}</b><br />Últimos 15 minutos</div>
+              <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{presence ? presence.hoje : 0}</b><br />Entraram hoje</div>
+            </div>
+            <button
+              onClick={function() { setShowOnline(!showOnline) }}
+              style={{ marginLeft: 'auto', padding: '8px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
+            >
+              {showOnline ? 'Esconder lista' : 'Ver quem está online'}
+            </button>
+          </div>
+          {showOnline && (
+            <div style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 12, maxHeight: 280, overflowY: 'auto' }}>
+              {(!presence || !presence.online || presence.online.length === 0) ? (
+                <div style={{ fontSize: 13, color: 'var(--muted2)' }}>Ninguém online neste momento.</div>
+              ) : presence.online.map(function(o: any, i: number) {
+                return (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '7px 0', fontSize: 13, borderBottom: '1px solid var(--border)' }}>
+                    <span style={{ color: 'var(--text)', fontWeight: 600 }}>{o.nome}</span>
+                    <span style={{ color: 'var(--muted2)', textAlign: 'right' }}>{pageLabel(o.pagina)} · {agoLabel(o.visto)}</span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         {/* Instalacoes do app */}
