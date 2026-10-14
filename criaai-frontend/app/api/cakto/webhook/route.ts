@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { recordPayment, clearBilling, firstFutureDate, toAmount } from '@/lib/billing'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -75,6 +76,15 @@ async function findUserIdByEmail(email: string): Promise<string | null> {
   return data?.id || null
 }
 
+
+// Registra a data do pagamento e da proxima cobranca (card "Assinaturas" do admin)
+async function trackBilling(userId: string, payload: any, planName: string | null): Promise<void> {
+  const sub = payload.data?.subscription || {}
+  const next = firstFutureDate([sub.next_payment_date, sub.nextPaymentDate, sub.next_payment_at, sub.next_charge_date])
+  const amount = toAmount(payload.data?.amount ?? payload.data?.offer?.price ?? payload.data?.baseAmount)
+  await recordPayment(admin, { userId, provider: 'cakto', amount, planName, nextChargeAt: next })
+}
+
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.json()
@@ -124,6 +134,8 @@ export async function POST(req: NextRequest) {
 
           if (!planId) {
             console.error('[cakto-webhook] plano nao identificado, offer:', JSON.stringify(payload.data?.offer))
+          } else {
+            await trackBilling(userId, payload, planName)
           }
         } else {
           // Compra de creditos avulsos (pagamento unico)
@@ -172,6 +184,7 @@ export async function POST(req: NextRequest) {
             updated_at: new Date().toISOString(),
           })
           .eq('id', userId)
+        if (planId) await trackBilling(userId, payload, planName)
         break
       }
 
@@ -183,6 +196,7 @@ export async function POST(req: NextRequest) {
             updated_at: new Date().toISOString(),
           })
           .eq('id', userId)
+        await clearBilling(admin, userId)
         break
       }
 
@@ -207,6 +221,7 @@ export async function POST(req: NextRequest) {
             updated_at: new Date().toISOString(),
           })
           .eq('id', userId)
+        await clearBilling(admin, userId)
         break
       }
 

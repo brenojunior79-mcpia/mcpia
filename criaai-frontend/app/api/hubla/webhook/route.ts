@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { recordPayment, clearBilling, firstFutureDate, toAmount } from '@/lib/billing'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -51,6 +52,17 @@ async function logEvent(eventType: string, email: string | null, userId: string 
   try {
     await admin.from('hubla_events').insert({ event_type: eventType, email, user_id: userId, action, note: note.slice(0, 300) })
   } catch (e) {}
+}
+
+
+// Registra a data do pagamento e da proxima cobranca (card "Assinaturas" do admin)
+async function trackBilling(userId: string, payload: any, planName: string | null): Promise<void> {
+  const sub = payload.event?.subscription || {}
+  const next = firstFutureDate([sub.nextBillingAt, sub.nextChargeAt, sub.nextInvoiceAt, sub.nextPaymentAt, sub.currentPeriodEnd, sub.expiresAt])
+  const inv = payload.event?.invoice || {}
+  const cents = Number(inv.amount?.totalCents ?? inv.amount?.subtotalCents)
+  const amount = isFinite(cents) && cents > 0 ? toAmount(cents / 100) : null
+  await recordPayment(admin, { userId, provider: 'hubla', amount, planName, nextChargeAt: next })
 }
 
 export async function POST(req: NextRequest) {
@@ -116,6 +128,7 @@ export async function POST(req: NextRequest) {
           updated_at: new Date().toISOString(),
         })
         .eq('id', userId)
+      await trackBilling(userId, payload, planName)
       return true
     }
 
@@ -134,6 +147,7 @@ export async function POST(req: NextRequest) {
           updated_at: new Date().toISOString(),
         })
         .eq('id', userId)
+      await clearBilling(admin, userId)
       return true
     }
 
@@ -152,6 +166,20 @@ export async function POST(req: NextRequest) {
         break
       }
 
+      // Renovacao mensal paga: so atualiza a data da proxima cobranca (nao mexe em plano nem creditos)
+      case 'invoice.payment_succeeded': {
+        const paidSub: string | null = payload.event?.invoice?.subscriptionId || payload.event?.subscription?.id || null
+        const planName = resolvePlanName(payload)
+        const cur = await admin.from('profiles').select('hubla_subscription_id, subscription_status').eq('id', userId).maybeSingle()
+        if (planName && paidSub && cur.data?.hubla_subscription_id === paidSub && cur.data?.subscription_status === 'active') {
+          await trackBilling(userId, payload, planName)
+          await logEvent(eventType, email, userId, 'registrado', 'pagamento registrado: ' + planName)
+        } else {
+          await logEvent(eventType, email, userId, 'ignorado', 'pagamento de outro produto ou assinatura')
+        }
+        break
+      }
+
       // Reembolso concluido: tira o acesso. (A Hubla tambem manda "invoice.status_updated" junto; so tratamos este.)
       case 'invoice.refunded': {
         const refundedSub: string | null = payload.event?.invoice?.subscriptionId || payload.event?.subscriptions?.[0]?.id || null
@@ -166,6 +194,7 @@ export async function POST(req: NextRequest) {
           break
         }
         await admin.from('profiles').update({ subscription_status: 'canceled', refunded_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', userId)
+        await clearBilling(admin, userId)
         await logEvent(eventType, email, userId, 'removido', 'reembolso')
         break
       }
