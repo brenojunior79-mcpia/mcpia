@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 import styles from './admin.module.css'
+import BillingCard from '@/components/admin/BillingCard'
 
 export default function AdminPage() {
   const [profiles, setProfiles] = useState<any[]>([])
@@ -15,7 +16,6 @@ export default function AdminPage() {
   const [popup, setPopup] = useState<any>(null)
   const [pushPeople, setPushPeople] = useState(0)
   const [billing, setBilling] = useState<any>(null)
-  const [showCharges, setShowCharges] = useState(false)
   const PAGE_STEP = 20
   const [visible, setVisible] = useState(PAGE_STEP)
   const [loading, setLoading] = useState(true)
@@ -149,19 +149,6 @@ export default function AdminPage() {
     }
     loadBilling()
   }, [])
-
-  function brl(v: any) {
-    return 'R$ ' + (Number(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-  }
-  function diaLabel(iso: string) {
-    const d = new Date(iso)
-    const hojeStr = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
-    const amanha = new Date(Date.now() + 24 * 60 * 60 * 1000).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
-    const ds = d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
-    if (ds === hojeStr) return 'Hoje'
-    if (ds === amanha) return 'Amanhã'
-    return d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'short', day: '2-digit', month: '2-digit' })
-  }
 
   const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
   const DIAS_LONGO = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado']
@@ -311,108 +298,8 @@ export default function AdminPage() {
           )}
         </div>
 
-        {/* Assinaturas ativas e proximas cobrancas */}
-        <div className={styles.stat} style={{ marginBottom: 28 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
-            <div style={{ minWidth: 150 }}>
-              <div className={styles.statLabel}><i className="ti ti-credit-card" /> Assinaturas ativas</div>
-              <div className={styles.statValue} style={{ color: 'var(--green)' }}>{billing ? billing.ativas : 0}</div>
-              <div className={styles.statUp} style={{ color: 'var(--muted2)' }}>{billing ? brl(billing.mensal) : 'R$ 0,00'} por mês</div>
-            </div>
-            <div style={{ display: 'flex', gap: 22, flexWrap: 'wrap', fontSize: 13, color: 'var(--muted2)' }}>
-              <div><b style={{ color: billing && billing.em_atraso > 0 ? 'var(--red)' : 'var(--text)', fontSize: 18 }}>{billing ? billing.em_atraso : 0}</b><br />Com pagamento atrasado{billing && billing.em_atraso > 0 ? ' (' + brl(billing.em_atraso_valor) + ')' : ''}</div>
-              {billing && billing.por_plano && billing.por_plano.map(function(pp: any) {
-                return <div key={pp.plano}><b style={{ color: 'var(--text)', fontSize: 18 }}>{pp.qtd}</b><br />{pp.plano}</div>
-              })}
-            </div>
-          </div>
-
-          {/* Quanto vou receber */}
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted2)', margin: '18px 0 8px' }}>Quanto vou receber</div>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            {[
-              { titulo: 'Hoje', d: billing ? billing.hoje : null, sub: '' },
-              { titulo: 'Esta semana', d: billing ? billing.semana : null, sub: billing && billing.semana ? 'até domingo, ' + new Date(billing.semana.ate + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '' },
-              { titulo: 'Este mês', d: billing ? billing.mes : null, sub: billing && billing.mes ? 'até ' + new Date(billing.mes.ate + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '' },
-            ].map(function(b) {
-              return (
-                <div key={b.titulo} style={{ flex: '1 1 150px', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: 12, padding: '12px 14px' }}>
-                  <div style={{ fontSize: 11, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '.05em', fontWeight: 700 }}>{b.titulo}</div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>{brl(b.d ? b.d.valor : 0)}</div>
-                  <div style={{ fontSize: 12, color: 'var(--muted2)' }}>{b.d ? b.d.qtd : 0} {b.d && b.d.qtd === 1 ? 'cobrança' : 'cobranças'}{b.sub ? ' · ' + b.sub : ''}</div>
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Por plataforma */}
-          {billing && billing.por_origem && billing.por_origem.length > 0 && (
-            <div style={{ marginTop: 18 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted2)', marginBottom: 8 }}>Por plataforma</div>
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                {billing.por_origem.map(function(o: any) {
-                  const nome = o.origem === 'cakto' ? 'Cakto' : o.origem === 'hubla' ? 'Hubla' : o.origem === 'stripe' ? 'Stripe' : o.origem
-                  return (
-                    <div key={o.origem} style={{ flex: '1 1 180px', background: 'var(--surface2)', borderRadius: 12, padding: '12px 14px' }}>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{nome} <span style={{ fontWeight: 500, color: 'var(--muted2)', fontSize: 12 }}>· {o.qtd} assinaturas · {brl(o.valor)}/mês</span></div>
-                      <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 6, lineHeight: 1.7 }}>
-                        Hoje: <b style={{ color: 'var(--text)' }}>{brl(o.hoje)}</b><br />
-                        Semana: <b style={{ color: 'var(--text)' }}>{brl(o.semana)}</b><br />
-                        Mês: <b style={{ color: 'var(--text)' }}>{brl(o.mes)}</b>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Proximos 14 dias */}
-          {billing && billing.por_dia && billing.por_dia.length > 0 && (
-            <div style={{ marginTop: 18 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted2)', marginBottom: 8 }}>Cobranças dos próximos 14 dias</div>
-              {billing.por_dia.map(function(x: any) {
-                const max = Math.max(1, ...billing.por_dia.map(function(y: any) { return Number(y.valor) }))
-                return (
-                  <div key={x.dia} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0', fontSize: 13 }}>
-                    <span style={{ width: 92, color: 'var(--text)', fontWeight: 600, textTransform: 'capitalize' }}>{diaLabel(x.dia + 'T12:00:00')}</span>
-                    <div style={{ flex: 1, background: 'var(--surface2)', borderRadius: 6, height: 10 }}>
-                      <div style={{ width: Math.max(3, Math.round((Number(x.valor) / max) * 100)) + '%', height: '100%', background: '#22c55e', borderRadius: 6 }} />
-                    </div>
-                    <span style={{ width: 90, textAlign: 'right', color: 'var(--text)', fontWeight: 600 }}>{brl(x.valor)}</span>
-                    <span style={{ width: 28, textAlign: 'right', color: 'var(--muted2)' }}>{x.qtd}x</span>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-
-          <button
-            onClick={function() { setShowCharges(!showCharges) }}
-            style={{ marginTop: 16, padding: '8px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
-          >
-            {showCharges ? 'Esconder lista' : 'Ver quem vai pagar'}
-          </button>
-          {showCharges && (
-            <div style={{ marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 10, maxHeight: 340, overflowY: 'auto' }}>
-              {(!billing || !billing.proximas || billing.proximas.length === 0) ? (
-                <div style={{ fontSize: 13, color: 'var(--muted2)' }}>Nenhuma cobrança prevista.</div>
-              ) : billing.proximas.map(function(c: any, i: number) {
-                return (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '7px 0', fontSize: 13, borderBottom: '1px solid var(--border)' }}>
-                    <span style={{ color: 'var(--text)', fontWeight: 600, minWidth: 0 }}>{c.nome || 'Sem nome'} <span style={{ color: 'var(--muted2)', fontWeight: 400 }}>· {c.plano} · {c.origem}</span></span>
-                    <span style={{ color: 'var(--muted2)', textAlign: 'right', whiteSpace: 'nowrap' }}>{diaLabel(c.data)} · <b style={{ color: 'var(--text)' }}>{brl(c.valor)}</b>{c.confirmada ? '' : ' *'}</span>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-
-          <div style={{ fontSize: 11, color: 'var(--muted2)', marginTop: 14, lineHeight: 1.5 }}>
-            Valores brutos (antes das taxas da Cakto, Hubla e Stripe). Só entram assinantes ativos; quem está com pagamento atrasado aparece à parte.
-            {billing && billing.estimadas > 0 ? ' * Data estimada (' + billing.estimadas + ' assinaturas): foi calculada a partir da última atualização do aluno, em ciclos de 30 dias. Ela vira a data real quando o aluno pagar a próxima cobrança.' : ''}
-          </div>
-        </div>
+        {/* Assinaturas ativas, recebido e proximas cobrancas */}
+        <BillingCard data={billing} />
 
         {/* Dias e horarios de maior acesso */}
         <div className={styles.stat} style={{ marginBottom: 28 }}>

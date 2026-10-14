@@ -221,7 +221,7 @@ export async function POST(req: NextRequest) {
             updated_at: new Date().toISOString(),
           })
           .eq('id', userId)
-        await clearBilling(admin, userId)
+        await clearBilling(admin, userId, true)
         break
       }
 

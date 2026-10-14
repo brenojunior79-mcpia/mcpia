@@ -194,7 +194,7 @@ export async function POST(req: NextRequest) {
           break
         }
         await admin.from('profiles').update({ subscription_status: 'canceled', refunded_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', userId)
-        await clearBilling(admin, userId)
+        await clearBilling(admin, userId, true)
         await logEvent(eventType, email, userId, 'removido', 'reembolso')
         break
       }
