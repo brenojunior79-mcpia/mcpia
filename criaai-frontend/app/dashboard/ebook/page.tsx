@@ -648,7 +648,7 @@ export default function EbookPage() {
             </div>
           </div>
           <div style={{ padding: '20px' }}>
-            <VideoLesson videoId="1202593192" title="Como criar seu e-book" color="#5b4ef8" />
+            <VideoLesson videoId="1137788982" title="Como criar seu e-book" color="#5b4ef8" />
           </div>
         </div>
 

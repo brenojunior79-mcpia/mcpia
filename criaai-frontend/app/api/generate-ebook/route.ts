@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 
 const GAMMA_API_URL = 'https://public-api.gamma.app/v1.0/generations'
 const GAMMA_API_KEY = process.env.GAMMA_API_KEY!
@@ -86,6 +87,26 @@ function buildGammaPrompt(title: string, topic: string, details?: string, chapte
   return lines.join('\n')
 }
 
+// Copia o PDF do Gamma para a plataforma (o link do Gamma e temporario).
+// Se der qualquer problema, devolve o link original para o aluno nao perder o ebook.
+async function storePdf(exportUrl: string, userId: string, generationId: string): Promise<{ url: string; stored: boolean }> {
+  try {
+    const res = await fetch(exportUrl)
+    if (!res.ok) throw new Error('download ' + res.status)
+    const buf = Buffer.from(await res.arrayBuffer())
+    if (buf.length < 1000 || buf.length > 50 * 1024 * 1024) throw new Error('tamanho invalido ' + buf.length)
+    const admin = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } })
+    const safeId = generationId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 60) || String(Date.now())
+    const path = userId + '/' + safeId + '.pdf'
+    const up = await admin.storage.from('ebooks').upload(path, buf, { contentType: 'application/pdf', cacheControl: '31536000', upsert: true })
+    if (up.error) throw up.error
+    return { url: admin.storage.from('ebooks').getPublicUrl(path).data.publicUrl, stored: true }
+  } catch (e) {
+    console.error('[generate-ebook] nao foi possivel guardar o PDF na plataforma:', e)
+    return { url: exportUrl, stored: false }
+  }
+}
+
 // Quantos ebooks quem ainda nao tem plano pode gerar de graca
 const FREE_EBOOKS = 1
 
@@ -159,6 +180,8 @@ export async function POST(req: NextRequest) {
     const generationId = await startGammaGeneration(prompt, title, targetAudience, tone, language, themeId || undefined)
     const result = await pollGammaUntilDone(generationId)
 
+    const saved = await storePdf(result.exportUrl, user.id, generationId)
+
     if (!isAdmin) {
       await supabase.from('profiles').update({ credits_ebooks_used: creditsUsed + 1 }).eq('id', user.id)
     }
@@ -167,13 +190,14 @@ export async function POST(req: NextRequest) {
       title: title,
       topic: topic,
       gamma_generation_id: generationId,
-      pdf_url: result.exportUrl,
+      pdf_url: saved.url,
       status: 'completed',
     })
 
     return NextResponse.json({
       success: true,
-      pdfUrl: result.exportUrl,
+      pdfUrl: saved.url,
+      savedOnPlatform: saved.stored,
       gammaUrl: result.gammaUrl,
       generationId: generationId,
       creditsRemaining: creditLimit - (creditsUsed + 1),
