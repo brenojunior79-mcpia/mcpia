@@ -48,7 +48,8 @@ export default function BillingCard(props: { data: any }) {
   const [sel, setSel] = useState('todas')
   const [ready, setReady] = useState(false)
   const [showPaid, setShowPaid] = useState(false)
-  const [showNext, setShowNext] = useState(false)
+  const [selDay, setSelDay] = useState<string | null>(null)
+  const [moreDay, setMoreDay] = useState(false)
 
   // Faz as barras crescerem depois que o card aparece
   useEffect(function() {
@@ -75,8 +76,29 @@ export default function BillingCard(props: { data: any }) {
 
   const pagos: any[] = ((b && b.pagos_hoje) || []).filter(function(x: any) { return sel === 'todas' || x.origem === sel })
   const proximas: any[] = ((b && b.proximas) || []).filter(function(x: any) { return sel === 'todas' || x.origem === sel })
-  const porDia: any[] = (b && b.por_dia) || []
-  const maxDia = Math.max(1, ...porDia.map(function(x: any) { return Number(x.valor) || 0 }))
+  // 14 dias a partir de hoje (horario de Brasilia), somando as cobrancas previstas de cada dia
+  const hojeKey = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
+  const base0 = new Date(hojeKey + 'T12:00:00Z').getTime()
+  const dias: { key: string; dow: string; num: string; valor: number; qtd: number; pessoas: any[] }[] = []
+  for (let i = 0; i < 14; i++) {
+    const dt = new Date(base0 + i * 86400000)
+    const key = dt.toISOString().slice(0, 10)
+    const pessoas = proximas.filter(function(x: any) { return x.dia === key })
+    dias.push({
+      key: key,
+      dow: dt.toLocaleDateString('pt-BR', { weekday: 'short', timeZone: 'UTC' }).replace('.', ''),
+      num: key.slice(8, 10),
+      valor: pessoas.reduce(function(a2: number, x: any) { return a2 + (Number(x.valor) || 0) }, 0),
+      qtd: pessoas.length,
+      pessoas: pessoas,
+    })
+  }
+  const maxDia = Math.max(1, ...dias.map(function(d) { return d.valor }))
+  const total14 = dias.reduce(function(a2, d) { return a2 + d.valor }, 0)
+  const firstWith = dias.find(function(d) { return d.qtd > 0 })
+  const activeKey = selDay || (firstWith ? firstWith.key : hojeKey)
+  const activeDay = dias.find(function(d) { return d.key === activeKey }) || dias[0]
+  const shownPeople = moreDay ? activeDay.pessoas : activeDay.pessoas.slice(0, 5)
 
   const card: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: 20, marginBottom: 28 }
   const btn: React.CSSProperties = { padding: '8px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }
@@ -167,42 +189,51 @@ export default function BillingCard(props: { data: any }) {
       </div>
 
       {/* Proximas cobrancas */}
-      <div style={{ marginTop: 22 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>
-          Próximas cobranças <span style={{ color: 'var(--muted2)', fontWeight: 500 }}>· 14 dias{sel !== 'todas' ? ' (todas as plataformas)' : ''}</span>
+      <div style={{ marginTop: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+          <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>Próximas cobranças</span>
+          <span style={{ fontSize: 12, color: 'var(--muted2)' }}>próximos 14 dias · <b style={{ color: 'var(--text)' }}>{brl(total14)}</b> · toque num dia para ver quem paga</span>
         </div>
-        {porDia.length === 0 ? (
-          <div style={{ fontSize: 13, color: 'var(--muted2)' }}>Nenhuma cobrança prevista nos próximos 14 dias.</div>
-        ) : porDia.map(function(x: any, i: number) {
-          const w = Math.max(4, Math.round(((Number(x.valor) || 0) / maxDia) * 100))
-          return (
-            <div key={x.dia} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0', fontSize: 13 }}>
-              <span style={{ width: 84, color: 'var(--text)', fontWeight: 600, textTransform: 'capitalize' }}>{diaLabel(x.dia + 'T12:00:00')}</span>
-              <div style={{ flex: 1, background: 'var(--surface2)', borderRadius: 6, height: 12, overflow: 'hidden' }}>
-                <div className="bc-bar" style={{ width: ready ? w + '%' : '0%', height: '100%', background: 'linear-gradient(90deg,#22c55e,#4ade80)', borderRadius: 6, transitionDelay: (i * 50) + 'ms' }} />
-              </div>
-              <span style={{ width: 88, textAlign: 'right', color: 'var(--text)', fontWeight: 700 }}>{brl(x.valor)}</span>
-            </div>
-          )
-        })}
 
-        <button onClick={function() { setShowNext(!showNext) }} style={Object.assign({}, btn, { marginTop: 12 })}>
-          {showNext ? 'Esconder lista' : 'Ver quem vai pagar'}
-        </button>
-        {showNext && (
-          <div style={{ marginTop: 10, maxHeight: 340, overflowY: 'auto' }}>
-            {proximas.length === 0 ? (
-              <div style={{ fontSize: 13, color: 'var(--muted2)' }}>Nenhuma cobrança prevista.</div>
-            ) : proximas.map(function(c: any, i: number) {
-              return (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '8px 0', fontSize: 13, borderBottom: '1px solid var(--border)' }}>
-                  <span style={{ color: 'var(--text)', fontWeight: 600 }}>{c.nome || 'Sem nome'} <span style={{ color: 'var(--muted2)', fontWeight: 400 }}>· {c.plano} · {nomeOrigem(c.origem)}</span></span>
-                  <span style={{ color: 'var(--muted2)', whiteSpace: 'nowrap' }}>{diaLabel(c.data)} · <b style={{ color: 'var(--text)' }}>{brl(c.valor)}</b>{c.confirmada ? '' : ' *'}</span>
+        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 6 }}>
+          {dias.map(function(d, i) {
+            const on = d.key === activeDay.key
+            const h = d.valor > 0 ? Math.max(8, Math.round((d.valor / maxDia) * 90)) : 3
+            return (
+              <button key={d.key} onClick={function() { setSelDay(d.key); setMoreDay(false) }}
+                style={{ flex: '1 0 54px', minWidth: 54, cursor: 'pointer', border: '1px solid ' + (on ? '#22c55e' : 'transparent'), background: on ? 'rgba(34,197,94,0.10)' : 'var(--surface2)', borderRadius: 12, padding: '8px 4px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 4, transition: 'all .2s' }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: d.valor > 0 ? 'var(--text)' : 'var(--muted2)', minHeight: 13 }}>{d.valor > 0 ? Math.round(d.valor) : ''}</span>
+                <div style={{ height: 90, display: 'flex', alignItems: 'flex-end', width: '100%', justifyContent: 'center' }}>
+                  <div className="bc-bar" style={{ width: 22, height: ready ? h : 0, transition: 'height .8s cubic-bezier(.2,.8,.2,1) ' + (i * 45) + 'ms', background: d.valor > 0 ? 'linear-gradient(180deg,#4ade80,#22c55e)' : 'var(--border)', borderRadius: '6px 6px 3px 3px' }} />
                 </div>
-              )
-            })}
+                <span style={{ fontSize: 10, color: 'var(--muted2)', textTransform: 'capitalize' }}>{i === 0 ? 'hoje' : d.dow}</span>
+                <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', lineHeight: 1 }}>{d.num}</span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Quem paga no dia escolhido */}
+        <div key={activeDay.key} className="bc-up" style={{ marginTop: 10, background: 'var(--surface2)', borderRadius: 14, padding: '12px 14px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', fontSize: 13, marginBottom: activeDay.qtd ? 6 : 0 }}>
+            <b style={{ color: 'var(--text)', textTransform: 'capitalize' }}>{diaLabel(activeDay.key + 'T12:00:00')}</b>
+            <span style={{ color: 'var(--muted2)' }}>{activeDay.qtd} {activeDay.qtd === 1 ? 'cobrança' : 'cobranças'} · <b style={{ color: 'var(--green)' }}>{brl(activeDay.valor)}</b></span>
           </div>
-        )}
+          {activeDay.qtd === 0 && <div style={{ fontSize: 13, color: 'var(--muted2)', marginTop: 4 }}>Nenhuma cobrança neste dia.</div>}
+          {shownPeople.map(function(c: any, i: number) {
+            return (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '7px 0', fontSize: 13, borderTop: '1px solid var(--border)' }}>
+                <span style={{ color: 'var(--text)', fontWeight: 600 }}>{c.nome || 'Sem nome'} <span style={{ color: 'var(--muted2)', fontWeight: 400 }}>· {c.plano} · {nomeOrigem(c.origem)}</span></span>
+                <span style={{ color: 'var(--text)', fontWeight: 700, whiteSpace: 'nowrap' }}>{brl(c.valor)}{c.confirmada ? '' : ' *'}</span>
+              </div>
+            )
+          })}
+          {activeDay.qtd > 5 && (
+            <button onClick={function() { setMoreDay(!moreDay) }} style={Object.assign({}, btn, { marginTop: 8 })}>
+              {moreDay ? 'Ver menos' : 'Ver mais (' + (activeDay.qtd - 5) + ')'}
+            </button>
+          )}
+        </div>
       </div>
 
       <div style={{ fontSize: 11, color: 'var(--muted2)', marginTop: 16, lineHeight: 1.5 }}>

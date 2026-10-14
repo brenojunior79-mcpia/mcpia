@@ -16,13 +16,19 @@ export default function AdminPage() {
   const [popup, setPopup] = useState<any>(null)
   const [pushPeople, setPushPeople] = useState(0)
   const [billing, setBilling] = useState<any>(null)
-  const PAGE_STEP = 20
-  const [visible, setVisible] = useState(PAGE_STEP)
+  const PAGE_FIRST = 5
+  const PAGE_STEP = 10
+  const [visible, setVisible] = useState(PAGE_FIRST)
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('todos')
   const [search, setSearch] = useState('')
   const supabase = createClient()
   const router = useRouter()
+
+  // Pagante = assinatura ativa, com plano da plataforma, e que nao e conta admin (mesma regra do card Assinaturas)
+  function isPayer(p: any) {
+    return p.subscription_status === 'active' && !!p.plan_id && !p.is_admin
+  }
 
   function isToday(dateStr: string) {
     const d = new Date(dateStr)
@@ -67,7 +73,7 @@ export default function AdminPage() {
 
       if (!fetchFailed) {
         setProfiles(allProfiles)
-        const pagantes = allProfiles.filter(function(p) { return p.subscription_status === 'active' })
+        const pagantes = allProfiles.filter(isPayer)
         const hoje = allProfiles.filter(function(p) { return isToday(p.created_at) })
         const receita = pagantes.reduce(function(a, p) { return a + (p.plans?.price_monthly || 0) }, 0)
         const custo = allProfiles.reduce(function(a, p) { return a + (p.credits_videos_used || 0) * 0.56 + (p.credits_ebooks_used || 0) * 1.65 }, 0)
@@ -200,7 +206,7 @@ export default function AdminPage() {
   }
 
   // Ao trocar o filtro ou a busca, volta a mostrar so os primeiros
-  useEffect(function() { setVisible(PAGE_STEP) }, [filter, search])
+  useEffect(function() { setVisible(PAGE_FIRST) }, [filter, search])
 
   const filtered = profiles.filter(function(p) {
     if (search.trim()) {
@@ -208,9 +214,9 @@ export default function AdminPage() {
       const matchesSearch = (p.full_name || '').toLowerCase().includes(q) || (p.email || '').toLowerCase().includes(q)
       if (!matchesSearch) return false
     }
-    if (filter === 'pagantes') return p.subscription_status === 'active'
+    if (filter === 'pagantes') return isPayer(p)
     if (filter === 'hoje') return isToday(p.created_at)
-    if (filter === 'sempagar') return p.subscription_status !== 'active' && p.subscription_status !== 'trialing'
+    if (filter === 'sempagar') return !isPayer(p) && !p.is_admin && p.subscription_status !== 'trialing'
     return true
   })
 
@@ -517,8 +523,9 @@ export default function AdminPage() {
             <tbody>
               {filtered.slice(0, visible).map(function(p) {
                 const plan = p.plans
-                const isPaying = p.subscription_status === 'active'
+                const isPaying = isPayer(p)
                 const situacao =
+                  p.is_admin ? { label: 'Administrador', color: 'var(--accent2)' } :
                   isPaying ? { label: 'Pagando', color: 'var(--green)' } :
                   p.subscription_status === 'trialing' ? { label: 'Teste gratis', color: 'var(--accent2)' } :
                   p.subscription_status === 'past_due' ? { label: 'Pagamento atrasado', color: 'var(--amber)' } :
@@ -567,10 +574,10 @@ export default function AdminPage() {
               </button>
             </div>
           )}
-          {filtered.length > 0 && filtered.length <= visible && filtered.length > PAGE_STEP && (
+          {filtered.length > 0 && filtered.length <= visible && filtered.length > PAGE_FIRST && (
             <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border)', textAlign: 'center', fontSize: 13, color: 'var(--muted2)' }}>
               Mostrando todos os {filtered.length}
-              <button onClick={function() { setVisible(PAGE_STEP) }} style={{ marginLeft: 12, border: 'none', background: 'none', color: 'var(--accent)', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>Mostrar menos</button>
+              <button onClick={function() { setVisible(PAGE_FIRST) }} style={{ marginLeft: 12, border: 'none', background: 'none', color: 'var(--accent)', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>Mostrar menos</button>
             </div>
           )}
         </div>
