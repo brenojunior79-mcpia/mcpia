@@ -281,6 +281,7 @@ export default function AdminPage() {
             <div style={{ display: 'flex', gap: 22, flexWrap: 'wrap', fontSize: 13, color: 'var(--muted2)' }}>
               <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{presence ? presence.ultimos15 : 0}</b><br />Últimos 15 minutos</div>
               <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{presence ? presence.hoje : 0}</b><br />Entraram hoje</div>
+              <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{presence && presence.ontem !== undefined ? presence.ontem : 0}</b><br />Entraram ontem</div>
             </div>
             <button
               onClick={function() { setShowOnline(!showOnline) }}
