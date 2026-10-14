@@ -85,6 +85,24 @@ async function trackBilling(userId: string, payload: any, planName: string | nul
   await recordPayment(admin, { userId, provider: 'cakto', amount, planName, nextChargeAt: next })
 }
 
+// Historico de compras e reembolsos para o painel Admin (mesma tabela da Hubla, com provider = 'cakto')
+async function logCakto(eventType: string, email: string | null, userId: string | null, action: string, note: string): Promise<void> {
+  try {
+    await admin.from('hubla_events').insert({ provider: 'cakto', event_type: eventType, email, user_id: userId, action, note: note.slice(0, 300) })
+  } catch (e) {}
+}
+
+// Compra nova = o aluno nao tinha nenhum pagamento nos ultimos 45 dias (senao e' renovacao e nao vai pro historico)
+async function isNewCustomer(userId: string): Promise<boolean> {
+  try {
+    const since = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString()
+    const r = await admin.from('billing_payments').select('id', { count: 'exact', head: true }).eq('user_id', userId).gte('paid_at', since)
+    return (r.count || 0) === 0
+  } catch (e) {
+    return false
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.json()
@@ -107,6 +125,9 @@ export async function POST(req: NextRequest) {
     const userId = await findUserIdByEmail(email)
     if (!userId) {
       console.error('[cakto-webhook] usuario nao encontrado para email', email)
+      if (eventName === 'purchase_approved' || eventName === 'subscription_created' || eventName === 'refund' || eventName === 'chargeback') {
+        await logCakto(eventName, email, null, 'ignorado', 'aluno nao encontrado na plataforma')
+      }
       return NextResponse.json({ received: true, warning: 'usuario nao encontrado' })
     }
 
@@ -135,7 +156,9 @@ export async function POST(req: NextRequest) {
           if (!planId) {
             console.error('[cakto-webhook] plano nao identificado, offer:', JSON.stringify(payload.data?.offer))
           } else {
+            const novo = await isNewCustomer(userId)
             await trackBilling(userId, payload, planName)
+            if (novo) await logCakto(eventName, email, userId, 'liberado', 'plano: ' + planName)
           }
         } else {
           // Compra de creditos avulsos (pagamento unico)
@@ -160,6 +183,7 @@ export async function POST(req: NextRequest) {
               .eq('id', userId)
 
             console.log('[cakto-webhook] ' + credits + ' creditos adicionados para', email)
+            await logCakto(eventName, email, userId, 'liberado', 'créditos avulsos: +' + credits + ' vídeos')
           } else {
             console.error('[cakto-webhook] creditos nao identificados, offer:', JSON.stringify(payload.data?.offer))
           }
@@ -184,7 +208,11 @@ export async function POST(req: NextRequest) {
             updated_at: new Date().toISOString(),
           })
           .eq('id', userId)
-        if (planId) await trackBilling(userId, payload, planName)
+        if (planId) {
+          const novo = await isNewCustomer(userId)
+          await trackBilling(userId, payload, planName)
+          if (novo && eventName === 'subscription_created') await logCakto(eventName, email, userId, 'liberado', 'plano: ' + planName)
+        }
         break
       }
 
@@ -222,6 +250,7 @@ export async function POST(req: NextRequest) {
           })
           .eq('id', userId)
         await clearBilling(admin, userId, true)
+        await logCakto(eventName, email, userId, 'removido', eventName === 'chargeback' ? 'chargeback (contestação no cartão)' : 'reembolso')
         break
       }
 

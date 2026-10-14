@@ -6,15 +6,17 @@ import styles from '@/app/dashboard/admin/admin.module.css'
 const FIRST = 5
 const STEP = 10
 
-const EVENT_LABEL: Record<string, string> = {
-  'invoice.refunded': 'Reembolso',
-  'invoice.payment_succeeded': 'Pagamento',
-  'invoice.payment_failed': 'Pagamento recusado',
-  'subscription.activated': 'Assinatura ativada',
-  'subscription.deactivated': 'Assinatura encerrada',
-  'customer.member_added': 'Acesso concedido',
-  'customer.member_removed': 'Acesso removido',
-  'manual': 'Manual (admin)',
+// Só dois tipos de evento interessam aqui: compra e reembolso
+function kindOf(ev: any): 'compra' | 'reembolso' | null {
+  const t = ev.event_type
+  if (t === 'invoice.refunded' || t === 'refund' || t === 'chargeback') return 'reembolso'
+  if (t === 'manual') return ev.action === 'removido' ? 'reembolso' : ev.action === 'liberado' ? 'compra' : null
+  if (t === 'subscription.activated' || t === 'customer.member_added' || t === 'purchase_approved' || t === 'subscription_created') return 'compra'
+  return null
+}
+
+function nomeOrigem(o: string): string {
+  return o === 'cakto' ? 'Cakto' : 'Hubla'
 }
 
 function fmt(d: string) {
@@ -25,6 +27,7 @@ export default function HublaPanel() {
   const supabase = createClient()
   const [events, setEvents] = useState<any[]>([])
   const [visible, setVisible] = useState(FIRST)
+  const [prov, setProv] = useState('todas')
   const [removed7, setRemoved7] = useState(0)
   const [showRevoke, setShowRevoke] = useState(false)
   const [text, setText] = useState('')
@@ -33,7 +36,7 @@ export default function HublaPanel() {
   const [error, setError] = useState('')
 
   async function loadEvents() {
-    const e = await supabase.from('hubla_events').select('*').order('created_at', { ascending: false }).limit(100)
+    const e = await supabase.from('hubla_events').select('*').order('created_at', { ascending: false }).limit(300)
     setEvents(e.data || [])
     const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
     const r = await supabase.from('hubla_events').select('id', { count: 'exact', head: true }).eq('action', 'removido').gte('created_at', since)
@@ -59,6 +62,21 @@ export default function HublaPanel() {
     }
     setBusy(false)
   }
+
+  // So compra e reembolso; o mesmo aluno/tipo em ate 10 minutos conta uma vez (a Hubla manda varios avisos por compra)
+  const lista: any[] = []
+  events.forEach(function(ev: any) {
+    const k = kindOf(ev)
+    if (!k) return
+    if (prov !== 'todas' && (ev.provider || 'hubla') !== prov) return
+    const dup = lista.find(function(x: any) {
+      return x.k === k && x.ev.email === ev.email && (x.ev.provider || 'hubla') === (ev.provider || 'hubla') && Math.abs(new Date(x.ev.created_at).getTime() - new Date(ev.created_at).getTime()) < 10 * 60 * 1000
+    })
+    if (dup) return
+    lista.push({ k: k, ev: ev })
+  })
+  const compras7 = lista.filter(function(x: any) { return x.k === 'compra' && Date.now() - new Date(x.ev.created_at).getTime() < 7 * 86400000 }).length
+  const reemb7 = lista.filter(function(x: any) { return x.k === 'reembolso' && Date.now() - new Date(x.ev.created_at).getTime() < 7 * 86400000 }).length
 
   const btn: React.CSSProperties = { padding: '9px 18px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }
 
@@ -110,11 +128,23 @@ export default function HublaPanel() {
       {/* Ultimos avisos */}
       <div className={styles.tableCard} style={{ marginBottom: 28 }}>
         <div className={styles.tableHeader}>
-          <div className={styles.tableTitle}>Últimos avisos da Hubla</div>
+          <div className={styles.tableTitle}>Últimas compras e reembolsos</div>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 12, color: 'var(--muted2)', marginRight: 6 }}>7 dias: <b style={{ color: 'var(--green)' }}>{compras7} compras</b> · <b style={{ color: 'var(--red)' }}>{reemb7} reembolsos</b></span>
+            {[{ id: 'todas', nome: 'Todas' }, { id: 'hubla', nome: 'Hubla' }, { id: 'cakto', nome: 'Cakto' }].map(function(t) {
+              const on = prov === t.id
+              return (
+                <button key={t.id} onClick={function() { setProv(t.id); setVisible(FIRST) }}
+                  style={{ padding: '6px 13px', borderRadius: 999, border: '1px solid ' + (on ? 'var(--accent)' : 'var(--border)'), background: on ? 'var(--accent)' : 'var(--surface2)', color: on ? '#fff' : 'var(--text)', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
+                  {t.nome}
+                </button>
+              )
+            })}
+          </div>
         </div>
-        {events.length === 0 ? (
+        {lista.length === 0 ? (
           <div style={{ padding: 24, textAlign: 'center', color: 'var(--muted2)', fontSize: 13 }}>
-            Nenhum aviso registrado ainda. Eles aparecem aqui conforme a Hubla avisa a plataforma.
+            Nenhuma compra ou reembolso registrado ainda. Eles aparecem aqui conforme a Hubla e a Cakto avisam a plataforma.
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
@@ -122,20 +152,26 @@ export default function HublaPanel() {
               <thead>
                 <tr style={{ textAlign: 'left', color: 'var(--muted2)' }}>
                   <th style={{ padding: '10px 18px' }}>Quando</th>
-                  <th style={{ padding: '10px 18px' }}>Aviso</th>
+                  <th style={{ padding: '10px 18px' }}>Tipo</th>
+                  <th style={{ padding: '10px 18px' }}>Plataforma</th>
                   <th style={{ padding: '10px 18px' }}>E-mail</th>
-                  <th style={{ padding: '10px 18px' }}>O que fizemos</th>
+                  <th style={{ padding: '10px 18px' }}>Detalhe</th>
                 </tr>
               </thead>
               <tbody>
-                {events.slice(0, visible).map(function(ev: any) {
-                  const color = ev.action === 'removido' ? 'var(--red)' : ev.action === 'liberado' ? 'var(--green)' : 'var(--muted2)'
+                {lista.slice(0, visible).map(function(x: any) {
+                  const ev = x.ev
+                  const isRef = x.k === 'reembolso'
+                  const detalhe = ev.action === 'ignorado' && ev.note === 'aluno nao encontrado na plataforma' ? 'ainda sem cadastro na plataforma' : (ev.note || '')
                   return (
                     <tr key={ev.id} style={{ borderTop: '1px solid var(--border)' }}>
                       <td style={{ padding: '10px 18px', whiteSpace: 'nowrap' }}>{fmt(ev.created_at)}</td>
-                      <td style={{ padding: '10px 18px' }}>{EVENT_LABEL[ev.event_type] || ev.event_type}</td>
+                      <td style={{ padding: '10px 18px' }}>
+                        <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700, background: isRef ? 'rgba(239,68,68,0.12)' : 'rgba(34,197,94,0.12)', color: isRef ? 'var(--red)' : 'var(--green)' }}>{isRef ? 'Reembolso' : 'Compra'}</span>
+                      </td>
+                      <td style={{ padding: '10px 18px' }}>{nomeOrigem(ev.provider || 'hubla')}</td>
                       <td style={{ padding: '10px 18px' }}>{ev.email || '—'}</td>
-                      <td style={{ padding: '10px 18px', color }}><b>{ev.action}</b>{ev.note ? ' · ' + ev.note : ''}</td>
+                      <td style={{ padding: '10px 18px', color: 'var(--muted2)' }}>{detalhe}</td>
                     </tr>
                   )
                 })}
@@ -143,10 +179,10 @@ export default function HublaPanel() {
             </table>
           </div>
         )}
-        {events.length > FIRST && (
+        {lista.length > FIRST && (
           <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 13, color: 'var(--muted2)' }}>Mostrando {Math.min(visible, events.length)} de {events.length}</span>
-            {visible < events.length && (
+            <span style={{ fontSize: 13, color: 'var(--muted2)' }}>Mostrando {Math.min(visible, lista.length)} de {lista.length}</span>
+            {visible < lista.length && (
               <button onClick={function() { setVisible(visible + STEP) }} style={btn}>Ver mais</button>
             )}
             {visible > FIRST && (
