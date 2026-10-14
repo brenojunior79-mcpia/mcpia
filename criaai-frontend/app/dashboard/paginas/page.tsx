@@ -42,6 +42,14 @@ interface FormState {
 
 const ACCENTS = ['#7c5cfc', '#2563eb', '#16a34a', '#ea580c', '#e11d48', '#0f766e']
 
+const LESSON_LINKS = [
+  { name: 'ChatGPT', icon: '🤖', url: 'https://chatgpt.com/' },
+  { name: 'Voz IA (Natural Readers)', icon: '🎙️', url: 'https://www.naturalreaders.com/' },
+  { name: 'Canva', icon: '🎨', url: 'https://www.canva.com/' },
+  { name: 'Gravador de áudio', icon: '🔴', url: 'https://chromewebstore.google.com/detail/web-audio-recorder%E2%80%AF%E2%80%93-capt/pddjlpangidimliafldcpfkbkifmegbd?hl=pt-BR' },
+  { name: 'Site de vídeos (Vecteezy)', icon: '🎞️', url: 'https://pt.vecteezy.com/' },
+]
+
 function VideoLesson({ videoId, title, color }: { videoId: string; title: string; color: string }) {
   const [playing, setPlaying] = useState(false)
   const [thumb, setThumb] = useState<string | null>(null)
@@ -254,12 +262,26 @@ export default function PaginasPage() {
         <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--border)' }}>
           <div style={{ width: 38, height: 38, background: 'var(--surface2)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>🎬</div>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Aula: Gerando site</div>
-            <div style={{ fontSize: 12, color: 'var(--muted2)' }}>Veja o passo a passo antes de criar a sua pagina</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Após você gerar o seu site, crie o vídeo e coloque no seu site</div>
+            <div style={{ fontSize: 12, color: 'var(--muted2)' }}>Veja o passo a passo</div>
           </div>
         </div>
         <div style={{ padding: '20px' }}>
-          <VideoLesson videoId="1201837708" title="Gerando site" color="#7c5cfc" />
+          <VideoLesson videoId="1137784536" title="Após você gerar o seu site, crie o vídeo e coloque no seu site" color="#7c5cfc" />
+        </div>
+        <div style={{ padding: '0 20px 20px' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Material da aula</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))', gap: 10 }}>
+            {LESSON_LINKS.map(function(l) {
+              return (
+                <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 12, textDecoration: 'none', color: 'var(--text)' }}>
+                  <span style={{ fontSize: 18, flexShrink: 0 }}>{l.icon}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, flex: 1 }}>{l.name}</span>
+                  <span style={{ fontSize: 13, color: 'var(--muted2)' }}>↗</span>
+                </a>
+              )
+            })}
+          </div>
         </div>
       </div>
 
