@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 import styles from './admin.module.css'
 import BillingCard from '@/components/admin/BillingCard'
+import HublaPanel from '@/components/admin/HublaPanel'
 
 export default function AdminPage() {
   const [profiles, setProfiles] = useState<any[]>([])
@@ -400,8 +401,8 @@ export default function AdminPage() {
               <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{refunded7}</b><br />Últimos 7 dias</div>
               <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{refunded30}</b><br />Últimos 30 dias</div>
             </div>
-            <a href="/dashboard/admin/pagamentos" style={{ marginLeft: 'auto', padding: '8px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
-              Ver pagamentos
+            <a href="#pagamentos" style={{ marginLeft: 'auto', padding: '8px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
+              Ver avisos da Hubla
             </a>
           </div>
           {refunded.length > 0 && (
@@ -581,6 +582,9 @@ export default function AdminPage() {
             </div>
           )}
         </div>
+
+        {/* Pagamentos (Hubla): reembolsos e ultimos avisos */}
+        <HublaPanel />
 
         {/* Saldo das ferramentas de IA — resumido, no rodape */}
         <div className={styles.apiPanel}>
