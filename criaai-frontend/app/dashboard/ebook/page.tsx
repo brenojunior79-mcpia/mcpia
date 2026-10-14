@@ -643,12 +643,12 @@ export default function EbookPage() {
           <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--border)' }}>
             <div style={{ width: 38, height: 38, background: 'var(--surface2)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>🎬</div>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Aula: Como criar seu e-book</div>
-              <div style={{ fontSize: 12, color: 'var(--muted2)' }}>Veja o passo a passo antes de gerar o seu</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Após gerar o seu e-book cadastre ele na plataforma</div>
+              <div style={{ fontSize: 12, color: 'var(--muted2)' }}>Veja o passo a passo</div>
             </div>
           </div>
           <div style={{ padding: '20px' }}>
-            <VideoLesson videoId="1137788982" title="Como criar seu e-book" color="#5b4ef8" />
+            <VideoLesson videoId="1137788982" title="Após gerar o seu e-book cadastre ele na plataforma" color="#5b4ef8" />
           </div>
         </div>
 
