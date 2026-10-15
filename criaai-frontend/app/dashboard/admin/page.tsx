@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 import styles from './admin.module.css'
 import BillingCard from '@/components/admin/BillingCard'
+import SalesMonthsCard from '@/components/admin/SalesMonthsCard'
 import HublaPanel from '@/components/admin/HublaPanel'
 
 export default function AdminPage() {
@@ -308,6 +309,9 @@ export default function AdminPage() {
 
         {/* Assinaturas ativas, recebido e proximas cobrancas */}
         <BillingCard data={billing} />
+
+        {/* Melhores meses de vendas (Mentoria + Estrutura Express), atualiza com os avisos da Hubla e da Cakto */}
+        <SalesMonthsCard />
 
         {/* Dias e horarios de maior acesso */}
         <div className={styles.stat} style={{ marginBottom: 28 }}>

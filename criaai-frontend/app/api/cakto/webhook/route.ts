@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { recordPayment, clearBilling, firstFutureDate, toAmount } from '@/lib/billing'
+import { recordSale, markRefunded } from '@/lib/sales-ledger'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -77,6 +78,18 @@ async function findUserIdByEmail(email: string): Promise<string | null> {
 }
 
 
+// Conta a venda (ou o reembolso) no card "Melhores meses de vendas" do admin.
+// Roda antes de procurar o aluno: quem compra Mentoria/Express quase nunca tem cadastro na plataforma.
+async function trackSale(eventName: string, payload: any, email: string | null): Promise<void> {
+  const d = payload.data || {}
+  const id = d.refId || d.id
+  if (eventName === 'purchase_approved') {
+    await recordSale(admin, { provider: 'cakto', externalId: id, productName: d.product?.name || d.offer?.name, amount: d.baseAmount ?? d.offer?.price ?? d.amount, paidAt: d.paidAt || d.paid_at, email })
+  } else if (eventName === 'refund' || eventName === 'chargeback') {
+    await markRefunded(admin, { provider: 'cakto', externalId: id, email })
+  }
+}
+
 // Registra a data do pagamento e da proxima cobranca (card "Assinaturas" do admin)
 async function trackBilling(userId: string, payload: any, planName: string | null): Promise<void> {
   const sub = payload.data?.subscription || {}
@@ -116,6 +129,8 @@ export async function POST(req: NextRequest) {
 
     const eventName: string = payload.event || payload.type || ''
     const email = getCustomerEmail(payload)
+
+    await trackSale(eventName, payload, email)
 
     if (!email) {
       console.error('[cakto-webhook] sem email no payload')

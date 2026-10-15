@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { recordPayment, clearBilling, firstFutureDate, toAmount } from '@/lib/billing'
+import { recordSale, markRefunded } from '@/lib/sales-ledger'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -55,6 +56,22 @@ async function logEvent(eventType: string, email: string | null, userId: string 
 }
 
 
+// Conta a venda (ou o reembolso) no card "Melhores meses de vendas" do admin.
+// Roda antes de procurar o aluno: quem compra Mentoria/Express quase nunca tem cadastro na plataforma.
+async function trackSale(admin2: any, eventType: string, payload: any, email: string | null): Promise<void> {
+  const inv = payload.event?.invoice || {}
+  if (eventType === 'invoice.payment_succeeded') {
+    const products: any[] = payload.event?.products || (payload.event?.product ? [payload.event.product] : [])
+    const a = inv.amount || {}
+    const cents = Number(a.subtotalCents ?? a.totalCents)
+    for (const pr of products) {
+      await recordSale(admin2, { provider: 'hubla', externalId: inv.id, productName: pr?.name, amount: isFinite(cents) ? cents / 100 : null, paidAt: inv.paidAt || inv.createdAt, email })
+    }
+  } else if (eventType === 'invoice.refunded') {
+    await markRefunded(admin2, { provider: 'hubla', externalId: inv.id, email })
+  }
+}
+
 // Registra a data do pagamento e da proxima cobranca (card "Assinaturas" do admin)
 async function trackBilling(userId: string, payload: any, planName: string | null): Promise<void> {
   const sub = payload.event?.subscription || {}
@@ -78,6 +95,8 @@ export async function POST(req: NextRequest) {
 
     const eventType: string = payload.type || ''
     const email = payload.event?.user?.email || null
+
+    await trackSale(admin, eventType, payload, email)
 
     if (!email) {
       console.error('[hubla-webhook] sem email no payload')
