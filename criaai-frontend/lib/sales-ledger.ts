@@ -16,6 +16,10 @@ export function classifyProduct(name: any): SaleProduct | null {
   return null
 }
 
+// Quanto sobra depois das taxas da plataforma (media real das vendas de jul-out/2026 dos relatorios).
+// Os avisos nao trazem o liquido, entao estimamos assim ate termos o valor exato.
+const NET_RATIO: Record<string, number> = { hubla: 0.956, cakto: 0.88 }
+
 function hashEmail(email: any): string | null {
   const e = String(email || '').toLowerCase().trim()
   if (!e) return null
@@ -65,6 +69,7 @@ export async function recordSale(
       external_id: externalId,
       product,
       amount,
+      net: Math.round(amount * (NET_RATIO[opts.provider] ?? 0.95) * 100) / 100,
       qty: 1,
       paid_at: paid.toISOString(),
       email_hash: emailHash,

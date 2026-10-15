@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 
 type Parte = { n: number; v: number }
-type Mes = { ym: string; vendas: number; fat: number; mentoria: Parte; express: Parte }
+type Mes = { ym: string; vendas: number; fat: number; bruto: number; mentoria: Parte; express: Parte }
 
 const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 const MEDALHAS = ['🥇', '🥈', '🥉']
@@ -134,7 +134,7 @@ export default function SalesMonthsCard() {
   for (let i = 1; i <= ultimo; i++) {
     const ym = anoSel + '-' + (i < 10 ? '0' : '') + i
     const achou = data.meses.find(function(m) { return m.ym === ym })
-    lista.push(achou || { ym: ym, vendas: 0, fat: 0, mentoria: { n: 0, v: 0 }, express: { n: 0, v: 0 } })
+    lista.push(achou || { ym: ym, vendas: 0, fat: 0, bruto: 0, mentoria: { n: 0, v: 0 }, express: { n: 0, v: 0 } })
   }
 
   const valor = function(m: Mes) { return metrica === 'fat' ? Number(m.fat) : Number(m.vendas) }
@@ -162,7 +162,7 @@ export default function SalesMonthsCard() {
       {/* Resumo do ano */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
         <div style={tile} className="sm-up">
-          <div style={{ fontSize: 11, color: 'var(--muted2)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em' }}>Faturamento em {anoSel}</div>
+          <div style={{ fontSize: 11, color: 'var(--muted2)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em' }}>Faturamento líquido em {anoSel}</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--green)', marginTop: 4 }}><CountUp value={totalFat} money /></div>
         </div>
         <div style={{ ...tile, animationDelay: '.08s' }} className="sm-up">
@@ -261,9 +261,9 @@ export default function SalesMonthsCard() {
                     <div style={{ fontSize: 12, color: 'var(--muted2)' }}>{brl(m.express.v)}</div>
                   </div>
                   <div style={{ ...tile, flex: '1 1 140px' }}>
-                    <div style={{ fontSize: 11, color: 'var(--muted2)', fontWeight: 700 }}>Venda média</div>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', marginTop: 2 }}>{brl(ticket)}</div>
-                    <div style={{ fontSize: 12, color: 'var(--muted2)' }}>{totalFat > 0 ? Math.round((Number(m.fat) / totalFat) * 100) : 0}% do ano</div>
+                    <div style={{ fontSize: 11, color: 'var(--muted2)', fontWeight: 700 }}>Preço dos produtos</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', marginTop: 2 }}>{brl(m.bruto)}</div>
+                    <div style={{ fontSize: 12, color: 'var(--muted2)' }}>venda média líquida {brl(ticket)}</div>
                   </div>
                 </div>
               )}
@@ -273,7 +273,7 @@ export default function SalesMonthsCard() {
       </div>
 
       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 12, lineHeight: 1.5 }}>
-        Toque em um mês para ver o detalhe. O valor é o preço dos produtos (sem juros do parcelamento) e se atualiza sozinho a cada venda nova da Hubla e da Cakto.
+        Toque em um mês para ver o detalhe. Faturamento líquido = o que sobra depois das taxas da plataforma (mesmo critério do Utmify) e se atualiza sozinho a cada venda nova da Hubla e da Cakto. Reembolsos feitos antes de 14/10 ainda não foram descontados dos meses.
         {data.reembolsadas > 0 ? ' Vendas reembolsadas não entram na conta (' + num(data.reembolsadas) + ').' : ''}
       </div>
     </div>
