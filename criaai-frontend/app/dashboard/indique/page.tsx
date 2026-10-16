@@ -133,15 +133,15 @@ export default function IndiquePage() {
         .ind-input { width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--border2); background: var(--surface2); color: var(--text); font-size: 14px; outline: none; }
         .ind-input:focus { border-color: #16a34a; }
         .ind-rain { position: relative; flex: 0 0 290px; height: 230px; overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14%, #000 80%, transparent 100%); mask-image: linear-gradient(to bottom, transparent 0, #000 14%, #000 80%, transparent 100%); }
-        .ind-notif { position: absolute; top: 0; box-sizing: border-box; width: 262px; display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 16px; background: rgba(255,255,255,0.97); color: #111827; box-shadow: 0 8px 22px rgba(0,0,0,0.22); opacity: 0; transform: translateY(-80px); animation: indFall 8s linear infinite; }
+        .ind-notif { position: absolute; top: 0; box-sizing: border-box; width: 262px; display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 16px; background: rgba(255,255,255,0.97); color: #111827; box-shadow: 0 8px 22px rgba(0,0,0,0.22); opacity: 0; transform: translateY(-80px); animation: indFall 8s linear infinite; -webkit-animation: indFall 8s linear infinite; will-change: transform, opacity; }
         .ind-notif-ico { width: 32px; height: 32px; border-radius: 9px; background-image: linear-gradient(135deg,#16a34a,#22c55e); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .ind-notif-txt { min-width: 0; flex: 1; }
         .ind-notif-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; color: #111827; }
         .ind-notif-top span { font-size: 10.5px; color: #6b7280; }
         .ind-notif-body { font-size: 12.5px; color: #374151; margin-top: 1px; white-space: nowrap; }
         .ind-notif-body b { color: #15803d; }
+        @-webkit-keyframes indFall { 0% { opacity: 0; -webkit-transform: translateY(-60px) scale(.94); } 7% { opacity: 1; -webkit-transform: translateY(0) scale(1); } 85% { opacity: 1; } 100% { opacity: 0; -webkit-transform: translateY(205px) scale(.97); } }
         @keyframes indFall { 0% { opacity: 0; transform: translateY(-60px) scale(.94); } 7% { opacity: 1; transform: translateY(0) scale(1); } 85% { opacity: 1; } 100% { opacity: 0; transform: translateY(205px) scale(.97); } }
-        @media (prefers-reduced-motion: reduce) { .ind-notif { animation: none; opacity: 1; } .ind-notif:nth-child(1) { transform: translateY(8px); } .ind-notif:nth-child(2) { transform: translateY(70px); } .ind-notif:nth-child(n+3) { display: none; } }
         @media (max-width: 640px) { .ind-rain { flex: 1 1 100%; max-width: 300px; margin: 0 auto; } }
       `}</style>
 
