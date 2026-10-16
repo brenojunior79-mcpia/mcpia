@@ -42,7 +42,7 @@ function NotifRain() {
     <div className="ind-rain" aria-hidden="true">
       {itens.map(function(i) {
         return (
-          <div key={i} className="ind-notif" style={{ animationDelay: (i * 2) + 's', left: [4, 20, 0, 14][i] + 'px' }}>
+          <div key={i} className="ind-notif" style={{ animationDelay: (i * 1.1) + 's', left: [4, 20, 0, 14][i] + 'px' }}>
             <div className="ind-notif-ico">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l4 4-4 4-4-4z" /><path d="M12 13l4 4-4 4-4-4z" /><path d="M3 12l4-4M3 12l4 4M21 12l-4-4M21 12l-4 4" /></svg>
             </div>
@@ -133,7 +133,7 @@ export default function IndiquePage() {
         .ind-input { width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--border2); background: var(--surface2); color: var(--text); font-size: 14px; outline: none; }
         .ind-input:focus { border-color: #16a34a; }
         .ind-rain { position: relative; flex: 0 0 290px; height: 230px; overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14%, #000 80%, transparent 100%); mask-image: linear-gradient(to bottom, transparent 0, #000 14%, #000 80%, transparent 100%); }
-        .ind-notif { position: absolute; top: 0; box-sizing: border-box; width: 262px; display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 16px; background: rgba(255,255,255,0.97); color: #111827; box-shadow: 0 8px 22px rgba(0,0,0,0.22); opacity: 0; transform: translateY(-80px); animation: indFall 8s linear infinite; -webkit-animation: indFall 8s linear infinite; will-change: transform, opacity; }
+        .ind-notif { position: absolute; top: 0; box-sizing: border-box; width: 262px; display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 16px; background: rgba(255,255,255,0.97); color: #111827; box-shadow: 0 8px 22px rgba(0,0,0,0.22); opacity: 0; transform: translateY(-80px); animation: indFall 4.4s linear infinite; -webkit-animation: indFall 4.4s linear infinite; will-change: transform, opacity; }
         .ind-notif-ico { width: 32px; height: 32px; border-radius: 9px; background-image: linear-gradient(135deg,#16a34a,#22c55e); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .ind-notif-txt { min-width: 0; flex: 1; }
         .ind-notif-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; color: #111827; }
