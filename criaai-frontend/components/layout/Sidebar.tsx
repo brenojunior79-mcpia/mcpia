@@ -19,6 +19,21 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
   const creditPct = plan?.is_unlimited ? 50 : (videosLimit ? Math.round((videosUsed / videosLimit) * 100) : 0)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
+  // Bolinha de notificacao do menu "Indique e ganhe": some depois da primeira visita
+  const [indiqueSeen, setIndiqueSeen] = useState(true)
+
+  useEffect(function() {
+    try {
+      setIndiqueSeen(localStorage.getItem('mcpia_indique_seen') === '1')
+    } catch (e) {}
+  }, [])
+
+  useEffect(function() {
+    if (pathname === '/dashboard/indique') {
+      setIndiqueSeen(true)
+      try { localStorage.setItem('mcpia_indique_seen', '1') } catch (e) {}
+    }
+  }, [pathname])
 
   useEffect(function() {
     try {
@@ -60,6 +75,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
 
   const navItems = [
     { href: '/dashboard', icon: 'ti-home', label: 'Painel do Aluno', locked: false },
+    { href: '/dashboard/indique', icon: 'ti-gift', label: 'Indique e ganhe', locked: false, highlight: true },
     { href: '/dashboard/chat', icon: 'ti-message-circle', label: 'Assistente IA', locked: false },
     { href: '/dashboard/plataformas', icon: 'ti-building-store', label: 'Plataformas', locked: false },
     { href: '/dashboard/produtos', icon: 'ti-flame', label: 'Produtos em Alta', locked: false },
@@ -125,6 +141,24 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
                   <span>{item.label}</span>
                   <span className={styles.lockBadge}><i className="ti ti-lock" /> {status}</span>
                 </div>
+              )
+            }
+            if ((item as any).highlight) {
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={function() { setMobileOpen(false) }}
+                  className={styles.navItem + ' ' + styles.navItemPromo + (pathname === item.href ? ' ' + styles.active : '')}
+                  title="Indique a plataforma e ganhe R$ 60 no Pix"
+                >
+                  <span className={styles.promoIconWrap}>
+                    <i className={'ti ' + item.icon} />
+                    {!indiqueSeen && <span className={styles.notifDot} aria-label="Novidade" />}
+                  </span>
+                  <span className={styles.promoText}>{item.label}</span>
+                  <span className={styles.promoPill}>R$ 60</span>
+                </Link>
               )
             }
             return (

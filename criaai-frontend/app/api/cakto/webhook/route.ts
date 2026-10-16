@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { recordPayment, clearBilling, firstFutureDate, toAmount } from '@/lib/billing'
 import { recordSale, markRefunded } from '@/lib/sales-ledger'
+import { trackReferralSale, trackReferralRefund } from '@/lib/referrals'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -85,8 +86,10 @@ async function trackSale(eventName: string, payload: any, email: string | null):
   const id = d.refId || d.id
   if (eventName === 'purchase_approved') {
     await recordSale(admin, { provider: 'cakto', externalId: id, productName: d.product?.name || d.offer?.name, amount: d.baseAmount ?? d.offer?.price ?? d.amount, paidAt: d.paidAt || d.paid_at, email })
+    await trackReferralSale(admin, { provider: 'cakto', externalId: id, productNames: [d.product?.name || d.offer?.name], email, name: d.customer?.name || '', paidAt: d.paidAt || d.paid_at, payload })
   } else if (eventName === 'refund' || eventName === 'chargeback') {
     await markRefunded(admin, { provider: 'cakto', externalId: id, email })
+    await trackReferralRefund(admin, { provider: 'cakto', externalId: id, email })
   }
 }
 

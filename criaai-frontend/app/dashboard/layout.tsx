@@ -7,6 +7,7 @@ import InstallTracker from '@/components/layout/InstallTracker'
 import PushSetup from '@/components/layout/PushSetup'
 import PresenceTracker from '@/components/layout/PresenceTracker'
 import RefundBlocked from '@/components/layout/RefundBlocked'
+import ReferralClaim from '@/components/referral/ReferralClaim'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
@@ -31,6 +32,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <PlanPopup profile={profile} user={user} />
       <InstallTracker />
       <PresenceTracker />
+      <ReferralClaim />
       <PushSetup user={user} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <Topbar profile={profile} user={user} />

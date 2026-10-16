@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { recordPayment, clearBilling, firstFutureDate, toAmount } from '@/lib/billing'
 import { recordSale, markRefunded } from '@/lib/sales-ledger'
+import { trackReferralSale, trackReferralRefund } from '@/lib/referrals'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -67,8 +68,12 @@ async function trackSale(admin2: any, eventType: string, payload: any, email: st
     for (const pr of products) {
       await recordSale(admin2, { provider: 'hubla', externalId: inv.id, productName: pr?.name, amount: isFinite(cents) ? cents / 100 : null, paidAt: inv.paidAt || inv.createdAt, email })
     }
+    // Indique e ganhe: compra da Mentoria feita pelo link de um aluno
+    const u = payload.event?.user || {}
+    await trackReferralSale(admin2, { provider: 'hubla', externalId: inv.id, productNames: products.map(function(x: any) { return x?.name }), email, name: u.firstName || u.name || u.fullName || '', paidAt: inv.paidAt || inv.createdAt, payload })
   } else if (eventType === 'invoice.refunded') {
     await markRefunded(admin2, { provider: 'hubla', externalId: inv.id, email })
+    await trackReferralRefund(admin2, { provider: 'hubla', externalId: inv.id, email })
   }
 }
 

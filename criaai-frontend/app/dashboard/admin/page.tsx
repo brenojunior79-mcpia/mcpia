@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import styles from './admin.module.css'
 import BillingCard from '@/components/admin/BillingCard'
 import SalesMonthsCard from '@/components/admin/SalesMonthsCard'
+import ReferralPayoutsCard from '@/components/admin/ReferralPayoutsCard'
 import HublaPanel from '@/components/admin/HublaPanel'
 
 export default function AdminPage() {
@@ -312,6 +313,7 @@ export default function AdminPage() {
 
         {/* Melhores meses de vendas (Mentoria + Estrutura Express), atualiza com os avisos da Hubla e da Cakto */}
         <SalesMonthsCard />
+        <ReferralPayoutsCard />
 
         {/* Dias e horarios de maior acesso */}
         <div className={styles.stat} style={{ marginBottom: 28 }}>
