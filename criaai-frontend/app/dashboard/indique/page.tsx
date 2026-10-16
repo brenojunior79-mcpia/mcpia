@@ -11,7 +11,7 @@ type Saque = { id: string; valor: number; status: string; quando: string; pago_e
 type Overview = {
   code: string; cliques: number; cadastros: number; compras: number
   aguardando: number; liberado: number; em_saque: number; pago: number
-  indicados: Indicado[]; saques: Saque[]; pix: { chave: string; tipo: string } | null
+  indicados: Indicado[]; saques: Saque[]; pix: { chave: string; tipo: string } | null; whatsapp: string | null
 }
 
 function brl(v: any): string {
@@ -42,6 +42,9 @@ export default function IndiquePage() {
   const [pixTipo, setPixTipo] = useState('CPF')
   const [pixChave, setPixChave] = useState('')
   const [enviando, setEnviando] = useState(false)
+  const [whats, setWhats] = useState('')
+  const [salvando, setSalvando] = useState(false)
+  const [msgDados, setMsgDados] = useState<{ ok: boolean; txt: string } | null>(null)
   const [msg, setMsg] = useState<{ ok: boolean; txt: string } | null>(null)
 
   async function carregar() {
@@ -50,6 +53,7 @@ export default function IndiquePage() {
     const o = r.data as Overview
     setData(o)
     if (o.pix && !pixChave) { setPixChave(o.pix.chave || ''); if (o.pix.tipo) setPixTipo(o.pix.tipo) }
+    if (o.whatsapp && !whats) setWhats(o.whatsapp)
   }
 
   useEffect(function() { carregar() }, [])
@@ -67,12 +71,24 @@ export default function IndiquePage() {
     setTimeout(function() { setCopiado(false) }, 2200)
   }
 
+  async function salvarDados() {
+    setMsgDados(null)
+    if (pixChave.trim().length < 5) { setMsgDados({ ok: false, txt: 'Digite a sua chave Pix.' }); return }
+    if (whats.replace(/\D/g, '').length < 10) { setMsgDados({ ok: false, txt: 'Digite o seu WhatsApp com DDD.' }); return }
+    setSalvando(true)
+    const r = await supabase.rpc('referral_save_contact', { p_pix: pixChave.trim(), p_type: pixTipo, p_whatsapp: whats })
+    setSalvando(false)
+    if (r.error) { setMsgDados({ ok: false, txt: r.error.message || 'Não foi possível salvar.' }); return }
+    setMsgDados({ ok: true, txt: 'Dados salvos! Agora é só pedir o saque quando tiver saldo liberado.' })
+    carregar()
+  }
+
   async function sacar() {
     if (!data) return
     setMsg(null)
-    if (pixChave.trim().length < 5) { setMsg({ ok: false, txt: 'Digite a sua chave Pix.' }); return }
+    if (!data.pix) { setMsg({ ok: false, txt: 'Cadastre a sua chave Pix e o seu WhatsApp antes de sacar.' }); return }
     setEnviando(true)
-    const r = await supabase.rpc('referral_request_payout', { p_pix: pixChave.trim(), p_type: pixTipo })
+    const r = await supabase.rpc('referral_request_payout', { p_pix: '', p_type: '' })
     setEnviando(false)
     if (r.error) { setMsg({ ok: false, txt: r.error.message || 'Não foi possível pedir o saque.' }); return }
     setMsg({ ok: true, txt: 'Saque pedido! Nossa equipe vai enviar o Pix para a chave informada.' })
@@ -159,6 +175,27 @@ export default function IndiquePage() {
             })}
           </div>
 
+          {/* Dados para receber */}
+          <div style={{ ...card, borderColor: data.pix ? 'var(--border)' : 'rgba(245,158,11,0.55)' }}>
+            <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>🔑 Seus dados para receber</div>
+            <div style={{ fontSize: 13.5, color: 'var(--muted2)', marginBottom: 12 }}>
+              {data.pix ? 'Pix e WhatsApp cadastrados. Você pode mudar quando quiser.' : 'Cadastre a sua chave Pix e o seu WhatsApp. Sem isso não dá para fazer o saque.'}
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+              <select className="ind-input" value={pixTipo} onChange={function(e) { setPixTipo(e.target.value) }} style={{ flex: '0 0 150px' }}>
+                <option>CPF</option><option>E-mail</option><option>Celular</option><option>Aleatória</option>
+              </select>
+              <input className="ind-input" placeholder="Sua chave Pix" value={pixChave} onChange={function(e) { setPixChave(e.target.value) }} style={{ flex: '1 1 220px' }} />
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <input className="ind-input" placeholder="Seu WhatsApp com DDD, ex: (11) 99999-9999" inputMode="tel" value={whats} onChange={function(e) { setWhats(e.target.value) }} style={{ flex: '1 1 260px' }} />
+              <button className="ind-btn" disabled={salvando} onClick={salvarDados} style={{ background: '#16a34a', color: '#fff' }}>
+                {salvando ? 'Salvando…' : data.pix ? 'Atualizar dados' : 'Salvar dados'}
+              </button>
+            </div>
+            {msgDados && <div style={{ marginTop: 10, fontSize: 13.5, fontWeight: 600, color: msgDados.ok ? '#15803d' : 'var(--red)' }}>{msgDados.txt}</div>}
+          </div>
+
           {/* Saque */}
           <div style={card}>
             <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>💸 Sacar no Pix</div>
@@ -167,16 +204,13 @@ export default function IndiquePage() {
             )}
             {liberado > 0 ? (
               <>
-                <div style={{ fontSize: 14, color: 'var(--muted2)', marginBottom: 12 }}>Você pode sacar <b style={{ color: '#15803d' }}>{brl(liberado)}</b> agora.</div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <select className="ind-input" value={pixTipo} onChange={function(e) { setPixTipo(e.target.value) }} style={{ flex: '0 0 150px' }}>
-                    <option>CPF</option><option>E-mail</option><option>Celular</option><option>Aleatória</option>
-                  </select>
-                  <input className="ind-input" placeholder="Sua chave Pix" value={pixChave} onChange={function(e) { setPixChave(e.target.value) }} style={{ flex: '1 1 220px' }} />
-                  <button className="ind-btn" disabled={enviando} onClick={sacar} style={{ background: '#16a34a', color: '#fff' }}>
-                    {enviando ? 'Enviando…' : 'Pedir saque de ' + brl(liberado)}
-                  </button>
+                <div style={{ fontSize: 14, color: 'var(--muted2)', marginBottom: 12 }}>
+                  Você pode sacar <b style={{ color: '#15803d' }}>{brl(liberado)}</b> agora{data.pix ? ', no Pix ' + data.pix.chave + '.' : '.'}
                 </div>
+                <button className="ind-btn" disabled={enviando || !data.pix} onClick={sacar} style={{ background: '#16a34a', color: '#fff' }}>
+                  {enviando ? 'Enviando…' : 'Pedir saque de ' + brl(liberado)}
+                </button>
+                {!data.pix && <div style={{ marginTop: 8, fontSize: 13, color: '#b45309', fontWeight: 600 }}>Cadastre a chave Pix acima para liberar o botão.</div>}
               </>
             ) : (
               <div style={{ fontSize: 14, color: 'var(--muted2)' }}>

@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 
-type Pedido = { id: string; nome: string; email: string; pix: string; tipo: string; valor: number; quando: string; qtd: number }
+type Pedido = { id: string; nome: string; email: string; whatsapp?: string | null; pix: string; tipo: string; valor: number; quando: string; qtd: number }
 type Pago = { id: string; nome: string; valor: number; pago_em: string }
 type Dados = { pendentes: Pedido[]; pagos: Pago[]; a_pagar: number; pago_total: number; indicacoes: number; em_espera: number }
 
@@ -79,6 +79,7 @@ export default function ReferralPayoutsCard() {
                   <div style={{ fontWeight: 800 }}>{p.nome || 'Sem nome'} · <span style={{ color: '#15803d' }}>{brl(p.valor)}</span> <span style={{ fontWeight: 500, fontSize: 12, color: 'var(--muted2)' }}>({p.qtd} {p.qtd === 1 ? 'indicação' : 'indicações'})</span></div>
                   <div style={{ fontSize: 12, color: 'var(--muted2)', wordBreak: 'break-all' }}>{p.email} · pedido em {quando(p.quando)}</div>
                   <div style={{ fontSize: 13, marginTop: 4, wordBreak: 'break-all' }}>Pix ({p.tipo || 'chave'}): <b>{p.pix}</b></div>
+                  {p.whatsapp && <div style={{ fontSize: 13, marginTop: 2 }}>WhatsApp: <a href={'https://wa.me/' + String(p.whatsapp).replace(/\D/g, '')} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, color: '#16a34a' }}>{p.whatsapp}</a></div>}
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   <button onClick={function() { copiar(p) }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 10, padding: '8px 12px', fontWeight: 700, fontSize: 12.5 }}>{copiado === p.id ? '✓ Copiada' : 'Copiar chave'}</button>
