@@ -34,6 +34,29 @@ const STATUS: Record<string, { txt: string; cor: string; bg: string }> = {
 
 const card: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: 20, boxShadow: 'var(--shadow-sm)' }
 
+
+// Notificacoes de Pix "caindo" no topo da pagina
+function NotifRain() {
+  const itens = [0, 1, 2, 3]
+  return (
+    <div className="ind-rain" aria-hidden="true">
+      {itens.map(function(i) {
+        return (
+          <div key={i} className="ind-notif" style={{ animationDelay: (i * 2) + 's', left: [4, 20, 0, 14][i] + 'px' }}>
+            <div className="ind-notif-ico">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l4 4-4 4-4-4z" /><path d="M12 13l4 4-4 4-4-4z" /><path d="M3 12l4-4M3 12l4 4M21 12l-4-4M21 12l-4 4" /></svg>
+            </div>
+            <div className="ind-notif-txt">
+              <div className="ind-notif-top"><b>Pix recebido</b><span>agora</span></div>
+              <div className="ind-notif-body">Você recebeu <b>60,00 BRL</b> no Pix</div>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function IndiquePage() {
   const supabase = createClient()
   const [data, setData] = useState<Overview | null>(null)
@@ -109,15 +132,29 @@ export default function IndiquePage() {
         .ind-btn:disabled { opacity: .55; cursor: not-allowed; }
         .ind-input { width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--border2); background: var(--surface2); color: var(--text); font-size: 14px; outline: none; }
         .ind-input:focus { border-color: #16a34a; }
+        .ind-rain { position: relative; flex: 0 0 290px; height: 230px; overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14%, #000 80%, transparent 100%); mask-image: linear-gradient(to bottom, transparent 0, #000 14%, #000 80%, transparent 100%); }
+        .ind-notif { position: absolute; top: 0; box-sizing: border-box; width: 262px; display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 16px; background: rgba(255,255,255,0.97); color: #111827; box-shadow: 0 8px 22px rgba(0,0,0,0.22); opacity: 0; transform: translateY(-80px); animation: indFall 8s linear infinite; }
+        .ind-notif-ico { width: 32px; height: 32px; border-radius: 9px; background-image: linear-gradient(135deg,#16a34a,#22c55e); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .ind-notif-txt { min-width: 0; flex: 1; }
+        .ind-notif-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; color: #111827; }
+        .ind-notif-top span { font-size: 10.5px; color: #6b7280; }
+        .ind-notif-body { font-size: 12.5px; color: #374151; margin-top: 1px; white-space: nowrap; }
+        .ind-notif-body b { color: #15803d; }
+        @keyframes indFall { 0% { opacity: 0; transform: translateY(-60px) scale(.94); } 7% { opacity: 1; transform: translateY(0) scale(1); } 85% { opacity: 1; } 100% { opacity: 0; transform: translateY(205px) scale(.97); } }
+        @media (prefers-reduced-motion: reduce) { .ind-notif { animation: none; opacity: 1; } .ind-notif:nth-child(1) { transform: translateY(8px); } .ind-notif:nth-child(2) { transform: translateY(70px); } .ind-notif:nth-child(n+3) { display: none; } }
+        @media (max-width: 640px) { .ind-rain { flex: 1 1 100%; max-width: 300px; margin: 0 auto; } }
       `}</style>
 
       {/* Topo */}
-      <div style={{ borderRadius: 20, padding: '26px 22px', color: '#fff', backgroundImage: 'linear-gradient(135deg,#15803d,#16a34a 45%,#f59e0b)', boxShadow: '0 10px 30px rgba(22,163,74,0.28)', animation: 'indPop .4s ease both' }}>
-        <div style={{ fontSize: 13, fontWeight: 700, opacity: .9, letterSpacing: .3 }}>🎁 INDIQUE E GANHE</div>
-        <h1 style={{ fontSize: 26, lineHeight: 1.2, margin: '8px 0 8px', fontWeight: 800 }}>Ganhe {brl(COMISSAO).replace(',00', '')} no Pix por cada pessoa que comprar</h1>
-        <p style={{ margin: 0, fontSize: 15, lineHeight: 1.5, opacity: .95 }}>
-          Quando alguém comprar a plataforma por <b>R$ {PRECO}</b> pelo seu link, você recebe <b>R$ {COMISSAO} no Pix</b>. Sem limite de indicações.
-        </p>
+      <div style={{ borderRadius: 20, padding: '26px 22px', color: '#fff', backgroundImage: 'linear-gradient(135deg,#15803d,#16a34a 45%,#f59e0b)', boxShadow: '0 10px 30px rgba(22,163,74,0.28)', animation: 'indPop .4s ease both', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 18, overflow: 'hidden' }}>
+        <div style={{ flex: '1 1 320px', minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', opacity: .9, letterSpacing: .3 }}>🎁 INDIQUE E GANHE</div>
+          <h1 style={{ fontSize: 26, lineHeight: 1.2, margin: '8px 0 8px', fontWeight: 800, color: '#fff' }}>Ganhe {brl(COMISSAO).replace(',00', '')} no Pix por cada pessoa que comprar</h1>
+          <p style={{ margin: 0, fontSize: 15, lineHeight: 1.5, color: '#fff', opacity: .95 }}>
+            Quando alguém comprar a plataforma por <b style={{ color: '#fff' }}>R$ {PRECO}</b> pelo seu link, você recebe <b style={{ color: '#fff' }}>R$ {COMISSAO} no Pix</b>. Sem limite de indicações.
+          </p>
+        </div>
+        <NotifRain />
       </div>
 
       {erro && <div style={{ ...card, color: 'var(--red)' }}>{erro}</div>}
@@ -177,7 +214,7 @@ export default function IndiquePage() {
 
           {/* Dados para receber */}
           <div style={{ ...card, borderColor: data.pix ? 'var(--border)' : 'rgba(245,158,11,0.55)' }}>
-            <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>🔑 Seus dados para receber</div>
+            <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>🔑 Cadastre sua chave de pix</div>
             <div style={{ fontSize: 13.5, color: 'var(--muted2)', marginBottom: 12 }}>
               {data.pix ? 'Pix e WhatsApp cadastrados. Você pode mudar quando quiser.' : 'Cadastre a sua chave Pix e o seu WhatsApp. Sem isso não dá para fazer o saque.'}
             </div>
