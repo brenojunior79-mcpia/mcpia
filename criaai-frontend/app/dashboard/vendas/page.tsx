@@ -135,6 +135,27 @@ const blocks = [
       },
     ],
   },
+  {
+    id: 'metricas',
+    title: 'Entendendo as métricas',
+    icon: '📊',
+    lessons: [
+      {
+        id: 15,
+        title: 'Entendendo as métricas',
+        description: 'Aprenda a ler os números dos seus anúncios e saber o que está funcionando.',
+        videoId: '1133467724',
+        icon: '📈',
+      },
+      {
+        id: 16,
+        title: 'Colunas de métricas',
+        description: 'Veja quais colunas colocar no gerenciador para acompanhar os resultados do seu anúncio.',
+        videoId: '1133467607',
+        icon: '🧮',
+      },
+    ],
+  },
 ]
 
 function VideoLesson({ videoId, title, color }: { videoId: string; title: string; color: string }) {
