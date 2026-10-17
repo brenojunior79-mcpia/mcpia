@@ -24,7 +24,10 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  await supabase.auth.getUser()
+  // getSession le o login do cookie e so vai ate o Supabase quando ele esta vencendo (para renovar).
+  // Antes, getUser() consultava o Supabase em TODA requisicao. A conferencia de verdade continua
+  // nas telas do painel (dashboard/layout.tsx) e nas rotas de API.
+  await supabase.auth.getSession()
   return response
 }
 
