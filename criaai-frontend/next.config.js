@@ -9,6 +9,11 @@ const nextConfig = {
   async headers() {
     return [
       {
+        // Fontes e icones: nunca mudam (o nome muda se trocar a versao), entao o navegador guarda por 1 ano
+        source: '/fonts/:path*',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+      },
+      {
         // Aplicativo Android: baixa o arquivo em vez de tentar abrir
         source: '/cristao-prospero.apk',
         headers: [

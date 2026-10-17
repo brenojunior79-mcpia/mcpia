@@ -158,20 +158,36 @@ export default function AtendimentoPage() {
     })()
   }, [])
 
-  // Tempo real + atualizacao de seguranca a cada 20s
+  // Tempo real. Mensagem nova so recarrega a conversa aberta; a lista so recarrega quando uma conversa muda.
+  // Atualizacao de seguranca a cada 60s (so com a aba visivel) e ao voltar para a aba.
   useEffect(function() {
     if (!staff) return
-    let t: any = null
-    const refresh = function() {
-      if (t) return
-      t = setTimeout(function() { t = null; carregarConvs(); if (selRef.current) carregarMsgs(selRef.current) }, 300)
+    let tl: any = null
+    let tm: any = null
+    const lista = function() {
+      if (tl) return
+      tl = setTimeout(function() { tl = null; carregarConvs() }, 500)
+    }
+    const abertas = function() {
+      if (tm) return
+      tm = setTimeout(function() { tm = null; if (selRef.current) carregarMsgs(selRef.current) }, 300)
     }
     const ch = supabase.channel('wa-inbox')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'wa_messages' }, refresh)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'wa_conversations' }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'wa_messages' }, function(p: any) {
+        const cid = (p && (p.new?.conversation_id || p.old?.conversation_id)) || ''
+        if (!cid || cid === selRef.current) abertas()
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'wa_conversations' }, function(p: any) {
+        lista()
+        const cid = (p && (p.new?.id || p.old?.id)) || ''
+        if (cid && cid === selRef.current) abertas()
+      })
       .subscribe()
-    const iv = setInterval(refresh, 20000)
-    return function() { clearInterval(iv); if (t) clearTimeout(t); supabase.removeChannel(ch) }
+    const tudo = function() { lista(); abertas() }
+    const iv = setInterval(function() { if (document.visibilityState === 'visible') tudo() }, 60000)
+    const vis = function() { if (document.visibilityState === 'visible') tudo() }
+    document.addEventListener('visibilitychange', vis)
+    return function() { clearInterval(iv); document.removeEventListener('visibilitychange', vis); if (tl) clearTimeout(tl); if (tm) clearTimeout(tm); supabase.removeChannel(ch) }
   }, [staff])
 
   useEffect(function() { if (fim.current) fim.current.scrollIntoView({ block: 'end' }) }, [msgs.length, sel])
