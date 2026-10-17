@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 
+type Achado = { waba: string; nome: string; erro: string; numeros: { id: string; numero: string; nome: string; qualidade: string }[] }
 type Conexao = { principal: boolean; phoneId: string; waba: string; nome: string; wabaNome: string; numero: string; limite: string; verificacao: string; status: 'ok' | 'analise' | 'atencao'; numStatus: string; qualidade: string; webhookLigado: boolean; apps: string[] }
 
 const box: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 16, marginBottom: 14 }
@@ -25,6 +26,11 @@ export default function Conexoes() {
   const [carregando, setCarregando] = useState(false)
   const [msg, setMsg] = useState('')
   const [novo, setNovo] = useState(false)
+  const [achados, setAchados] = useState<Achado[] | null>(null)
+  const [diag, setDiag] = useState<string[]>([])
+  const [procurando, setProcurando] = useState(false)
+  const [atualPhone, setAtualPhone] = useState('')
+  const [copiado, setCopiado] = useState('')
 
   async function carregar() {
     setCarregando(true); setErro('')
@@ -46,6 +52,20 @@ export default function Conexoes() {
       setMsg(r.ok ? 'Webhook ligado. Apps ligados: ' + ((j.apps || []).join(', ') || '—') : (j.error || 'Não foi possível ligar.'))
       carregar()
     } catch (e) { setMsg('Sem conexão.') }
+  }
+
+  async function procurar() {
+    setProcurando(true); setMsg('')
+    try {
+      const r = await fetch('/api/whatsapp/numbers', { cache: 'no-store' })
+      const j = await r.json().catch(function() { return {} })
+      if (!r.ok) setMsg(j.error || 'Não foi possível procurar.')
+      else { setAchados(j.contas || []); setDiag(j.diag || []); setAtualPhone(String(j.atual?.phoneId || '')) }
+    } catch (e) { setMsg('Sem conexão.') }
+    setProcurando(false)
+  }
+  function copiar(texto: string, k: string) {
+    try { navigator.clipboard.writeText(texto); setCopiado(k); setTimeout(function() { setCopiado('') }, 2000) } catch (e) {}
   }
 
   const total = lista ? lista.length : 0
@@ -74,6 +94,35 @@ export default function Conexoes() {
               </ol>
               Se o número estiver em outro app da Meta, a chave de acesso dele é colocada direto na Vercel (nunca aqui no chat). Esses IDs não são secretos, pode mandar no chat.
             </div>
+            <div style={{ marginTop: 12 }}>
+              <button onClick={procurar} disabled={procurando} style={{ cursor: 'pointer', border: 0, background: '#1f7a5a', color: '#fff', borderRadius: 10, padding: '9px 16px', fontWeight: 800, fontSize: 13.5, opacity: procurando ? 0.6 : 1 }}>{procurando ? 'Procurando…' : '🔎 Procurar números disponíveis'}</button>
+              <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginTop: 6 }}>Mostra os números que a plataforma já consegue enxergar na Meta, com os IDs. É só leitura, não muda nada.</div>
+            </div>
+            {achados && (
+              <div style={{ marginTop: 12 }}>
+                {achados.length === 0 && <div style={{ fontSize: 13, color: '#b45309', fontWeight: 700 }}>Não encontrei nenhuma conta. Confira se o Breno app tem acesso ao número novo.</div>}
+                {achados.map(function(a) {
+                  return (
+                    <div key={a.waba} style={{ border: '1px solid var(--border)', borderRadius: 12, padding: 10, marginBottom: 8, background: 'var(--surface2)' }}>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)' }}>Conta {a.nome ? '“' + a.nome + '” ' : ''}<span style={{ fontWeight: 600, color: 'var(--muted2)' }}>· WABA {a.waba}</span></div>
+                      {a.erro && <div style={{ fontSize: 12.5, color: '#b91c1c', marginTop: 4 }}>{a.erro}</div>}
+                      {a.numeros.map(function(n) {
+                        const k = a.waba + n.id
+                        const ja = n.id === atualPhone
+                        return (
+                          <div key={n.id} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 6, fontSize: 13, color: 'var(--text)' }}>
+                            <b>{n.numero}</b><span style={{ color: 'var(--muted2)' }}>{n.nome}</span>
+                            {ja ? <span style={{ fontSize: 11.5, fontWeight: 800, color: '#15803d' }}>JÁ LIGADO (SUPORTE)</span> : <button onClick={function() { copiar('Número ' + n.numero + ' · Phone Number ID: ' + n.id + ' · WABA: ' + a.waba, k) }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface)', color: 'var(--text)', borderRadius: 8, padding: '4px 10px', fontWeight: 700, fontSize: 12 }}>{copiado === k ? '✓ Copiado' : 'Copiar IDs'}</button>}
+                            <div style={{ width: '100%', fontSize: 12, color: 'var(--muted2)', wordBreak: 'break-all' }}>Phone Number ID: {n.id} · WABA: {a.waba}</div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })}
+                {diag.length > 0 && <div style={{ fontSize: 11.5, color: 'var(--muted2)', marginTop: 4, lineHeight: 1.5 }}>Detalhes técnicos: {diag.join(' | ')}</div>}
+              </div>
+            )}
             <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginTop: 8, lineHeight: 1.5 }}>Hoje a plataforma atende por um número só. Para receber e responder por dois números no mesmo Atendimento, eu preciso ajustar o sistema quando você trouxer o segundo. Esta lista já está pronta para mostrar todos eles.</div>
           </div>
         )}

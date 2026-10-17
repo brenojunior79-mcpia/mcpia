@@ -32,6 +32,15 @@ export async function GET(req: NextRequest) {
       erro: '',
     })
   }
+  // Tambem procura pelas contas atribuidas ao usuario do sistema e pelas contas do portfolio
+  const diag: string[] = []
+  const negocio = (process.env.WHATSAPP_BUSINESS_ID || '789560754809867').trim()
+  const usuario = (process.env.WHATSAPP_SYSTEM_USER_ID || '61595557738231').trim()
+  for (const [pai, rel] of [[usuario, 'assigned_whatsapp_business_accounts'], [negocio, 'owned_whatsapp_business_accounts'], [negocio, 'client_whatsapp_business_accounts']] as string[][]) {
+    const l = await graphFetch(pai + '/' + rel + '?fields=id,name&limit=50')
+    if (!l.ok) { diag.push(rel + ': ' + String(l.data?.error?.message || 'sem acesso').slice(0, 140)); continue }
+    for (const w of (l.data?.data || [])) { await conta(String(w.id), String(w.name || '')) }
+  }
   for (const id of ids) {
     const p = await graphFetch(id + '/phone_numbers?fields=id&limit=1')
     if (p.ok) { await conta(id, ''); continue }
@@ -43,5 +52,5 @@ export async function GET(req: NextRequest) {
     }
     if (!achou) contas.push({ waba: id, nome: '', numeros: [], erro: String(p.data?.error?.message || 'nao e uma conta do WhatsApp nem um negocio com acesso') })
   }
-  return NextResponse.json({ atual: { phoneId: cfg.phoneId, waba: process.env.WHATSAPP_WABA_ID || '' }, contas })
+  return NextResponse.json({ atual: { phoneId: cfg.phoneId, waba: process.env.WHATSAPP_WABA_ID || '' }, contas, diag })
 }
