@@ -88,6 +88,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
     { href: '/dashboard/suporte', icon: 'ti-headset', label: 'Suporte Humano', locked: false },
     { href: '/dashboard/aulas', icon: 'ti-device-tv', label: 'Aulas ao Vivo', locked: false },
     { href: '/dashboard/planos', icon: 'ti-credit-card', label: 'Planos', locked: false },
+    ...((isAdmin || profile?.is_support) ? [{ href: '/dashboard/atendimento', icon: 'ti-brand-whatsapp', label: 'Atendimento WhatsApp', locked: false }] : []),
     ...(isAdmin ? [{ href: '/dashboard/admin', icon: 'ti-shield', label: 'Admin', locked: false }] : []),
     ...(isAdmin ? [{ href: '/dashboard/admin/conversas', icon: 'ti-message-2', label: 'Conversas (Junior)', locked: false }] : []),
     ...(isAdmin ? [{ href: '/dashboard/admin/notificacoes', icon: 'ti-bell-ringing', label: 'Notificacoes (envio)', locked: false }] : []),
