@@ -216,17 +216,18 @@ export default function AtendimentoPage() {
   useEffect(function() { setRespondendo(null) }, [sel])
   const resumo = function(m: Msg): string { return m.body ? m.body : m.type === 'image' ? '📷 Foto' : m.type === 'audio' ? '🎤 Áudio' : m.type === 'video' ? '🎬 Vídeo' : m.type === 'document' ? '📎 Arquivo' : '[' + m.type + ']' }
   const [info, setInfo] = useState<{ plano: string | null; cadastro_em: string | null; reembolso_em: string | null } | null>(null)
-  const [compra, setCompra] = useState<{ comprou_em: string | null; produto: string | null; fonte: string | null } | null>(null)
+  const [compra, setCompra] = useState<{ comprou_em: string | null; produto: string | null; cat: string | null; por: string | null } | null>(null)
   const perfilAtual = atual ? atual.profile_id || '' : ''
   const waAtual = atual ? atual.wa_id : ''
+  const nomeAtual = atual ? (atual.name || '') : ''
   useEffect(function() {
     setInfo(null); setCompra(null)
     if (!waAtual) return
     let vivo = true
     if (perfilAtual) supabase.rpc('wa_aluno_info', { p_id: perfilAtual }).then(function(r) { if (vivo && !r.error && r.data) setInfo(r.data as any) })
-    supabase.rpc('wa_compra', { p_wa: waAtual, p_profile: perfilAtual || null }).then(function(r) { if (vivo && !r.error && r.data) setCompra(r.data as any) })
+    supabase.rpc('wa_compra', { p_wa: waAtual, p_profile: perfilAtual || null, p_name: nomeAtual || null }).then(function(r) { if (vivo && !r.error && r.data) setCompra(r.data as any) })
     return function() { vivo = false }
-  }, [perfilAtual, waAtual])
+  }, [perfilAtual, waAtual, nomeAtual])
   const fmtDia = function(iso: string | null) { if (!iso) return ''; try { return new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) } catch (e) { return '' } }
   useEffect(function() {
     if (!atualConexao) return
@@ -547,7 +548,7 @@ export default function AtendimentoPage() {
                   <div style={{ fontWeight: 800, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomeDe(atual)}{atual.connection_id && <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 800, color: '#c2410c', border: '1px solid rgba(194,65,12,0.45)', borderRadius: 999, padding: '1px 8px' }}>🛒 Recuperação</span>}</div>
                   <div style={{ fontSize: 12, color: 'var(--muted2)' }}>{fmtPhone(atual.wa_id)}{atual.profile_label ? ' · 🎓 ' + (info ? atual.profile_label.split(' · ')[0] + ' · ' + (info.plano || 'Sem plano') : atual.profile_label) : ''}
                     {compra && (compra.comprou_em
-                      ? <span style={{ color: '#15803d', fontWeight: 700 }}> · 🛒 Comprou em {fmtDia(compra.comprou_em)}{compra.fonte === 'hubla' ? ' (Hubla)' : ''}</span>
+                      ? <span style={{ color: '#15803d', fontWeight: 700 }}> · 🛒 {compra.cat === 'm' || !compra.produto ? 'Comprou a Mentoria em ' : 'Comprou ' + compra.produto + ' em '}{fmtDia(compra.comprou_em)}{compra.por === 'nome' ? ' (pelo nome)' : ''}</span>
                       : info && info.plano
                         ? <span style={{ color: '#15803d', fontWeight: 700 }}> · 🛒 Conta criada em {fmtDia(info.cadastro_em)}</span>
                         : <span style={{ color: 'var(--muted2)' }}> · 🛒 Sem compra registrada</span>)}

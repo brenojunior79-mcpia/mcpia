@@ -109,7 +109,12 @@ export async function POST(req: NextRequest) {
       try {
         const info = lerEvento(eventType, payload)
         const chave = (eventType === 'invoice.payment_succeeded' ? 'inv:' : 'ev:') + (info.chave || (info.email + ':' + Date.now()))
-        await admin.from('hubla_compras').upsert({ email: info.email || null, wa: info.wa || null, produto: info.produto || null, chave, paid_at: new Date().toISOString() }, { onConflict: 'chave', ignoreDuplicates: true })
+        const u = payload.event?.user || {}
+        const nomeCompleto = String(u.fullName || u.name || ((u.firstName || '') + ' ' + (u.lastName || '')) || '').trim()
+        const nomeNorm = nomeCompleto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+        const prodTxt = String(info.produto || '').toLowerCase()
+        const cat = prodTxt.startsWith('mentoria') ? 'm' : prodTxt.includes('express') ? 'e' : 'p'
+        await admin.from('hubla_compras').upsert({ email: info.email || null, wa: info.wa || null, produto: info.produto || null, chave, paid_at: new Date().toISOString(), cat, nome_norm: nomeNorm || null, tokens: nomeNorm ? nomeNorm.split(' ') : null, origem: 'webhook' }, { onConflict: 'chave', ignoreDuplicates: true })
       } catch (e) { console.error('[hubla-webhook] compra:', e) }
     }
 
