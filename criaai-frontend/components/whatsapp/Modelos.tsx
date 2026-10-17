@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 export type Tpl = { name: string; language: string; status: string; category: string; rejected_reason?: string; header: string; body: string; footer: string; buttons: string[]; vars: number }
 
@@ -31,29 +31,79 @@ function limparNome(v: string): string {
 const btn: React.CSSProperties = { cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 11px', fontSize: 12.5, fontWeight: 700 }
 const lab: React.CSSProperties = { fontSize: 12.5, fontWeight: 700, color: 'var(--text)', marginBottom: 4, display: 'block' }
 
-export default function Modelos({ isAdmin, tpls, erro, carregando, onReload }: { isAdmin: boolean; tpls: Tpl[] | null; erro: string; carregando: boolean; onReload: () => void }) {
+type Pasta = { tpls: Tpl[] | null; erro: string; carregando: boolean }
+
+export default function Modelos({ isAdmin, tpls, erro, carregando, onReload, canais }: { isAdmin: boolean; tpls: Tpl[] | null; erro: string; carregando: boolean; onReload: () => void; canais?: { id: string; nome: string; numero: string | null }[] }) {
+  const lista = canais || []
   const [novo, setNovo] = useState(false)
   const [aviso, setAviso] = useState('')
   const [apagando, setApagando] = useState('')
+  // Pastas: 'suporte' ou o id de um numero (ex.: Recuperacao). null = tela das pastas.
+  const [pasta, setPasta] = useState<string | null>(null)
+  const [outras, setOutras] = useState<Record<string, Pasta>>({})
+
+  function carregarPasta(id: string) {
+    setOutras(function(o) { return { ...o, [id]: { tpls: (o[id] || {}).tpls || null, erro: '', carregando: true } } })
+    fetch('/api/whatsapp/templates?connection=' + id, { cache: 'no-store' })
+      .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, j: j } }) })
+      .then(function(x) { setOutras(function(o) { return { ...o, [id]: { tpls: x.ok ? (x.j.templates || []) : (o[id] || {}).tpls || null, erro: x.ok ? '' : (x.j.error || 'Não foi possível listar os modelos.'), carregando: false } } }) })
+      .catch(function() { setOutras(function(o) { return { ...o, [id]: { tpls: (o[id] || {}).tpls || null, erro: 'Sem conexão. Tente de novo.', carregando: false } } }) })
+  }
+  const chaveCanais = lista.map(function(c) { return c.id }).join(',')
+  useEffect(function() { lista.forEach(function(c) { carregarPasta(c.id) }) }, [chaveCanais])
+
+  const aberta = lista.length === 0 ? 'suporte' : pasta
+  const conexao = aberta && aberta !== 'suporte' ? aberta : ''
+  const dados: Pasta = conexao ? (outras[conexao] || { tpls: null, erro: '', carregando: true }) : { tpls, erro, carregando }
+  const recarregar = function() { if (conexao) carregarPasta(conexao); else onReload() }
+  const nomePasta = !aberta ? '' : conexao ? 'Modelos de ' + (lista.find(function(c) { return c.id === conexao })?.nome || 'recuperação').toLowerCase() : 'Modelos de suporte'
 
   async function apagar(t: Tpl) {
     if (!window.confirm('Apagar o modelo "' + t.name + '" (todos os idiomas)? Isso não pode ser desfeito.')) return
     setApagando(t.name); setAviso('')
     try {
-      const r = await fetch('/api/whatsapp/templates?name=' + encodeURIComponent(t.name), { method: 'DELETE' })
+      const r = await fetch('/api/whatsapp/templates?name=' + encodeURIComponent(t.name) + (conexao ? '&connection=' + conexao : ''), { method: 'DELETE' })
       const j = await r.json().catch(function() { return {} })
       if (!r.ok) setAviso(j.error || 'Não foi possível apagar.')
-      else onReload()
+      else recarregar()
     } catch (e) { setAviso('Sem conexão. Tente de novo.') }
     setApagando('')
+  }
+
+  // Tela das pastas
+  if (!aberta) {
+    const pastaCard = function(id: string, icone: string, titulo: string, sub: string, n: number | null) {
+      return (
+        <div key={id} onClick={function() { setPasta(id); setAviso('') }} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 14, marginBottom: 10 }}>
+          <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--accent-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, flexShrink: 0 }}>{icone}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 800, fontSize: 15.5, color: 'var(--text)' }}>{titulo}</div>
+            <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginTop: 2 }}>{sub}</div>
+          </div>
+          <span style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text)', background: 'var(--surface2)', borderRadius: 999, padding: '3px 10px' }}>{n === null ? '…' : n + ' modelo' + (n === 1 ? '' : 's')}</span>
+          <span style={{ color: 'var(--accent)', fontWeight: 800, fontSize: 13.5 }}>Abrir ›</span>
+        </div>
+      )
+    }
+    return (
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 16 }}>
+        <div style={{ maxWidth: 720, margin: '0 auto' }}>
+          <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--text)', marginBottom: 4 }}>📄 Modelos de mensagem</div>
+          <div style={{ fontSize: 13, color: 'var(--muted2)', lineHeight: 1.5, marginBottom: 14 }}>Cada número do WhatsApp tem os seus próprios modelos. Abra a pasta do número que você quer ver.</div>
+          {pastaCard('suporte', '📁', 'Modelos de suporte', 'Usados no Chat de suporte e nos disparos.', tpls ? tpls.length : null)}
+          {lista.map(function(c) { const o = outras[c.id]; return pastaCard(c.id, '📁', 'Modelos de ' + c.nome.toLowerCase(), 'Usados nos fluxos da Hubla e no Chat de recuperação' + (c.numero ? ' · ' + c.numero : '') + '.', o && o.tpls ? o.tpls.length : null) })}
+        </div>
+      </div>
+    )
   }
 
   return (
     <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 16 }}>
       <div style={{ maxWidth: 920, margin: '0 auto' }}>
+        {lista.length > 0 && <button onClick={function() { setPasta(null); setAviso('') }} style={{ cursor: 'pointer', border: 0, background: 'transparent', color: 'var(--accent)', fontWeight: 800, fontSize: 13.5, padding: 0, marginBottom: 8 }}>← Voltar para as pastas</button>}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
-          <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--text)', flex: 1 }}>📄 Modelos de mensagem</div>
-          <button style={btn} onClick={onReload} disabled={carregando}>{carregando ? 'Atualizando…' : '↻ Atualizar'}</button>
+          <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--text)', flex: 1 }}>{lista.length > 0 ? '📁 ' + nomePasta : '📄 Modelos de mensagem'}</div>
+          <button style={btn} onClick={recarregar} disabled={dados.carregando}>{dados.carregando ? 'Atualizando…' : '↻ Atualizar'}</button>
           {isAdmin && <button onClick={function() { setNovo(true); setAviso('') }} style={{ cursor: 'pointer', border: 0, background: '#16a34a', color: '#fff', borderRadius: 8, padding: '8px 13px', fontWeight: 800, fontSize: 13 }}>+ Novo modelo</button>}
         </div>
         <div style={{ fontSize: 13, color: 'var(--muted2)', lineHeight: 1.5, marginBottom: 14 }}>
@@ -61,12 +111,12 @@ export default function Modelos({ isAdmin, tpls, erro, carregando, onReload }: {
         </div>
 
         {aviso && <div style={{ marginBottom: 12, fontSize: 13, color: '#b91c1c', fontWeight: 700 }}>{aviso}</div>}
-        {erro && <div style={{ marginBottom: 12, padding: 12, borderRadius: 12, background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.25)', color: 'var(--text)', fontSize: 13.5, lineHeight: 1.5 }}>{erro}</div>}
-        {!erro && tpls && tpls.length === 0 && <div style={{ padding: 24, textAlign: 'center', color: 'var(--muted2)', fontSize: 14 }}>Nenhum modelo ainda.{isAdmin ? ' Clique em “+ Novo modelo” para criar o primeiro.' : ''}</div>}
-        {!tpls && !erro && <div style={{ padding: 24, textAlign: 'center', color: 'var(--muted2)' }}>Carregando…</div>}
+        {dados.erro && <div style={{ marginBottom: 12, padding: 12, borderRadius: 12, background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.25)', color: 'var(--text)', fontSize: 13.5, lineHeight: 1.5 }}>{dados.erro}</div>}
+        {!dados.erro && dados.tpls && dados.tpls.length === 0 && <div style={{ padding: 24, textAlign: 'center', color: 'var(--muted2)', fontSize: 14 }}>Nenhum modelo ainda.{isAdmin ? ' Clique em “+ Novo modelo” para criar o primeiro.' : ''}</div>}
+        {!dados.tpls && !dados.erro && <div style={{ padding: 24, textAlign: 'center', color: 'var(--muted2)' }}>Carregando…</div>}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 12 }}>
-          {(tpls || []).map(function(t) {
+          {(dados.tpls || []).map(function(t) {
             const s = ST[t.status] || { t: t.status, c: '#6b7280', bg: 'rgba(107,114,128,0.16)' }
             return (
               <div key={t.name + t.language} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -89,12 +139,12 @@ export default function Modelos({ isAdmin, tpls, erro, carregando, onReload }: {
         </div>
       </div>
 
-      {novo && <NovoModelo onClose={function() { setNovo(false) }} onCriado={function() { setNovo(false); setAviso(''); onReload() }} />}
+      {novo && <NovoModelo connection={conexao} onClose={function() { setNovo(false) }} onCriado={function() { setNovo(false); setAviso(''); recarregar() }} />}
     </div>
   )
 }
 
-function NovoModelo({ onClose, onCriado }: { onClose: () => void; onCriado: () => void }) {
+function NovoModelo({ connection, onClose, onCriado }: { connection: string; onClose: () => void; onCriado: () => void }) {
   const [nome, setNome] = useState('')
   const [cat, setCat] = useState('UTILITY')
   const [lang, setLang] = useState('pt_BR')
@@ -113,7 +163,7 @@ function NovoModelo({ onClose, onCriado }: { onClose: () => void; onCriado: () =
     setMsg('')
     setSalvando(true)
     try {
-      const r = await fetch('/api/whatsapp/templates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: nome, category: cat, language: lang, header: cab, body: corpo, footer: rod, examples: exemplos }) })
+      const r = await fetch('/api/whatsapp/templates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ connection, name: nome, category: cat, language: lang, header: cab, body: corpo, footer: rod, examples: exemplos }) })
       const j = await r.json().catch(function() { return {} })
       if (!r.ok) setMsg(j.error || 'Não foi possível criar o modelo.')
       else onCriado()

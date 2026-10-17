@@ -6,6 +6,13 @@ export const dynamic = 'force-dynamic'
 
 const SEM_WABA = 'Nao consegui achar a conta do WhatsApp (WABA). Adicione a chave WHATSAPP_WABA_ID na Vercel com o ID da conta de mensagens e faca Redeploy.'
 
+// Conta do WhatsApp (WABA) do modelo: a do suporte, ou a do numero escolhido (ex.: Recuperacao)
+async function wabaDaPasta(connId: string): Promise<string> {
+  if (!connId) return await wabaId()
+  const c = await adminClient().from('wa_connections').select('waba_id').eq('id', connId).maybeSingle()
+  return String(c.data?.waba_id || '')
+}
+
 function maxVar(text: string): number {
   let n = 0
   const re = /\{\{(\d+)\}\}/g
@@ -20,14 +27,7 @@ export async function GET(req: NextRequest) {
   const cfg = waConfig()
   if (!cfg.token) return NextResponse.json({ error: 'O WhatsApp ainda nao foi conectado.' }, { status: 400 })
   // Com ?connection=<id> lista os modelos da conta de OUTRO numero (ex.: Recuperacao)
-  const connId = req.nextUrl.searchParams.get('connection') || ''
-  let waba = ''
-  if (connId) {
-    const c = await adminClient().from('wa_connections').select('waba_id').eq('id', connId).maybeSingle()
-    waba = String(c.data?.waba_id || '')
-  } else {
-    waba = await wabaId()
-  }
+  const waba = await wabaDaPasta(req.nextUrl.searchParams.get('connection') || '')
   if (!waba) return NextResponse.json({ error: SEM_WABA }, { status: 400 })
 
   const out: any[] = []
@@ -60,11 +60,10 @@ export async function GET(req: NextRequest) {
 // Cria um modelo e manda para analise da Meta (so admin)
 export async function POST(req: NextRequest) {
   if (!(await requireAdmin())) return NextResponse.json({ error: 'So administradores podem criar modelos.' }, { status: 403 })
-  const waba = await wabaId()
-  if (!waba) return NextResponse.json({ error: SEM_WABA }, { status: 400 })
-
   let input: any
   try { input = await req.json() } catch (e) { return NextResponse.json({ error: 'Pedido invalido.' }, { status: 400 }) }
+  const waba = await wabaDaPasta(String(input?.connection || ''))
+  if (!waba) return NextResponse.json({ error: SEM_WABA }, { status: 400 })
   const name = String(input?.name || '').trim()
   const category = String(input?.category || '')
   const language = String(input?.language || 'pt_BR').trim()
@@ -107,7 +106,7 @@ export async function DELETE(req: NextRequest) {
   if (!(await requireAdmin())) return NextResponse.json({ error: 'So administradores podem apagar modelos.' }, { status: 403 })
   const name = new URL(req.url).searchParams.get('name') || ''
   if (!/^[a-z0-9_]{1,100}$/.test(name)) return NextResponse.json({ error: 'Nome invalido.' }, { status: 400 })
-  const waba = await wabaId()
+  const waba = await wabaDaPasta(new URL(req.url).searchParams.get('connection') || '')
   if (!waba) return NextResponse.json({ error: SEM_WABA }, { status: 400 })
   const r = await graphFetch(waba + '/message_templates?name=' + encodeURIComponent(name), { method: 'DELETE' })
   if (!r.ok) return NextResponse.json({ error: graphError(r.data) }, { status: 400 })
