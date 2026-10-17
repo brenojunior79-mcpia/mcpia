@@ -17,6 +17,14 @@ type Conv = { profile_id?: string | null; connection_id: string | null; id: stri
 type Msg = { wa_message_id?: string | null; reply_to_wa_id?: string | null; id: string; conversation_id: string; direction: 'in' | 'out'; sent_by?: string | null; type: string; body: string | null; media_path: string | null; mime: string | null; status: string; error: string | null; created_at: string }
 type Status = { connected: boolean; missing?: string[]; webhookUrl?: string; number?: string; name?: string; quality?: string; error?: string }
 
+// Mensagens prontas do chat de recuperacao: um clique e ja envia
+const RAPIDAS: { titulo: string; texto: string }[] = [
+  { titulo: 'Link da plataforma', texto: 'Só acessar!\n\nhttps://www.mcpia.site/login' },
+  { titulo: 'Acesso Hubla', texto: 'Agora você vai receber um e-mail da Hubla:\n\nAbre o e-mail e você vai conseguir acessar Área de membros pra começar.\n\nAssim que acessar me confirma aqui se deu certinho.\n\nAproveita e já entro no nosso grupo:' },
+  { titulo: 'Grupo de avisos e suporte', texto: 'Grupo de avisos\n\nhttps://chat.whatsapp.com/EQOJkJWilLjES81OIl6UWg\n\nSuporte\n\nhttps://wa.me/553791348869' },
+  { titulo: 'Pagamento', texto: 'Ele expira daqui a pouco\n\nAssim que você finalizar o pagamento me avisa aqui' },
+]
+
 const WIN = 24 * 60 * 60 * 1000
 
 function fmtPhone(wa: string): string {
@@ -238,12 +246,14 @@ export default function AtendimentoPage() {
   const janelaAberta = !!(atual && atual.last_inbound_at && Date.now() - new Date(atual.last_inbound_at).getTime() < WIN)
   const horasRestantes = atual && atual.last_inbound_at ? Math.max(0, Math.ceil((WIN - (Date.now() - new Date(atual.last_inbound_at).getTime())) / 3600000)) : 0
 
-  async function enviar(modelo?: TplSend) {
+  async function enviar(modelo?: TplSend, pronto?: string) {
     if (!atual || enviando) return
     setErro('')
     const body: any = { conversationId: atual.id }
     if (modelo) {
       body.template = { name: modelo.name, language: modelo.language, params: modelo.params, preview: modelo.preview }
+    } else if (pronto) {
+      body.text = pronto
     } else {
       if (!texto.trim()) return
       body.text = texto
@@ -254,7 +264,7 @@ export default function AtendimentoPage() {
       const r = await fetch('/api/whatsapp/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const j = await r.json().catch(function() { return {} })
       if (!r.ok) setErro(j.error || 'Nao foi possivel enviar.')
-      else { setTexto(''); setMostrarTpl(false); setRespondendo(null); fetch('/api/whatsapp/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId: atual.id }) }).catch(function() {}); await carregarMsgs(atual.id); carregarConvs() }
+      else { if (!pronto) { setTexto(''); setRespondendo(null) } setMostrarTpl(false); fetch('/api/whatsapp/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId: atual.id }) }).catch(function() {}); await carregarMsgs(atual.id); carregarConvs() }
     } catch (e) { setErro('Sem conexao. Tente de novo.') }
     setEnviando(false)
   }
@@ -607,6 +617,13 @@ export default function AtendimentoPage() {
                 {janelaAberta ? (
                   <>
                     <div style={{ fontSize: 11.5, color: 'var(--muted2)', marginBottom: 6 }}>Você pode responder por mais ~{horasRestantes}h.</div>
+                    {atual.connection_id && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                        {RAPIDAS.map(function(r) {
+                          return <button key={r.titulo} disabled={enviando} title={r.texto} onClick={function() { enviar(undefined, r.texto) }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 999, padding: '6px 12px', fontSize: 13, fontWeight: 700, opacity: enviando ? 0.55 : 1 }}>⚡ {r.titulo}</button>
+                        })}
+                      </div>
+                    )}
                     {mostrarTpl && <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: 10, marginBottom: 8 }}><TemplatePicker tpls={tplsDaConversa} enviando={enviando} onSend={function(t) { enviar(t) }} /></div>}
                     {gravando ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.3)', borderRadius: 12, padding: '10px 12px' }}>
