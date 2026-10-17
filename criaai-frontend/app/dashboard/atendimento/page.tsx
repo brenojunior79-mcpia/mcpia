@@ -204,6 +204,20 @@ export default function AtendimentoPage() {
         <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)' }}>💬 Atendimento WhatsApp</div>
         {totalNaoLidas > 0 && <span style={{ background: '#ef4444', color: '#fff', fontSize: 11, fontWeight: 800, borderRadius: 999, padding: '2px 8px' }}>{totalNaoLidas} não lida{totalNaoLidas > 1 ? 's' : ''}</span>}
         <div style={{ flex: 1 }} />
+        {isAdmin && <button title="Mostra as contas e os IDs dos números que o token enxerga" onClick={async function() {
+          try {
+            const r = await fetch('/api/whatsapp/numbers', { cache: 'no-store' })
+            const j = await r.json().catch(function() { return {} })
+            if (!r.ok) { window.alert(j.error || 'Não foi possível listar.'); return }
+            const linhas: string[] = ['Em uso agora: número ' + (j.atual.phoneId || '-') + ' · conta ' + (j.atual.waba || '(automática)'), '']
+            for (const c of (j.contas || [])) {
+              linhas.push('CONTA ' + c.waba + (c.nome ? ' (' + c.nome + ')' : '') + (c.erro ? ' — erro: ' + c.erro : ''))
+              for (const n of c.numeros) linhas.push('   número ' + n.numero + (n.nome ? ' · ' + n.nome : '') + '  → ID ' + n.id)
+            }
+            if (!(j.contas || []).length) linhas.push('O token não enxerga nenhuma conta. Gere um token novo.')
+            window.alert(linhas.join('\n'))
+          } catch (e) { window.alert('Sem conexão. Tente de novo.') }
+        }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '5px 9px', fontSize: 12, fontWeight: 700 }}>📋 Números</button>}
         {isAdmin && <button title="Liga o webhook à conta do WhatsApp (use depois de trocar o número)" onClick={async function() {
           if (!window.confirm('Ligar o webhook a esta conta do WhatsApp? Use isso depois de trocar o número.')) return
           try {
