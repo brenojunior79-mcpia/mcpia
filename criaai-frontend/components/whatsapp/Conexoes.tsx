@@ -29,6 +29,7 @@ export default function Conexoes() {
   const [achados, setAchados] = useState<Achado[] | null>(null)
   const [diag, setDiag] = useState<string[]>([])
   const [procurando, setProcurando] = useState(false)
+  const [wabaDigitado, setWabaDigitado] = useState('')
   const [atualPhone, setAtualPhone] = useState('')
   const [copiado, setCopiado] = useState('')
 
@@ -57,7 +58,7 @@ export default function Conexoes() {
   async function procurar() {
     setProcurando(true); setMsg('')
     try {
-      const r = await fetch('/api/whatsapp/numbers', { cache: 'no-store' })
+      const r = await fetch('/api/whatsapp/numbers' + (wabaDigitado.replace(/\D/g, '').length >= 8 ? '?waba=' + encodeURIComponent(wabaDigitado) : ''), { cache: 'no-store' })
       const j = await r.json().catch(function() { return {} })
       if (!r.ok) setMsg(j.error || 'Não foi possível procurar.')
       else { setAchados(j.contas || []); setDiag(j.diag || []); setAtualPhone(String(j.atual?.phoneId || '')) }
@@ -97,6 +98,9 @@ export default function Conexoes() {
             <div style={{ marginTop: 12 }}>
               <button onClick={procurar} disabled={procurando} style={{ cursor: 'pointer', border: 0, background: '#1f7a5a', color: '#fff', borderRadius: 10, padding: '9px 16px', fontWeight: 800, fontSize: 13.5, opacity: procurando ? 0.6 : 1 }}>{procurando ? 'Procurando…' : '🔎 Procurar números disponíveis'}</button>
               <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginTop: 6 }}>Mostra os números que a plataforma já consegue enxergar na Meta, com os IDs. É só leitura, não muda nada.</div>
+              <div style={{ marginTop: 10, fontSize: 13, color: 'var(--text)', fontWeight: 700 }}>Já tem o ID da conta (WABA) do número novo? Cole aqui:</div>
+              <input className="at-input" placeholder="Ex: 123456789012345" value={wabaDigitado} onChange={function(e) { setWabaDigitado(e.target.value) }} onKeyDown={function(e) { if (e.key === 'Enter') procurar() }} style={{ marginTop: 6 }} />
+              <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 4 }}>Depois clique em Procurar: a plataforma acha o Phone Number ID sozinha.</div>
             </div>
             {achados && (
               <div style={{ marginTop: 12 }}>
