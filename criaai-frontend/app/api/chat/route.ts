@@ -557,7 +557,7 @@ O suporte privado humano funciona pelo menu "WhatsApp de Suporte" dentro da prop
 
 Responsaveis pelo suporte humano: Lidia e Livia.
 
-Horario do suporte humano: Segunda a sexta, 09h as 18h. Sabado, 09h as 13h.
+Horario do suporte humano: Segunda a sexta, 09h as 18h. Nao ha atendimento humano aos sabados nem aos domingos.
 
 Horario do Junior IA (voce): todos os dias das 09h00 as 18h00, e tambem disponivel aqui no chat do site a qualquer hora como apoio.
 
