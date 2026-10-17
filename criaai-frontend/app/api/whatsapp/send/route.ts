@@ -43,7 +43,15 @@ export async function POST(req: NextRequest) {
     shown = text
   }
 
-  const r = await graphFetch(cfg.phoneId + '/messages', { method: 'POST', json: payload })
+  let r = await graphFetch(cfg.phoneId + '/messages', { method: 'POST', json: payload })
+  // Numeros do Brasil: a Meta entrega o numero sem o 9 (55 + DDD + 8 digitos), mas a lista de
+  // teste guarda com o 9. Se falhar por "numero nao liberado" (131030), tenta de novo com o 9.
+  const to = String(payload.to || '')
+  if (!r.ok && Number(r.data?.error?.code) === 131030 && /^55\d{2}[6-9]\d{7}$/.test(to)) {
+    const withNine = to.slice(0, 4) + '9' + to.slice(4)
+    const retry = await graphFetch(cfg.phoneId + '/messages', { method: 'POST', json: { ...payload, to: withNine } })
+    if (retry.ok) r = retry
+  }
   if (!r.ok) return NextResponse.json({ error: graphError(r.data) }, { status: 400 })
 
   const waId = r.data?.messages?.[0]?.id || null
