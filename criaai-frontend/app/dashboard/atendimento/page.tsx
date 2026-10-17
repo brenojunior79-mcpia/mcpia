@@ -89,6 +89,7 @@ export default function AtendimentoPage() {
   const [nomes, setNomes] = useState<Record<string, string>>({})
   const [meuId, setMeuId] = useState('')
   const [filtro, setFiltro] = useState<string>('todas')
+  const [menuAberto, setMenuAberto] = useState(false)
   const fim = useRef<HTMLDivElement>(null)
   const selRef = useRef<string | null>(null)
   selRef.current = sel
@@ -378,15 +379,38 @@ export default function AtendimentoPage() {
         <div className="at-list">
           <div style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <input className="at-input" placeholder="Buscar nome ou número" value={busca} onChange={function(e) { setBusca(e.target.value) }} />
-            {(
-              <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
-                {(isAdmin ? [{ k: 'todas', t: 'Todas' }, { k: 'sem', t: 'Em espera' }] : [{ k: 'sem', t: 'Em espera' }, { k: meuId, t: 'Minhas' }] as { k: string; t: string }[]).concat(isAdmin ? pessoas.map(function(p) { return { k: p.id, t: p.id === meuId ? 'Minhas' : (p.nome.split(' ')[0] || p.email) } }) : []).map(function(f) {
-                  const on = filtro === f.k
-                  const n = convs.filter(function(c) { return c.status !== 'resolvida' && (f.k === 'todas' ? true : f.k === 'sem' ? !c.assigned_to : c.assigned_to === f.k) }).length
-                  return <button key={f.k} onClick={function() { setFiltro(f.k) }} style={{ cursor: 'pointer', border: 0, borderRadius: 999, padding: '5px 10px', fontWeight: 700, fontSize: 12, whiteSpace: 'nowrap', background: on ? '#16a34a' : 'var(--surface2)', color: on ? '#fff' : 'var(--muted2)' }}>{f.t} ({n})</button>
-                })}
-              </div>
-            )}
+            {(function() {
+              // Estilo Unnichat: dois botoes fixos (Em espera / Minhas) + menu com as demais visoes (so admin)
+              const cont = function(k: string) { return convs.filter(function(c) { return c.status !== 'resolvida' && (k === 'todas' ? true : k === 'sem' ? !c.assigned_to : c.assigned_to === k) }).length }
+              const nomeFiltro = function(k: string) { return k === 'todas' ? 'Todas' : k === meuId ? 'Minhas' : primeiroNome(k) }
+              const emEspera = filtro === 'sem'
+              const botao = function(on: boolean): React.CSSProperties { return { cursor: 'pointer', border: 0, borderRadius: 10, padding: '10px 6px', fontWeight: 700, fontSize: 13.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', background: on ? '#1f7a5a' : 'var(--surface2)', color: on ? '#fff' : 'var(--muted2)' } }
+              const pessoasMenu = pessoas.slice().sort(function(x, y) { return (x.id === meuId ? -1 : 0) - (y.id === meuId ? -1 : 0) })
+              return (
+                <div style={{ position: 'relative', display: 'flex', gap: 6 }}>
+                  <button onClick={function() { setFiltro('sem'); setMenuAberto(false) }} style={{ ...botao(emEspera), flex: 1 }}>Em espera ({cont('sem')})</button>
+                  <button onClick={function() { if (emEspera) setFiltro(isAdmin ? 'todas' : meuId); setMenuAberto(false) }} style={{ ...botao(!emEspera), flex: 1 }}>{emEspera ? (isAdmin ? 'Todas' : 'Minhas') + ' (' + cont(isAdmin ? 'todas' : meuId) + ')' : nomeFiltro(filtro) + ' (' + cont(filtro) + ')'}</button>
+                  {isAdmin && <button onClick={function() { setMenuAberto(!menuAberto) }} title="Ver por atendente" style={{ ...botao(menuAberto), flex: '0 0 42px', fontSize: 18, padding: '6px 0' }}>☰</button>}
+                  {isAdmin && menuAberto && (
+                    <>
+                      <div onClick={function() { setMenuAberto(false) }} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
+                      <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 6, width: '100%', maxHeight: 320, overflowY: 'auto', zIndex: 41, background: 'var(--surface)', border: '1px solid var(--border2)', borderRadius: 12, boxShadow: '0 10px 30px rgba(0,0,0,0.18)' }}>
+                        {([{ k: 'todas', t: 'Todas as conversas', i: '👥' }] as { k: string; t: string; i: string }[]).concat(pessoasMenu.map(function(pp) { return { k: pp.id, t: pp.id === meuId ? 'Minhas' : (pp.nome || pp.email), i: '👤' } })).map(function(f) {
+                          const on = filtro === f.k
+                          return (
+                            <div key={f.k} onClick={function() { setFiltro(f.k); setMenuAberto(false) }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border)', background: on ? 'var(--accent-light)' : undefined, color: 'var(--text)', fontSize: 14, fontWeight: on ? 800 : 600 }}>
+                              <span style={{ width: 20, textAlign: 'center' }}>{f.i}</span>
+                              <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.t}</span>
+                              <span style={{ color: 'var(--muted2)', fontWeight: 700 }}>({cont(f.k)})</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )
+            })()}
             <div style={{ display: 'flex', gap: 6 }}>
               {(['abertas', 'resolvidas'] as const).map(function(a) {
                 const on = aba === a
