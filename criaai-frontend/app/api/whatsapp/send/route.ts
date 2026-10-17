@@ -38,6 +38,13 @@ export async function POST(req: NextRequest) {
     } else assumiu = true
   }
 
+  // Responder uma mensagem especifica (citacao): so vale para texto e arquivos, e so de mensagens desta conversa
+  let ctxId: string | null = null
+  const rt = typeof input?.replyTo === 'string' ? input.replyTo.slice(0, 200) : ''
+  if (rt && !tpl) {
+    const q = await admin.from('wa_messages').select('wa_message_id').eq('conversation_id', convId).eq('wa_message_id', rt).maybeSingle()
+    if (q.data) ctxId = rt
+  }
   let payload: any
   let shown: string
   let type = 'text'
@@ -74,6 +81,7 @@ export async function POST(req: NextRequest) {
     if (cl.kind !== 'audio' && caption) obj.caption = caption
     if (cl.kind === 'document') obj.filename = filename
     payload = { messaging_product: 'whatsapp', to: c.data.wa_id, type: cl.kind, [cl.kind]: obj }
+    if (ctxId) payload.context = { message_id: ctxId }
     type = cl.kind
     mediaPath = path
     mediaMime = cl.mime
@@ -93,10 +101,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Passaram 24 horas desde a ultima mensagem do aluno. Envie um modelo aprovado.', window: 'closed' }, { status: 409 })
     }
     payload = { messaging_product: 'whatsapp', to: c.data.wa_id, type: 'text', text: { body: text, preview_url: true } }
+    if (ctxId) payload.context = { message_id: ctxId }
     shown = text
   }
 
-  const r = await postMessage(payload, phoneId)
+  let r = await postMessage(payload, phoneId)
+  // Se a Meta nao aceitar a citacao (ex.: mensagem muito antiga), envia sem citar
+  if (!r.ok && ctxId) { ctxId = null; const sem = { ...payload }; delete sem.context; r = await postMessage(sem, phoneId) }
   if (!r.ok) {
     if (assumiu) await admin.from('wa_conversations').update({ assigned_to: null }).eq('id', convId).eq('assigned_to', staffId)
     return NextResponse.json({ error: graphError(r.data) }, { status: 400 })
@@ -104,7 +115,7 @@ export async function POST(req: NextRequest) {
 
   const waId = r.data?.messages?.[0]?.id || null
   const now = new Date().toISOString()
-  await admin.from('wa_messages').insert({ conversation_id: convId, wa_message_id: waId, direction: 'out', type, body: shown || null, media_path: mediaPath, mime: mediaMime, status: 'sent', sent_by: staffId, created_at: now })
+  await admin.from('wa_messages').insert({ conversation_id: convId, wa_message_id: waId, direction: 'out', type, body: shown || null, media_path: mediaPath, mime: mediaMime, status: 'sent', sent_by: staffId, reply_to_wa_id: ctxId, created_at: now })
   if (assumiu) {
     const pr = await admin.from('profiles').select('full_name, email').eq('id', staffId).maybeSingle()
     const nome = ((pr.data as any)?.full_name || String((pr.data as any)?.email || 'Atendente').split('@')[0]).trim().split(/\s+/).slice(0, 2).join(' ')

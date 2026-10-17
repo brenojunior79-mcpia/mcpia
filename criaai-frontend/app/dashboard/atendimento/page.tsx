@@ -14,7 +14,7 @@ type Pessoa = { id: string; nome: string; email: string; admin: boolean; escopo?
 // Quem atende aquele chat (admin e 'todos' atendem os dois)
 function atendeCanal(p: Pessoa, rec: boolean): boolean { return p.admin || p.escopo === 'todos' || (p.escopo === 'recuperacao') === rec }
 type Conv = { profile_id?: string | null; connection_id: string | null; id: string; assigned_to: string | null; wa_id: string; name: string | null; profile_label: string | null; status: string; unread: number; last_text: string | null; last_message_at: string; last_inbound_at: string | null }
-type Msg = { id: string; conversation_id: string; direction: 'in' | 'out'; sent_by?: string | null; type: string; body: string | null; media_path: string | null; mime: string | null; status: string; error: string | null; created_at: string }
+type Msg = { wa_message_id?: string | null; reply_to_wa_id?: string | null; id: string; conversation_id: string; direction: 'in' | 'out'; sent_by?: string | null; type: string; body: string | null; media_path: string | null; mime: string | null; status: string; error: string | null; created_at: string }
 type Status = { connected: boolean; missing?: string[]; webhookUrl?: string; number?: string; name?: string; quality?: string; error?: string }
 
 const WIN = 24 * 60 * 60 * 1000
@@ -52,10 +52,10 @@ function Tick({ s }: { s: string }) {
   return <span style={{ opacity: 0.6 }}>✓</span>
 }
 
-function Midia({ m }: { m: Msg }) {
+function Midia({ m, onFoto }: { m: Msg; onFoto: (src: string) => void }) {
   if (!m.media_path) return null
   const src = '/api/whatsapp/media?m=' + m.id
-  if (m.type === 'image' || m.type === 'sticker') return <a href={src} target="_blank" rel="noopener noreferrer"><img src={src} alt="Imagem" style={{ maxWidth: '100%', maxHeight: 280, borderRadius: 8, display: 'block', marginBottom: m.body ? 6 : 0 }} /></a>
+  if (m.type === 'image' || m.type === 'sticker') return <img src={src} alt="Imagem" onClick={function() { onFoto(src) }} style={{ maxWidth: '100%', maxHeight: 280, borderRadius: 8, display: 'block', marginBottom: m.body ? 6 : 0, cursor: 'zoom-in' }} />
   if (m.type === 'audio') return <audio controls src={src} style={{ maxWidth: '100%', height: 36 }} />
   if (m.type === 'video') return <video controls src={src} style={{ maxWidth: '100%', maxHeight: 280, borderRadius: 8 }} />
   return <a href={src} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', fontWeight: 700 }}>📎 Abrir arquivo</a>
@@ -111,7 +111,7 @@ export default function AtendimentoPage() {
   }, [])
 
   const carregarMsgs = useCallback(async function(id: string) {
-    const r = await supabase.from('wa_messages').select('id, conversation_id, direction, sent_by, type, body, media_path, mime, status, error, created_at').eq('conversation_id', id).order('created_at', { ascending: true }).limit(500)
+    const r = await supabase.from('wa_messages').select('id, conversation_id, direction, sent_by, type, body, media_path, mime, status, error, created_at, wa_message_id, reply_to_wa_id').eq('conversation_id', id).order('created_at', { ascending: true }).limit(500)
     if (!r.error && r.data && selRef.current === id) setMsgs(r.data as Msg[])
   }, [])
 
@@ -205,6 +205,16 @@ export default function AtendimentoPage() {
   const atual = convs.find(function(c) { return c.id === sel }) || null
   const atualConexao = atual ? atual.connection_id : null
   // Dados do aluno (plano e dia da compra), buscados na hora para sempre estarem atualizados
+  const [foto, setFoto] = useState<string | null>(null)
+  const [respondendo, setRespondendo] = useState<Msg | null>(null)
+  useEffect(function() {
+    if (!foto) return
+    const k = function(e: KeyboardEvent) { if (e.key === 'Escape') setFoto(null) }
+    window.addEventListener('keydown', k)
+    return function() { window.removeEventListener('keydown', k) }
+  }, [foto])
+  useEffect(function() { setRespondendo(null) }, [sel])
+  const resumo = function(m: Msg): string { return m.body ? m.body : m.type === 'image' ? '📷 Foto' : m.type === 'audio' ? '🎤 Áudio' : m.type === 'video' ? '🎬 Vídeo' : m.type === 'document' ? '📎 Arquivo' : '[' + m.type + ']' }
   const [info, setInfo] = useState<{ plano: string | null; comprou_em: string | null; cadastro_em: string | null; reembolso_em: string | null } | null>(null)
   const perfilAtual = atual ? atual.profile_id || '' : ''
   useEffect(function() {
@@ -233,13 +243,14 @@ export default function AtendimentoPage() {
     } else {
       if (!texto.trim()) return
       body.text = texto
+      if (respondendo && respondendo.wa_message_id) body.replyTo = respondendo.wa_message_id
     }
     setEnviando(true)
     try {
       const r = await fetch('/api/whatsapp/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const j = await r.json().catch(function() { return {} })
       if (!r.ok) setErro(j.error || 'Nao foi possivel enviar.')
-      else { setTexto(''); setMostrarTpl(false); fetch('/api/whatsapp/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId: atual.id }) }).catch(function() {}); await carregarMsgs(atual.id); carregarConvs() }
+      else { setTexto(''); setMostrarTpl(false); setRespondendo(null); fetch('/api/whatsapp/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId: atual.id }) }).catch(function() {}); await carregarMsgs(atual.id); carregarConvs() }
     } catch (e) { setErro('Sem conexao. Tente de novo.') }
     setEnviando(false)
   }
@@ -272,10 +283,10 @@ export default function AtendimentoPage() {
       if (!u.ok) { setErro(uj.error || 'Não foi possível preparar o envio.'); setEnviando(false); return }
       const up = await supabase.storage.from('wa-media').uploadToSignedUrl(uj.path, uj.token, file, { contentType: mime })
       if (up.error) { setErro('Não foi possível enviar o arquivo. Tente de novo.'); setEnviando(false); return }
-      const r = await fetch('/api/whatsapp/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId: atual.id, media: { path: uj.path, mime, filename: nome, caption: legenda } }) })
+      const r = await fetch('/api/whatsapp/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId: atual.id, replyTo: respondendo && respondendo.wa_message_id ? respondendo.wa_message_id : undefined, media: { path: uj.path, mime, filename: nome, caption: legenda } }) })
       const j = await r.json().catch(function() { return {} })
       if (!r.ok) setErro(j.error || 'Não foi possível enviar.')
-      else { setTexto(''); setAnexo(null); fetch('/api/whatsapp/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId: atual.id }) }).catch(function() {}); await carregarMsgs(atual.id); carregarConvs() }
+      else { setTexto(''); setAnexo(null); setRespondendo(null); fetch('/api/whatsapp/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId: atual.id }) }).catch(function() {}); await carregarMsgs(atual.id); carregarConvs() }
     } catch (e) { setErro('Sem conexão. Tente de novo.') }
     setEnviando(false)
   }
@@ -359,12 +370,21 @@ export default function AtendimentoPage() {
 
   return (
     <div style={{ height: 'calc(100vh - 56px)', minHeight: 480, display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
+      {foto && (
+        <div onClick={function() { setFoto(null) }} style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <button onClick={function() { setFoto(null) }} title="Fechar" style={{ position: 'absolute', top: 14, right: 14, width: 44, height: 44, borderRadius: '50%', border: 0, background: 'rgba(255,255,255,0.18)', color: '#fff', fontSize: 28, lineHeight: 1, cursor: 'pointer' }}>×</button>
+          <img src={foto} alt="Imagem" onClick={function(e) { e.stopPropagation() }} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 8 }} />
+        </div>
+      )}
       <style>{`
         .at-wrap { flex: 1; min-height: 0; display: flex; }
         .at-list { width: 340px; flex-shrink: 0; border-right: 1px solid var(--border); display: flex; flex-direction: column; background: var(--surface); }
         .at-chat { flex: 1; min-width: 0; display: flex; flex-direction: column; }
         .at-back { display: none; }
         .at-item:hover { background: var(--surface2); }
+        .at-resp { opacity: 0; transition: opacity .12s; }
+        .at-bolha:hover .at-resp, .at-resp:focus { opacity: 1; }
+        @media (hover: none) { .at-resp { opacity: 0.55; } }
         .at-input { width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border2); background: var(--surface2); color: var(--text); font-size: 14px; outline: none; font-family: inherit; }
         @media (max-width: 760px) {
           .at-list { width: 100%; border-right: 0; ${sel ? 'display: none;' : ''} }
@@ -546,14 +566,26 @@ export default function AtendimentoPage() {
                   return (
                     <div key={m.id} style={{ display: 'flex', flexDirection: 'column' }}>
                       {novoDia && <div style={{ alignSelf: 'center', fontSize: 11.5, color: 'var(--muted2)', background: 'var(--surface2)', borderRadius: 999, padding: '3px 10px', margin: '8px 0' }}>{diaMsg(m.created_at)}</div>}
-                      <div style={{ alignSelf: meu ? 'flex-end' : 'flex-start', maxWidth: 'min(78%, 520px)', background: meu ? '#d9fdd3' : 'var(--surface)', color: meu ? '#111b21' : 'var(--text)', border: meu ? 'none' : '1px solid var(--border)', borderRadius: 12, padding: '7px 10px 5px', fontSize: 14, lineHeight: 1.4, wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
+                      <div className="at-bolha" style={{ alignSelf: meu ? 'flex-end' : 'flex-start', display: 'flex', flexDirection: meu ? 'row-reverse' : 'row', alignItems: 'center', gap: 4, maxWidth: '100%' }}>
+                      <div id={m.wa_message_id ? 'msg-' + m.wa_message_id : undefined} style={{ maxWidth: 'min(78%, 520px)', background: meu ? '#d9fdd3' : 'var(--surface)', color: meu ? '#111b21' : 'var(--text)', border: meu ? 'none' : '1px solid var(--border)', borderRadius: 12, padding: '7px 10px 5px', fontSize: 14, lineHeight: 1.4, wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
                         {meu && !m.sent_by && m.type === 'text' && <div style={{ fontSize: 10.5, fontWeight: 800, opacity: 0.7, marginBottom: 2 }}>🤖 Resposta automática</div>}
                         {meu && m.sent_by && <div style={{ fontSize: 12, fontWeight: 800, opacity: 0.75, marginBottom: 3 }}>👤 {nomes[m.sent_by] || 'Atendente'}</div>}
-                        <Midia m={m} />
+                        {m.reply_to_wa_id && (function() {
+                          const q = msgs.find(function(x) { return x.wa_message_id === m.reply_to_wa_id })
+                          return (
+                            <div onClick={function() { const el = document.getElementById('msg-' + m.reply_to_wa_id); if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' }) }} style={{ cursor: q ? 'pointer' : 'default', borderLeft: '3px solid #16a34a', background: 'rgba(0,0,0,0.06)', borderRadius: 6, padding: '4px 8px', marginBottom: 5, fontSize: 12.5, lineHeight: 1.3 }}>
+                              <div style={{ fontWeight: 800, fontSize: 11.5, color: '#15803d' }}>{q ? (q.direction === 'out' ? (q.sent_by ? (nomes[q.sent_by] || 'Atendente') : 'Resposta automática') : nomeDe(atual)) : 'Mensagem'}</div>
+                              <div style={{ opacity: 0.8, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>{q ? resumo(q) : 'Mensagem anterior'}</div>
+                            </div>
+                          )
+                        })()}
+                        <Midia m={m} onFoto={setFoto} />
                         {m.type !== 'audio' && m.body && <div>{m.body}</div>}
                         {!m.media_path && m.type !== 'text' && m.type !== 'template' && !m.body && <div style={{ opacity: 0.7 }}>[{m.type}]</div>}
                         <div style={{ fontSize: 10.5, opacity: 0.65, textAlign: 'right', marginTop: 2 }}>{horaMsg(m.created_at)} {meu && <Tick s={m.status} />}</div>
                         {m.status === 'failed' && m.error && <div style={{ fontSize: 11.5, color: '#b91c1c' }}>{m.error}</div>}
+                      </div>
+                      {m.wa_message_id && janelaAberta && <button className="at-resp" title="Responder esta mensagem" onClick={function() { setRespondendo(m); const t = document.querySelector('textarea.at-input') as HTMLTextAreaElement | null; if (t) t.focus() }} style={{ cursor: 'pointer', border: 0, background: 'var(--surface2)', color: 'var(--muted2)', borderRadius: '50%', width: 28, height: 28, fontSize: 14, flexShrink: 0 }}>↩</button>}
                       </div>
                     </div>
                   )
@@ -577,6 +609,15 @@ export default function AtendimentoPage() {
                       </div>
                     ) : (
                       <>
+                        {respondendo && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--surface2)', borderLeft: '3px solid #16a34a', borderRadius: 8, padding: '6px 10px', marginBottom: 8, fontSize: 13, color: 'var(--text)' }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontWeight: 800, fontSize: 11.5, color: '#15803d' }}>Respondendo a {respondendo.direction === 'out' ? (respondendo.sent_by ? (nomes[respondendo.sent_by] || 'Atendente') : 'Resposta automática') : nomeDe(atual)}</div>
+                              <div style={{ opacity: 0.8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{resumo(respondendo)}</div>
+                            </div>
+                            <button title="Cancelar" onClick={function() { setRespondendo(null) }} style={{ border: 0, background: 'transparent', color: 'var(--muted2)', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
+                          </div>
+                        )}
                         {anexo && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--surface2)', borderRadius: 10, padding: '7px 10px', marginBottom: 8, fontSize: 13, color: 'var(--text)' }}>
                             <span>📎</span>
