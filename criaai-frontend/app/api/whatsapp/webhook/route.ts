@@ -65,8 +65,15 @@ async function respostaAutomatica(admin: any, convId: string, waId: string): Pro
     const since = new Date(Date.now() - h.cooldown_hours * 3600000).toISOString()
     const prev = await admin.from('wa_messages').select('id').eq('conversation_id', convId).eq('direction', 'out').eq('type', 'text').is('sent_by', null).is('flow_id', null).gte('created_at', since).limit(1)
     if (prev.data && prev.data.length > 0) return false
+    // Trava no banco: se duas mensagens chegam juntas (ex.: foto + texto), so a primeira envia o aviso
+    const claim = await admin.from('wa_conversations').update({ last_away_at: new Date().toISOString() }).eq('id', convId).or('last_away_at.is.null,last_away_at.lt.' + since).select('id')
+    if (claim.error || !claim.data || claim.data.length === 0) return false
     const r = await postMessage({ messaging_product: 'whatsapp', to: waId, type: 'text', text: { body: h.away_message } })
-    if (!r.ok) { console.error('[whatsapp] resposta automatica:', JSON.stringify(r.data?.error || r.data)); return false }
+    if (!r.ok) {
+      console.error('[whatsapp] resposta automatica:', JSON.stringify(r.data?.error || r.data))
+      await admin.from('wa_conversations').update({ last_away_at: null }).eq('id', convId)
+      return false
+    }
     const now = new Date().toISOString()
     await admin.from('wa_messages').insert({ conversation_id: convId, wa_message_id: r.data?.messages?.[0]?.id || null, direction: 'out', type: 'text', body: h.away_message, status: 'sent', sent_by: null, created_at: now })
     await admin.from('wa_conversations').update({ last_message_at: now, last_text: '🤖 ' + h.away_message.slice(0, 120) }).eq('id', convId)
