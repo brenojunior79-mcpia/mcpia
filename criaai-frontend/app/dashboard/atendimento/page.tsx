@@ -206,7 +206,8 @@ export default function AtendimentoPage() {
         <div style={{ flex: 1 }} />
         {isAdmin && <button title="Mostra as contas e os IDs dos números que o token enxerga" onClick={async function() {
           try {
-            const r = await fetch('/api/whatsapp/numbers', { cache: 'no-store' })
+            const ids = window.prompt('Cole o ID da conta do WhatsApp (pode colocar mais de um, separados por vírgula). Deixe vazio para tentar automático.', '') || ''
+            const r = await fetch('/api/whatsapp/numbers?waba=' + encodeURIComponent(ids), { cache: 'no-store' })
             const j = await r.json().catch(function() { return {} })
             if (!r.ok) { window.alert(j.error || 'Não foi possível listar.'); return }
             const linhas: string[] = ['Em uso agora: número ' + (j.atual.phoneId || '-') + ' · conta ' + (j.atual.waba || '(automática)'), '']
@@ -214,7 +215,7 @@ export default function AtendimentoPage() {
               linhas.push('CONTA ' + c.waba + (c.nome ? ' (' + c.nome + ')' : '') + (c.erro ? ' — erro: ' + c.erro : ''))
               for (const n of c.numeros) linhas.push('   número ' + n.numero + (n.nome ? ' · ' + n.nome : '') + '  → ID ' + n.id)
             }
-            if (!(j.contas || []).length) linhas.push('O token não enxerga nenhuma conta. Gere um token novo.')
+            if (!(j.contas || []).length) linhas.push('Nenhuma conta encontrada. Cole o ID da conta (WABA) quando a janela pedir.')
             window.alert(linhas.join('\n'))
           } catch (e) { window.alert('Sem conexão. Tente de novo.') }
         }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '5px 9px', fontSize: 12, fontWeight: 700 }}>📋 Números</button>}

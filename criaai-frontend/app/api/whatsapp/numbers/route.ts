@@ -1,11 +1,11 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { graphFetch, requireAdmin, waConfig } from '@/lib/whatsapp'
 
 export const maxDuration = 30
 export const dynamic = 'force-dynamic'
 
 // Lista as contas do WhatsApp e os numeros que o token enxerga (com os IDs) — so admin
-export async function GET() {
+export async function GET(req: NextRequest) {
   if (!(await requireAdmin())) return NextResponse.json({ error: 'So administradores.' }, { status: 403 })
   const cfg = waConfig()
   if (!cfg.token) return NextResponse.json({ error: 'Falta o WHATSAPP_TOKEN.' }, { status: 400 })
@@ -15,6 +15,10 @@ export async function GET() {
     if (g.scope !== 'whatsapp_business_management' && g.scope !== 'whatsapp_business_messaging') continue
     for (const t of (g.target_ids || [])) { if (ids.indexOf(String(t)) < 0) ids.push(String(t)) }
   }
+  // Tambem aceita IDs de conta informados na tela (?waba=ID1,ID2) e a conta configurada na Vercel
+  const extra = (req.nextUrl.searchParams.get('waba') || '').split(/[^0-9]+/).filter(function(x) { return x.length >= 8 })
+  const env = (process.env.WHATSAPP_WABA_ID || '').trim()
+  for (const x of extra.concat(env ? [env] : [])) { if (ids.indexOf(x) < 0) ids.push(x) }
   const contas: any[] = []
   for (const id of ids) {
     const w = await graphFetch(id + '?fields=name')
