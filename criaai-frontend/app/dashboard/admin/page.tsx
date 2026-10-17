@@ -197,7 +197,7 @@ export default function AdminPage() {
       '/dashboard': 'Painel', '/dashboard/chat': 'Assistente IA', '/dashboard/plataformas': 'Plataformas', '/dashboard/produtos': 'Produtos em Alta',
       '/dashboard/ebook': 'Gerador de Ebook', '/dashboard/paginas': 'Gerador de Site', '/dashboard/criativo': 'Gerador de Criativos',
       '/dashboard/criativos-manuais': 'Criativos Manuais', '/dashboard/vendas': 'Vendendo no Automático', '/dashboard/anuncios': 'Gerenciador de Anúncios',
-      '/dashboard/suporte': 'Suporte Humano', '/dashboard/aulas': 'Aulas ao Vivo', '/dashboard/planos': 'Planos', '/dashboard/creditos': 'Créditos',
+      '/dashboard/suporte': 'WhatsApp de Suporte', '/dashboard/aulas': 'Aulas ao Vivo', '/dashboard/planos': 'Planos', '/dashboard/creditos': 'Créditos',
     }
     return map[path] || path.replace('/dashboard/', '')
   }

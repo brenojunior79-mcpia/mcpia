@@ -296,7 +296,7 @@ export default function DashboardPage() {
             {[
               { href: 'https://chat.whatsapp.com/EQOJkJWilLjES81OIl6UWg', icon: 'ti-bell-ringing', label: 'Grupo de avisos', sub: 'Entre no grupo do WhatsApp', color: '#16a34a' },
               { href: 'https://chat.whatsapp.com/FMK11OpmjIPIO24ByPNME6', icon: 'ti-messages', label: 'Grupo de depoimentos', sub: 'Veja os resultados dos alunos', color: '#0ea5e9' },
-              { href: 'https://wa.me/553791348869', icon: 'ti-headset', label: 'Suporte', sub: 'Fale com a gente no WhatsApp', color: '#7c5cfc' },
+              { href: 'https://wa.me/553791348869', icon: 'ti-brand-whatsapp', label: 'Suporte', sub: 'Fale com a gente no WhatsApp', color: '#7c5cfc' },
             ].map(function(item) {
               return (
                 <a key={item.href} href={item.href} target="_blank" rel="noopener noreferrer" className="link-btn" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px', borderRadius: 16, background: 'var(--surface)', border: '1px solid ' + item.color + '55' }}>

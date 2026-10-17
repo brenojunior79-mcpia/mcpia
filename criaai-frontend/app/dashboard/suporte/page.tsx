@@ -29,9 +29,9 @@ export default function SuportePage() {
         {/* Header */}
         <div style={{ marginBottom: 28 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
-            <div style={{ width: 48, height: 48, background: 'linear-gradient(135deg, #16a34a, #4ade80)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>🎧</div>
+            <div style={{ width: 48, height: 48, background: 'linear-gradient(135deg, #16a34a, #4ade80)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, color: '#fff' }}><i className="ti ti-brand-whatsapp" /></div>
             <div>
-              <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: 22, fontWeight: 800, margin: 0 }}>Suporte Humano</h1>
+              <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: 22, fontWeight: 800, margin: 0 }}>WhatsApp de Suporte</h1>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
                 <div style={{ width: 8, height: 8, borderRadius: '50%', background: isOpen ? '#16a34a' : '#ef4444', animation: isOpen ? 'pulse 2s ease infinite' : 'none' }} />
                 <span style={{ fontSize: 12, fontWeight: 600, color: isOpen ? '#16a34a' : '#ef4444' }}>
