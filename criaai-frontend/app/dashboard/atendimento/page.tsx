@@ -81,6 +81,7 @@ export default function AtendimentoPage() {
   const recCancel = useRef(false)
   const recTimer = useRef<any>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const [ferramentas, setFerramentas] = useState(false)
   const [pessoas, setPessoas] = useState<Pessoa[]>([])
   const [nomes, setNomes] = useState<Record<string, string>>({})
   const [meuId, setMeuId] = useState('')
@@ -111,7 +112,9 @@ export default function AtendimentoPage() {
   }, [])
 
   useEffect(function() {
-    (async function() {
+    // Ferramentas de conexao ficam escondidas; abrir com ?ferramentas=1 quando precisar (ex.: trocar de numero)
+    try { setFerramentas(new URLSearchParams(window.location.search).get('ferramentas') === '1') } catch (e) {}
+    ;(async function() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setStaff(false); return }
       setMeuId(user.id)
@@ -308,7 +311,7 @@ export default function AtendimentoPage() {
         <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)' }}>💬 Atendimento WhatsApp</div>
         {totalNaoLidas > 0 && <span style={{ background: '#ef4444', color: '#fff', fontSize: 11, fontWeight: 800, borderRadius: 999, padding: '2px 8px' }}>{totalNaoLidas} não lida{totalNaoLidas > 1 ? 's' : ''}</span>}
         <div style={{ flex: 1 }} />
-        {isAdmin && <button title="Mostra as contas e os IDs dos números que o token enxerga" onClick={async function() {
+        {isAdmin && ferramentas && <button title="Mostra as contas e os IDs dos números que o token enxerga" onClick={async function() {
           try {
             const ids = window.prompt('Cole o ID da conta do WhatsApp (pode colocar mais de um, separados por vírgula). Deixe vazio para tentar automático.', '') || ''
             const r = await fetch('/api/whatsapp/numbers?waba=' + encodeURIComponent(ids), { cache: 'no-store' })
@@ -323,7 +326,7 @@ export default function AtendimentoPage() {
             window.alert(linhas.join('\n'))
           } catch (e) { window.alert('Sem conexão. Tente de novo.') }
         }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '5px 9px', fontSize: 12, fontWeight: 700 }}>📋 Números</button>}
-        {isAdmin && <button title="Liga o webhook à conta do WhatsApp (use depois de trocar o número)" onClick={async function() {
+        {isAdmin && ferramentas && <button title="Liga o webhook à conta do WhatsApp (use depois de trocar o número)" onClick={async function() {
           if (!window.confirm('Ligar o webhook a esta conta do WhatsApp? Use isso depois de trocar o número.')) return
           try {
             const r = await fetch('/api/whatsapp/subscribe', { method: 'POST' })
@@ -331,9 +334,8 @@ export default function AtendimentoPage() {
             window.alert(r.ok ? 'Webhook ligado à conta ' + j.waba + '.' + (j.apps && j.apps.length ? '\nApps ligados: ' + j.apps.join(', ') : '') : (j.error || 'Não foi possível ligar.'))
           } catch (e) { window.alert('Sem conexão. Tente de novo.') }
         }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '5px 9px', fontSize: 12, fontWeight: 700 }}>🔗 Ligar webhook</button>}
-        {status && (status.connected
-          ? <span style={{ fontSize: 12.5, color: '#15803d', fontWeight: 700 }}>🟢 Conectado · {status.number}{status.quality ? ' · qualidade ' + status.quality : ''}</span>
-          : <span style={{ fontSize: 12.5, color: '#b45309', fontWeight: 700 }}>🟠 Não conectado</span>)}
+        {status && !status.connected && <span style={{ fontSize: 12.5, color: '#b45309', fontWeight: 700 }}>🟠 Não conectado</span>}
+        {status && status.connected && ferramentas && <span style={{ fontSize: 12.5, color: '#15803d', fontWeight: 700 }}>🟢 Conectado · {status.number}{status.quality ? ' · qualidade ' + status.quality : ''}</span>}
       </div>
 
       {/* Abas */}
