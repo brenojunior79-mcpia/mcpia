@@ -8,7 +8,6 @@ import PushSetup from '@/components/layout/PushSetup'
 import PresenceTracker from '@/components/layout/PresenceTracker'
 import RefundBlocked from '@/components/layout/RefundBlocked'
 import ReferralClaim from '@/components/referral/ReferralClaim'
-import WhatsAppSupport from '@/components/layout/WhatsAppSupport'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
@@ -34,7 +33,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <InstallTracker />
       <PresenceTracker />
       <ReferralClaim />
-      <WhatsAppSupport />
       <PushSetup user={user} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <Topbar profile={profile} user={user} />
