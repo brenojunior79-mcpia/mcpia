@@ -13,7 +13,7 @@ import { classificar } from '@/lib/waMedia'
 type Pessoa = { id: string; nome: string; email: string; admin: boolean; escopo?: string }
 // Quem atende aquele chat (admin e 'todos' atendem os dois)
 function atendeCanal(p: Pessoa, rec: boolean): boolean { return p.admin || p.escopo === 'todos' || (p.escopo === 'recuperacao') === rec }
-type Conv = { connection_id: string | null; id: string; assigned_to: string | null; wa_id: string; name: string | null; profile_label: string | null; status: string; unread: number; last_text: string | null; last_message_at: string; last_inbound_at: string | null }
+type Conv = { profile_id?: string | null; connection_id: string | null; id: string; assigned_to: string | null; wa_id: string; name: string | null; profile_label: string | null; status: string; unread: number; last_text: string | null; last_message_at: string; last_inbound_at: string | null }
 type Msg = { id: string; conversation_id: string; direction: 'in' | 'out'; sent_by?: string | null; type: string; body: string | null; media_path: string | null; mime: string | null; status: string; error: string | null; created_at: string }
 type Status = { connected: boolean; missing?: string[]; webhookUrl?: string; number?: string; name?: string; quality?: string; error?: string }
 
@@ -204,6 +204,17 @@ export default function AtendimentoPage() {
 
   const atual = convs.find(function(c) { return c.id === sel }) || null
   const atualConexao = atual ? atual.connection_id : null
+  // Dados do aluno (plano e dia da compra), buscados na hora para sempre estarem atualizados
+  const [info, setInfo] = useState<{ plano: string | null; comprou_em: string | null; cadastro_em: string | null; reembolso_em: string | null } | null>(null)
+  const perfilAtual = atual ? atual.profile_id || '' : ''
+  useEffect(function() {
+    setInfo(null)
+    if (!perfilAtual) return
+    let vivo = true
+    supabase.rpc('wa_aluno_info', { p_id: perfilAtual }).then(function(r) { if (vivo && !r.error && r.data) setInfo(r.data as any) })
+    return function() { vivo = false }
+  }, [perfilAtual])
+  const fmtDia = function(iso: string | null) { if (!iso) return ''; try { return new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) } catch (e) { return '' } }
   useEffect(function() {
     if (!atualConexao) return
     setTplsRec(null)
@@ -511,7 +522,10 @@ export default function AtendimentoPage() {
                 <button className="at-back" onClick={function() { setSel(null) }} style={{ border: 0, background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>←</button>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 800, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomeDe(atual)}{atual.connection_id && <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 800, color: '#c2410c', border: '1px solid rgba(194,65,12,0.45)', borderRadius: 999, padding: '1px 8px' }}>🛒 Recuperação</span>}</div>
-                  <div style={{ fontSize: 12, color: 'var(--muted2)' }}>{fmtPhone(atual.wa_id)}{atual.profile_label ? ' · 🎓 ' + atual.profile_label : ''}</div>
+                  <div style={{ fontSize: 12, color: 'var(--muted2)' }}>{fmtPhone(atual.wa_id)}{atual.profile_label ? ' · 🎓 ' + (info ? atual.profile_label.split(' · ')[0] + ' · ' + (info.plano || 'Sem plano') : atual.profile_label) : ''}
+                    {info && info.plano && <span style={{ color: '#15803d', fontWeight: 700 }}> · 🛒 {info.comprou_em ? 'Comprou em ' + fmtDia(info.comprou_em) : 'Conta criada em ' + fmtDia(info.cadastro_em)}</span>}
+                    {info && info.reembolso_em && <span style={{ color: '#b91c1c', fontWeight: 700 }}> · Reembolsado em {fmtDia(info.reembolso_em)}</span>}
+                  </div>
                 </div>
                 {isAdmin && (
                   <select value={atual.assigned_to || ''} onChange={function(e) { atribuir(e.target.value) }} title="Atendente desta conversa" style={{ border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '6px 8px', fontSize: 12.5, fontWeight: 700, maxWidth: 150 }}>
