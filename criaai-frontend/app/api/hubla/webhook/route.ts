@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { recordPayment, clearBilling, firstFutureDate, toAmount } from '@/lib/billing'
 import { recordSale, markRefunded } from '@/lib/sales-ledger'
 import { trackReferralSale, trackReferralRefund } from '@/lib/referrals'
+import { tratarEventoHubla } from '@/lib/waAuto'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -102,6 +103,9 @@ export async function POST(req: NextRequest) {
     const email = payload.event?.user?.email || null
 
     await trackSale(admin, eventType, payload, email)
+
+    // Fluxos de WhatsApp por evento (recuperacao). Nunca pode atrapalhar o resto do aviso.
+    try { await tratarEventoHubla(admin, eventType, payload) } catch (e) { console.error('[hubla-webhook] fluxos whatsapp:', e) }
 
     if (!email) {
       console.error('[hubla-webhook] sem email no payload')

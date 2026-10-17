@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { graphError, graphFetch, requireAdmin, requireStaff, wabaId, waConfig } from '@/lib/whatsapp'
+import { adminClient, graphError, graphFetch, requireAdmin, requireStaff, wabaId, waConfig } from '@/lib/whatsapp'
 
 export const maxDuration = 30
 export const dynamic = 'force-dynamic'
@@ -15,11 +15,19 @@ function maxVar(text: string): number {
 }
 
 // Lista os modelos (templates) da conta
-export async function GET() {
+export async function GET(req: NextRequest) {
   if (!(await requireStaff())) return NextResponse.json({ error: 'Sem permissao.' }, { status: 403 })
   const cfg = waConfig()
   if (!cfg.token) return NextResponse.json({ error: 'O WhatsApp ainda nao foi conectado.' }, { status: 400 })
-  const waba = await wabaId()
+  // Com ?connection=<id> lista os modelos da conta de OUTRO numero (ex.: Recuperacao)
+  const connId = req.nextUrl.searchParams.get('connection') || ''
+  let waba = ''
+  if (connId) {
+    const c = await adminClient().from('wa_connections').select('waba_id').eq('id', connId).maybeSingle()
+    waba = String(c.data?.waba_id || '')
+  } else {
+    waba = await wabaId()
+  }
   if (!waba) return NextResponse.json({ error: SEM_WABA }, { status: 400 })
 
   const out: any[] = []

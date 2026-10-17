@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 
 type Achado = { waba: string; nome: string; erro: string; numeros: { id: string; numero: string; nome: string; qualidade: string }[] }
-type Conexao = { principal: boolean; phoneId: string; waba: string; nome: string; wabaNome: string; numero: string; limite: string; verificacao: string; status: 'ok' | 'analise' | 'atencao'; numStatus: string; qualidade: string; webhookLigado: boolean; apps: string[] }
+type Conexao = { id?: string; apelido?: string; ativo?: boolean; leituraOk?: boolean; principal: boolean; phoneId: string; waba: string; nome: string; wabaNome: string; numero: string; limite: string; verificacao: string; status: 'ok' | 'analise' | 'atencao'; numStatus: string; qualidade: string; webhookLigado: boolean; apps: string[] }
 
 const box: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 16, marginBottom: 14 }
 const linha: React.CSSProperties = { fontSize: 13.5, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 6 }
@@ -32,6 +32,10 @@ export default function Conexoes() {
   const [wabaDigitado, setWabaDigitado] = useState('')
   const [atualPhone, setAtualPhone] = useState('')
   const [copiado, setCopiado] = useState('')
+  const [fNome, setFNome] = useState('Recuperação')
+  const [fPhone, setFPhone] = useState('')
+  const [fWaba, setFWaba] = useState('')
+  const [salvando, setSalvando] = useState(false)
 
   async function carregar() {
     setCarregando(true); setErro('')
@@ -51,6 +55,27 @@ export default function Conexoes() {
       const r = await fetch('/api/whatsapp/subscribe', { method: 'POST' })
       const j = await r.json().catch(function() { return {} })
       setMsg(r.ok ? 'Webhook ligado. Apps ligados: ' + ((j.apps || []).join(', ') || '—') : (j.error || 'Não foi possível ligar.'))
+      carregar()
+    } catch (e) { setMsg('Sem conexão.') }
+  }
+
+  async function cadastrar() {
+    setSalvando(true); setMsg('')
+    try {
+      const r = await fetch('/api/whatsapp/connections', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'adicionar', nome: fNome, phoneId: fPhone, waba: fWaba }) })
+      const j = await r.json().catch(function() { return {} })
+      if (!r.ok) setMsg(j.error || 'Não foi possível cadastrar.')
+      else { setMsg('Conexão cadastrada. Agora clique em “Ligar webhook” nela.'); setNovo(false); setFPhone(''); setFWaba(''); carregar() }
+    } catch (e) { setMsg('Sem conexão.') }
+    setSalvando(false)
+  }
+  async function acao(c: Conexao, action: string) {
+    if (action === 'remover' && !window.confirm('Remover a conexão "' + (c.apelido || c.nome) + '" da plataforma? O número continua na Meta.')) return
+    setMsg('')
+    try {
+      const r = await fetch('/api/whatsapp/connections', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, id: c.id }) })
+      const j = await r.json().catch(function() { return {} })
+      setMsg(r.ok ? (action === 'webhook' ? 'Webhook ligado nesta conta.' : 'Pronto.') : (j.error || 'Não foi possível.'))
       carregar()
     } catch (e) { setMsg('Sem conexão.') }
   }
@@ -95,6 +120,17 @@ export default function Conexoes() {
               </ol>
               Se o número estiver em outro app da Meta, a chave de acesso dele é colocada direto na Vercel (nunca aqui no chat). Esses IDs não são secretos, pode mandar no chat.
             </div>
+            <div style={{ marginTop: 12, border: '1px solid var(--border)', borderRadius: 12, padding: 12, background: 'var(--surface2)' }}>
+              <div style={{ fontWeight: 800, fontSize: 13.5, color: 'var(--text)', marginBottom: 8 }}>Cadastrar o número</div>
+              <label style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text)' }}>Nome da conexão</label>
+              <input className="at-input" value={fNome} maxLength={60} onChange={function(e) { setFNome(e.target.value) }} style={{ marginTop: 4, marginBottom: 8 }} />
+              <label style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text)' }}>Phone Number ID</label>
+              <input className="at-input" placeholder="Ex: 1123306704209618" value={fPhone} onChange={function(e) { setFPhone(e.target.value) }} style={{ marginTop: 4, marginBottom: 8 }} />
+              <label style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text)' }}>ID da conta do WhatsApp (WABA)</label>
+              <input className="at-input" placeholder="Ex: 931704369886996" value={fWaba} onChange={function(e) { setFWaba(e.target.value) }} style={{ marginTop: 4 }} />
+              <button onClick={cadastrar} disabled={salvando || !fNome.trim() || !fPhone.trim() || !fWaba.trim()} style={{ cursor: 'pointer', border: 0, background: '#1f7a5a', color: '#fff', borderRadius: 10, padding: '9px 16px', fontWeight: 800, fontSize: 13.5, marginTop: 10, opacity: salvando || !fPhone.trim() || !fWaba.trim() ? 0.6 : 1 }}>{salvando ? 'Conferindo na Meta…' : 'Cadastrar conexão'}</button>
+              <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 6 }}>A plataforma confere na Meta se o número pertence mesmo a essa conta. Não muda nada no número de suporte.</div>
+            </div>
             <div style={{ marginTop: 12 }}>
               <button onClick={procurar} disabled={procurando} style={{ cursor: 'pointer', border: 0, background: '#1f7a5a', color: '#fff', borderRadius: 10, padding: '9px 16px', fontWeight: 800, fontSize: 13.5, opacity: procurando ? 0.6 : 1 }}>{procurando ? 'Procurando…' : '🔎 Procurar números disponíveis'}</button>
               <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginTop: 6 }}>Mostra os números que a plataforma já consegue enxergar na Meta, com os IDs. É só leitura, não muda nada.</div>
@@ -127,7 +163,7 @@ export default function Conexoes() {
                 {diag.length > 0 && <div style={{ fontSize: 11.5, color: 'var(--muted2)', marginTop: 4, lineHeight: 1.5 }}>Detalhes técnicos: {diag.join(' | ')}</div>}
               </div>
             )}
-            <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginTop: 8, lineHeight: 1.5 }}>Hoje a plataforma atende por um número só. Para receber e responder por dois números no mesmo Atendimento, eu preciso ajustar o sistema quando você trouxer o segundo. Esta lista já está pronta para mostrar todos eles.</div>
+            <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginTop: 8, lineHeight: 1.5 }}>O Atendimento (conversas) continua só com o número de suporte. Os outros números enviam os fluxos automáticos por evento da Hubla.</div>
           </div>
         )}
 
@@ -138,17 +174,17 @@ export default function Conexoes() {
         {(lista || []).map(function(c) {
           const q = c.qualidade === 'GREEN' ? ['ALTA', 'verde'] : c.qualidade === 'YELLOW' ? ['MÉDIA', 'amarelo'] : c.qualidade === 'RED' ? ['BAIXA', 'vermelho'] : ['—', 'cinza']
           return (
-            <div key={c.phoneId} style={box}>
+            <div key={c.id || c.phoneId} style={box}>
               <div style={{ display: 'flex', gap: 12, alignItems: 'center', background: 'rgba(31,122,90,0.08)', border: '1px solid rgba(31,122,90,0.45)', borderRadius: 12, padding: 12 }}>
                 <div style={{ position: 'relative', width: 46, height: 46, borderRadius: '50%', background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
                   📱<span style={{ position: 'absolute', right: -1, bottom: -1, width: 13, height: 13, borderRadius: '50%', border: '2px solid var(--surface)', background: c.numStatus === 'CONNECTED' || !c.numStatus ? '#22c55e' : '#f59e0b' }} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)' }}>{c.nome || 'WhatsApp'}</div>
+                  <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)' }}>{c.apelido || c.nome || 'WhatsApp'}</div>
                   <div style={{ fontSize: 12.5, color: 'var(--muted2)' }}>WABA: {c.wabaNome || c.waba || '—'}</div>
                   <div style={{ fontSize: 13.5, color: 'var(--text)', fontWeight: 600, marginTop: 2 }}>{fmtNumero(c.numero)}</div>
                 </div>
-                {c.principal && <Selo cor="verde">PRINCIPAL</Selo>}
+                {c.principal ? <Selo cor="verde">PRINCIPAL · SUPORTE</Selo> : <Selo cor="cinza">FLUXOS DA HUBLA</Selo>}
               </div>
 
               <div style={{ marginTop: 10 }}>
@@ -160,8 +196,10 @@ export default function Conexoes() {
               </div>
 
               <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
-                <button onClick={ligarWebhook} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface)', color: 'var(--text)', borderRadius: 10, padding: '9px 14px', fontWeight: 700, fontSize: 13 }}>🔗 Ligar webhook</button>
+                <button onClick={function() { if (c.principal) ligarWebhook(); else acao(c, 'webhook') }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface)', color: 'var(--text)', borderRadius: 10, padding: '9px 14px', fontWeight: 700, fontSize: 13 }}>🔗 Ligar webhook</button>
+                {!c.principal && <button onClick={function() { acao(c, 'remover') }} style={{ cursor: 'pointer', border: '1px solid rgba(220,38,38,0.4)', background: 'transparent', color: '#dc2626', borderRadius: 10, padding: '9px 14px', fontWeight: 700, fontSize: 13 }}>Remover</button>}
               </div>
+              {!c.principal && <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 8, lineHeight: 1.5 }}>Este número é usado só para enviar os fluxos por evento da Hubla. Respostas das pessoas nele ainda não aparecem no Atendimento.</div>}
               <div style={{ fontSize: 11.5, color: 'var(--muted2)', marginTop: 10, wordBreak: 'break-all' }}>Phone Number ID: {c.phoneId} · WABA ID: {c.waba || '—'}</div>
             </div>
           )

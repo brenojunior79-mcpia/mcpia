@@ -124,8 +124,24 @@ export async function POST(req: NextRequest) {
       for (const ch of entry.changes || []) {
         const v = ch.value
         if (!v) continue
-        // Ignora avisos de outros numeros da mesma conta
-        if (cfg.phoneId && v.metadata?.phone_number_id && String(v.metadata.phone_number_id) !== cfg.phoneId) continue
+        // Outro numero (ex.: Recuperacao): so acompanha entregue/lido/falha dos fluxos automaticos.
+        // As mensagens recebidas nele NAO entram no atendimento do suporte.
+        if (cfg.phoneId && v.metadata?.phone_number_id && String(v.metadata.phone_number_id) !== cfg.phoneId) {
+          for (const s of v.statuses || []) {
+            const id = String(s.id || '')
+            const st = String(s.status || '')
+            if (!id) continue
+            const agora = new Date().toISOString()
+            if (st === 'sent') await admin.from('wa_auto_sends').update({ status: 'sent', updated_at: agora }).eq('wa_message_id', id).in('status', ['sent'])
+            else if (st === 'delivered') await admin.from('wa_auto_sends').update({ status: 'delivered', updated_at: agora }).eq('wa_message_id', id).eq('status', 'sent')
+            else if (st === 'read') await admin.from('wa_auto_sends').update({ status: 'read', updated_at: agora }).eq('wa_message_id', id).in('status', ['sent', 'delivered'])
+            else if (st === 'failed') {
+              const e0 = s.errors?.[0]
+              await admin.from('wa_auto_sends').update({ status: 'failed', error: String(e0?.error_data?.details || e0?.message || e0?.title || 'Falha no envio').slice(0, 300), updated_at: agora }).eq('wa_message_id', id).in('status', ['sent', 'delivered'])
+            }
+          }
+          continue
+        }
 
         for (const m of v.messages || []) {
           const d = describe(m)

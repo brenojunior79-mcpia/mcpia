@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react'
 import { DIAS, normalizar, type Horario as H } from '@/lib/waHours'
 import { GATILHOS, VAZIO, aplicaNome, type Fluxo } from '@/lib/waFlows'
 import Horario from './Horario'
+import EditorEvento, { VAZIO_EVENTO, textoEspera, type ConexaoLeve } from './FluxoEvento'
+import { nomeEvento, type FluxoAuto } from '@/lib/waAutoTipos'
 
 const CURTO: Record<string, string> = { mon: 'Seg', tue: 'Ter', wed: 'Qua', thu: 'Qui', fri: 'Sex', sat: 'Sáb', sun: 'Dom' }
 
@@ -140,7 +142,11 @@ function Editor({ inicial, onVoltar }: { inicial: Fluxo; onVoltar: (recarregar: 
 
 // Lista de fluxos de automacao do WhatsApp. Cada fluxo abre a propria tela de configuracao.
 export default function Fluxos() {
-  const [tela, setTela] = useState<'lista' | 'horario' | 'editar'>('lista')
+  const [tela, setTela] = useState<'lista' | 'horario' | 'editar' | 'escolher' | 'evento'>('lista')
+  const [autos, setAutos] = useState<(FluxoAuto & { id: string })[]>([])
+  const [stats, setStats] = useState<Record<string, any>>({})
+  const [conexoes, setConexoes] = useState<ConexaoLeve[]>([])
+  const [editAuto, setEditAuto] = useState<FluxoAuto>(VAZIO_EVENTO)
   const [h, setH] = useState<H | null>(null)
   const [fluxos, setFluxos] = useState<(Fluxo & { id: string })[] | null>(null)
   const [edit, setEdit] = useState<Fluxo>(VAZIO)
@@ -151,12 +157,52 @@ export default function Fluxos() {
     fetch('/api/whatsapp/flows', { cache: 'no-store' }).then(function(r) { return r.json().then(function(j) { return { ok: r.ok, j: j } }) }).then(function(x) {
       if (x.ok) { setFluxos(x.j.fluxos || []); setErro('') } else setErro(x.j.error || 'Não foi possível carregar os fluxos.')
     }).catch(function() { setErro('Sem conexão.') })
+    fetch('/api/whatsapp/auto', { cache: 'no-store' }).then(function(r) { return r.json().then(function(j) { return { ok: r.ok, j: j } }) }).then(function(x) {
+      if (x.ok) { setAutos(x.j.fluxos || []); setStats(x.j.stats || {}); setConexoes(x.j.conexoes || []) }
+    }).catch(function() {})
   }
   useEffect(function() { if (tela === 'lista') carregar() }, [tela])
 
   async function ligar(f: Fluxo & { id: string }, on: boolean) {
     setFluxos(function(l) { return (l || []).map(function(x) { return x.id === f.id ? { ...x, enabled: on } : x }) })
     try { await fetch('/api/whatsapp/flows', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'ligar', id: f.id, enabled: on }) }) } catch (e) { carregar() }
+  }
+
+  async function ligarAuto(f: FluxoAuto & { id: string }, on: boolean) {
+    setErro('')
+    try {
+      const r = await fetch('/api/whatsapp/auto', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'ligar', id: f.id, enabled: on }) })
+      const j = await r.json().catch(function() { return {} })
+      if (!r.ok) setErro(j.error || 'Não foi possível salvar.')
+    } catch (e) {}
+    carregar()
+  }
+
+  if (tela === 'evento') return <EditorEvento inicial={editAuto} conexoes={conexoes} onVoltar={function() { setTela('lista') }} />
+
+  if (tela === 'escolher') {
+    const op = function(icone: string, titulo: string, desc: string, ir: () => void) {
+      return (
+        <div onClick={ir} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 14, marginBottom: 10 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--accent-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>{icone}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--text)' }}>{titulo}</div>
+            <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginTop: 2, lineHeight: 1.45 }}>{desc}</div>
+          </div>
+          <span style={{ color: 'var(--accent)', fontWeight: 800, fontSize: 13.5 }}>Criar ›</span>
+        </div>
+      )
+    }
+    return (
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 16 }}>
+        <div style={{ maxWidth: 680, margin: '0 auto' }}>
+          <button onClick={function() { setTela('lista') }} style={{ cursor: 'pointer', border: 0, background: 'transparent', color: 'var(--accent)', fontWeight: 800, fontSize: 13.5, padding: 0, marginBottom: 10 }}>← Voltar para fluxos</button>
+          <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--text)', marginBottom: 12 }}>Que tipo de fluxo você quer criar?</div>
+          {op('💬', 'Resposta automática', 'Responde sozinho quando alguém escreve para o suporte (palavra-chave, primeira mensagem…).', function() { setEdit(VAZIO); setTela('editar') })}
+          {op('🛒', 'Fluxo por evento da Hubla', 'Começa quando acontece algo na Hubla: carrinho abandonado, Pix gerado, cartão recusado, compra aprovada… Com esperas e modelos de mensagem.', function() { setEditAuto({ ...VAZIO_EVENTO, connection_id: conexoes.length === 1 ? conexoes[0].id : null }); setTela('evento') })}
+        </div>
+      </div>
+    )
   }
 
   if (tela === 'editar') return <Editor inicial={edit} onVoltar={function() { setTela('lista') }} />
@@ -179,7 +225,7 @@ export default function Fluxos() {
       <div style={{ maxWidth: 720, margin: '0 auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
           <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--text)', flex: 1 }}>⚡ Fluxos</div>
-          <button onClick={function() { setEdit(VAZIO); setTela('editar') }} style={{ cursor: 'pointer', border: 0, background: '#16a34a', color: '#fff', borderRadius: 10, padding: '9px 16px', fontWeight: 800, fontSize: 13.5 }}>+ Novo fluxo</button>
+          <button onClick={function() { setTela('escolher') }} style={{ cursor: 'pointer', border: 0, background: '#16a34a', color: '#fff', borderRadius: 10, padding: '9px 16px', fontWeight: 800, fontSize: 13.5 }}>+ Novo fluxo</button>
         </div>
         <div style={{ fontSize: 13, color: 'var(--muted2)', lineHeight: 1.5, marginBottom: 14 }}>
           Automações do WhatsApp: respostas que a plataforma envia sozinha. Clique em um fluxo para ver e editar.
@@ -209,6 +255,37 @@ export default function Fluxos() {
               </div>
               <button onClick={function(e) { e.stopPropagation(); ligar(f, !f.enabled) }} title={f.enabled ? 'Clique para desligar' : 'Clique para ligar'} style={{ cursor: 'pointer', border: 0, ...chip(f.enabled, true) }}>{f.enabled ? '● Ativo' : '○ Desligado'}</button>
               <span style={{ color: 'var(--accent)', fontWeight: 800, fontSize: 13.5 }}>Editar ›</span>
+            </div>
+          )
+        })}
+
+        {autos.length > 0 && <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', margin: '18px 0 8px' }}>🛒 Fluxos por evento da Hubla</div>}
+        {autos.map(function(f) {
+          const st = stats[f.id] || {}
+          const passos = f.steps.map(function(p) { return p.tipo === 'esperar' ? '⏱ ' + textoEspera(p.minutos) : '💬 ' + (p.template || '?') }).join(' → ')
+          const num = function(k: string) { return Number(st[k] || 0) }
+          const cn = conexoes.find(function(c) { return c.id === f.connection_id })
+          return (
+            <div key={f.id} onClick={function() { setEditAuto(f); setTela('evento') }} style={{ cursor: 'pointer', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 14, marginBottom: 10, opacity: f.enabled ? 1 : 0.75 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--accent-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>🛒</div>
+                <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+                  <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--text)' }}>{f.name}</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginTop: 2 }}>Evento: {nomeEvento(f.trigger_event)}{f.trigger_filter.metodo ? ' · ' + f.trigger_filter.metodo : ''}{cn ? ' · ' + cn.name : ''}</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text)', marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{passos || 'Sem passos ainda'}</div>
+                </div>
+                <button onClick={function(e) { e.stopPropagation(); ligarAuto(f, !f.enabled) }} title={f.enabled ? 'Clique para desligar' : 'Clique para ligar'} style={{ cursor: 'pointer', border: 0, ...chip(f.enabled, true) }}>{f.enabled ? '● Ligado' : '○ Desligado'}</button>
+                <span style={{ color: 'var(--accent)', fontWeight: 800, fontSize: 13.5 }}>Editar ›</span>
+              </div>
+              <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12, color: 'var(--muted2)', marginTop: 10 }}>
+                <span>Esperando: <b style={{ color: 'var(--text)' }}>{num('ativos')}</b></span>
+                <span>Concluídos: <b style={{ color: 'var(--text)' }}>{num('concluidos')}</b></span>
+                <span>Cancelados (compraram): <b style={{ color: 'var(--text)' }}>{num('cancelados')}</b></span>
+                <span>Enviadas: <b style={{ color: 'var(--text)' }}>{num('enviadas')}</b></span>
+                <span>Entregues: <b style={{ color: 'var(--text)' }}>{num('entregues')}</b></span>
+                <span>Lidas: <b style={{ color: 'var(--text)' }}>{num('lidas')}</b></span>
+                {(num('erros') + num('falharam')) > 0 && <span style={{ color: '#b91c1c' }}>Com erro: <b>{num('erros') + num('falharam')}</b></span>}
+              </div>
             </div>
           )
         })}
