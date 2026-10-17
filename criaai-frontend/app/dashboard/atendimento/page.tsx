@@ -5,6 +5,7 @@ import Modelos, { type Tpl } from '@/components/whatsapp/Modelos'
 import TemplatePicker, { type TplSend } from '@/components/whatsapp/TemplatePicker'
 import Atendentes from '@/components/whatsapp/Atendentes'
 import Fluxos from '@/components/whatsapp/Fluxos'
+import Conexoes from '@/components/whatsapp/Conexoes'
 import Disparo from '@/components/whatsapp/Disparo'
 import { paraMp3 } from '@/lib/audioMp3'
 import { classificar } from '@/lib/waMedia'
@@ -71,7 +72,7 @@ export default function AtendimentoPage() {
   const [status, setStatus] = useState<Status | null>(null)
   const [staff, setStaff] = useState<boolean | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
-  const [tab, setTab] = useState<'conversas' | 'atendentes' | 'modelos' | 'disparo' | 'fluxos'>('conversas')
+  const [tab, setTab] = useState<'conversas' | 'atendentes' | 'modelos' | 'disparo' | 'fluxos' | 'conexoes'>('conversas')
   const [tpls, setTpls] = useState<Tpl[] | null>(null)
   const [disparoAberto, setDisparoAberto] = useState(false)
   const [tplErro, setTplErro] = useState('')
@@ -354,7 +355,7 @@ export default function AtendimentoPage() {
 
       {/* Abas */}
       <div style={{ display: 'flex', gap: 6, padding: '8px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface)', overflowX: 'auto' }}>
-        {([['conversas', '💬 Conversas'], ['atendentes', '👥 Atendentes'], ['modelos', '📄 Modelos'], ['disparo', '📣 Disparo'], ['fluxos', '⚡ Fluxos']] as const).filter(function(t) { return (t[0] !== 'atendentes' && t[0] !== 'fluxos' && t[0] !== 'disparo') || isAdmin }).map(function(t) {
+        {([['conversas', '💬 Conversas'], ['atendentes', '👥 Atendentes'], ['modelos', '📄 Modelos'], ['disparo', '📣 Disparo'], ['fluxos', '⚡ Fluxos'], ['conexoes', '🔌 Conexões']] as const).filter(function(t) { return (t[0] !== 'atendentes' && t[0] !== 'fluxos' && t[0] !== 'disparo' && t[0] !== 'conexoes') || isAdmin }).map(function(t) {
           const on = tab === t[0]
           return <button key={t[0]} onClick={function() { setTab(t[0]); if (t[0] === 'modelos') carregarTpls(); if (t[0] === 'disparo') setDisparoAberto(true) }} style={{ cursor: 'pointer', border: 0, borderRadius: 8, padding: '7px 14px', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', background: on ? 'var(--accent-light)' : 'var(--surface2)', color: on ? 'var(--accent)' : 'var(--muted2)' }}>{t[1]}</button>
         })}
@@ -373,6 +374,7 @@ export default function AtendimentoPage() {
       {tab === 'atendentes' && isAdmin && <Atendentes />}
       {disparoAberto && isAdmin && <div style={tab === 'disparo' ? { display: 'contents' } : { display: 'none' }}><Disparo tpls={tpls} onLoadTpls={carregarTpls} /></div>}
       {tab === 'fluxos' && isAdmin && <Fluxos />}
+      {tab === 'conexoes' && isAdmin && <Conexoes />}
 
       <div className="at-wrap" style={tab === 'conversas' ? undefined : { display: 'none' }}>
         {/* Lista */}
