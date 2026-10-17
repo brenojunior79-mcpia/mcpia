@@ -108,6 +108,7 @@ export default function AtendimentoPage() {
       setMeuId(user.id)
       const p = await supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle()
       setIsAdmin(!!(p.data as any)?.is_admin)
+      if (!(p.data as any)?.is_admin) setFiltro('sem')
       if ((p.data as any)?.is_admin) {
         const pe = await supabase.rpc('wa_assignable')
         if (!pe.error && pe.data) setPessoas(pe.data as any)
@@ -144,7 +145,7 @@ export default function AtendimentoPage() {
     setSel(c.id); setMsgs([]); setErro(''); setTexto('')
     selRef.current = c.id
     await carregarMsgs(c.id)
-    if (c.unread > 0) {
+    if (c.unread > 0 && c.assigned_to) {
       setConvs(function(l) { return l.map(function(x) { return x.id === c.id ? { ...x, unread: 0 } : x }) })
       fetch('/api/whatsapp/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId: c.id }) }).catch(function() {})
     }
@@ -169,7 +170,7 @@ export default function AtendimentoPage() {
       const r = await fetch('/api/whatsapp/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const j = await r.json().catch(function() { return {} })
       if (!r.ok) setErro(j.error || 'Nao foi possivel enviar.')
-      else { setTexto(''); setMostrarTpl(false); await carregarMsgs(atual.id); carregarConvs() }
+      else { setTexto(''); setMostrarTpl(false); fetch('/api/whatsapp/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId: atual.id }) }).catch(function() {}); await carregarMsgs(atual.id); carregarConvs() }
     } catch (e) { setErro('Sem conexao. Tente de novo.') }
     setEnviando(false)
   }
@@ -189,17 +190,15 @@ export default function AtendimentoPage() {
     await carregarConvs()
   }
   function primeiroNome(id: string | null): string {
-    if (!id) return 'Sem atendente'
+    if (!id) return 'Em espera'
     const p = pessoas.find(function(x) { return x.id === id })
     return p ? (p.nome.split(' ')[0] || p.email) : 'Atendente'
   }
 
   const lista = convs.filter(function(c) {
     if ((aba === 'abertas') !== (c.status !== 'resolvida')) return false
-    if (isAdmin) {
-      if (filtro === 'sem' && c.assigned_to) return false
-      if (filtro !== 'todas' && filtro !== 'sem' && c.assigned_to !== filtro) return false
-    }
+    if (filtro === 'sem' && c.assigned_to) return false
+    if (filtro !== 'todas' && filtro !== 'sem' && c.assigned_to !== filtro) return false
     const q = busca.trim().toLowerCase()
     if (!q) return true
     return nomeDe(c).toLowerCase().indexOf(q) >= 0 || c.wa_id.indexOf(q.replace(/\D/g, '') || '§') >= 0 || (c.profile_label || '').toLowerCase().indexOf(q) >= 0
@@ -284,9 +283,9 @@ export default function AtendimentoPage() {
         <div className="at-list">
           <div style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <input className="at-input" placeholder="Buscar nome ou número" value={busca} onChange={function(e) { setBusca(e.target.value) }} />
-            {isAdmin && (
+            {(
               <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
-                {([{ k: 'todas', t: 'Todas' }, { k: 'sem', t: 'Sem atendente' }] as { k: string; t: string }[]).concat(pessoas.map(function(p) { return { k: p.id, t: p.id === meuId ? 'Minhas' : (p.nome.split(' ')[0] || p.email) } })).map(function(f) {
+                {(isAdmin ? [{ k: 'todas', t: 'Todas' }, { k: 'sem', t: 'Em espera' }] : [{ k: 'sem', t: 'Em espera' }, { k: meuId, t: 'Minhas' }] as { k: string; t: string }[]).concat(isAdmin ? pessoas.map(function(p) { return { k: p.id, t: p.id === meuId ? 'Minhas' : (p.nome.split(' ')[0] || p.email) } }) : []).map(function(f) {
                   const on = filtro === f.k
                   const n = convs.filter(function(c) { return c.status !== 'resolvida' && (f.k === 'todas' ? true : f.k === 'sem' ? !c.assigned_to : c.assigned_to === f.k) }).length
                   return <button key={f.k} onClick={function() { setFiltro(f.k) }} style={{ cursor: 'pointer', border: 0, borderRadius: 999, padding: '5px 10px', fontWeight: 700, fontSize: 12, whiteSpace: 'nowrap', background: on ? '#16a34a' : 'var(--surface2)', color: on ? '#fff' : 'var(--muted2)' }}>{f.t} ({n})</button>
@@ -316,7 +315,7 @@ export default function AtendimentoPage() {
                       <div style={{ fontSize: 12.5, color: 'var(--muted2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.last_text}</div>
                       {c.unread > 0 && <span style={{ background: '#16a34a', color: '#fff', borderRadius: 999, minWidth: 20, height: 20, padding: '0 6px', fontSize: 11.5, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' }}>{c.unread}</span>}
                     </div>
-                    {isAdmin && <div style={{ fontSize: 11, color: c.assigned_to ? 'var(--muted2)' : '#b45309', fontWeight: 700, marginTop: 2 }}>👤 {primeiroNome(c.assigned_to)}</div>}
+                    {(isAdmin || !c.assigned_to) && <div style={{ fontSize: 11, color: c.assigned_to ? 'var(--muted2)' : '#b45309', fontWeight: 700, marginTop: 2 }}>{c.assigned_to ? '👤 ' + primeiroNome(c.assigned_to) : '⏳ Em espera'}</div>}
                     {c.profile_label && <div style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 700, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>🎓 {c.profile_label}</div>}
                   </div>
                 </div>
@@ -339,7 +338,7 @@ export default function AtendimentoPage() {
                 </div>
                 {isAdmin && (
                   <select value={atual.assigned_to || ''} onChange={function(e) { atribuir(e.target.value) }} title="Atendente desta conversa" style={{ border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '6px 8px', fontSize: 12.5, fontWeight: 700, maxWidth: 150 }}>
-                    <option value="">Sem atendente</option>
+                    <option value="">Em espera</option>
                     {pessoas.map(function(p) { return <option key={p.id} value={p.id}>{p.id === meuId ? 'Eu (' + (p.nome.split(' ')[0] || 'admin') + ')' : (p.nome.split(' ')[0] || p.email)}</option> })}
                   </select>
                 )}
@@ -371,6 +370,7 @@ export default function AtendimentoPage() {
 
               <div style={{ padding: 10, background: 'var(--surface)', borderTop: '1px solid var(--border)' }}>
                 {erro && <div style={{ marginBottom: 8, fontSize: 13, color: '#b91c1c', fontWeight: 600 }}>{erro}</div>}
+                {!atual.assigned_to && <div style={{ marginBottom: 8, fontSize: 12.5, color: '#b45309', fontWeight: 700 }}>⏳ Esta conversa está em espera. Ao responder, ela fica com você.</div>}
                 {janelaAberta ? (
                   <>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>

@@ -24,6 +24,15 @@ export async function POST(req: NextRequest) {
   const c = await admin.from('wa_conversations').select('id, wa_id, last_inbound_at, assigned_to').eq('id', convId).maybeSingle()
   if (!c.data) return NextResponse.json({ error: 'Conversa nao encontrada.' }, { status: 404 })
 
+  // Conversa em espera: quem responde primeiro assume (so uma pessoa consegue)
+  let assumiu = false
+  if (!(c.data as any).assigned_to) {
+    const claim = await admin.from('wa_conversations').update({ assigned_to: staffId }).eq('id', convId).is('assigned_to', null).select('id')
+    if (!claim.data || claim.data.length === 0) {
+      if (!(await canAccessConv(staffId, convId))) return NextResponse.json({ error: 'Outra pessoa acabou de assumir esta conversa.' }, { status: 409 })
+    } else assumiu = true
+  }
+
   let payload: any
   let shown: string
   let type = 'text'
@@ -46,14 +55,15 @@ export async function POST(req: NextRequest) {
   }
 
   const r = await postMessage(payload)
-  if (!r.ok) return NextResponse.json({ error: graphError(r.data) }, { status: 400 })
+  if (!r.ok) {
+    if (assumiu) await admin.from('wa_conversations').update({ assigned_to: null }).eq('id', convId).eq('assigned_to', staffId)
+    return NextResponse.json({ error: graphError(r.data) }, { status: 400 })
+  }
 
   const waId = r.data?.messages?.[0]?.id || null
   const now = new Date().toISOString()
   await admin.from('wa_messages').insert({ conversation_id: convId, wa_message_id: waId, direction: 'out', type, body: shown, status: 'sent', sent_by: staffId, created_at: now })
-  // Quem responde uma conversa sem atendente fica com ela
-  const upd: any = { last_message_at: now, last_text: 'Você: ' + shown.slice(0, 120), status: 'aberta' }
-  if (!(c.data as any).assigned_to) upd.assigned_to = staffId
+  const upd: any = { last_message_at: now, last_text: 'Você: ' + shown.slice(0, 120), status: 'aberta', unread: 0 }
   await admin.from('wa_conversations').update(upd).eq('id', convId)
   return NextResponse.json({ ok: true })
 }

@@ -57,13 +57,15 @@ export async function graphFetch(path: string, init?: RequestInit & { json?: any
   return { ok: res.ok, status: res.status, data }
 }
 
-// Admin ve tudo; atendente so ve as conversas atribuidas a ele
+// Admin ve tudo; atendente ve as conversas dele e as que estao em espera (sem atendente)
 export async function canAccessConv(userId: string, convId: string): Promise<boolean> {
   const admin = adminClient()
   const p = await admin.from('profiles').select('is_admin').eq('id', userId).maybeSingle()
   if ((p.data as any)?.is_admin) return true
   const c = await admin.from('wa_conversations').select('assigned_to').eq('id', convId).maybeSingle()
-  return !!c.data && (c.data as any).assigned_to === userId
+  if (!c.data) return false
+  const a = (c.data as any).assigned_to
+  return !a || a === userId
 }
 
 // So admin (para criar/apagar modelos)
