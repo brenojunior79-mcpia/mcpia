@@ -106,12 +106,13 @@ export async function wabaId(): Promise<string> {
 
 // Envia uma mensagem. Numeros do Brasil: a Meta entrega o numero sem o 9 (55 + DDD + 8 digitos),
 // mas a lista do modo de teste guarda com o 9. Se recusar por "numero nao liberado" (131030), tenta com o 9.
-export async function postMessage(payload: any): Promise<{ ok: boolean; status: number; data: any }> {
+export async function postMessage(payload: any, phoneIdOverride?: string): Promise<{ ok: boolean; status: number; data: any }> {
   const cfg = waConfig()
-  let r = await graphFetch(cfg.phoneId + '/messages', { method: 'POST', json: payload })
+  const phoneId = phoneIdOverride || cfg.phoneId
+  let r = await graphFetch(phoneId + '/messages', { method: 'POST', json: payload })
   const to = String(payload?.to || '')
   if (!r.ok && Number(r.data?.error?.code) === 131030 && /^55\d{2}[6-9]\d{7}$/.test(to)) {
-    const retry = await graphFetch(cfg.phoneId + '/messages', { method: 'POST', json: { ...payload, to: to.slice(0, 4) + '9' + to.slice(4) } })
+    const retry = await graphFetch(phoneId + '/messages', { method: 'POST', json: { ...payload, to: to.slice(0, 4) + '9' + to.slice(4) } })
     if (retry.ok) r = retry
   }
   return r
@@ -126,4 +127,11 @@ export function graphError(data: any): string {
   if (code === 132001) return 'Esse modelo nao existe ou o idioma esta errado.'
   if (code === 131030) return 'Esse numero nao esta liberado para receber mensagens (modo de teste).'
   return (e.error_user_msg || e.message || 'Erro ao falar com o WhatsApp.') + (code ? ' (codigo ' + code + ')' : '')
+}
+
+// Qual numero (Phone Number ID) atende uma conversa: sem conexao = o numero de suporte (Vercel)
+export async function phoneIdDaConversa(admin: any, connectionId: string | null): Promise<string> {
+  if (!connectionId) return waConfig().phoneId
+  const c = await admin.from('wa_connections').select('phone_number_id').eq('id', connectionId).maybeSingle()
+  return String(c.data?.phone_number_id || '')
 }

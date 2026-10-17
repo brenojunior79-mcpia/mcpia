@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adminClient, canAccessConv, GRAPH, graphError, postMessage, requireStaff, waConfig } from '@/lib/whatsapp'
+import { adminClient, canAccessConv, GRAPH, graphError, phoneIdDaConversa, postMessage, requireStaff, waConfig } from '@/lib/whatsapp'
 import { classificar } from '@/lib/waMedia'
 
 export const maxDuration = 60
@@ -23,8 +23,11 @@ export async function POST(req: NextRequest) {
 
   if (!(await canAccessConv(staffId, convId))) return NextResponse.json({ error: 'Essa conversa nao esta com voce.' }, { status: 403 })
   const admin = adminClient()
-  const c = await admin.from('wa_conversations').select('id, wa_id, last_inbound_at, assigned_to').eq('id', convId).maybeSingle()
+  const c = await admin.from('wa_conversations').select('id, wa_id, last_inbound_at, assigned_to, connection_id').eq('id', convId).maybeSingle()
   if (!c.data) return NextResponse.json({ error: 'Conversa nao encontrada.' }, { status: 404 })
+  // Cada conversa responde pelo numero em que aconteceu (suporte ou recuperacao)
+  const phoneId = await phoneIdDaConversa(admin, (c.data as any).connection_id || null)
+  if (!phoneId) return NextResponse.json({ error: 'O numero desta conversa nao esta mais cadastrado em Conexoes.' }, { status: 400 })
 
   // Conversa em espera: quem responde primeiro assume (so uma pessoa consegue)
   let assumiu = false
@@ -60,7 +63,7 @@ export async function POST(req: NextRequest) {
     fd.append('file', new Blob([await dl.data.arrayBuffer()], { type: cl.mime }), filename)
     let up: any = null
     try {
-      const res = await fetch(GRAPH + '/' + cfg.phoneId + '/media', { method: 'POST', headers: { Authorization: 'Bearer ' + cfg.token }, body: fd })
+      const res = await fetch(GRAPH + '/' + phoneId + '/media', { method: 'POST', headers: { Authorization: 'Bearer ' + cfg.token }, body: fd })
       up = { ok: res.ok, data: await res.json().catch(function() { return null }) }
     } catch (e) { up = { ok: false, data: null } }
     if (!up.ok || !up.data?.id) {
@@ -93,7 +96,7 @@ export async function POST(req: NextRequest) {
     shown = text
   }
 
-  const r = await postMessage(payload)
+  const r = await postMessage(payload, phoneId)
   if (!r.ok) {
     if (assumiu) await admin.from('wa_conversations').update({ assigned_to: null }).eq('id', convId).eq('assigned_to', staffId)
     return NextResponse.json({ error: graphError(r.data) }, { status: 400 })

@@ -142,6 +142,24 @@ export async function criarTeste(admin: any, fluxo: any, numero: string, nome: s
   return { ok: true }
 }
 
+// Guarda a mensagem enviada pelo fluxo no "Chat de recuperacao" (para ver o que a pessoa recebeu e responder depois)
+async function registrarNaConversa(admin: any, connId: string, run: any, texto: string, waMsgId: string): Promise<void> {
+  try {
+    let cid: string | null = null
+    const ex = await admin.from('wa_conversations').select('id').eq('wa_id', run.wa_id).eq('connection_id', connId).maybeSingle()
+    cid = ex.data?.id || null
+    const agora = new Date().toISOString()
+    if (!cid) {
+      const m = await admin.rpc('wa_match_profile', { p_wa: run.wa_id })
+      const ins = await admin.from('wa_conversations').insert({ wa_id: run.wa_id, name: run.name || null, profile_id: m.data?.id || null, profile_label: m.data?.label || null, connection_id: connId, status: 'aberta', last_message_at: agora, last_text: texto.slice(0, 140), unread: 0 }).select('id').single()
+      cid = ins.data?.id || null
+    }
+    if (!cid) return
+    await admin.from('wa_messages').insert({ conversation_id: cid, wa_message_id: waMsgId || null, direction: 'out', type: 'template', body: texto, status: 'sent', created_at: agora })
+    await admin.from('wa_conversations').update({ last_message_at: agora, last_text: '🤖 ' + texto.slice(0, 120) }).eq('id', cid)
+  } catch (e) {}
+}
+
 const LIMITE = [130429, 131048, 80007, 4, 17, 32, 613]
 
 function montar(params: { mode: string; value: string }[], run: any): string[] {
@@ -216,6 +234,7 @@ export async function processarFluxos(admin: any, token: string): Promise<{ proc
       if (r.ok) {
         enviados++; out.enviados++; idx++
         await admin.from('wa_auto_sends').insert({ run_id: run.id, flow_id: run.flow_id, wa_message_id: r.msgId, to_wa: run.wa_id, template: s.template, status: 'sent', is_test: run.is_test === true })
+        await registrarNaConversa(admin, fx.connection_id, run, 'Fluxo “' + fx.name + '”: modelo ' + s.template + (s.params.length ? ' — ' + montar(s.params, run).join(' | ') : ''), r.msgId)
         continue
       }
       if (LIMITE.indexOf(r.code) >= 0 || r.code === -1) {

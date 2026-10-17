@@ -128,7 +128,8 @@ export async function POST(req: NextRequest) {
   if (action === 'remover') {
     const emUso = await admin.from('wa_auto_flows').select('id', { count: 'exact', head: true }).eq('connection_id', id).eq('enabled', true)
     if ((emUso.count || 0) > 0) return NextResponse.json({ error: 'Há fluxos ligados usando este número. Desligue-os antes de remover.' }, { status: 400 })
-    await admin.from('wa_connections').delete().eq('id', id)
+    const d = await admin.from('wa_connections').delete().eq('id', id)
+    if (d.error) return NextResponse.json({ error: 'Este número já tem conversas no Chat de recuperação, então não dá para remover. Use "Desativar".' }, { status: 400 })
     return NextResponse.json({ ok: true })
   }
   if (action === 'ativar') {

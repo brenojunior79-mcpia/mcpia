@@ -127,6 +127,24 @@ export async function POST(req: NextRequest) {
         // Outro numero (ex.: Recuperacao): so acompanha entregue/lido/falha dos fluxos automaticos.
         // As mensagens recebidas nele NAO entram no atendimento do suporte.
         if (cfg.phoneId && v.metadata?.phone_number_id && String(v.metadata.phone_number_id) !== cfg.phoneId) {
+          const cn = await admin.from('wa_connections').select('id, active').eq('phone_number_id', String(v.metadata.phone_number_id)).maybeSingle()
+          const connId: string | null = cn.data && (cn.data as any).active ? String((cn.data as any).id) : null
+          // Respostas das pessoas ao numero de Recuperacao entram no "Chat de recuperacao" (sem respostas automaticas)
+          if (connId) {
+            for (const m of v.messages || []) {
+              const d = describe(m)
+              if (!d) continue
+              const name = (v.contacts || []).find(function(c: any) { return c.wa_id === m.from })?.profile?.name || null
+              const ts = new Date(Number(m.timestamp) * 1000)
+              const r = await admin.rpc('wa_ingest_canal', {
+                p_wa_id: String(m.from), p_name: name, p_wa_msg_id: String(m.id), p_type: d.type, p_body: d.body, p_preview: d.preview,
+                p_media_id: d.mediaId, p_mime: d.mime, p_ts: isNaN(ts.getTime()) ? new Date().toISOString() : ts.toISOString(), p_connection: connId,
+              })
+              if (r.error) { console.error('[whatsapp] ingest recuperacao:', r.error.message); continue }
+              const out = r.data as any
+              if (d.mediaId && out?.message_id) await saveMedia(admin, out.conversation_id, out.message_id, d.mediaId, d.mime)
+            }
+          }
           for (const s of v.statuses || []) {
             const id = String(s.id || '')
             const st = String(s.status || '')
@@ -139,6 +157,10 @@ export async function POST(req: NextRequest) {
               const e0 = s.errors?.[0]
               await admin.from('wa_auto_sends').update({ status: 'failed', error: String(e0?.error_data?.details || e0?.message || e0?.title || 'Falha no envio').slice(0, 300), updated_at: agora }).eq('wa_message_id', id).in('status', ['sent', 'delivered'])
             }
+            // Mesmo status no historico da conversa (tracinhos do chat de recuperacao)
+            if (st === 'delivered') await admin.from('wa_messages').update({ status: 'delivered' }).eq('wa_message_id', id).in('status', ['sending', 'sent'])
+            else if (st === 'read') await admin.from('wa_messages').update({ status: 'read' }).eq('wa_message_id', id).in('status', ['sending', 'sent', 'delivered'])
+            else if (st === 'failed') { const e1 = s.errors?.[0]; await admin.from('wa_messages').update({ status: 'failed', error: String(e1?.error_data?.details || e1?.message || e1?.title || 'Falha no envio').slice(0, 300) }).eq('wa_message_id', id) }
           }
           continue
         }

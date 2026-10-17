@@ -11,7 +11,7 @@ import { paraMp3 } from '@/lib/audioMp3'
 import { classificar } from '@/lib/waMedia'
 
 type Pessoa = { id: string; nome: string; email: string; admin: boolean }
-type Conv = { id: string; assigned_to: string | null; wa_id: string; name: string | null; profile_label: string | null; status: string; unread: number; last_text: string | null; last_message_at: string; last_inbound_at: string | null }
+type Conv = { connection_id: string | null; id: string; assigned_to: string | null; wa_id: string; name: string | null; profile_label: string | null; status: string; unread: number; last_text: string | null; last_message_at: string; last_inbound_at: string | null }
 type Msg = { id: string; conversation_id: string; direction: 'in' | 'out'; sent_by?: string | null; type: string; body: string | null; media_path: string | null; mime: string | null; status: string; error: string | null; created_at: string }
 type Status = { connected: boolean; missing?: string[]; webhookUrl?: string; number?: string; name?: string; quality?: string; error?: string }
 
@@ -89,6 +89,9 @@ export default function AtendimentoPage() {
   const [pessoas, setPessoas] = useState<Pessoa[]>([])
   const [nomes, setNomes] = useState<Record<string, string>>({})
   const [meuId, setMeuId] = useState('')
+  const [canal, setCanal] = useState<'suporte' | 'recuperacao'>('suporte')
+  const [canais, setCanais] = useState<{ id: string; nome: string; numero: string | null }[]>([])
+  const [tplsRec, setTplsRec] = useState<Tpl[] | null>(null)
   const [filtro, setFiltro] = useState<string>('todas')
   const [menuAberto, setMenuAberto] = useState(false)
   const fim = useRef<HTMLDivElement>(null)
@@ -96,8 +99,12 @@ export default function AtendimentoPage() {
   selRef.current = sel
 
   const carregarConvs = useCallback(async function() {
-    const r = await supabase.from('wa_conversations').select('*').order('last_message_at', { ascending: false }).limit(300)
-    if (!r.error && r.data) setConvs(r.data as Conv[])
+    // Suporte e recuperacao buscados separados, para um nao empurrar o outro para fora do limite
+    const [a, b] = await Promise.all([
+      supabase.from('wa_conversations').select('*').is('connection_id', null).order('last_message_at', { ascending: false }).limit(300),
+      supabase.from('wa_conversations').select('*').not('connection_id', 'is', null).order('last_message_at', { ascending: false }).limit(300),
+    ])
+    if (!a.error && a.data) setConvs((a.data as Conv[]).concat(!b.error && b.data ? (b.data as Conv[]) : []))
   }, [])
 
   const carregarMsgs = useCallback(async function(id: string) {
@@ -138,6 +145,7 @@ export default function AtendimentoPage() {
         })
         carregarConvs()
         carregarTpls()
+        supabase.rpc('wa_canais').then(function(r) { if (!r.error && r.data) setCanais(r.data as any) })
         fetch('/api/whatsapp/status').then(function(r) { return r.json() }).then(setStatus).catch(function() {})
       }
     })()
@@ -172,6 +180,13 @@ export default function AtendimentoPage() {
   }
 
   const atual = convs.find(function(c) { return c.id === sel }) || null
+  const atualConexao = atual ? atual.connection_id : null
+  useEffect(function() {
+    if (!atualConexao) return
+    setTplsRec(null)
+    fetch('/api/whatsapp/templates?connection=' + atualConexao, { cache: 'no-store' }).then(function(r) { return r.json().then(function(j) { return { ok: r.ok, j: j } }) }).then(function(x) { setTplsRec(x.ok ? (x.j.templates || []) : []) }).catch(function() { setTplsRec([]) })
+  }, [atualConexao])
+  const tplsDaConversa = atualConexao ? tplsRec : tpls
   const janelaAberta = !!(atual && atual.last_inbound_at && Date.now() - new Date(atual.last_inbound_at).getTime() < WIN)
   const horasRestantes = atual && atual.last_inbound_at ? Math.max(0, Math.ceil((WIN - (Date.now() - new Date(atual.last_inbound_at).getTime())) / 3600000)) : 0
 
@@ -293,6 +308,7 @@ export default function AtendimentoPage() {
   }
 
   const lista = convs.filter(function(c) {
+    if ((canal === 'recuperacao') !== !!c.connection_id) return false
     if ((aba === 'abertas') !== (c.status !== 'resolvida')) return false
     if (filtro === 'sem' && c.assigned_to) return false
     if (filtro !== 'todas' && filtro !== 'sem' && c.assigned_to !== filtro) return false
@@ -300,6 +316,8 @@ export default function AtendimentoPage() {
     if (!q) return true
     return nomeDe(c).toLowerCase().indexOf(q) >= 0 || c.wa_id.indexOf(q.replace(/\D/g, '') || '§') >= 0 || (c.profile_label || '').toLowerCase().indexOf(q) >= 0
   })
+  const naoLidasCanal = function(rec: boolean) { return convs.reduce(function(n, c) { return n + ((!!c.connection_id) === rec && c.status !== 'resolvida' ? c.unread : 0) }, 0) }
+  const abertasCanal = function(rec: boolean) { return convs.filter(function(c) { return (!!c.connection_id) === rec && c.status !== 'resolvida' }).length }
   const totalNaoLidas = convs.reduce(function(n, c) { return n + (c.status !== 'resolvida' ? c.unread : 0) }, 0)
 
   if (staff === null) return <div style={{ padding: 24, color: 'var(--muted2)' }}>Carregando…</div>
@@ -380,10 +398,24 @@ export default function AtendimentoPage() {
         {/* Lista */}
         <div className="at-list">
           <div style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {canais.length > 0 && (
+              <div style={{ display: 'flex', gap: 6 }}>
+                {([['suporte', '🎧 Chat de suporte', false], ['recuperacao', '🛒 Chat de recuperação', true]] as const).map(function(t) {
+                  const on = canal === t[0]
+                  const nl = naoLidasCanal(t[2])
+                  return (
+                    <button key={t[0]} onClick={function() { if (canal !== t[0]) { setCanal(t[0]); setSel(null); setMsgs([]) } }} style={{ flex: 1, cursor: 'pointer', border: on ? '2px solid ' + (t[2] ? '#c2410c' : '#1f7a5a') : '2px solid transparent', borderRadius: 10, padding: '8px 6px', fontWeight: 800, fontSize: 12.5, lineHeight: 1.25, background: on ? (t[2] ? 'rgba(234,88,12,0.12)' : 'rgba(31,122,90,0.12)') : 'var(--surface2)', color: on ? 'var(--text)' : 'var(--muted2)' }}>
+                      {t[1]}
+                      <div style={{ fontSize: 11.5, fontWeight: 700, opacity: 0.8, marginTop: 2 }}>{abertasCanal(t[2])} abertas{nl > 0 ? ' · ' : ''}{nl > 0 && <span style={{ background: '#ef4444', color: '#fff', borderRadius: 999, padding: '0 6px', fontSize: 11 }}>{nl}</span>}</div>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
             <input className="at-input" placeholder="Buscar nome ou número" value={busca} onChange={function(e) { setBusca(e.target.value) }} />
             {(function() {
               // Estilo Unnichat: dois botoes fixos (Em espera / Minhas) + menu com as demais visoes (so admin)
-              const cont = function(k: string) { return convs.filter(function(c) { return c.status !== 'resolvida' && (k === 'todas' ? true : k === 'sem' ? !c.assigned_to : c.assigned_to === k) }).length }
+              const cont = function(k: string) { return convs.filter(function(c) { return (!!c.connection_id) === (canal === 'recuperacao') && c.status !== 'resolvida' && (k === 'todas' ? true : k === 'sem' ? !c.assigned_to : c.assigned_to === k) }).length }
               const nomeFiltro = function(k: string) { return k === 'todas' ? 'Todas' : k === meuId ? 'Minhas' : primeiroNome(k) }
               const emEspera = filtro === 'sem'
               const botao = function(on: boolean): React.CSSProperties { return { cursor: 'pointer', border: 0, borderRadius: 10, padding: '10px 6px', fontWeight: 700, fontSize: 13.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', background: on ? '#1f7a5a' : 'var(--surface2)', color: on ? '#fff' : 'var(--muted2)' } }
@@ -448,13 +480,13 @@ export default function AtendimentoPage() {
         {/* Conversa */}
         <div className="at-chat">
           {!atual ? (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted2)', fontSize: 14, textAlign: 'center', padding: 20 }}>Escolha uma conversa à esquerda para responder.</div>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted2)', fontSize: 14, textAlign: 'center', padding: 20 }}>{canal === 'recuperacao' ? 'Aqui ficam as mensagens enviadas pelos fluxos da Hubla e as respostas das pessoas.' : 'Escolha uma conversa à esquerda para responder.'}</div>
           ) : (
             <>
               <div style={{ padding: '10px 14px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
                 <button className="at-back" onClick={function() { setSel(null) }} style={{ border: 0, background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>←</button>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 800, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomeDe(atual)}</div>
+                  <div style={{ fontWeight: 800, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomeDe(atual)}{atual.connection_id && <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 800, color: '#c2410c', border: '1px solid rgba(194,65,12,0.45)', borderRadius: 999, padding: '1px 8px' }}>🛒 Recuperação</span>}</div>
                   <div style={{ fontSize: 12, color: 'var(--muted2)' }}>{fmtPhone(atual.wa_id)}{atual.profile_label ? ' · 🎓 ' + atual.profile_label : ''}</div>
                 </div>
                 {isAdmin && (
@@ -497,7 +529,7 @@ export default function AtendimentoPage() {
                 {janelaAberta ? (
                   <>
                     <div style={{ fontSize: 11.5, color: 'var(--muted2)', marginBottom: 6 }}>Você pode responder por mais ~{horasRestantes}h.</div>
-                    {mostrarTpl && <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: 10, marginBottom: 8 }}><TemplatePicker tpls={tpls} enviando={enviando} onSend={function(t) { enviar(t) }} /></div>}
+                    {mostrarTpl && <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: 10, marginBottom: 8 }}><TemplatePicker tpls={tplsDaConversa} enviando={enviando} onSend={function(t) { enviar(t) }} /></div>}
                     {gravando ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.3)', borderRadius: 12, padding: '10px 12px' }}>
                         <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#dc2626', display: 'inline-block' }} />
@@ -532,7 +564,7 @@ export default function AtendimentoPage() {
                   <div style={{ background: 'rgba(217,119,6,0.1)', borderRadius: 12, padding: 12 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>⏳ Passaram 24 horas desde a última mensagem do aluno.</div>
                     <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginBottom: 8 }}>Para voltar a falar, escolha um <b>modelo aprovado</b>. Quando o aluno responder, a conversa volta a ficar livre.</div>
-                    <TemplatePicker tpls={tpls} enviando={enviando} onSend={function(t) { enviar(t) }} />
+                    <TemplatePicker tpls={tplsDaConversa} enviando={enviando} onSend={function(t) { enviar(t) }} />
                   </div>
                 )}
               </div>

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adminClient, canAccessConv, graphFetch, requireStaff, waConfig } from '@/lib/whatsapp'
+import { adminClient, canAccessConv, graphFetch, phoneIdDaConversa, requireStaff, waConfig } from '@/lib/whatsapp'
 import { createClient } from '@/lib/supabase-server'
 
 export const dynamic = 'force-dynamic'
@@ -17,9 +17,11 @@ export async function POST(req: NextRequest) {
 
   try {
     const cfg = waConfig()
-    if (cfg.token && cfg.phoneId) {
+    const cv = await adminClient().from('wa_conversations').select('connection_id').eq('id', convId).maybeSingle()
+    const phoneId = await phoneIdDaConversa(adminClient(), (cv.data as any)?.connection_id || null)
+    if (cfg.token && phoneId) {
       const last = await adminClient().from('wa_messages').select('wa_message_id').eq('conversation_id', convId).eq('direction', 'in').order('created_at', { ascending: false }).limit(1).maybeSingle()
-      if (last.data?.wa_message_id) await graphFetch(cfg.phoneId + '/messages', { method: 'POST', json: { messaging_product: 'whatsapp', status: 'read', message_id: last.data.wa_message_id } })
+      if (last.data?.wa_message_id) await graphFetch(phoneId + '/messages', { method: 'POST', json: { messaging_product: 'whatsapp', status: 'read', message_id: last.data.wa_message_id } })
     }
   } catch (e) {}
   return NextResponse.json({ ok: true })
