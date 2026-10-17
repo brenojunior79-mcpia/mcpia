@@ -204,6 +204,14 @@ export default function AtendimentoPage() {
         <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)' }}>💬 Atendimento WhatsApp</div>
         {totalNaoLidas > 0 && <span style={{ background: '#ef4444', color: '#fff', fontSize: 11, fontWeight: 800, borderRadius: 999, padding: '2px 8px' }}>{totalNaoLidas} não lida{totalNaoLidas > 1 ? 's' : ''}</span>}
         <div style={{ flex: 1 }} />
+        {isAdmin && <button title="Liga o webhook à conta do WhatsApp (use depois de trocar o número)" onClick={async function() {
+          if (!window.confirm('Ligar o webhook a esta conta do WhatsApp? Use isso depois de trocar o número.')) return
+          try {
+            const r = await fetch('/api/whatsapp/subscribe', { method: 'POST' })
+            const j = await r.json().catch(function() { return {} })
+            window.alert(r.ok ? 'Webhook ligado à conta ' + j.waba + '.' + (j.apps && j.apps.length ? '\nApps ligados: ' + j.apps.join(', ') : '') : (j.error || 'Não foi possível ligar.'))
+          } catch (e) { window.alert('Sem conexão. Tente de novo.') }
+        }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '5px 9px', fontSize: 12, fontWeight: 700 }}>🔗 Ligar webhook</button>}
         {status && (status.connected
           ? <span style={{ fontSize: 12.5, color: '#15803d', fontWeight: 700 }}>🟢 Conectado · {status.number}{status.quality ? ' · qualidade ' + status.quality : ''}</span>
           : <span style={{ fontSize: 12.5, color: '#b45309', fontWeight: 700 }}>🟠 Não conectado</span>)}
