@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { recordPayment, clearBilling, firstFutureDate, toAmount } from '@/lib/billing'
 import { recordSale, markRefunded } from '@/lib/sales-ledger'
 import { trackReferralSale, trackReferralRefund } from '@/lib/referrals'
-import { tratarEventoHubla } from '@/lib/waAuto'
+import { tratarEventoHubla, lerEvento } from '@/lib/waAuto'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -103,6 +103,15 @@ export async function POST(req: NextRequest) {
     const email = payload.event?.user?.email || null
 
     await trackSale(admin, eventType, payload, email)
+
+    // Guarda o dia da compra (com e-mail e telefone) para aparecer no cabecalho do chat de atendimento
+    if (eventType === 'invoice.payment_succeeded' || eventType === 'customer.member_added' || eventType === 'subscription.activated') {
+      try {
+        const info = lerEvento(eventType, payload)
+        const chave = (eventType === 'invoice.payment_succeeded' ? 'inv:' : 'ev:') + (info.chave || (info.email + ':' + Date.now()))
+        await admin.from('hubla_compras').upsert({ email: info.email || null, wa: info.wa || null, produto: info.produto || null, chave, paid_at: new Date().toISOString() }, { onConflict: 'chave', ignoreDuplicates: true })
+      } catch (e) { console.error('[hubla-webhook] compra:', e) }
+    }
 
     // Fluxos de WhatsApp por evento (recuperacao). Nunca pode atrapalhar o resto do aviso.
     try { await tratarEventoHubla(admin, eventType, payload) } catch (e) { console.error('[hubla-webhook] fluxos whatsapp:', e) }
