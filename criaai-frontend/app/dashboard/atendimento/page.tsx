@@ -6,6 +6,7 @@ import TemplatePicker, { type TplSend } from '@/components/whatsapp/TemplatePick
 import Atendentes from '@/components/whatsapp/Atendentes'
 import Horario from '@/components/whatsapp/Horario'
 import Disparo from '@/components/whatsapp/Disparo'
+import { paraMp3 } from '@/lib/audioMp3'
 import { classificar } from '@/lib/waMedia'
 
 type Pessoa = { id: string; nome: string; email: string; admin: boolean }
@@ -230,23 +231,33 @@ export default function AtendimentoPage() {
 
   async function iniciarGravacao() {
     setErro('')
-    const tipos = ['audio/ogg;codecs=opus', 'audio/mp4;codecs=mp4a.40.2', 'audio/mp4', 'audio/mpeg']
+    // ogg/opus (Firefox) o WhatsApp aceita direto; nos outros navegadores grava e converte para MP3 depois
+    const tipos = ['audio/ogg;codecs=opus', 'audio/webm;codecs=opus', 'audio/webm', 'audio/mp4']
     const tipo = typeof MediaRecorder !== 'undefined' ? tipos.find(function(t) { return MediaRecorder.isTypeSupported(t) }) : undefined
-    if (!tipo) { setErro('Este navegador não grava áudio num formato que o WhatsApp aceita. Use o clipe 📎 para enviar um arquivo de áudio.'); return }
+    if (!tipo) { setErro('Este navegador não consegue gravar áudio. Use o clipe 📎 para enviar um arquivo de áudio.'); return }
     let stream: MediaStream
     try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }) } catch (e) { setErro('Permita o uso do microfone no navegador para gravar.'); return }
     const chunks: Blob[] = []
     const rec = new MediaRecorder(stream, { mimeType: tipo })
     recCancel.current = false
     rec.ondataavailable = function(e) { if (e.data && e.data.size > 0) chunks.push(e.data) }
-    rec.onstop = function() {
+    rec.onstop = async function() {
       stream.getTracks().forEach(function(t) { t.stop() })
       if (recTimer.current) { clearInterval(recTimer.current); recTimer.current = null }
       setGravando(false)
       if (recCancel.current || chunks.length === 0) return
       const mime = tipo.split(';')[0]
-      const ext = mime === 'audio/ogg' ? 'ogg' : mime === 'audio/mpeg' ? 'mp3' : 'm4a'
-      enviarArquivo(new Blob(chunks, { type: mime }), 'audio.' + ext, mime, '')
+      const bruto = new Blob(chunks, { type: mime })
+      if (mime === 'audio/ogg') { enviarArquivo(bruto, 'audio.ogg', 'audio/ogg', ''); return }
+      setEnviando(true)
+      try {
+        const mp3 = await paraMp3(bruto)
+        setEnviando(false)
+        enviarArquivo(mp3, 'audio.mp3', 'audio/mpeg', '')
+      } catch (e) {
+        setEnviando(false)
+        setErro('Não consegui preparar o áudio gravado. Tente de novo ou envie um arquivo de áudio pelo clipe 📎.')
+      }
     }
     recRef.current = rec
     rec.start()

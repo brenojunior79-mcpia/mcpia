@@ -9,23 +9,24 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "html2canvas": "^1.4.1",
+    "@breezystack/lamejs": "^1.2.7",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/ssr": "^0.4.0",
     "@supabase/supabase-js": "^2.43.0",
+    "html2canvas": "^1.4.1",
     "lucide-react": "^0.383.0",
     "next": "14.2.3",
+    "openai": "^4.47.0",
     "react": "^18",
     "react-dom": "^18",
     "stripe": "^15.7.0",
-    "openai": "^4.47.0",
     "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "typescript": "^5",
-    "@types/web-push": "^3.6.4"
+    "@types/web-push": "^3.6.4",
+    "typescript": "^5"
   }
 }
