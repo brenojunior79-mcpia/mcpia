@@ -2,7 +2,8 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 
-type Pessoa = { id: string; nome: string; email: string }
+type Pessoa = { id: string; nome: string; email: string; escopo?: string }
+const ESCOPOS: { k: string; t: string }[] = [{ k: 'suporte', t: '🎧 Só chat de suporte' }, { k: 'recuperacao', t: '🛒 Só chat de recuperação' }, { k: 'todos', t: '🎧🛒 Suporte e recuperação' }]
 
 // Admin escolhe quem da equipe pode atender (essas pessoas so veem o menu de atendimento)
 export default function Atendentes() {
@@ -11,6 +12,7 @@ export default function Atendentes() {
   const [carregou, setCarregou] = useState(false)
   const [resp, setResp] = useState<Record<string, number>>({})
   const [email, setEmail] = useState('')
+  const [escopoNovo, setEscopoNovo] = useState('suporte')
   const [msg, setMsg] = useState('')
   const [ok, setOk] = useState('')
 
@@ -29,9 +31,15 @@ export default function Atendentes() {
   }
   useEffect(function() { carregar() }, [])
 
+  async function escopo(em: string, esc: string) {
+    setMsg(''); setOk('')
+    const r = await supabase.rpc('wa_set_support_escopo', { p_email: em.trim(), p_escopo: esc })
+    if (r.error) setMsg(r.error.message)
+    else { setOk('Acesso atualizado.'); carregar() }
+  }
   async function mudar(em: string, on: boolean) {
     setMsg(''); setOk('')
-    const r = await supabase.rpc('wa_set_support', { p_email: em.trim(), p_on: on })
+    const r = on ? await supabase.rpc('wa_set_support_escopo', { p_email: em.trim(), p_escopo: escopoNovo }) : await supabase.rpc('wa_set_support', { p_email: em.trim(), p_on: false })
     if (r.error) setMsg(r.error.message)
     else { if (on) { setEmail(''); setOk('Atendente adicionado.') } else setOk('Atendente removido.'); carregar() }
   }
@@ -48,6 +56,9 @@ export default function Atendentes() {
           <div style={{ fontWeight: 700, fontSize: 13.5, color: 'var(--text)', marginBottom: 8 }}>Adicionar atendente</div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <input className="at-input" type="email" placeholder="E-mail da conta do atendente" value={email} onChange={function(e) { setEmail(e.target.value) }} onKeyDown={function(e) { if (e.key === 'Enter' && email.trim()) mudar(email, true) }} style={{ flex: '1 1 240px', width: 'auto' }} />
+            <select className="at-input" value={escopoNovo} onChange={function(e) { setEscopoNovo(e.target.value) }} style={{ flex: '0 1 220px', width: 'auto' }}>
+              {ESCOPOS.map(function(x) { return <option key={x.k} value={x.k}>{x.t}</option> })}
+            </select>
             <button onClick={function() { if (email.trim()) mudar(email, true) }} style={{ cursor: 'pointer', border: 0, background: '#16a34a', color: '#fff', borderRadius: 10, padding: '10px 16px', fontWeight: 800 }}>Adicionar</button>
           </div>
           {msg && <div style={{ fontSize: 13, color: '#b91c1c', fontWeight: 700, marginTop: 8 }}>{msg}</div>}
@@ -66,6 +77,9 @@ export default function Atendentes() {
                 <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>{p.nome || 'Sem nome'}</div>
                 <div style={{ fontSize: 12, color: 'var(--muted2)', wordBreak: 'break-all' }}>{p.email}</div>
               </div>
+              <select value={p.escopo || 'suporte'} onChange={function(e) { escopo(p.email, e.target.value) }} title="Quais chats esta pessoa enxerga" style={{ border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '6px 8px', fontSize: 12.5, fontWeight: 700 }}>
+                {ESCOPOS.map(function(x) { return <option key={x.k} value={x.k}>{x.t}</option> })}
+              </select>
               <div style={{ fontSize: 12, color: 'var(--muted2)', textAlign: 'center' }}><b style={{ fontSize: 16, color: 'var(--text)' }}>{n}</b><br />resposta{n === 1 ? '' : 's'} em 30 dias</div>
               <button onClick={function() { if (window.confirm('Remover ' + (p.nome || p.email) + ' do atendimento?')) mudar(p.email, false) }} style={{ cursor: 'pointer', border: '1px solid rgba(220,38,38,0.4)', background: 'transparent', color: '#dc2626', borderRadius: 8, padding: '6px 10px', fontWeight: 700, fontSize: 12 }}>Remover</button>
             </div>

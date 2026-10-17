@@ -33,7 +33,7 @@ const lab: React.CSSProperties = { fontSize: 12.5, fontWeight: 700, color: 'var(
 
 type Pasta = { tpls: Tpl[] | null; erro: string; carregando: boolean }
 
-export default function Modelos({ isAdmin, tpls, erro, carregando, onReload, canais }: { isAdmin: boolean; tpls: Tpl[] | null; erro: string; carregando: boolean; onReload: () => void; canais?: { id: string; nome: string; numero: string | null }[] }) {
+export default function Modelos({ isAdmin, tpls, erro, carregando, onReload, canais, escopo }: { isAdmin: boolean; tpls: Tpl[] | null; erro: string; carregando: boolean; onReload: () => void; canais?: { id: string; nome: string; numero: string | null }[]; escopo?: string }) {
   const lista = canais || []
   const [novo, setNovo] = useState(false)
   const [aviso, setAviso] = useState('')
@@ -52,7 +52,9 @@ export default function Modelos({ isAdmin, tpls, erro, carregando, onReload, can
   const chaveCanais = lista.map(function(c) { return c.id }).join(',')
   useEffect(function() { lista.forEach(function(c) { carregarPasta(c.id) }) }, [chaveCanais])
 
-  const aberta = lista.length === 0 ? 'suporte' : pasta
+  // Quem so atende a recuperacao nao ve a pasta de suporte; com uma unica pasta, abre direto
+  const soRecuperacao = escopo === 'recuperacao' && lista.length > 0
+  const aberta = lista.length === 0 ? 'suporte' : (pasta || (soRecuperacao && lista.length === 1 ? lista[0].id : null))
   const conexao = aberta && aberta !== 'suporte' ? aberta : ''
   const dados: Pasta = conexao ? (outras[conexao] || { tpls: null, erro: '', carregando: true }) : { tpls, erro, carregando }
   const recarregar = function() { if (conexao) carregarPasta(conexao); else onReload() }
@@ -90,7 +92,7 @@ export default function Modelos({ isAdmin, tpls, erro, carregando, onReload, can
         <div style={{ maxWidth: 720, margin: '0 auto' }}>
           <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--text)', marginBottom: 4 }}>📄 Modelos de mensagem</div>
           <div style={{ fontSize: 13, color: 'var(--muted2)', lineHeight: 1.5, marginBottom: 14 }}>Cada número do WhatsApp tem os seus próprios modelos. Abra a pasta do número que você quer ver.</div>
-          {pastaCard('suporte', '📁', 'Modelos de suporte', 'Usados no Chat de suporte e nos disparos.', tpls ? tpls.length : null)}
+          {!soRecuperacao && pastaCard('suporte', '📁', 'Modelos de suporte', 'Usados no Chat de suporte e nos disparos.', tpls ? tpls.length : null)}
           {lista.map(function(c) { const o = outras[c.id]; return pastaCard(c.id, '📁', 'Modelos de ' + c.nome.toLowerCase(), 'Usados nos fluxos da Hubla e no Chat de recuperação' + (c.numero ? ' · ' + c.numero : '') + '.', o && o.tpls ? o.tpls.length : null) })}
         </div>
       </div>
@@ -100,7 +102,7 @@ export default function Modelos({ isAdmin, tpls, erro, carregando, onReload, can
   return (
     <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 16 }}>
       <div style={{ maxWidth: 920, margin: '0 auto' }}>
-        {lista.length > 0 && <button onClick={function() { setPasta(null); setAviso('') }} style={{ cursor: 'pointer', border: 0, background: 'transparent', color: 'var(--accent)', fontWeight: 800, fontSize: 13.5, padding: 0, marginBottom: 8 }}>← Voltar para as pastas</button>}
+        {lista.length > 0 && !(soRecuperacao && lista.length === 1) && <button onClick={function() { setPasta(null); setAviso('') }} style={{ cursor: 'pointer', border: 0, background: 'transparent', color: 'var(--accent)', fontWeight: 800, fontSize: 13.5, padding: 0, marginBottom: 8 }}>← Voltar para as pastas</button>}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
           <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--text)', flex: 1 }}>{lista.length > 0 ? '📁 ' + nomePasta : '📄 Modelos de mensagem'}</div>
           <button style={btn} onClick={recarregar} disabled={dados.carregando}>{dados.carregando ? 'Atualizando…' : '↻ Atualizar'}</button>

@@ -90,6 +90,7 @@ export default function AtendimentoPage() {
   const [nomes, setNomes] = useState<Record<string, string>>({})
   const [meuId, setMeuId] = useState('')
   const [canal, setCanal] = useState<'suporte' | 'recuperacao'>('suporte')
+  const [escopo, setEscopo] = useState<string>('suporte')
   const [canais, setCanais] = useState<{ id: string; nome: string; numero: string | null }[]>([])
   const [tplsRec, setTplsRec] = useState<Tpl[] | null>(null)
   const [filtro, setFiltro] = useState<string>('todas')
@@ -144,7 +145,11 @@ export default function AtendimentoPage() {
           if (!r.error && r.data) { const m: Record<string, string> = {}; for (const x of (r.data as any[])) m[x.id] = String(x.nome || '').trim().split(/\s+/).slice(0, 2).join(' '); setNomes(m) }
         })
         carregarConvs()
-        carregarTpls()
+        const esc = await supabase.rpc('wa_meu_escopo')
+        const meuEscopo = String(esc.data || 'suporte')
+        setEscopo(meuEscopo)
+        if (meuEscopo === 'recuperacao') setCanal('recuperacao')
+        if (meuEscopo !== 'recuperacao') carregarTpls()
         supabase.rpc('wa_canais').then(function(r) { if (!r.error && r.data) setCanais(r.data as any) })
         fetch('/api/whatsapp/status').then(function(r) { return r.json() }).then(setStatus).catch(function() {})
       }
@@ -388,7 +393,7 @@ export default function AtendimentoPage() {
         </div>
       )}
 
-      {tab === 'modelos' && <Modelos isAdmin={isAdmin} tpls={tpls} erro={tplErro} carregando={tplCarregando} onReload={carregarTpls} canais={canais} />}
+      {tab === 'modelos' && <Modelos isAdmin={isAdmin} tpls={tpls} erro={tplErro} carregando={tplCarregando} onReload={carregarTpls} canais={canais} escopo={escopo} />}
       {tab === 'atendentes' && isAdmin && <Atendentes />}
       {disparoAberto && isAdmin && <div style={tab === 'disparo' ? { display: 'contents' } : { display: 'none' }}><Disparo tpls={tpls} onLoadTpls={carregarTpls} /></div>}
       {tab === 'fluxos' && isAdmin && <Fluxos />}
@@ -398,7 +403,7 @@ export default function AtendimentoPage() {
         {/* Lista */}
         <div className="at-list">
           <div style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {canais.length > 0 && (
+            {canais.length > 0 && escopo === 'todos' && (
               <div style={{ display: 'flex', gap: 6 }}>
                 {([['suporte', '🎧 Chat de suporte', false], ['recuperacao', '🛒 Chat de recuperação', true]] as const).map(function(t) {
                   const on = canal === t[0]
@@ -412,6 +417,7 @@ export default function AtendimentoPage() {
                 })}
               </div>
             )}
+            {escopo === 'recuperacao' && <div style={{ fontWeight: 800, fontSize: 13.5, color: '#c2410c', background: 'rgba(234,88,12,0.12)', borderRadius: 10, padding: '8px 10px' }}>🛒 Chat de recuperação</div>}
             <input className="at-input" placeholder="Buscar nome ou número" value={busca} onChange={function(e) { setBusca(e.target.value) }} />
             {(function() {
               // Estilo Unnichat: dois botoes fixos (Em espera / Minhas) + menu com as demais visoes (so admin)

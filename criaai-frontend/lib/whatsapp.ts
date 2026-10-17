@@ -60,12 +60,23 @@ export async function graphFetch(path: string, init?: RequestInit & { json?: any
 // Admin ve tudo; atendente ve as conversas dele e as que estao em espera (sem atendente)
 export async function canAccessConv(userId: string, convId: string): Promise<boolean> {
   const admin = adminClient()
-  const p = await admin.from('profiles').select('is_admin').eq('id', userId).maybeSingle()
+  const p = await admin.from('profiles').select('is_admin, wa_scope').eq('id', userId).maybeSingle()
   if ((p.data as any)?.is_admin) return true
-  const c = await admin.from('wa_conversations').select('assigned_to').eq('id', convId).maybeSingle()
+  const c = await admin.from('wa_conversations').select('assigned_to, connection_id').eq('id', convId).maybeSingle()
   if (!c.data) return false
   const a = (c.data as any).assigned_to
-  return !a || a === userId
+  if (a && a !== userId) return false
+  // Escopo do atendente: suporte, recuperacao ou todos
+  const escopo = String((p.data as any)?.wa_scope || 'suporte')
+  if (escopo === 'todos') return true
+  return (escopo === 'recuperacao') === !!(c.data as any).connection_id
+}
+
+// 'suporte' | 'recuperacao' | 'todos' (admin = todos) do usuario logado
+export async function escopoDoUsuario(userId: string): Promise<string> {
+  const p = await adminClient().from('profiles').select('is_admin, wa_scope').eq('id', userId).maybeSingle()
+  if ((p.data as any)?.is_admin) return 'todos'
+  return String((p.data as any)?.wa_scope || 'suporte')
 }
 
 // So admin (para criar/apagar modelos)

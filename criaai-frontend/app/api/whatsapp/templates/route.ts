@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adminClient, graphError, graphFetch, requireAdmin, requireStaff, wabaId, waConfig } from '@/lib/whatsapp'
+import { adminClient, escopoDoUsuario, graphError, graphFetch, requireAdmin, requireStaff, wabaId, waConfig } from '@/lib/whatsapp'
 
 export const maxDuration = 30
 export const dynamic = 'force-dynamic'
@@ -23,9 +23,14 @@ function maxVar(text: string): number {
 
 // Lista os modelos (templates) da conta
 export async function GET(req: NextRequest) {
-  if (!(await requireStaff())) return NextResponse.json({ error: 'Sem permissao.' }, { status: 403 })
+  const staffId = await requireStaff()
+  if (!staffId) return NextResponse.json({ error: 'Sem permissao.' }, { status: 403 })
   const cfg = waConfig()
   if (!cfg.token) return NextResponse.json({ error: 'O WhatsApp ainda nao foi conectado.' }, { status: 400 })
+  // Atendente de so um chat nao ve os modelos do outro
+  const escopo = await escopoDoUsuario(staffId)
+  const pedeOutro = !!req.nextUrl.searchParams.get('connection')
+  if ((pedeOutro && escopo === 'suporte') || (!pedeOutro && escopo === 'recuperacao')) return NextResponse.json({ error: 'Sem permissao.' }, { status: 403 })
   // Com ?connection=<id> lista os modelos da conta de OUTRO numero (ex.: Recuperacao)
   const waba = await wabaDaPasta(req.nextUrl.searchParams.get('connection') || '')
   if (!waba) return NextResponse.json({ error: SEM_WABA }, { status: 400 })
