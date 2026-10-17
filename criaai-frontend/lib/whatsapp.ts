@@ -57,6 +57,42 @@ export async function graphFetch(path: string, init?: RequestInit & { json?: any
   return { ok: res.ok, status: res.status, data }
 }
 
+// So admin (para criar/apagar modelos)
+export async function requireAdmin(): Promise<string | null> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+  const p = await supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle()
+  return (p.data as any)?.is_admin ? user.id : null
+}
+
+// ID da conta do WhatsApp Business (WABA), necessario para os modelos.
+// Usa WHATSAPP_WABA_ID se existir; senao descobre pelo proprio token (a conta que tem o numero).
+let wabaCache: { phoneId: string; waba: string } | null = null
+export async function wabaId(): Promise<string> {
+  const env = (process.env.WHATSAPP_WABA_ID || '').trim()
+  if (env) return env
+  const cfg = waConfig()
+  if (!cfg.token || !cfg.phoneId) return ''
+  if (wabaCache && wabaCache.phoneId === cfg.phoneId) return wabaCache.waba
+  const d = await graphFetch('debug_token?input_token=' + encodeURIComponent(cfg.token))
+  const ids: string[] = []
+  const gs: any[] = d.data?.data?.granular_scopes || []
+  for (const g of gs) {
+    if (g.scope !== 'whatsapp_business_management' && g.scope !== 'whatsapp_business_messaging') continue
+    for (const t of (g.target_ids || [])) { if (ids.indexOf(String(t)) < 0) ids.push(String(t)) }
+  }
+  let found = ''
+  for (const id of ids) {
+    const p = await graphFetch(id + '/phone_numbers?fields=id&limit=50')
+    const list: any[] = p.data?.data || []
+    if (p.ok && list.some(function(x) { return String(x.id) === cfg.phoneId })) { found = id; break }
+  }
+  if (!found && ids.length === 1) found = ids[0]
+  if (found) wabaCache = { phoneId: cfg.phoneId, waba: found }
+  return found
+}
+
 export function graphError(data: any): string {
   const e = data?.error
   if (!e) return 'Erro ao falar com o WhatsApp.'

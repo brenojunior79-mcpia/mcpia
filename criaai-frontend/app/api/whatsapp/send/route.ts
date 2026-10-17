@@ -32,7 +32,8 @@ export async function POST(req: NextRequest) {
       messaging_product: 'whatsapp', to: c.data.wa_id, type: 'template',
       template: { name: String(tpl.name).trim(), language: { code: String(tpl.language || 'pt_BR').trim() }, ...(params.length ? { components: [{ type: 'body', parameters: params.map(function(t) { return { type: 'text', text: t } }) }] } : {}) },
     }
-    shown = '[Modelo: ' + String(tpl.name).trim() + ']' + (params.length ? ' ' + params.join(' | ') : '')
+    const preview = typeof tpl.preview === 'string' ? tpl.preview.trim().slice(0, 1500) : ''
+    shown = preview ? '📄 ' + preview : '[Modelo: ' + String(tpl.name).trim() + ']' + (params.length ? ' ' + params.join(' | ') : '')
     type = 'template'
   } else {
     const last = c.data.last_inbound_at ? new Date(c.data.last_inbound_at).getTime() : 0

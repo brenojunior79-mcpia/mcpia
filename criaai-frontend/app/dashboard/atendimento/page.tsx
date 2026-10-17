@@ -1,6 +1,9 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
+import Modelos, { type Tpl } from '@/components/whatsapp/Modelos'
+import TemplatePicker, { type TplSend } from '@/components/whatsapp/TemplatePicker'
+import Atendentes from '@/components/whatsapp/Atendentes'
 
 type Conv = { id: string; wa_id: string; name: string | null; profile_label: string | null; status: string; unread: number; last_text: string | null; last_message_at: string; last_inbound_at: string | null }
 type Msg = { id: string; conversation_id: string; direction: 'in' | 'out'; type: string; body: string | null; media_path: string | null; mime: string | null; status: string; error: string | null; created_at: string }
@@ -63,10 +66,11 @@ export default function AtendimentoPage() {
   const [status, setStatus] = useState<Status | null>(null)
   const [staff, setStaff] = useState<boolean | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
-  const [equipe, setEquipe] = useState(false)
-  const [tplNome, setTplNome] = useState('')
-  const [tplLang, setTplLang] = useState('pt_BR')
-  const [tplVars, setTplVars] = useState('')
+  const [tab, setTab] = useState<'conversas' | 'atendentes' | 'modelos'>('conversas')
+  const [tpls, setTpls] = useState<Tpl[] | null>(null)
+  const [tplErro, setTplErro] = useState('')
+  const [tplCarregando, setTplCarregando] = useState(false)
+  const [mostrarTpl, setMostrarTpl] = useState(false)
   const fim = useRef<HTMLDivElement>(null)
   const selRef = useRef<string | null>(null)
   selRef.current = sel
@@ -81,6 +85,17 @@ export default function AtendimentoPage() {
     if (!r.error && r.data && selRef.current === id) setMsgs(r.data as Msg[])
   }, [])
 
+  const carregarTpls = useCallback(async function() {
+    setTplCarregando(true)
+    try {
+      const r = await fetch('/api/whatsapp/templates', { cache: 'no-store' })
+      const j = await r.json().catch(function() { return {} })
+      if (r.ok) { setTpls(j.templates || []); setTplErro('') }
+      else { setTplErro(j.error || 'Não foi possível listar os modelos.'); setTpls(function(x) { return x }) }
+    } catch (e) { setTplErro('Sem conexão. Tente de novo.') }
+    setTplCarregando(false)
+  }, [])
+
   useEffect(function() {
     (async function() {
       const { data: { user } } = await supabase.auth.getUser()
@@ -91,6 +106,7 @@ export default function AtendimentoPage() {
       setStaff(s.data === true)
       if (s.data === true) {
         carregarConvs()
+        carregarTpls()
         fetch('/api/whatsapp/status').then(function(r) { return r.json() }).then(setStatus).catch(function() {})
       }
     })()
@@ -128,13 +144,12 @@ export default function AtendimentoPage() {
   const janelaAberta = !!(atual && atual.last_inbound_at && Date.now() - new Date(atual.last_inbound_at).getTime() < WIN)
   const horasRestantes = atual && atual.last_inbound_at ? Math.max(0, Math.ceil((WIN - (Date.now() - new Date(atual.last_inbound_at).getTime())) / 3600000)) : 0
 
-  async function enviar(modelo?: boolean) {
+  async function enviar(modelo?: TplSend) {
     if (!atual || enviando) return
     setErro('')
     const body: any = { conversationId: atual.id }
     if (modelo) {
-      if (!tplNome.trim()) { setErro('Digite o nome do modelo aprovado.'); return }
-      body.template = { name: tplNome.trim(), language: tplLang.trim() || 'pt_BR', params: tplVars.split('|').map(function(x) { return x.trim() }).filter(Boolean) }
+      body.template = { name: modelo.name, language: modelo.language, params: modelo.params, preview: modelo.preview }
     } else {
       if (!texto.trim()) return
       body.text = texto
@@ -144,7 +159,7 @@ export default function AtendimentoPage() {
       const r = await fetch('/api/whatsapp/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const j = await r.json().catch(function() { return {} })
       if (!r.ok) setErro(j.error || 'Nao foi possivel enviar.')
-      else { setTexto(''); if (modelo) { setTplVars('') } await carregarMsgs(atual.id); carregarConvs() }
+      else { setTexto(''); setMostrarTpl(false); await carregarMsgs(atual.id); carregarConvs() }
     } catch (e) { setErro('Sem conexao. Tente de novo.') }
     setEnviando(false)
   }
@@ -191,7 +206,14 @@ export default function AtendimentoPage() {
         {status && (status.connected
           ? <span style={{ fontSize: 12.5, color: '#15803d', fontWeight: 700 }}>🟢 Conectado · {status.number}{status.quality ? ' · qualidade ' + status.quality : ''}</span>
           : <span style={{ fontSize: 12.5, color: '#b45309', fontWeight: 700 }}>🟠 Não conectado</span>)}
-        {isAdmin && <button onClick={function() { setEquipe(true) }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '6px 10px', fontSize: 12.5, fontWeight: 700 }}>👥 Equipe</button>}
+      </div>
+
+      {/* Abas */}
+      <div style={{ display: 'flex', gap: 6, padding: '8px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface)', overflowX: 'auto' }}>
+        {([['conversas', '💬 Conversas'], ['atendentes', '👥 Atendentes'], ['modelos', '📄 Modelos']] as const).filter(function(t) { return t[0] !== 'atendentes' || isAdmin }).map(function(t) {
+          const on = tab === t[0]
+          return <button key={t[0]} onClick={function() { setTab(t[0]); if (t[0] === 'modelos') carregarTpls() }} style={{ cursor: 'pointer', border: 0, borderRadius: 8, padding: '7px 14px', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', background: on ? 'var(--accent-light)' : 'var(--surface2)', color: on ? 'var(--accent)' : 'var(--muted2)' }}>{t[1]}</button>
+        })}
       </div>
 
       {status && !status.connected && (
@@ -203,7 +225,10 @@ export default function AtendimentoPage() {
         </div>
       )}
 
-      <div className="at-wrap">
+      {tab === 'modelos' && <Modelos isAdmin={isAdmin} tpls={tpls} erro={tplErro} carregando={tplCarregando} onReload={carregarTpls} />}
+      {tab === 'atendentes' && isAdmin && <Atendentes />}
+
+      <div className="at-wrap" style={tab === 'conversas' ? undefined : { display: 'none' }}>
         {/* Lista */}
         <div className="at-list">
           <div style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -280,7 +305,11 @@ export default function AtendimentoPage() {
                 {erro && <div style={{ marginBottom: 8, fontSize: 13, color: '#b91c1c', fontWeight: 600 }}>{erro}</div>}
                 {janelaAberta ? (
                   <>
-                    <div style={{ fontSize: 11.5, color: 'var(--muted2)', marginBottom: 6 }}>Você pode responder por mais ~{horasRestantes}h.</div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+                      <div style={{ fontSize: 11.5, color: 'var(--muted2)' }}>Você pode responder por mais ~{horasRestantes}h.</div>
+                      <button onClick={function() { setMostrarTpl(!mostrarTpl) }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: mostrarTpl ? 'var(--accent-light)' : 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '4px 9px', fontSize: 12, fontWeight: 700 }}>📄 Modelo</button>
+                    </div>
+                    {mostrarTpl && <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: 10, marginBottom: 8 }}><TemplatePicker tpls={tpls} enviando={enviando} onSend={function(t) { enviar(t) }} /></div>}
                     <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
                       <textarea className="at-input" rows={2} placeholder="Digite a resposta…" value={texto} onChange={function(e) { setTexto(e.target.value) }}
                         onKeyDown={function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar() } }} style={{ resize: 'none' }} />
@@ -290,13 +319,8 @@ export default function AtendimentoPage() {
                 ) : (
                   <div style={{ background: 'rgba(217,119,6,0.1)', borderRadius: 12, padding: 12 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>⏳ Passaram 24 horas desde a última mensagem do aluno.</div>
-                    <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginBottom: 8 }}>Para voltar a falar, envie um <b>modelo aprovado</b> na Meta. Quando o aluno responder, a conversa volta a ficar livre.</div>
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      <input className="at-input" placeholder="Nome do modelo" value={tplNome} onChange={function(e) { setTplNome(e.target.value) }} style={{ flex: '1 1 150px' }} />
-                      <input className="at-input" placeholder="Idioma" value={tplLang} onChange={function(e) { setTplLang(e.target.value) }} style={{ flex: '0 0 90px' }} />
-                      <input className="at-input" placeholder="Variáveis do modelo separadas por | (se tiver)" value={tplVars} onChange={function(e) { setTplVars(e.target.value) }} style={{ flex: '2 1 220px' }} />
-                      <button disabled={enviando} onClick={function() { enviar(true) }} style={{ cursor: 'pointer', border: 0, background: '#16a34a', color: '#fff', borderRadius: 10, padding: '10px 14px', fontWeight: 800, fontSize: 13.5 }}>{enviando ? '…' : 'Enviar modelo'}</button>
-                    </div>
+                    <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginBottom: 8 }}>Para voltar a falar, escolha um <b>modelo aprovado</b>. Quando o aluno responder, a conversa volta a ficar livre.</div>
+                    <TemplatePicker tpls={tpls} enviando={enviando} onSend={function(t) { enviar(t) }} />
                   </div>
                 )}
               </div>
@@ -305,53 +329,6 @@ export default function AtendimentoPage() {
         </div>
       </div>
 
-      {equipe && <Equipe onClose={function() { setEquipe(false) }} />}
-    </div>
-  )
-}
-
-// Admin escolhe quem da equipe pode atender (so ve este menu, sem acesso ao resto do admin)
-function Equipe({ onClose }: { onClose: () => void }) {
-  const supabase = createClient()
-  const [lista, setLista] = useState<{ id: string; nome: string; email: string }[]>([])
-  const [email, setEmail] = useState('')
-  const [msg, setMsg] = useState('')
-
-  async function carregar() {
-    const r = await supabase.rpc('wa_support_list')
-    if (!r.error && r.data) setLista(r.data as any)
-  }
-  useEffect(function() { carregar() }, [])
-
-  async function mudar(em: string, on: boolean) {
-    setMsg('')
-    const r = await supabase.rpc('wa_set_support', { p_email: em, p_on: on })
-    if (r.error) setMsg(r.error.message)
-    else { if (on) setEmail(''); carregar() }
-  }
-
-  return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={function(e) { e.stopPropagation() }} style={{ background: 'var(--surface)', color: 'var(--text)', borderRadius: 16, padding: 20, width: '100%', maxWidth: 440, maxHeight: '85vh', overflowY: 'auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-          <div style={{ fontWeight: 800, fontSize: 16 }}>👥 Equipe de atendimento</div>
-          <button onClick={onClose} style={{ border: 0, background: 'transparent', color: 'var(--muted2)', fontSize: 20, cursor: 'pointer' }}>×</button>
-        </div>
-        <div style={{ fontSize: 13, color: 'var(--muted2)', marginBottom: 12 }}>Quem você adicionar aqui vê só o menu de atendimento, sem acesso ao resto do painel admin. A pessoa precisa ter conta na plataforma.</div>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-          <input className="at-input" type="email" placeholder="E-mail da conta do atendente" value={email} onChange={function(e) { setEmail(e.target.value) }} />
-          <button onClick={function() { if (email.trim()) mudar(email, true) }} style={{ cursor: 'pointer', border: 0, background: '#16a34a', color: '#fff', borderRadius: 10, padding: '0 14px', fontWeight: 800 }}>Adicionar</button>
-        </div>
-        {msg && <div style={{ fontSize: 13, color: '#b91c1c', fontWeight: 600, marginBottom: 8 }}>{msg}</div>}
-        {lista.length === 0 ? <div style={{ fontSize: 13.5, color: 'var(--muted2)' }}>Nenhum atendente adicionado ainda (admins sempre têm acesso).</div> : lista.map(function(p) {
-          return (
-            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 10, background: 'var(--surface2)', marginBottom: 6 }}>
-              <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 700, fontSize: 14 }}>{p.nome || 'Sem nome'}</div><div style={{ fontSize: 12, color: 'var(--muted2)', wordBreak: 'break-all' }}>{p.email}</div></div>
-              <button onClick={function() { mudar(p.email, false) }} style={{ cursor: 'pointer', border: '1px solid rgba(220,38,38,0.4)', background: 'transparent', color: '#dc2626', borderRadius: 8, padding: '5px 9px', fontWeight: 700, fontSize: 12 }}>Remover</button>
-            </div>
-          )
-        })}
-      </div>
     </div>
   )
 }
