@@ -36,6 +36,7 @@ type Pasta = { tpls: Tpl[] | null; erro: string; carregando: boolean }
 export default function Modelos({ isAdmin, tpls, erro, carregando, onReload, canais, escopo }: { isAdmin: boolean; tpls: Tpl[] | null; erro: string; carregando: boolean; onReload: () => void; canais?: { id: string; nome: string; numero: string | null }[]; escopo?: string }) {
   const lista = canais || []
   const [novo, setNovo] = useState(false)
+  const [vendo, setVendo] = useState<Tpl | null>(null)
   const [aviso, setAviso] = useState('')
   const [apagando, setApagando] = useState('')
   // Pastas: 'suporte' ou o id de um numero (ex.: Recuperacao). null = tela das pastas.
@@ -117,29 +118,45 @@ export default function Modelos({ isAdmin, tpls, erro, carregando, onReload, can
         {!dados.erro && dados.tpls && dados.tpls.length === 0 && <div style={{ padding: 24, textAlign: 'center', color: 'var(--muted2)', fontSize: 14 }}>Nenhum modelo ainda.{isAdmin ? ' Clique em “+ Novo modelo” para criar o primeiro.' : ''}</div>}
         {!dados.tpls && !dados.erro && <div style={{ padding: 24, textAlign: 'center', color: 'var(--muted2)' }}>Carregando…</div>}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 12 }}>
-          {(dados.tpls || []).map(function(t) {
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden' }}>
+          {(dados.tpls || []).map(function(t, i) {
             const s = ST[t.status] || { t: t.status, c: '#6b7280', bg: 'rgba(107,114,128,0.16)' }
             return (
-              <div key={t.name + t.language} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', wordBreak: 'break-all', flex: 1 }}>{t.name}</div>
-                  <span style={{ background: s.bg, color: s.c, borderRadius: 999, padding: '2px 9px', fontSize: 11.5, fontWeight: 800 }}>{s.t}</span>
-                </div>
-                <div style={{ fontSize: 11.5, color: 'var(--muted2)' }}>{CAT[t.category] || t.category} · {t.language}{t.vars > 0 ? ' · ' + t.vars + ' variável' + (t.vars > 1 ? 's' : '') : ''}</div>
-                <div style={{ background: '#d9fdd3', color: '#111b21', borderRadius: 10, padding: '8px 10px', fontSize: 13.5, lineHeight: 1.45, whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 220, overflowY: 'auto' }}>
-                  {t.header && <div style={{ fontWeight: 800, marginBottom: 4 }}>{t.header}</div>}
-                  {t.body}
-                  {t.footer && <div style={{ fontSize: 11.5, opacity: 0.6, marginTop: 6 }}>{t.footer}</div>}
-                </div>
-                {t.buttons.length > 0 && <div style={{ fontSize: 12, color: 'var(--muted2)' }}>Botões: {t.buttons.join(' · ')}</div>}
-                {t.status === 'REJECTED' && t.rejected_reason && <div style={{ fontSize: 12, color: '#b91c1c' }}>Motivo: {t.rejected_reason}</div>}
-                {isAdmin && <div><button onClick={function() { apagar(t) }} disabled={apagando === t.name} style={{ cursor: 'pointer', border: '1px solid rgba(220,38,38,0.4)', background: 'transparent', color: '#dc2626', borderRadius: 8, padding: '5px 10px', fontWeight: 700, fontSize: 12 }}>{apagando === t.name ? 'Apagando…' : 'Apagar'}</button></div>}
-              </div>
+              <button key={t.name + t.language} onClick={function() { setVendo(t) }} style={{ cursor: 'pointer', width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '13px 14px', border: 0, borderTop: i === 0 ? 0 : '1px solid var(--border)', background: 'transparent', color: 'var(--text)', textAlign: 'left', fontFamily: 'inherit' }}>
+                <span style={{ fontWeight: 700, fontSize: 14, flex: 1, minWidth: 0, wordBreak: 'break-all' }}>{t.name}</span>
+                <span style={{ background: s.bg, color: s.c, borderRadius: 999, padding: '2px 9px', fontSize: 11.5, fontWeight: 800, flexShrink: 0 }}>{s.t}</span>
+                <span style={{ color: 'var(--muted2)', fontSize: 18, lineHeight: 1, flexShrink: 0 }}>›</span>
+              </button>
             )
           })}
         </div>
       </div>
+
+      {vendo && (function(t: Tpl) {
+        const s = ST[t.status] || { t: t.status, c: '#6b7280', bg: 'rgba(107,114,128,0.16)' }
+        return (
+          <div onClick={function() { setVendo(null) }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+            <div onClick={function(e) { e.stopPropagation() }} style={{ background: 'var(--surface)', color: 'var(--text)', borderRadius: 16, padding: 20, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 6 }}>
+                <div style={{ fontWeight: 800, fontSize: 16, flex: 1, wordBreak: 'break-all' }}>{t.name}</div>
+                <button onClick={function() { setVendo(null) }} style={{ border: 0, background: 'transparent', color: 'var(--muted2)', fontSize: 24, lineHeight: 1, cursor: 'pointer' }}>×</button>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                <span style={{ background: s.bg, color: s.c, borderRadius: 999, padding: '2px 9px', fontSize: 11.5, fontWeight: 800 }}>{s.t}</span>
+                <span style={{ fontSize: 12, color: 'var(--muted2)' }}>{CAT[t.category] || t.category} · {t.language}{t.vars > 0 ? ' · ' + t.vars + ' variável' + (t.vars > 1 ? 's' : '') : ''}</span>
+              </div>
+              <div style={{ background: '#d9fdd3', color: '#111b21', borderRadius: 12, padding: '10px 12px', fontSize: 14, lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                {t.header && <div style={{ fontWeight: 800, marginBottom: 4 }}>{t.header}</div>}
+                {t.body}
+                {t.footer && <div style={{ fontSize: 12, opacity: 0.6, marginTop: 6 }}>{t.footer}</div>}
+              </div>
+              {t.buttons.length > 0 && <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginTop: 10 }}>Botões: {t.buttons.join(' · ')}</div>}
+              {t.status === 'REJECTED' && t.rejected_reason && <div style={{ fontSize: 12.5, color: '#b91c1c', marginTop: 10 }}>Motivo: {t.rejected_reason}</div>}
+              {isAdmin && <div style={{ marginTop: 14 }}><button onClick={async function() { await apagar(t); setVendo(null) }} disabled={apagando === t.name} style={{ cursor: 'pointer', border: '1px solid rgba(220,38,38,0.4)', background: 'transparent', color: '#dc2626', borderRadius: 8, padding: '6px 12px', fontWeight: 700, fontSize: 12.5 }}>{apagando === t.name ? 'Apagando…' : 'Apagar modelo'}</button></div>}
+            </div>
+          </div>
+        )
+      })(vendo)}
 
       {novo && <NovoModelo connection={conexao} onClose={function() { setNovo(false) }} onCriado={function() { setNovo(false); setAviso(''); recarregar() }} />}
     </div>
