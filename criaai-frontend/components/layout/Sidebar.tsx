@@ -111,8 +111,8 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
           <div className={styles.logoTop}>Plataforma do</div>
           <div className={styles.logoBottom}>Cristão Próspero</div>
           <div className={styles.logoUser}>
-            <div className={styles.logoUserName}>{firstName}</div>
-            {!hidePlans && <div className={styles.logoUserPlan}>{plan?.name || 'Starter'}</div>}
+            <div className={styles.logoUserName} title={profile?.full_name || ''}>{(profile?.full_name || '').trim() || firstName}</div>
+            {(profile?.email || user?.email) && <div className={styles.logoUserEmail} title={profile?.email || user?.email}>{profile?.email || user?.email}</div>}
             <div className={styles.logoUserCredits} style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
               {!hidePlans && <span>{plan?.is_unlimited ? '∞' : videosRestantes} Créditos</span>}
               <button

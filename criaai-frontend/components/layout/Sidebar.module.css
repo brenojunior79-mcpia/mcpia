@@ -131,6 +131,15 @@
   margin-top: 1px;
 }
 
+.logoUserEmail {
+  font-size: 10.5px;
+  color: var(--muted2);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .logoUserCredits {
   font-size: 11px;
   color: var(--accent2);
