@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "site.mcpia.app",
+      "sha256_cert_fingerprints": ["45:42:70:A5:F9:CA:AB:61:E2:87:65:17:46:63:15:00:4B:9A:8A:81:B0:2A:F0:45:2B:41:20:92:A5:52:BF:07"]
+    }
+  }
+]
