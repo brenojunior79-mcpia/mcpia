@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adminClient, graphFetch, requireStaff, waConfig } from '@/lib/whatsapp'
+import { adminClient, canAccessConv, graphFetch, requireStaff, waConfig } from '@/lib/whatsapp'
 import { createClient } from '@/lib/supabase-server'
 
 export const dynamic = 'force-dynamic'
@@ -12,6 +12,7 @@ export async function POST(req: NextRequest) {
   try { convId = String((await req.json())?.conversationId || '') } catch (e) {}
   if (!convId) return NextResponse.json({ error: 'Pedido invalido.' }, { status: 400 })
 
+  if (!(await canAccessConv(staffId, convId))) return NextResponse.json({ error: 'Sem permissao.' }, { status: 403 })
   await createClient().rpc('wa_mark_read', { p_conv: convId })
 
   try {

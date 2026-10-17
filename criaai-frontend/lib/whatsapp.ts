@@ -57,6 +57,15 @@ export async function graphFetch(path: string, init?: RequestInit & { json?: any
   return { ok: res.ok, status: res.status, data }
 }
 
+// Admin ve tudo; atendente so ve as conversas atribuidas a ele
+export async function canAccessConv(userId: string, convId: string): Promise<boolean> {
+  const admin = adminClient()
+  const p = await admin.from('profiles').select('is_admin').eq('id', userId).maybeSingle()
+  if ((p.data as any)?.is_admin) return true
+  const c = await admin.from('wa_conversations').select('assigned_to').eq('id', convId).maybeSingle()
+  return !!c.data && (c.data as any).assigned_to === userId
+}
+
 // So admin (para criar/apagar modelos)
 export async function requireAdmin(): Promise<string | null> {
   const supabase = createClient()

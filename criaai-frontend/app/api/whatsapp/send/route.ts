@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adminClient, graphError, postMessage, requireStaff, waConfig } from '@/lib/whatsapp'
+import { adminClient, canAccessConv, graphError, postMessage, requireStaff, waConfig } from '@/lib/whatsapp'
 
 export const maxDuration = 30
 export const dynamic = 'force-dynamic'
@@ -19,8 +19,9 @@ export async function POST(req: NextRequest) {
   if (!convId || (!text && !tpl)) return NextResponse.json({ error: 'Escreva uma mensagem.' }, { status: 400 })
   if (text.length > 4000) return NextResponse.json({ error: 'Mensagem muito longa.' }, { status: 400 })
 
+  if (!(await canAccessConv(staffId, convId))) return NextResponse.json({ error: 'Essa conversa nao esta com voce.' }, { status: 403 })
   const admin = adminClient()
-  const c = await admin.from('wa_conversations').select('id, wa_id, last_inbound_at').eq('id', convId).maybeSingle()
+  const c = await admin.from('wa_conversations').select('id, wa_id, last_inbound_at, assigned_to').eq('id', convId).maybeSingle()
   if (!c.data) return NextResponse.json({ error: 'Conversa nao encontrada.' }, { status: 404 })
 
   let payload: any
@@ -50,6 +51,9 @@ export async function POST(req: NextRequest) {
   const waId = r.data?.messages?.[0]?.id || null
   const now = new Date().toISOString()
   await admin.from('wa_messages').insert({ conversation_id: convId, wa_message_id: waId, direction: 'out', type, body: shown, status: 'sent', sent_by: staffId, created_at: now })
-  await admin.from('wa_conversations').update({ last_message_at: now, last_text: 'Você: ' + shown.slice(0, 120), status: 'aberta' }).eq('id', convId)
+  // Quem responde uma conversa sem atendente fica com ela
+  const upd: any = { last_message_at: now, last_text: 'Você: ' + shown.slice(0, 120), status: 'aberta' }
+  if (!(c.data as any).assigned_to) upd.assigned_to = staffId
+  await admin.from('wa_conversations').update(upd).eq('id', convId)
   return NextResponse.json({ ok: true })
 }

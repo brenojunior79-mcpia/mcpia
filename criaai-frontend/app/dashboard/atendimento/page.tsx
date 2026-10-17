@@ -6,7 +6,8 @@ import TemplatePicker, { type TplSend } from '@/components/whatsapp/TemplatePick
 import Atendentes from '@/components/whatsapp/Atendentes'
 import Horario from '@/components/whatsapp/Horario'
 
-type Conv = { id: string; wa_id: string; name: string | null; profile_label: string | null; status: string; unread: number; last_text: string | null; last_message_at: string; last_inbound_at: string | null }
+type Pessoa = { id: string; nome: string; email: string; admin: boolean }
+type Conv = { id: string; assigned_to: string | null; wa_id: string; name: string | null; profile_label: string | null; status: string; unread: number; last_text: string | null; last_message_at: string; last_inbound_at: string | null }
 type Msg = { id: string; conversation_id: string; direction: 'in' | 'out'; sent_by?: string | null; type: string; body: string | null; media_path: string | null; mime: string | null; status: string; error: string | null; created_at: string }
 type Status = { connected: boolean; missing?: string[]; webhookUrl?: string; number?: string; name?: string; quality?: string; error?: string }
 
@@ -72,6 +73,9 @@ export default function AtendimentoPage() {
   const [tplErro, setTplErro] = useState('')
   const [tplCarregando, setTplCarregando] = useState(false)
   const [mostrarTpl, setMostrarTpl] = useState(false)
+  const [pessoas, setPessoas] = useState<Pessoa[]>([])
+  const [meuId, setMeuId] = useState('')
+  const [filtro, setFiltro] = useState<string>('todas')
   const fim = useRef<HTMLDivElement>(null)
   const selRef = useRef<string | null>(null)
   selRef.current = sel
@@ -101,8 +105,13 @@ export default function AtendimentoPage() {
     (async function() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setStaff(false); return }
+      setMeuId(user.id)
       const p = await supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle()
       setIsAdmin(!!(p.data as any)?.is_admin)
+      if ((p.data as any)?.is_admin) {
+        const pe = await supabase.rpc('wa_assignable')
+        if (!pe.error && pe.data) setPessoas(pe.data as any)
+      }
       const s = await supabase.rpc('wa_is_staff')
       setStaff(s.data === true)
       if (s.data === true) {
@@ -172,8 +181,25 @@ export default function AtendimentoPage() {
     if (novo === 'resolvida') setSel(null)
   }
 
+  async function atribuir(userId: string) {
+    if (!atual) return
+    setErro('')
+    const r = await supabase.rpc('wa_assign', { p_conv: atual.id, p_user: userId || null })
+    if (r.error) setErro(r.error.message)
+    await carregarConvs()
+  }
+  function primeiroNome(id: string | null): string {
+    if (!id) return 'Sem atendente'
+    const p = pessoas.find(function(x) { return x.id === id })
+    return p ? (p.nome.split(' ')[0] || p.email) : 'Atendente'
+  }
+
   const lista = convs.filter(function(c) {
     if ((aba === 'abertas') !== (c.status !== 'resolvida')) return false
+    if (isAdmin) {
+      if (filtro === 'sem' && c.assigned_to) return false
+      if (filtro !== 'todas' && filtro !== 'sem' && c.assigned_to !== filtro) return false
+    }
     const q = busca.trim().toLowerCase()
     if (!q) return true
     return nomeDe(c).toLowerCase().indexOf(q) >= 0 || c.wa_id.indexOf(q.replace(/\D/g, '') || '§') >= 0 || (c.profile_label || '').toLowerCase().indexOf(q) >= 0
@@ -258,6 +284,15 @@ export default function AtendimentoPage() {
         <div className="at-list">
           <div style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <input className="at-input" placeholder="Buscar nome ou número" value={busca} onChange={function(e) { setBusca(e.target.value) }} />
+            {isAdmin && (
+              <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
+                {([{ k: 'todas', t: 'Todas' }, { k: 'sem', t: 'Sem atendente' }] as { k: string; t: string }[]).concat(pessoas.map(function(p) { return { k: p.id, t: p.id === meuId ? 'Minhas' : (p.nome.split(' ')[0] || p.email) } })).map(function(f) {
+                  const on = filtro === f.k
+                  const n = convs.filter(function(c) { return c.status !== 'resolvida' && (f.k === 'todas' ? true : f.k === 'sem' ? !c.assigned_to : c.assigned_to === f.k) }).length
+                  return <button key={f.k} onClick={function() { setFiltro(f.k) }} style={{ cursor: 'pointer', border: 0, borderRadius: 999, padding: '5px 10px', fontWeight: 700, fontSize: 12, whiteSpace: 'nowrap', background: on ? '#16a34a' : 'var(--surface2)', color: on ? '#fff' : 'var(--muted2)' }}>{f.t} ({n})</button>
+                })}
+              </div>
+            )}
             <div style={{ display: 'flex', gap: 6 }}>
               {(['abertas', 'resolvidas'] as const).map(function(a) {
                 const on = aba === a
@@ -281,6 +316,7 @@ export default function AtendimentoPage() {
                       <div style={{ fontSize: 12.5, color: 'var(--muted2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.last_text}</div>
                       {c.unread > 0 && <span style={{ background: '#16a34a', color: '#fff', borderRadius: 999, minWidth: 20, height: 20, padding: '0 6px', fontSize: 11.5, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' }}>{c.unread}</span>}
                     </div>
+                    {isAdmin && <div style={{ fontSize: 11, color: c.assigned_to ? 'var(--muted2)' : '#b45309', fontWeight: 700, marginTop: 2 }}>👤 {primeiroNome(c.assigned_to)}</div>}
                     {c.profile_label && <div style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 700, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>🎓 {c.profile_label}</div>}
                   </div>
                 </div>
@@ -301,6 +337,12 @@ export default function AtendimentoPage() {
                   <div style={{ fontWeight: 800, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomeDe(atual)}</div>
                   <div style={{ fontSize: 12, color: 'var(--muted2)' }}>{fmtPhone(atual.wa_id)}{atual.profile_label ? ' · 🎓 ' + atual.profile_label : ''}</div>
                 </div>
+                {isAdmin && (
+                  <select value={atual.assigned_to || ''} onChange={function(e) { atribuir(e.target.value) }} title="Atendente desta conversa" style={{ border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '6px 8px', fontSize: 12.5, fontWeight: 700, maxWidth: 150 }}>
+                    <option value="">Sem atendente</option>
+                    {pessoas.map(function(p) { return <option key={p.id} value={p.id}>{p.id === meuId ? 'Eu (' + (p.nome.split(' ')[0] || 'admin') + ')' : (p.nome.split(' ')[0] || p.email)}</option> })}
+                  </select>
+                )}
                 {atual.status === 'resolvida'
                   ? <button onClick={function() { mudarStatus('aberta') }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 10px', fontWeight: 700, fontSize: 12.5 }}>Reabrir</button>
                   : <button onClick={function() { mudarStatus('resolvida') }} style={{ cursor: 'pointer', border: 0, background: '#16a34a', color: '#fff', borderRadius: 8, padding: '7px 10px', fontWeight: 800, fontSize: 12.5 }}>✓ Resolver</button>}
