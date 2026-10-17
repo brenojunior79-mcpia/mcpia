@@ -20,14 +20,28 @@ export async function GET(req: NextRequest) {
   const env = (process.env.WHATSAPP_WABA_ID || '').trim()
   for (const x of extra.concat(env ? [env] : [])) { if (ids.indexOf(x) < 0) ids.push(x) }
   const contas: any[] = []
-  for (const id of ids) {
-    const w = await graphFetch(id + '?fields=name')
+  const vistos: string[] = []
+  async function conta(id: string, nome: string) {
+    if (vistos.indexOf(id) >= 0) return
+    vistos.push(id)
     const p = await graphFetch(id + '/phone_numbers?fields=id,display_phone_number,verified_name,quality_rating&limit=50')
+    if (!p.ok) { contas.push({ waba: id, nome, numeros: [], erro: String(p.data?.error?.message || 'sem acesso') }); return }
     contas.push({
-      waba: id, nome: w.data?.name || '',
+      waba: id, nome,
       numeros: (p.data?.data || []).map(function(x: any) { return { id: String(x.id), numero: x.display_phone_number, nome: x.verified_name, qualidade: x.quality_rating } }),
-      erro: p.ok ? '' : String(p.data?.error?.message || 'sem acesso'),
+      erro: '',
     })
+  }
+  for (const id of ids) {
+    const p = await graphFetch(id + '/phone_numbers?fields=id&limit=1')
+    if (p.ok) { await conta(id, ''); continue }
+    // Se nao for uma conta do WhatsApp, pode ser o ID do negocio: procura as contas dele
+    let achou = 0
+    for (const rel of ['owned_whatsapp_business_accounts', 'client_whatsapp_business_accounts']) {
+      const l = await graphFetch(id + '/' + rel + '?fields=id,name&limit=50')
+      for (const w of (l.data?.data || [])) { achou++; await conta(String(w.id), String(w.name || '')) }
+    }
+    if (!achou) contas.push({ waba: id, nome: '', numeros: [], erro: String(p.data?.error?.message || 'nao e uma conta do WhatsApp nem um negocio com acesso') })
   }
   return NextResponse.json({ atual: { phoneId: cfg.phoneId, waba: process.env.WHATSAPP_WABA_ID || '' }, contas })
 }
