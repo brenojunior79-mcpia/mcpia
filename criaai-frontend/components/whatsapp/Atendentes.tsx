@@ -20,7 +20,7 @@ export default function Atendentes() {
     setCarregou(true)
     // respostas enviadas por cada pessoa nos ultimos 30 dias
     const desde = new Date(Date.now() - 30 * 86400000).toISOString()
-    const m = await supabase.from('wa_messages').select('sent_by').eq('direction', 'out').gte('created_at', desde).limit(5000)
+    const m = await supabase.from('wa_messages').select('sent_by').eq('direction', 'out').neq('type', 'system').gte('created_at', desde).limit(5000)
     if (!m.error && m.data) {
       const c: Record<string, number> = {}
       for (const x of m.data as any[]) { if (x.sent_by) c[x.sent_by] = (c[x.sent_by] || 0) + 1 }

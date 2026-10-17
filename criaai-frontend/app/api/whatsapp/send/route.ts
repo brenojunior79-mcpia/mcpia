@@ -102,6 +102,11 @@ export async function POST(req: NextRequest) {
   const waId = r.data?.messages?.[0]?.id || null
   const now = new Date().toISOString()
   await admin.from('wa_messages').insert({ conversation_id: convId, wa_message_id: waId, direction: 'out', type, body: shown || null, media_path: mediaPath, mime: mediaMime, status: 'sent', sent_by: staffId, created_at: now })
+  if (assumiu) {
+    const pr = await admin.from('profiles').select('full_name, email').eq('id', staffId).maybeSingle()
+    const nome = ((pr.data as any)?.full_name || String((pr.data as any)?.email || 'Atendente').split('@')[0]).trim().split(/\s+/).slice(0, 2).join(' ')
+    await admin.from('wa_messages').insert({ conversation_id: convId, direction: 'out', type: 'system', body: 'Conversa atribuída a ' + nome + ' por envio de mensagem.', status: 'sent', sent_by: staffId, created_at: new Date(new Date(now).getTime() - 2).toISOString() })
+  }
   const rotulo = type === 'image' ? '📷 ' + (shown || 'Imagem') : type === 'video' ? '🎬 ' + (shown || 'Vídeo') : type === 'audio' ? '🎤 Áudio' : type === 'document' ? '📎 ' + shown : shown
   const upd: any = { last_message_at: now, last_text: 'Você: ' + rotulo.slice(0, 120), status: 'aberta', unread: 0 }
   await admin.from('wa_conversations').update(upd).eq('id', convId)

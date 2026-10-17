@@ -82,6 +82,7 @@ export default function AtendimentoPage() {
   const recTimer = useRef<any>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const [pessoas, setPessoas] = useState<Pessoa[]>([])
+  const [nomes, setNomes] = useState<Record<string, string>>({})
   const [meuId, setMeuId] = useState('')
   const [filtro, setFiltro] = useState<string>('todas')
   const fim = useRef<HTMLDivElement>(null)
@@ -124,6 +125,9 @@ export default function AtendimentoPage() {
       const s = await supabase.rpc('wa_is_staff')
       setStaff(s.data === true)
       if (s.data === true) {
+        supabase.rpc('wa_staff_names').then(function(r) {
+          if (!r.error && r.data) { const m: Record<string, string> = {}; for (const x of (r.data as any[])) m[x.id] = String(x.nome || '').trim().split(/\s+/).slice(0, 2).join(' '); setNomes(m) }
+        })
         carregarConvs()
         carregarTpls()
         fetch('/api/whatsapp/status').then(function(r) { return r.json() }).then(setStatus).catch(function() {})
@@ -265,6 +269,7 @@ export default function AtendimentoPage() {
   }
   function primeiroNome(id: string | null): string {
     if (!id) return 'Em espera'
+    if (nomes[id]) return nomes[id]
     const p = pessoas.find(function(x) { return x.id === id })
     return p ? (p.nome.split(' ')[0] || p.email) : 'Atendente'
   }
@@ -425,11 +430,13 @@ export default function AtendimentoPage() {
                 {msgs.map(function(m, i) {
                   const novoDia = i === 0 || new Date(msgs[i - 1].created_at).toDateString() !== new Date(m.created_at).toDateString()
                   const meu = m.direction === 'out'
+                  if (m.type === 'system') return <div key={m.id} style={{ alignSelf: 'center', textAlign: 'center', fontSize: 12.5, color: 'var(--muted2)', margin: '8px 0', maxWidth: '85%' }}>{m.body}</div>
                   return (
                     <div key={m.id} style={{ display: 'flex', flexDirection: 'column' }}>
                       {novoDia && <div style={{ alignSelf: 'center', fontSize: 11.5, color: 'var(--muted2)', background: 'var(--surface2)', borderRadius: 999, padding: '3px 10px', margin: '8px 0' }}>{diaMsg(m.created_at)}</div>}
                       <div style={{ alignSelf: meu ? 'flex-end' : 'flex-start', maxWidth: 'min(78%, 520px)', background: meu ? '#d9fdd3' : 'var(--surface)', color: meu ? '#111b21' : 'var(--text)', border: meu ? 'none' : '1px solid var(--border)', borderRadius: 12, padding: '7px 10px 5px', fontSize: 14, lineHeight: 1.4, wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
                         {meu && !m.sent_by && m.type === 'text' && <div style={{ fontSize: 10.5, fontWeight: 800, opacity: 0.7, marginBottom: 2 }}>🤖 Resposta automática</div>}
+                        {meu && m.sent_by && <div style={{ fontSize: 12, fontWeight: 800, opacity: 0.75, marginBottom: 3 }}>👤 {nomes[m.sent_by] || 'Atendente'}</div>}
                         <Midia m={m} />
                         {m.type !== 'audio' && m.body && <div>{m.body}</div>}
                         {!m.media_path && m.type !== 'text' && m.type !== 'template' && !m.body && <div style={{ opacity: 0.7 }}>[{m.type}]</div>}
