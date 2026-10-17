@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminClient, graphFetch, postMessage, validSignature, waConfig } from '@/lib/whatsapp'
 import { abertoAgora, normalizar } from '@/lib/waHours'
+import { aplicaNome, casaPalavra } from '@/lib/waFlows'
+import { primeiroNome } from '@/lib/waBroadcast'
 
 export const maxDuration = 30
 export const dynamic = 'force-dynamic'
@@ -55,21 +57,57 @@ async function saveMedia(admin: any, convId: string, msgId: string, mediaId: str
 }
 
 // Fora do horario de atendimento: responde uma vez (a cada X horas) com o aviso configurado
-async function respostaAutomatica(admin: any, convId: string, waId: string): Promise<void> {
+async function respostaAutomatica(admin: any, convId: string, waId: string): Promise<boolean> {
   try {
     const st = await admin.from('wa_settings').select('value').eq('key', 'hours').maybeSingle()
     const h = normalizar(st.data?.value)
-    if (!h.away_enabled || !h.away_message.trim() || abertoAgora(h)) return
+    if (!h.away_enabled || !h.away_message.trim() || abertoAgora(h)) return false
     const since = new Date(Date.now() - h.cooldown_hours * 3600000).toISOString()
-    const prev = await admin.from('wa_messages').select('id').eq('conversation_id', convId).eq('direction', 'out').eq('type', 'text').is('sent_by', null).gte('created_at', since).limit(1)
-    if (prev.data && prev.data.length > 0) return
+    const prev = await admin.from('wa_messages').select('id').eq('conversation_id', convId).eq('direction', 'out').eq('type', 'text').is('sent_by', null).is('flow_id', null).gte('created_at', since).limit(1)
+    if (prev.data && prev.data.length > 0) return false
     const r = await postMessage({ messaging_product: 'whatsapp', to: waId, type: 'text', text: { body: h.away_message } })
-    if (!r.ok) { console.error('[whatsapp] resposta automatica:', JSON.stringify(r.data?.error || r.data)); return }
+    if (!r.ok) { console.error('[whatsapp] resposta automatica:', JSON.stringify(r.data?.error || r.data)); return false }
     const now = new Date().toISOString()
     await admin.from('wa_messages').insert({ conversation_id: convId, wa_message_id: r.data?.messages?.[0]?.id || null, direction: 'out', type: 'text', body: h.away_message, status: 'sent', sent_by: null, created_at: now })
     await admin.from('wa_conversations').update({ last_message_at: now, last_text: '🤖 ' + h.away_message.slice(0, 120) }).eq('id', convId)
+    return true
   } catch (e) {
     console.error('[whatsapp] resposta automatica:', e)
+    return false
+  }
+}
+
+// Fluxos criados na aba Fluxos: o primeiro que combinar responde (uma resposta automatica por mensagem)
+async function fluxosPersonalizados(admin: any, convId: string, waId: string, texto: string, nomeContato: string | null): Promise<void> {
+  try {
+    const fl = await admin.from('wa_flows').select('*').eq('enabled', true).order('created_at', { ascending: true }).limit(50)
+    const lista: any[] = fl.data || []
+    if (lista.length === 0) return
+    const st = await admin.from('wa_settings').select('value').eq('key', 'hours').maybeSingle()
+    const aberto = abertoAgora(normalizar(st.data?.value))
+    const cnt = await admin.from('wa_messages').select('id', { count: 'exact', head: true }).eq('conversation_id', convId).eq('direction', 'in')
+    const primeira = (cnt.count || 0) <= 1
+    for (const f of lista) {
+      if (f.when_hours === 'dentro' && !aberto) continue
+      if (f.when_hours === 'fora' && aberto) continue
+      if (f.trigger === 'primeira' && !primeira) continue
+      if (f.trigger === 'palavra' && !casaPalavra(texto, f.keywords || [], f.match)) continue
+      if (f.trigger !== 'primeira') {
+        const since = new Date(Date.now() - (Number(f.cooldown_hours) || 12) * 3600000).toISOString()
+        const prev = await admin.from('wa_messages').select('id').eq('conversation_id', convId).eq('flow_id', f.id).gte('created_at', since).limit(1)
+        if (prev.data && prev.data.length > 0) continue
+      }
+      const corpo = aplicaNome(String(f.message || ''), primeiroNome(nomeContato))
+      if (!corpo.trim()) continue
+      const r = await postMessage({ messaging_product: 'whatsapp', to: waId, type: 'text', text: { body: corpo } })
+      if (!r.ok) { console.error('[whatsapp] fluxo ' + f.name + ':', JSON.stringify(r.data?.error || r.data)); return }
+      const now = new Date().toISOString()
+      await admin.from('wa_messages').insert({ conversation_id: convId, wa_message_id: r.data?.messages?.[0]?.id || null, direction: 'out', type: 'text', body: corpo, status: 'sent', sent_by: null, flow_id: f.id, created_at: now })
+      await admin.from('wa_conversations').update({ last_message_at: now, last_text: '🤖 ' + corpo.slice(0, 120) }).eq('id', convId)
+      return
+    }
+  } catch (e) {
+    console.error('[whatsapp] fluxos:', e)
   }
 }
 
@@ -101,7 +139,11 @@ export async function POST(req: NextRequest) {
           if (r.error) { console.error('[whatsapp] ingest:', r.error.message); continue }
           const out = r.data as any
           if (d.mediaId && out?.message_id) await saveMedia(admin, out.conversation_id, out.message_id, d.mediaId, d.mime)
-          if (out?.conversation_id) await respostaAutomatica(admin, out.conversation_id, String(m.from))
+          // So responde sozinho a mensagem nova (nao a reenvios da Meta)
+          if (out?.conversation_id && out?.message_id) {
+            const respondeu = await respostaAutomatica(admin, out.conversation_id, String(m.from))
+            if (!respondeu) await fluxosPersonalizados(admin, out.conversation_id, String(m.from), d.type === 'text' ? String(d.body || '') : '', name)
+          }
         }
 
         for (const s of v.statuses || []) {
