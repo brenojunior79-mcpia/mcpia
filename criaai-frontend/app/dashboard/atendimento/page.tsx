@@ -10,7 +10,9 @@ import Disparo from '@/components/whatsapp/Disparo'
 import { paraMp3 } from '@/lib/audioMp3'
 import { classificar } from '@/lib/waMedia'
 
-type Pessoa = { id: string; nome: string; email: string; admin: boolean }
+type Pessoa = { id: string; nome: string; email: string; admin: boolean; escopo?: string }
+// Quem atende aquele chat (admin e 'todos' atendem os dois)
+function atendeCanal(p: Pessoa, rec: boolean): boolean { return p.admin || p.escopo === 'todos' || (p.escopo === 'recuperacao') === rec }
 type Conv = { connection_id: string | null; id: string; assigned_to: string | null; wa_id: string; name: string | null; profile_label: string | null; status: string; unread: number; last_text: string | null; last_message_at: string; last_inbound_at: string | null }
 type Msg = { id: string; conversation_id: string; direction: 'in' | 'out'; sent_by?: string | null; type: string; body: string | null; media_path: string | null; mime: string | null; status: string; error: string | null; created_at: string }
 type Status = { connected: boolean; missing?: string[]; webhookUrl?: string; number?: string; name?: string; quality?: string; error?: string }
@@ -425,7 +427,7 @@ export default function AtendimentoPage() {
               const nomeFiltro = function(k: string) { return k === 'todas' ? 'Todas' : k === meuId ? 'Minhas' : primeiroNome(k) }
               const emEspera = filtro === 'sem'
               const botao = function(on: boolean): React.CSSProperties { return { cursor: 'pointer', border: 0, borderRadius: 10, padding: '10px 6px', fontWeight: 700, fontSize: 13.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', background: on ? '#1f7a5a' : 'var(--surface2)', color: on ? '#fff' : 'var(--muted2)' } }
-              const pessoasMenu = pessoas.slice().sort(function(x, y) { return (x.id === meuId ? -1 : 0) - (y.id === meuId ? -1 : 0) })
+              const pessoasMenu = pessoas.filter(function(x) { return atendeCanal(x, canal === 'recuperacao') }).sort(function(x, y) { return (x.id === meuId ? -1 : 0) - (y.id === meuId ? -1 : 0) })
               return (
                 <div style={{ position: 'relative', display: 'flex', gap: 6 }}>
                   <button onClick={function() { setFiltro('sem'); setMenuAberto(false) }} style={{ ...botao(emEspera), flex: 1 }}>Em espera ({cont('sem')})</button>
@@ -498,7 +500,7 @@ export default function AtendimentoPage() {
                 {isAdmin && (
                   <select value={atual.assigned_to || ''} onChange={function(e) { atribuir(e.target.value) }} title="Atendente desta conversa" style={{ border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '6px 8px', fontSize: 12.5, fontWeight: 700, maxWidth: 150 }}>
                     <option value="">Em espera</option>
-                    {pessoas.map(function(p) { return <option key={p.id} value={p.id}>{p.id === meuId ? 'Eu (' + (p.nome.split(' ')[0] || 'admin') + ')' : (p.nome.split(' ')[0] || p.email)}</option> })}
+                    {pessoas.filter(function(x) { return x.id === atual.assigned_to || atendeCanal(x, !!atual.connection_id) }).map(function(p) { return <option key={p.id} value={p.id}>{p.id === meuId ? 'Eu (' + (p.nome.split(' ')[0] || 'admin') + ')' : (p.nome.split(' ')[0] || p.email)}</option> })}
                   </select>
                 )}
                 {atual.status === 'resolvida'
