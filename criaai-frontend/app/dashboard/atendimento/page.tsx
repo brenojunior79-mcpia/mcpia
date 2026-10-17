@@ -4,9 +4,10 @@ import { createClient } from '@/lib/supabase-browser'
 import Modelos, { type Tpl } from '@/components/whatsapp/Modelos'
 import TemplatePicker, { type TplSend } from '@/components/whatsapp/TemplatePicker'
 import Atendentes from '@/components/whatsapp/Atendentes'
+import Horario from '@/components/whatsapp/Horario'
 
 type Conv = { id: string; wa_id: string; name: string | null; profile_label: string | null; status: string; unread: number; last_text: string | null; last_message_at: string; last_inbound_at: string | null }
-type Msg = { id: string; conversation_id: string; direction: 'in' | 'out'; type: string; body: string | null; media_path: string | null; mime: string | null; status: string; error: string | null; created_at: string }
+type Msg = { id: string; conversation_id: string; direction: 'in' | 'out'; sent_by?: string | null; type: string; body: string | null; media_path: string | null; mime: string | null; status: string; error: string | null; created_at: string }
 type Status = { connected: boolean; missing?: string[]; webhookUrl?: string; number?: string; name?: string; quality?: string; error?: string }
 
 const WIN = 24 * 60 * 60 * 1000
@@ -66,7 +67,7 @@ export default function AtendimentoPage() {
   const [status, setStatus] = useState<Status | null>(null)
   const [staff, setStaff] = useState<boolean | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
-  const [tab, setTab] = useState<'conversas' | 'atendentes' | 'modelos'>('conversas')
+  const [tab, setTab] = useState<'conversas' | 'atendentes' | 'modelos' | 'horario'>('conversas')
   const [tpls, setTpls] = useState<Tpl[] | null>(null)
   const [tplErro, setTplErro] = useState('')
   const [tplCarregando, setTplCarregando] = useState(false)
@@ -81,7 +82,7 @@ export default function AtendimentoPage() {
   }, [])
 
   const carregarMsgs = useCallback(async function(id: string) {
-    const r = await supabase.from('wa_messages').select('id, conversation_id, direction, type, body, media_path, mime, status, error, created_at').eq('conversation_id', id).order('created_at', { ascending: true }).limit(500)
+    const r = await supabase.from('wa_messages').select('id, conversation_id, direction, sent_by, type, body, media_path, mime, status, error, created_at').eq('conversation_id', id).order('created_at', { ascending: true }).limit(500)
     if (!r.error && r.data && selRef.current === id) setMsgs(r.data as Msg[])
   }, [])
 
@@ -210,7 +211,7 @@ export default function AtendimentoPage() {
 
       {/* Abas */}
       <div style={{ display: 'flex', gap: 6, padding: '8px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface)', overflowX: 'auto' }}>
-        {([['conversas', '💬 Conversas'], ['atendentes', '👥 Atendentes'], ['modelos', '📄 Modelos']] as const).filter(function(t) { return t[0] !== 'atendentes' || isAdmin }).map(function(t) {
+        {([['conversas', '💬 Conversas'], ['atendentes', '👥 Atendentes'], ['modelos', '📄 Modelos'], ['horario', '🕒 Horário']] as const).filter(function(t) { return (t[0] !== 'atendentes' && t[0] !== 'horario') || isAdmin }).map(function(t) {
           const on = tab === t[0]
           return <button key={t[0]} onClick={function() { setTab(t[0]); if (t[0] === 'modelos') carregarTpls() }} style={{ cursor: 'pointer', border: 0, borderRadius: 8, padding: '7px 14px', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', background: on ? 'var(--accent-light)' : 'var(--surface2)', color: on ? 'var(--accent)' : 'var(--muted2)' }}>{t[1]}</button>
         })}
@@ -227,6 +228,7 @@ export default function AtendimentoPage() {
 
       {tab === 'modelos' && <Modelos isAdmin={isAdmin} tpls={tpls} erro={tplErro} carregando={tplCarregando} onReload={carregarTpls} />}
       {tab === 'atendentes' && isAdmin && <Atendentes />}
+      {tab === 'horario' && isAdmin && <Horario />}
 
       <div className="at-wrap" style={tab === 'conversas' ? undefined : { display: 'none' }}>
         {/* Lista */}
@@ -289,6 +291,7 @@ export default function AtendimentoPage() {
                     <div key={m.id} style={{ display: 'flex', flexDirection: 'column' }}>
                       {novoDia && <div style={{ alignSelf: 'center', fontSize: 11.5, color: 'var(--muted2)', background: 'var(--surface2)', borderRadius: 999, padding: '3px 10px', margin: '8px 0' }}>{diaMsg(m.created_at)}</div>}
                       <div style={{ alignSelf: meu ? 'flex-end' : 'flex-start', maxWidth: 'min(78%, 520px)', background: meu ? '#d9fdd3' : 'var(--surface)', color: meu ? '#111b21' : 'var(--text)', border: meu ? 'none' : '1px solid var(--border)', borderRadius: 12, padding: '7px 10px 5px', fontSize: 14, lineHeight: 1.4, wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
+                        {meu && !m.sent_by && m.type === 'text' && <div style={{ fontSize: 10.5, fontWeight: 800, opacity: 0.7, marginBottom: 2 }}>🤖 Resposta automática</div>}
                         <Midia m={m} />
                         {m.type !== 'audio' && m.body && <div>{m.body}</div>}
                         {!m.media_path && m.type !== 'text' && m.type !== 'template' && !m.body && <div style={{ opacity: 0.7 }}>[{m.type}]</div>}

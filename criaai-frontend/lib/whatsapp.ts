@@ -93,6 +93,19 @@ export async function wabaId(): Promise<string> {
   return found
 }
 
+// Envia uma mensagem. Numeros do Brasil: a Meta entrega o numero sem o 9 (55 + DDD + 8 digitos),
+// mas a lista do modo de teste guarda com o 9. Se recusar por "numero nao liberado" (131030), tenta com o 9.
+export async function postMessage(payload: any): Promise<{ ok: boolean; status: number; data: any }> {
+  const cfg = waConfig()
+  let r = await graphFetch(cfg.phoneId + '/messages', { method: 'POST', json: payload })
+  const to = String(payload?.to || '')
+  if (!r.ok && Number(r.data?.error?.code) === 131030 && /^55\d{2}[6-9]\d{7}$/.test(to)) {
+    const retry = await graphFetch(cfg.phoneId + '/messages', { method: 'POST', json: { ...payload, to: to.slice(0, 4) + '9' + to.slice(4) } })
+    if (retry.ok) r = retry
+  }
+  return r
+}
+
 export function graphError(data: any): string {
   const e = data?.error
   if (!e) return 'Erro ao falar com o WhatsApp.'

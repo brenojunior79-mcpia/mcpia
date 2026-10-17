@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adminClient, graphFetch, validSignature, waConfig } from '@/lib/whatsapp'
+import { adminClient, graphFetch, postMessage, validSignature, waConfig } from '@/lib/whatsapp'
+import { abertoAgora, normalizar } from '@/lib/waHours'
 
 export const maxDuration = 30
 export const dynamic = 'force-dynamic'
@@ -53,6 +54,25 @@ async function saveMedia(admin: any, convId: string, msgId: string, mediaId: str
   }
 }
 
+// Fora do horario de atendimento: responde uma vez (a cada X horas) com o aviso configurado
+async function respostaAutomatica(admin: any, convId: string, waId: string): Promise<void> {
+  try {
+    const st = await admin.from('wa_settings').select('value').eq('key', 'hours').maybeSingle()
+    const h = normalizar(st.data?.value)
+    if (!h.away_enabled || !h.away_message.trim() || abertoAgora(h)) return
+    const since = new Date(Date.now() - h.cooldown_hours * 3600000).toISOString()
+    const prev = await admin.from('wa_messages').select('id').eq('conversation_id', convId).eq('direction', 'out').is('sent_by', null).gte('created_at', since).limit(1)
+    if (prev.data && prev.data.length > 0) return
+    const r = await postMessage({ messaging_product: 'whatsapp', to: waId, type: 'text', text: { body: h.away_message } })
+    if (!r.ok) { console.error('[whatsapp] resposta automatica:', JSON.stringify(r.data?.error || r.data)); return }
+    const now = new Date().toISOString()
+    await admin.from('wa_messages').insert({ conversation_id: convId, wa_message_id: r.data?.messages?.[0]?.id || null, direction: 'out', type: 'text', body: h.away_message, status: 'sent', sent_by: null, created_at: now })
+    await admin.from('wa_conversations').update({ last_message_at: now, last_text: '🤖 ' + h.away_message.slice(0, 120) }).eq('id', convId)
+  } catch (e) {
+    console.error('[whatsapp] resposta automatica:', e)
+  }
+}
+
 export async function POST(req: NextRequest) {
   const cfg = waConfig()
   const raw = await req.text()
@@ -81,6 +101,7 @@ export async function POST(req: NextRequest) {
           if (r.error) { console.error('[whatsapp] ingest:', r.error.message); continue }
           const out = r.data as any
           if (d.mediaId && out?.message_id) await saveMedia(admin, out.conversation_id, out.message_id, d.mediaId, d.mime)
+          if (out?.conversation_id) await respostaAutomatica(admin, out.conversation_id, String(m.from))
         }
 
         for (const s of v.statuses || []) {
