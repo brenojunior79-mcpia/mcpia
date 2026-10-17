@@ -5,6 +5,7 @@ import Modelos, { type Tpl } from '@/components/whatsapp/Modelos'
 import TemplatePicker, { type TplSend } from '@/components/whatsapp/TemplatePicker'
 import Atendentes from '@/components/whatsapp/Atendentes'
 import Horario from '@/components/whatsapp/Horario'
+import { classificar } from '@/lib/waMedia'
 
 type Pessoa = { id: string; nome: string; email: string; admin: boolean }
 type Conv = { id: string; assigned_to: string | null; wa_id: string; name: string | null; profile_label: string | null; status: string; unread: number; last_text: string | null; last_message_at: string; last_inbound_at: string | null }
@@ -73,6 +74,13 @@ export default function AtendimentoPage() {
   const [tplErro, setTplErro] = useState('')
   const [tplCarregando, setTplCarregando] = useState(false)
   const [mostrarTpl, setMostrarTpl] = useState(false)
+  const [anexo, setAnexo] = useState<File | null>(null)
+  const [gravando, setGravando] = useState(false)
+  const [segs, setSegs] = useState(0)
+  const recRef = useRef<MediaRecorder | null>(null)
+  const recCancel = useRef(false)
+  const recTimer = useRef<any>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
   const [pessoas, setPessoas] = useState<Pessoa[]>([])
   const [meuId, setMeuId] = useState('')
   const [filtro, setFiltro] = useState<string>('todas')
@@ -173,6 +181,72 @@ export default function AtendimentoPage() {
       else { setTexto(''); setMostrarTpl(false); fetch('/api/whatsapp/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId: atual.id }) }).catch(function() {}); await carregarMsgs(atual.id); carregarConvs() }
     } catch (e) { setErro('Sem conexao. Tente de novo.') }
     setEnviando(false)
+  }
+
+  function mimeDe(f: File): string {
+    if (f.type) return f.type
+    const ext = (f.name.split('.').pop() || '').toLowerCase()
+    const m: Record<string, string> = { pdf: 'application/pdf', txt: 'text/plain', csv: 'text/csv', doc: 'application/msword', xls: 'application/vnd.ms-excel', ppt: 'application/vnd.ms-powerpoint',
+      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      mp3: 'audio/mpeg', m4a: 'audio/mp4', aac: 'audio/aac', ogg: 'audio/ogg', amr: 'audio/amr', mp4: 'video/mp4', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png' }
+    return m[ext] || ''
+  }
+
+  function escolherArquivo(f: File | null | undefined) {
+    if (!f) return
+    setErro('')
+    const c = classificar(mimeDe(f))
+    if ('erro' in c) { setErro(c.erro); return }
+    if (f.size > c.max) { setErro('Arquivo grande demais (máximo ' + Math.round(c.max / 1048576) + ' MB para este tipo).'); return }
+    setAnexo(f)
+  }
+
+  // Envia um arquivo (ou audio gravado): sobe direto ao armazenamento e depois manda pelo WhatsApp
+  async function enviarArquivo(file: Blob, nome: string, mime: string, legenda: string) {
+    if (!atual || enviando) return
+    setEnviando(true); setErro('')
+    try {
+      const u = await fetch('/api/whatsapp/upload-url', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId: atual.id, filename: nome, mime, size: file.size }) })
+      const uj = await u.json().catch(function() { return {} })
+      if (!u.ok) { setErro(uj.error || 'Não foi possível preparar o envio.'); setEnviando(false); return }
+      const up = await supabase.storage.from('wa-media').uploadToSignedUrl(uj.path, uj.token, file, { contentType: mime })
+      if (up.error) { setErro('Não foi possível enviar o arquivo. Tente de novo.'); setEnviando(false); return }
+      const r = await fetch('/api/whatsapp/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId: atual.id, media: { path: uj.path, mime, filename: nome, caption: legenda } }) })
+      const j = await r.json().catch(function() { return {} })
+      if (!r.ok) setErro(j.error || 'Não foi possível enviar.')
+      else { setTexto(''); setAnexo(null); fetch('/api/whatsapp/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId: atual.id }) }).catch(function() {}); await carregarMsgs(atual.id); carregarConvs() }
+    } catch (e) { setErro('Sem conexão. Tente de novo.') }
+    setEnviando(false)
+  }
+
+  async function iniciarGravacao() {
+    setErro('')
+    const tipos = ['audio/ogg;codecs=opus', 'audio/mp4;codecs=mp4a.40.2', 'audio/mp4', 'audio/mpeg']
+    const tipo = typeof MediaRecorder !== 'undefined' ? tipos.find(function(t) { return MediaRecorder.isTypeSupported(t) }) : undefined
+    if (!tipo) { setErro('Este navegador não grava áudio num formato que o WhatsApp aceita. Use o clipe 📎 para enviar um arquivo de áudio.'); return }
+    let stream: MediaStream
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }) } catch (e) { setErro('Permita o uso do microfone no navegador para gravar.'); return }
+    const chunks: Blob[] = []
+    const rec = new MediaRecorder(stream, { mimeType: tipo })
+    recCancel.current = false
+    rec.ondataavailable = function(e) { if (e.data && e.data.size > 0) chunks.push(e.data) }
+    rec.onstop = function() {
+      stream.getTracks().forEach(function(t) { t.stop() })
+      if (recTimer.current) { clearInterval(recTimer.current); recTimer.current = null }
+      setGravando(false)
+      if (recCancel.current || chunks.length === 0) return
+      const mime = tipo.split(';')[0]
+      const ext = mime === 'audio/ogg' ? 'ogg' : mime === 'audio/mpeg' ? 'mp3' : 'm4a'
+      enviarArquivo(new Blob(chunks, { type: mime }), 'audio.' + ext, mime, '')
+    }
+    recRef.current = rec
+    rec.start()
+    setSegs(0); setGravando(true)
+    recTimer.current = setInterval(function() { setSegs(function(x) { return x + 1 }) }, 1000)
+  }
+  function pararGravacao(cancelar: boolean) {
+    recCancel.current = cancelar
+    if (recRef.current && recRef.current.state !== 'inactive') recRef.current.stop()
   }
 
   async function mudarStatus(novo: 'aberta' | 'resolvida') {
@@ -373,16 +447,37 @@ export default function AtendimentoPage() {
                 {!atual.assigned_to && <div style={{ marginBottom: 8, fontSize: 12.5, color: '#b45309', fontWeight: 700 }}>⏳ Esta conversa está em espera. Ao responder, ela fica com você.</div>}
                 {janelaAberta ? (
                   <>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
-                      <div style={{ fontSize: 11.5, color: 'var(--muted2)' }}>Você pode responder por mais ~{horasRestantes}h.</div>
-                      <button onClick={function() { setMostrarTpl(!mostrarTpl) }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: mostrarTpl ? 'var(--accent-light)' : 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '4px 9px', fontSize: 12, fontWeight: 700 }}>📄 Modelo</button>
-                    </div>
+                    <div style={{ fontSize: 11.5, color: 'var(--muted2)', marginBottom: 6 }}>Você pode responder por mais ~{horasRestantes}h.</div>
                     {mostrarTpl && <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: 10, marginBottom: 8 }}><TemplatePicker tpls={tpls} enviando={enviando} onSend={function(t) { enviar(t) }} /></div>}
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-                      <textarea className="at-input" rows={2} placeholder="Digite a resposta…" value={texto} onChange={function(e) { setTexto(e.target.value) }}
-                        onKeyDown={function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar() } }} style={{ resize: 'none' }} />
-                      <button disabled={enviando || !texto.trim()} onClick={function() { enviar() }} style={{ cursor: 'pointer', border: 0, background: '#16a34a', color: '#fff', borderRadius: 10, padding: '11px 16px', fontWeight: 800, fontSize: 14, opacity: enviando || !texto.trim() ? 0.55 : 1 }}>{enviando ? '…' : 'Enviar'}</button>
-                    </div>
+                    {gravando ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.3)', borderRadius: 12, padding: '10px 12px' }}>
+                        <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#dc2626', display: 'inline-block' }} />
+                        <div style={{ flex: 1, fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>Gravando… {Math.floor(segs / 60)}:{String(segs % 60).padStart(2, '0')}</div>
+                        <button onClick={function() { pararGravacao(true) }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 11px', fontWeight: 700, fontSize: 13 }}>Cancelar</button>
+                        <button onClick={function() { pararGravacao(false) }} style={{ cursor: 'pointer', border: 0, background: '#16a34a', color: '#fff', borderRadius: 8, padding: '7px 13px', fontWeight: 800, fontSize: 13 }}>Enviar áudio</button>
+                      </div>
+                    ) : (
+                      <>
+                        {anexo && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--surface2)', borderRadius: 10, padding: '7px 10px', marginBottom: 8, fontSize: 13, color: 'var(--text)' }}>
+                            <span>📎</span>
+                            <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>{anexo.name}</span>
+                            <span style={{ color: 'var(--muted2)', fontSize: 12 }}>{anexo.size > 1048576 ? (anexo.size / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(anexo.size / 1024)) + ' KB'}</span>
+                            <button onClick={function() { setAnexo(null) }} style={{ border: 0, background: 'transparent', color: 'var(--muted2)', cursor: 'pointer', fontSize: 16 }}>×</button>
+                          </div>
+                        )}
+                        <textarea className="at-input" rows={2} placeholder={anexo ? 'Legenda (opcional)…' : 'Digite a resposta…'} value={texto} onChange={function(e) { setTexto(e.target.value) }}
+                          onKeyDown={function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (anexo) enviarArquivo(anexo, anexo.name, mimeDe(anexo), texto); else enviar() } }} style={{ resize: 'none' }} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
+                          <input ref={fileRef} type="file" accept="image/jpeg,image/png,video/mp4,video/3gpp,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv" style={{ display: 'none' }} onChange={function(e) { escolherArquivo(e.target.files && e.target.files[0]); e.target.value = '' }} />
+                          <button title="Enviar arquivo, foto ou vídeo" onClick={function() { if (fileRef.current) fileRef.current.click() }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 10px', fontSize: 14, fontWeight: 700 }}>📎 Arquivo</button>
+                          <button title="Gravar áudio" onClick={iniciarGravacao} disabled={enviando} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 10px', fontSize: 14, fontWeight: 700 }}>🎤 Áudio</button>
+                          <button title="Enviar modelo aprovado" onClick={function() { setMostrarTpl(!mostrarTpl) }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: mostrarTpl ? 'var(--accent-light)' : 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 10px', fontSize: 14, fontWeight: 700 }}>📄 Modelo</button>
+                          <div style={{ flex: 1 }} />
+                          <button disabled={enviando || (!texto.trim() && !anexo)} onClick={function() { if (anexo) enviarArquivo(anexo, anexo.name, mimeDe(anexo), texto); else enviar() }} style={{ cursor: 'pointer', border: 0, background: '#16a34a', color: '#fff', borderRadius: 10, padding: '10px 18px', fontWeight: 800, fontSize: 14, opacity: enviando || (!texto.trim() && !anexo) ? 0.55 : 1 }}>{enviando ? '…' : 'Enviar'}</button>
+                        </div>
+                      </>
+                    )}
                   </>
                 ) : (
                   <div style={{ background: 'rgba(217,119,6,0.1)', borderRadius: 12, padding: 12 }}>

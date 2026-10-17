@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adminClient, canAccessConv, graphError, postMessage, requireStaff, waConfig } from '@/lib/whatsapp'
+import { adminClient, canAccessConv, GRAPH, graphError, postMessage, requireStaff, waConfig } from '@/lib/whatsapp'
+import { classificar } from '@/lib/waMedia'
 
-export const maxDuration = 30
+export const maxDuration = 60
 export const dynamic = 'force-dynamic'
 
 // Envia uma mensagem de texto (dentro das 24h) ou um modelo aprovado (a qualquer hora)
@@ -16,7 +17,8 @@ export async function POST(req: NextRequest) {
   const convId = String(input?.conversationId || '')
   const text = typeof input?.text === 'string' ? input.text.trim() : ''
   const tpl = input?.template && typeof input.template.name === 'string' ? input.template : null
-  if (!convId || (!text && !tpl)) return NextResponse.json({ error: 'Escreva uma mensagem.' }, { status: 400 })
+  const media = input?.media && typeof input.media.path === 'string' ? input.media : null
+  if (!convId || (!text && !tpl && !media)) return NextResponse.json({ error: 'Escreva uma mensagem.' }, { status: 400 })
   if (text.length > 4000) return NextResponse.json({ error: 'Mensagem muito longa.' }, { status: 400 })
 
   if (!(await canAccessConv(staffId, convId))) return NextResponse.json({ error: 'Essa conversa nao esta com voce.' }, { status: 403 })
@@ -36,7 +38,44 @@ export async function POST(req: NextRequest) {
   let payload: any
   let shown: string
   let type = 'text'
-  if (tpl) {
+  let mediaPath: string | null = null
+  let mediaMime: string | null = null
+  if (media) {
+    const last = c.data.last_inbound_at ? new Date(c.data.last_inbound_at).getTime() : 0
+    if (Date.now() - last > 24 * 60 * 60 * 1000) {
+      return NextResponse.json({ error: 'Passaram 24 horas desde a ultima mensagem do aluno. Envie um modelo aprovado.', window: 'closed' }, { status: 409 })
+    }
+    const path = String(media.path)
+    if (path.indexOf('out/' + convId + '/') !== 0 || path.indexOf('..') >= 0) return NextResponse.json({ error: 'Arquivo invalido.' }, { status: 400 })
+    const cl = classificar(String(media.mime || ''))
+    if ('erro' in cl) return NextResponse.json({ error: cl.erro }, { status: 400 })
+    const dl = await admin.storage.from('wa-media').download(path)
+    if (dl.error || !dl.data) return NextResponse.json({ error: 'Nao achei o arquivo enviado. Tente de novo.' }, { status: 400 })
+    if (dl.data.size > cl.max) return NextResponse.json({ error: 'Arquivo grande demais.' }, { status: 400 })
+    const filename = String(media.filename || 'arquivo').replace(/[^\w.\- ()\u00C0-\u017F]/g, '_').slice(0, 100)
+    const caption = typeof media.caption === 'string' ? media.caption.trim().slice(0, 1000) : ''
+    const fd = new FormData()
+    fd.append('messaging_product', 'whatsapp')
+    fd.append('type', cl.mime)
+    fd.append('file', new Blob([await dl.data.arrayBuffer()], { type: cl.mime }), filename)
+    let up: any = null
+    try {
+      const res = await fetch(GRAPH + '/' + cfg.phoneId + '/media', { method: 'POST', headers: { Authorization: 'Bearer ' + cfg.token }, body: fd })
+      up = { ok: res.ok, data: await res.json().catch(function() { return null }) }
+    } catch (e) { up = { ok: false, data: null } }
+    if (!up.ok || !up.data?.id) {
+      if (assumiu) await admin.from('wa_conversations').update({ assigned_to: null }).eq('id', convId).eq('assigned_to', staffId)
+      return NextResponse.json({ error: graphError(up.data) }, { status: 400 })
+    }
+    const obj: any = { id: up.data.id }
+    if (cl.kind !== 'audio' && caption) obj.caption = caption
+    if (cl.kind === 'document') obj.filename = filename
+    payload = { messaging_product: 'whatsapp', to: c.data.wa_id, type: cl.kind, [cl.kind]: obj }
+    type = cl.kind
+    mediaPath = path
+    mediaMime = cl.mime
+    shown = cl.kind === 'document' ? (caption ? filename + ' — ' + caption : filename) : caption
+  } else if (tpl) {
     const params: string[] = Array.isArray(tpl.params) ? tpl.params.map(function(x: any) { return String(x) }).filter(function(x: string) { return x.length > 0 }) : []
     payload = {
       messaging_product: 'whatsapp', to: c.data.wa_id, type: 'template',
@@ -62,8 +101,9 @@ export async function POST(req: NextRequest) {
 
   const waId = r.data?.messages?.[0]?.id || null
   const now = new Date().toISOString()
-  await admin.from('wa_messages').insert({ conversation_id: convId, wa_message_id: waId, direction: 'out', type, body: shown, status: 'sent', sent_by: staffId, created_at: now })
-  const upd: any = { last_message_at: now, last_text: 'Você: ' + shown.slice(0, 120), status: 'aberta', unread: 0 }
+  await admin.from('wa_messages').insert({ conversation_id: convId, wa_message_id: waId, direction: 'out', type, body: shown || null, media_path: mediaPath, mime: mediaMime, status: 'sent', sent_by: staffId, created_at: now })
+  const rotulo = type === 'image' ? '📷 ' + (shown || 'Imagem') : type === 'video' ? '🎬 ' + (shown || 'Vídeo') : type === 'audio' ? '🎤 Áudio' : type === 'document' ? '📎 ' + shown : shown
+  const upd: any = { last_message_at: now, last_text: 'Você: ' + rotulo.slice(0, 120), status: 'aberta', unread: 0 }
   await admin.from('wa_conversations').update(upd).eq('id', convId)
   return NextResponse.json({ ok: true })
 }
