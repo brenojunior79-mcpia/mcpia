@@ -169,10 +169,11 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
                 href={item.href}
                 onClick={function() { setMobileOpen(false) }}
                 className={styles.navItem + (pathname === item.href ? ' ' + styles.active : '')}
+                style={(item as any).badge ? { background: 'linear-gradient(135deg,#f59e0b,#f97316)', color: '#fff', fontWeight: 700, boxShadow: '0 4px 14px rgba(249,115,22,0.35)' } : undefined}
               >
                 <i className={'ti ' + item.icon} />
                 {item.label}
-                {(item as any).badge && <span style={{ marginLeft: 'auto', background: 'linear-gradient(135deg,#f59e0b,#f97316)', color: '#fff', fontSize: 9.5, fontWeight: 800, letterSpacing: 0.4, borderRadius: 999, padding: '2px 7px' }}>{(item as any).badge}</span>}
+                {(item as any).badge && <span style={{ marginLeft: 'auto', background: '#fff', color: '#ea580c', fontSize: 9.5, fontWeight: 800, letterSpacing: 0.4, borderRadius: 999, padding: '2px 7px' }}>{(item as any).badge}</span>}
               </Link>
             )
           })}

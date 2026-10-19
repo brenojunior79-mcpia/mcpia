@@ -270,9 +270,6 @@ export default function EstruturaExpressPage() {
                     <button onClick={function() { irPara(atual - 1) }} disabled={atual === 0} className="ee-btn" style={{ cursor: atual === 0 ? 'default' : 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', fontWeight: 700, fontSize: 14, padding: '10px 14px', borderRadius: 10, opacity: atual === 0 ? 0.45 : 1 }}>← Anterior</button>
                     <button onClick={function() { irPara(atual + 1) }} disabled={atual >= total - 1} className="ee-btn" style={{ cursor: atual >= total - 1 ? 'default' : 'pointer', border: 0, background: '#1f7a5a', color: '#fff', fontWeight: 800, fontSize: 14, padding: '10px 16px', borderRadius: 10, opacity: atual >= total - 1 ? 0.45 : 1 }}>Próxima →</button>
                   </div>
-                  <div style={{ marginTop: 12, fontSize: 12.5, color: 'var(--muted2)' }}>
-                    O vídeo não abriu? <a href={'https://vimeo.com/' + aula.video_id} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', fontWeight: 700 }}>Assistir no Vimeo</a>
-                  </div>
                 </div>
               </div>
             </div>
