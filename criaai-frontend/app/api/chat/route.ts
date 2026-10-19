@@ -75,25 +75,42 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemContent },
-          ...apiMessages
-        ],
-        max_tokens: 800,
-        temperature: 0.2,
-      }),
-    })
+    const chamar = function() {
+      return fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: systemContent },
+            ...apiMessages
+          ],
+          max_tokens: 800,
+          temperature: 0.2,
+        }),
+        signal: AbortSignal.timeout(40000),
+      })
+    }
+    let response = await chamar()
+    // Limite momentaneo ou falha do servidor da OpenAI: tenta mais uma vez
+    if (response.status === 429 || response.status >= 500) {
+      await new Promise(function(r) { setTimeout(r, 1500) })
+      response = await chamar()
+    }
 
-    const data = await response.json()
-    const reply = data.choices?.[0]?.message?.content || 'Não consegui gerar uma resposta. Tente novamente.'
+    const data = await response.json().catch(function() { return null })
+    let reply = data?.choices?.[0]?.message?.content
+    if (!reply) {
+      // Registra o motivo real (antes ficava escondido atras da mensagem generica)
+      const motivo = response.status + ' ' + JSON.stringify(data?.error || data || '').slice(0, 400)
+      console.error('[chat] OpenAI sem resposta:', motivo)
+      reply = 'Não consegui gerar uma resposta. Tente novamente.'
+      // Para o admin, mostra o motivo na propria tela (so ele ve)
+      if (profileResult.data?.is_admin === true) reply += '\n\n[Aviso so para o admin] OpenAI respondeu: ' + motivo
+    }
 
     await saveConversation(reply)
 
