@@ -13,7 +13,7 @@ import { classificar } from '@/lib/waMedia'
 type Pessoa = { id: string; nome: string; email: string; admin: boolean; escopo?: string }
 // Quem atende aquele chat (admin e 'todos' atendem os dois)
 function atendeCanal(p: Pessoa, rec: boolean): boolean { return p.admin || p.escopo === 'todos' || (p.escopo === 'recuperacao') === rec }
-type Conv = { profile_id?: string | null; connection_id: string | null; id: string; assigned_to: string | null; wa_id: string; name: string | null; profile_label: string | null; status: string; unread: number; last_text: string | null; last_message_at: string; last_inbound_at: string | null }
+type Conv = { profile_id?: string | null; connection_id: string | null; id: string; assigned_to: string | null; wa_id: string; name: string | null; profile_label: string | null; status: string; unread: number; last_text: string | null; last_message_at: string; last_inbound_at: string | null; ia_ativa?: boolean }
 type Msg = { wa_message_id?: string | null; reply_to_wa_id?: string | null; id: string; conversation_id: string; direction: 'in' | 'out'; sent_by?: string | null; type: string; body: string | null; media_path: string | null; mime: string | null; status: string; error: string | null; created_at: string }
 type Status = { connected: boolean; missing?: string[]; webhookUrl?: string; number?: string; name?: string; quality?: string; error?: string }
 
@@ -469,6 +469,17 @@ export default function AtendimentoPage() {
     if (r.error) setErro(r.error.message)
     await carregarConvs()
   }
+  // Assistente de IA: so o admin liga/desliga (o servidor tambem confere)
+  async function alternarIA(ids: string[], ativo: boolean) {
+    if (!isAdmin || ids.length === 0) return
+    setErro('')
+    setConvs(function(l) { return l.map(function(x) { return ids.indexOf(x.id) >= 0 ? { ...x, ia_ativa: ativo } : x }) })
+    try {
+      const r = await fetch('/api/whatsapp/ia', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids, ativo }) })
+      const j = await r.json().catch(function() { return {} })
+      if (!r.ok) { setErro(j.error || 'Não foi possível mudar o assistente.'); await carregarConvs() }
+    } catch (e) { setErro('Sem conexão. Tente de novo.'); await carregarConvs() }
+  }
   // Acoes em massa: vale so para as conversas que estao na lista (e marcadas) neste momento
   async function acaoMassa(tipo: 'finalizar' | 'reabrir' | 'transferir') {
     const ids = lista.filter(function(c) { return marcadas[c.id] }).map(function(c) { return c.id })
@@ -715,6 +726,12 @@ export default function AtendimentoPage() {
                       <button disabled={off || destino === '__'} onClick={function() { acaoMassa('transferir') }} style={btn('#2563eb', off || destino === '__')}>Transferir</button>
                     </div>
                   )}
+                  {isAdmin && (
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button disabled={off} onClick={function() { const ids = lista.filter(function(c) { return marcadas[c.id] }).map(function(c) { return c.id }); if (window.confirm('Ligar o assistente de IA em ' + ids.length + ' conversa(s)? Ele passa a responder sozinho.')) { alternarIA(ids, true); setMarcadas({}); setModoSel(false) } }} style={btn('#7c3aed', off)}>🤖 Ligar assistente</button>
+                      <button disabled={off} onClick={function() { const ids = lista.filter(function(c) { return marcadas[c.id] }).map(function(c) { return c.id }); alternarIA(ids, false); setMarcadas({}); setModoSel(false) }} style={btn('#6b7280', off)}>Desligar</button>
+                    </div>
+                  )}
                   {acaoRodando && <div style={{ fontSize: 12.5, color: 'var(--muted2)' }}>Aplicando…</div>}
                 </div>
               )
@@ -738,6 +755,7 @@ export default function AtendimentoPage() {
                       {c.unread > 0 && <span style={{ background: '#16a34a', color: '#fff', borderRadius: 999, minWidth: 20, height: 20, padding: '0 6px', fontSize: 11.5, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' }}>{c.unread}</span>}
                     </div>
                     {(isAdmin || !c.assigned_to) && <div style={{ fontSize: 11, color: c.assigned_to ? 'var(--muted2)' : '#b45309', fontWeight: 700, marginTop: 2 }}>{c.assigned_to ? '👤 ' + primeiroNome(c.assigned_to) : '⏳ Em espera'}</div>}
+                    {c.ia_ativa && <div style={{ fontSize: 11, color: '#7c3aed', fontWeight: 800, marginTop: 2 }}>🤖 Assistente ligado</div>}
                     {c.profile_label && <div style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 700, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>🎓 {c.profile_label}</div>}
                   </div>
                 </div>
@@ -765,6 +783,9 @@ export default function AtendimentoPage() {
                     {info && info.reembolso_em && <span style={{ color: '#b91c1c', fontWeight: 700 }}> · Reembolsado em {fmtDia(info.reembolso_em)}</span>}
                   </div>
                 </div>
+                {isAdmin
+                  ? <button onClick={function() { alternarIA([atual.id], !atual.ia_ativa) }} title={atual.ia_ativa ? 'O assistente está respondendo sozinho nesta conversa. Clique para desligar.' : 'Clique para o assistente de IA passar a responder sozinho nesta conversa.'} style={{ cursor: 'pointer', border: '1px solid ' + (atual.ia_ativa ? '#7c3aed' : 'var(--border2)'), background: atual.ia_ativa ? '#7c3aed' : 'var(--surface2)', color: atual.ia_ativa ? '#fff' : 'var(--text)', borderRadius: 8, padding: '7px 10px', fontWeight: 800, fontSize: 12.5, whiteSpace: 'nowrap' }}>🤖 {atual.ia_ativa ? 'Assistente ligado' : 'Ligar assistente'}</button>
+                  : atual.ia_ativa ? <span title="O assistente de IA está respondendo esta conversa" style={{ border: '1px solid #7c3aed', color: '#7c3aed', borderRadius: 8, padding: '6px 9px', fontWeight: 800, fontSize: 12, whiteSpace: 'nowrap' }}>🤖 Assistente ativo</span> : null}
                 {isAdmin && (
                   <select value={atual.assigned_to || ''} onChange={function(e) { atribuir(e.target.value) }} title="Atendente desta conversa" style={{ border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '6px 8px', fontSize: 12.5, fontWeight: 700, maxWidth: 150 }}>
                     <option value="">Em espera</option>

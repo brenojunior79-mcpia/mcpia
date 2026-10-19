@@ -3,6 +3,7 @@ import { adminClient, graphFetch, postMessage, validSignature, waConfig } from '
 import { abertoAgora, normalizar } from '@/lib/waHours'
 import { aplicaNome, casaPalavra } from '@/lib/waFlows'
 import { primeiroNome } from '@/lib/waBroadcast'
+import { tratarIA } from '@/lib/waIA'
 
 export const maxDuration = 30
 export const dynamic = 'force-dynamic'
@@ -151,6 +152,8 @@ export async function POST(req: NextRequest) {
               const out = r.data as any
               if (d.mediaId && out?.message_id) await saveMedia(admin, out.conversation_id, out.message_id, d.mediaId, d.mime)
               if (m.context?.id && out?.message_id) await admin.from('wa_messages').update({ reply_to_wa_id: String(m.context.id) }).eq('id', out.message_id)
+              // Assistente de IA: so responde se o admin ligou nesta conversa
+              if (out?.conversation_id && out?.message_id) await tratarIA(admin, out.conversation_id, String(m.from), out.message_id, d.type, name)
             }
           }
           for (const s of v.statuses || []) {
@@ -188,7 +191,9 @@ export async function POST(req: NextRequest) {
           if (m.context?.id && out?.message_id) await admin.from('wa_messages').update({ reply_to_wa_id: String(m.context.id) }).eq('id', out.message_id)
           // So responde sozinho a mensagem nova (nao a reenvios da Meta)
           if (out?.conversation_id && out?.message_id) {
-            const respondeu = await respostaAutomatica(admin, out.conversation_id, String(m.from))
+            // Assistente de IA ligado pelo admin nesta conversa: ele responde e substitui o aviso de horario e os fluxos
+            const iaLigada = await tratarIA(admin, out.conversation_id, String(m.from), out.message_id, d.type, name)
+            const respondeu = iaLigada ? true : await respostaAutomatica(admin, out.conversation_id, String(m.from))
             if (!respondeu) await fluxosPersonalizados(admin, out.conversation_id, String(m.from), d.type === 'text' ? String(d.body || '') : '', name)
           }
         }
