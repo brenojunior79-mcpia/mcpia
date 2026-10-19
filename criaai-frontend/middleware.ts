@@ -27,10 +27,17 @@ export async function middleware(request: NextRequest) {
   // getSession le o login do cookie e so vai ate o Supabase quando ele esta vencendo (para renovar).
   // Antes, getUser() consultava o Supabase em TODA requisicao. A conferencia de verdade continua
   // nas telas do painel (dashboard/layout.tsx) e nas rotas de API.
-  await supabase.auth.getSession()
+  // Nunca deixa a navegacao esperar o Supabase por mais de 3 segundos: se ele demorar, a pagina abre
+  // do mesmo jeito (o login e conferido de verdade no layout do painel e nas rotas de API).
+  try {
+    await Promise.race([
+      supabase.auth.getSession(),
+      new Promise(function(resolve) { setTimeout(resolve, 3000) }),
+    ])
+  } catch (e) {}
   return response
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|api/hubla/webhook|api/cakto/webhook|api/whatsapp/webhook|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 }

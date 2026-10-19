@@ -150,6 +150,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
                 <Link
                   key={item.href}
                   href={item.href}
+                  prefetch={false}
                   onClick={function() { setMobileOpen(false) }}
                   className={styles.navItem + ' ' + styles.navItemPromo + (pathname === item.href ? ' ' + styles.active : '')}
                   title="Indique a plataforma e ganhe R$ 60 no Pix"
@@ -167,6 +168,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={false}
                 onClick={function() { setMobileOpen(false) }}
                 className={styles.navItem + (pathname === item.href ? ' ' + styles.active : '')}
                 style={(item as any).badge ? { background: 'linear-gradient(135deg,#f59e0b,#f97316)', color: '#fff', fontWeight: 700, boxShadow: '0 4px 14px rgba(249,115,22,0.35)' } : undefined}
