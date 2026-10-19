@@ -61,9 +61,71 @@ function Tick({ s }: { s: string }) {
   return <span style={{ opacity: 0.6 }}>✓</span>
 }
 
+// Links dentro das mensagens: clicaveis, com previa (titulo e descricao do site) logo abaixo
+const URL_RE = /((?:https?:\/\/|www\.)[^\s<>"']+)/gi
+function limpaUrl(u: string): { url: string; resto: string } {
+  const m = /[.,;:!?)\]]+$/.exec(u)
+  return m ? { url: u.slice(0, u.length - m[0].length), resto: m[0] } : { url: u, resto: '' }
+}
+function acharLinks(t: string | null): string[] {
+  if (!t) return []
+  const out: string[] = []
+  const partes = t.split(URL_RE)
+  for (let i = 1; i < partes.length; i += 2) {
+    const u = limpaUrl(partes[i]).url
+    if (u && out.indexOf(u) < 0) out.push(u)
+  }
+  return out.slice(0, 2)
+}
+function Texto({ t }: { t: string }) {
+  const partes = t.split(URL_RE)
+  return (
+    <>
+      {partes.map(function(p, i) {
+        if (i % 2 === 1) {
+          const l = limpaUrl(p)
+          const href = /^www\./i.test(l.url) ? 'https://' + l.url : l.url
+          return <span key={i}><a href={href} target="_blank" rel="noopener noreferrer" style={{ color: '#0b57d0', textDecoration: 'underline', wordBreak: 'break-all' }}>{l.url}</a>{l.resto}</span>
+        }
+        return <span key={i}>{p}</span>
+      })}
+    </>
+  )
+}
+const prevCache: Record<string, { url: string; domain: string; title: string; description: string } | null> = {}
+function LinkPrev({ url }: { url: string }) {
+  const [p, setP] = useState<{ url: string; domain: string; title: string; description: string } | null | undefined>(prevCache[url])
+  useEffect(function() {
+    if (prevCache[url] !== undefined) { setP(prevCache[url]); return }
+    let vivo = true
+    fetch('/api/whatsapp/link-preview?u=' + encodeURIComponent(url))
+      .then(function(r) { return r.json() })
+      .then(function(j) { prevCache[url] = j && j.preview ? j.preview : null; if (vivo) setP(prevCache[url]) })
+      .catch(function() {})
+    return function() { vivo = false }
+  }, [url])
+  if (!p) return null
+  const href = /^www\./i.test(url) ? 'https://' + url : url
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" style={{ display: 'block', textDecoration: 'none', color: 'inherit', borderLeft: '3px solid #16a34a', background: 'rgba(0,0,0,0.06)', borderRadius: 8, padding: '6px 10px', marginTop: 6, maxWidth: 360 }}>
+      <div style={{ fontSize: 11, opacity: 0.65, fontWeight: 700 }}>🔗 {p.domain}</div>
+      {p.title && <div style={{ fontSize: 13, fontWeight: 800, lineHeight: 1.25, marginTop: 1 }}>{p.title}</div>}
+      {p.description && <div style={{ fontSize: 12, opacity: 0.75, lineHeight: 1.3, marginTop: 2, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>{p.description}</div>}
+    </a>
+  )
+}
+
 function Midia({ m, onFoto }: { m: Msg; onFoto: (src: string) => void }) {
   if (!m.media_path) return null
   const src = '/api/whatsapp/media?m=' + m.id
+  if (String(m.mime || '').toLowerCase().split(';')[0].trim() === 'application/pdf') {
+    return (
+      <div style={{ marginBottom: m.body ? 6 : 0 }}>
+        <iframe src={src + '&inline=1#toolbar=0&navpanes=0&view=FitH'} loading="lazy" title="Prévia do PDF" style={{ display: 'block', width: 'min(380px, 68vw)', height: 250, border: '1px solid rgba(0,0,0,0.15)', borderRadius: 8, background: '#fff' }} />
+        <a href={src} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 4, color: 'inherit', fontWeight: 700, fontSize: 13 }}>📎 Abrir PDF em outra aba</a>
+      </div>
+    )
+  }
   if (m.type === 'image' || m.type === 'sticker') return <img src={src} alt="Imagem" onClick={function() { onFoto(src) }} style={{ maxWidth: '100%', maxHeight: 280, borderRadius: 8, display: 'block', marginBottom: m.body ? 6 : 0, cursor: 'zoom-in' }} />
   if (m.type === 'audio') return <audio controls src={src} style={{ maxWidth: '100%', height: 36 }} />
   if (m.type === 'video') return <video controls src={src} style={{ maxWidth: '100%', maxHeight: 280, borderRadius: 8 }} />
@@ -75,7 +137,7 @@ export default function AtendimentoPage() {
   const [convs, setConvs] = useState<Conv[]>([])
   const [sel, setSel] = useState<string | null>(null)
   const [msgs, setMsgs] = useState<Msg[]>([])
-  const [aba, setAba] = useState<'abertas' | 'resolvidas'>('abertas')
+  const [aba, setAba] = useState<'abertas' | 'naolidas' | 'resolvidas'>('abertas')
   const [busca, setBusca] = useState('')
   const [texto, setTexto] = useState('')
   const [enviando, setEnviando] = useState(false)
@@ -410,9 +472,14 @@ export default function AtendimentoPage() {
 
   const lista = convs.filter(function(c) {
     if ((canal === 'recuperacao') !== !!c.connection_id) return false
-    if ((aba === 'abertas') !== (c.status !== 'resolvida')) return false
-    if (filtro === 'sem' && c.assigned_to) return false
-    if (filtro !== 'todas' && filtro !== 'sem' && c.assigned_to !== filtro) return false
+    if (aba === 'naolidas') {
+      // Nao lidas: todas as conversas abertas com mensagem nova, de qualquer atendente (que voce pode ver)
+      if (c.status === 'resolvida' || !(c.unread > 0)) return false
+    } else {
+      if ((aba === 'abertas') !== (c.status !== 'resolvida')) return false
+      if (filtro === 'sem' && c.assigned_to) return false
+      if (filtro !== 'todas' && filtro !== 'sem' && c.assigned_to !== filtro) return false
+    }
     const q = busca.trim().toLowerCase()
     if (!q) return true
     return nomeDe(c).toLowerCase().indexOf(q) >= 0 || c.wa_id.indexOf(q.replace(/\D/g, '') || '§') >= 0 || (c.profile_label || '').toLowerCase().indexOf(q) >= 0
@@ -557,14 +624,18 @@ export default function AtendimentoPage() {
               )
             })()}
             <div style={{ display: 'flex', gap: 6 }}>
-              {(['abertas', 'resolvidas'] as const).map(function(a) {
+              {(['abertas', 'naolidas', 'resolvidas'] as const).map(function(a) {
                 const on = aba === a
-                return <button key={a} onClick={function() { setAba(a) }} style={{ flex: 1, cursor: 'pointer', border: 0, borderRadius: 8, padding: '7px 4px', fontWeight: 700, fontSize: 13, background: on ? 'var(--accent-light)' : 'var(--surface2)', color: on ? 'var(--accent)' : 'var(--muted2)' }}>{a === 'abertas' ? 'Abertas' : 'Finalizadas'}</button>
+                const qtdNaoLidas = convs.filter(function(c) { return (!!c.connection_id) === (canal === 'recuperacao') && c.status !== 'resolvida' && c.unread > 0 }).length
+                return <button key={a} onClick={function() { setAba(a) }} style={{ flex: 1, cursor: 'pointer', border: 0, borderRadius: 8, padding: '7px 4px', fontWeight: 700, fontSize: 13, background: on ? 'var(--accent-light)' : 'var(--surface2)', color: on ? 'var(--accent)' : 'var(--muted2)' }}>
+                  {a === 'abertas' ? 'Abertas' : a === 'resolvidas' ? 'Finalizadas' : 'Não lidas'}
+                  {a === 'naolidas' && qtdNaoLidas > 0 && <span style={{ marginLeft: 5, background: '#ef4444', color: '#fff', borderRadius: 999, padding: '0 6px', fontSize: 11 }}>{qtdNaoLidas}</span>}
+                </button>
               })}
             </div>
           </div>
           <div style={{ flex: 1, overflowY: 'auto' }}>
-            {lista.length === 0 && <div style={{ padding: 20, fontSize: 13.5, color: 'var(--muted2)', textAlign: 'center' }}>{aba === 'abertas' ? 'Nenhuma conversa aberta.' : 'Nenhuma conversa finalizada.'}</div>}
+            {lista.length === 0 && <div style={{ padding: 20, fontSize: 13.5, color: 'var(--muted2)', textAlign: 'center' }}>{aba === 'abertas' ? 'Nenhuma conversa aberta.' : aba === 'naolidas' ? 'Nenhuma mensagem não lida. 🎉' : 'Nenhuma conversa finalizada.'}</div>}
             {lista.map(function(c) {
               const on = c.id === sel
               return (
@@ -640,7 +711,8 @@ export default function AtendimentoPage() {
                           )
                         })()}
                         <Midia m={m} onFoto={setFoto} />
-                        {m.type !== 'audio' && m.body && <div>{m.body}</div>}
+                        {m.type !== 'audio' && m.body && <div><Texto t={m.body} /></div>}
+                        {m.type !== 'audio' && acharLinks(m.body).map(function(u) { return <LinkPrev key={u} url={u} /> })}
                         {!m.media_path && m.type !== 'text' && m.type !== 'template' && !m.body && <div style={{ opacity: 0.7 }}>[{m.type}]</div>}
                         <div style={{ fontSize: 10.5, opacity: 0.65, textAlign: 'right', marginTop: 2 }}>{horaMsg(m.created_at)} {meu && <Tick s={m.status} />}</div>
                         {m.status === 'failed' && m.error && <div style={{ fontSize: 11.5, color: '#b91c1c' }}>{m.error}</div>}
