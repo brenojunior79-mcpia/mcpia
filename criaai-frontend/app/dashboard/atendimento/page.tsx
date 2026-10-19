@@ -677,28 +677,33 @@ export default function AtendimentoPage() {
                   {a === 'naolidas' && qtdNaoLidas > 0 && <span style={{ marginLeft: 5, background: '#ef4444', color: '#fff', borderRadius: 999, padding: '0 6px', fontSize: 11 }}>{qtdNaoLidas}</span>}
                 </button>
               })}
+              {lista.length > 0 && (function() {
+                const n = lista.filter(function(c) { return marcadas[c.id] }).length
+                const todas = n === lista.length
+                const algumas = n > 0 && !todas
+                return (
+                  <button title={modoSel && todas ? 'Desmarcar todas' : 'Selecionar todas as conversas da lista'} onClick={function() {
+                    if (modoSel && todas) { setModoSel(false); setMarcadas({}); return }
+                    const m: Record<string, boolean> = {}
+                    lista.forEach(function(c) { m[c.id] = true })
+                    setMarcadas(m); setModoSel(true); setAcaoMsg('')
+                  }} style={{ cursor: 'pointer', flex: '0 0 26px', width: 26, height: 26, alignSelf: 'center', borderRadius: 6, border: '2px solid ' + (modoSel ? '#2563eb' : 'var(--border2)'), background: modoSel ? '#2563eb' : 'transparent', color: '#fff', fontSize: 15, fontWeight: 900, lineHeight: 1, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{modoSel ? (algumas ? '−' : '✓') : ''}</button>
+                )
+              })()}
             </div>
-            {!modoSel && lista.length > 0 && <button onClick={function() { setModoSel(true); setMarcadas({}); setAcaoMsg('') }} style={{ cursor: 'pointer', border: '1px dashed var(--border2)', background: 'transparent', color: 'var(--muted2)', borderRadius: 8, padding: '6px 8px', fontWeight: 700, fontSize: 12.5 }}>☑ Selecionar várias conversas</button>}
             {acaoMsg && !modoSel && <div style={{ fontSize: 12.5, color: acaoMsg.indexOf('⚠') === 0 ? '#b91c1c' : '#15803d', fontWeight: 700 }}>{acaoMsg}</div>}
             {modoSel && (function() {
-              const marcadasAgora = lista.filter(function(c) { return marcadas[c.id] })
-              const todas = lista.length > 0 && marcadasAgora.length === lista.length
+              const n = lista.filter(function(c) { return marcadas[c.id] }).length
               const pessoasDestino = pessoas.filter(function(x) { return atendeCanal(x, canal === 'recuperacao') })
-              const btn = function(cor: string, off: boolean): React.CSSProperties { return { cursor: off ? 'default' : 'pointer', border: 0, borderRadius: 8, padding: '7px 10px', fontWeight: 800, fontSize: 12.5, background: cor, color: '#fff', opacity: off ? 0.5 : 1 } }
+              const off = acaoRodando || n === 0
+              const btn = function(cor: string, desl: boolean): React.CSSProperties { return { cursor: desl ? 'default' : 'pointer', border: 0, borderRadius: 8, padding: '7px 10px', fontWeight: 800, fontSize: 12.5, background: cor, color: '#fff', opacity: desl ? 0.5 : 1 } }
               return (
                 <div style={{ background: 'var(--surface2)', borderRadius: 10, padding: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 800, fontSize: 13, color: 'var(--text)', cursor: 'pointer' }}>
-                      <input type="checkbox" checked={todas} onChange={function() { const n: Record<string, boolean> = {}; if (!todas) lista.forEach(function(c) { n[c.id] = true }); setMarcadas(n) }} style={{ width: 18, height: 18 }} />
-                      Selecionar todas ({lista.length})
-                    </label>
-                    <button onClick={function() { setModoSel(false); setMarcadas({}) }} style={{ cursor: 'pointer', border: 0, background: 'transparent', color: 'var(--muted2)', fontWeight: 700, fontSize: 12.5 }}>Cancelar</button>
-                  </div>
-                  <div style={{ fontSize: 12.5, color: 'var(--muted2)', fontWeight: 700 }}>{marcadasAgora.length} selecionada(s)</div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ flex: 1, fontWeight: 800, fontSize: 13, color: 'var(--text)' }}>{n} selecionada(s)</span>
                     {aba === 'resolvidas'
-                      ? <button disabled={acaoRodando || marcadasAgora.length === 0} onClick={function() { acaoMassa('reabrir') }} style={btn('#1f7a5a', acaoRodando || marcadasAgora.length === 0)}>↩ Reabrir</button>
-                      : <button disabled={acaoRodando || marcadasAgora.length === 0} onClick={function() { acaoMassa('finalizar') }} style={btn('#16a34a', acaoRodando || marcadasAgora.length === 0)}>✓ Finalizar</button>}
+                      ? <button disabled={off} onClick={function() { acaoMassa('reabrir') }} style={btn('#1f7a5a', off)}>↩ Reabrir</button>
+                      : <button disabled={off} onClick={function() { acaoMassa('finalizar') }} style={btn('#16a34a', off)}>✓ Finalizar</button>}
                   </div>
                   {isAdmin && (
                     <div style={{ display: 'flex', gap: 6 }}>
@@ -707,7 +712,7 @@ export default function AtendimentoPage() {
                         <option value="">⏳ Fila de espera</option>
                         {pessoasDestino.map(function(pp) { return <option key={pp.id} value={pp.id}>{pp.id === meuId ? 'Eu (' + (pp.nome || pp.email) + ')' : (pp.nome || pp.email)}</option> })}
                       </select>
-                      <button disabled={acaoRodando || marcadasAgora.length === 0 || destino === '__'} onClick={function() { acaoMassa('transferir') }} style={btn('#2563eb', acaoRodando || marcadasAgora.length === 0 || destino === '__')}>Transferir</button>
+                      <button disabled={off || destino === '__'} onClick={function() { acaoMassa('transferir') }} style={btn('#2563eb', off || destino === '__')}>Transferir</button>
                     </div>
                   )}
                   {acaoRodando && <div style={{ fontSize: 12.5, color: 'var(--muted2)' }}>Aplicando…</div>}
