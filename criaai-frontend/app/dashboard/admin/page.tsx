@@ -18,6 +18,7 @@ export default function AdminPage() {
   const [heat, setHeat] = useState<any>(null)
   const [popup, setPopup] = useState<any>(null)
   const [pushPeople, setPushPeople] = useState(0)
+  const [expCliques, setExpCliques] = useState<any>(null)
   const [billing, setBilling] = useState<any>(null)
   const PAGE_FIRST = 5
   const PAGE_STEP = 10
@@ -106,6 +107,11 @@ export default function AdminPage() {
           pFrom += 1000
         }
         setPushPeople(Object.keys(ids).length)
+      } catch (e) {}
+      // Estrutura Express: quem viu a tela de venda e quem clicou no botao de compra
+      try {
+        const ec = await fetch('/api/estrutura/clique', { cache: 'no-store' })
+        if (ec.ok) setExpCliques(await ec.json())
       } catch (e) {}
       setLoading(false)
     }
@@ -422,6 +428,42 @@ export default function AdminPage() {
                   </div>
                 )
               })}
+            </div>
+          )}
+        </div>
+
+        {/* Estrutura Express: cliques no link de compra */}
+        <div className={styles.stat} style={{ marginBottom: 28 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
+            <div style={{ minWidth: 150 }}>
+              <div className={styles.statLabel}><i className="ti ti-bolt" /> Estrutura Express: cliques na compra</div>
+              <div className={styles.statValue} style={{ color: '#f97316' }}>{expCliques ? expCliques.resumo.pessoasClicaram : 0}</div>
+              <div className={styles.statUp} style={{ color: 'var(--muted2)' }}>pessoas clicaram no link de compra</div>
+            </div>
+            <div style={{ display: 'flex', gap: 22, flexWrap: 'wrap', fontSize: 13, color: 'var(--muted2)' }}>
+              <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{expCliques ? expCliques.resumo.cliquesHoje : 0}</b><br />Cliques hoje</div>
+              <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{expCliques ? expCliques.resumo.cliques7 : 0}</b><br />Cliques (7 dias)</div>
+              <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{expCliques ? expCliques.resumo.totalCliques : 0}</b><br />Cliques no total</div>
+              <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{expCliques ? expCliques.resumo.pessoasViram : 0}</b><br />Viram a tela de venda</div>
+            </div>
+          </div>
+          {expCliques && expCliques.pessoas && expCliques.pessoas.length > 0 ? (
+            <div style={{ marginTop: 14, borderTop: '1px solid var(--border)', paddingTop: 10, maxHeight: 340, overflowY: 'auto' }}>
+              {expCliques.pessoas.map(function(p: any, i: number) {
+                const quando = p.ultimoClique || p.ultimaVisita
+                return (
+                  <div key={(p.email || 'x') + i} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '6px 0', fontSize: 13, flexWrap: 'wrap' }}>
+                    <span style={{ color: 'var(--text)', fontWeight: 600 }}>{p.nome || 'Sem nome'} <span style={{ color: 'var(--muted2)', fontWeight: 400 }}>· {p.email}{p.whatsapp ? ' · ' + p.whatsapp : ''}</span></span>
+                    <span style={{ color: p.cliques > 0 ? '#f97316' : 'var(--muted2)', whiteSpace: 'nowrap', fontWeight: p.cliques > 0 ? 700 : 400 }}>
+                      {p.cliques > 0 ? '🛒 clicou' + (p.cliques > 1 ? ' ' + p.cliques + 'x' : '') : '👀 só viu a tela'} · {quando ? new Date(quando).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div style={{ marginTop: 10, fontSize: 12, color: 'var(--muted2)' }}>
+              A contagem começa a partir de agora. Os cliques feitos antes desta atualização não foram registrados.
             </div>
           )}
         </div>

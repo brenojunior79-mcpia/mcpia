@@ -8,6 +8,11 @@ type Thumb = { img: string; dur: number }
 const LINK_COMPRA = 'https://pay.hub.la/EzX4EkF4HSfNfHn2QH4z'
 const KEY_FEITAS = 'ee_aulas_feitas_v1'
 
+// Registra para o admin quem viu a tela de venda e quem clicou no botao de compra
+function registrar(tipo: 'visita' | 'clique') {
+  try { fetch('/api/estrutura/clique', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo }), keepalive: true }).catch(function() {}) } catch (e) {}
+}
+
 function fmtDur(s: number): string {
   const m = Math.floor(s / 60)
   const r = Math.round(s % 60)
@@ -73,7 +78,7 @@ export default function EstruturaExpressPage() {
           let previa = false
           try { previa = !!j.isAdmin && new URLSearchParams(window.location.search).get('bloqueado') === '1' } catch (e) {}
           setEstado(previa ? 'bloqueado' : 'liberado')
-        } else if (j && j.acesso === false) setEstado('bloqueado')
+        } else if (j && j.acesso === false) { setEstado('bloqueado'); registrar('visita') }
         else setEstado('erro')
       })
       .catch(function() { setEstado('erro') })
@@ -153,7 +158,7 @@ export default function EstruturaExpressPage() {
             <p style={{ position: 'relative', maxWidth: 640, margin: '0 auto 26px', fontSize: 'clamp(15px, 2.2vw, 18px)', lineHeight: 1.55, opacity: 0.95 }}>
               O seu <b>produto pronto</b>, o <b>site pronto</b> e os <b>criativos já prontos</b> pra você subir e começar a fazer <b style={{ color: '#fdba74' }}>R$ 200 por dia</b>.
             </p>
-            <a href={LINK_COMPRA} target="_blank" rel="noopener noreferrer" className="ee-cta" style={{ position: 'relative', display: 'inline-block', background: 'linear-gradient(135deg,#f59e0b,#f97316)', color: '#fff', textDecoration: 'none', fontWeight: 800, fontSize: 18, padding: '16px 34px', borderRadius: 14 }}>
+            <a href={LINK_COMPRA} target="_blank" rel="noopener noreferrer" onClick={function() { registrar('clique') }} className="ee-cta" style={{ position: 'relative', display: 'inline-block', background: 'linear-gradient(135deg,#f59e0b,#f97316)', color: '#fff', textDecoration: 'none', fontWeight: 800, fontSize: 18, padding: '16px 34px', borderRadius: 14 }}>
               🚀 Quero a Estrutura Express
             </a>
             <div style={{ position: 'relative', marginTop: 12, fontSize: 12, opacity: 0.7 }}>Os resultados variam de pessoa para pessoa e dependem da sua dedicação.</div>
