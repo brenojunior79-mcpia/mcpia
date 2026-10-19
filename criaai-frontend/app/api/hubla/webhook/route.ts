@@ -104,6 +104,22 @@ export async function POST(req: NextRequest) {
 
     await trackSale(admin, eventType, payload, email)
 
+    // Reembolso da Estrutura Express (upsell): so tira o acesso ao menu Estrutura Express.
+    // Nao pode cancelar o plano da plataforma nem bloquear a conta do aluno.
+    if (eventType === 'invoice.refunded') {
+      const prods: any[] = payload.event?.products || (payload.event?.product ? [payload.event.product] : [])
+      const soExpress = prods.length > 0 && prods.every(function(pr: any) { return String(pr?.name || '').toLowerCase().includes('express') })
+      if (soExpress) {
+        try {
+          const info = lerEvento(eventType, payload)
+          if (info.email) await admin.from('hubla_compras').update({ reembolsado: true }).eq('cat', 'e').eq('email', info.email.toLowerCase())
+          if (info.wa) await admin.from('hubla_compras').update({ reembolsado: true }).eq('cat', 'e').eq('wa', info.wa)
+        } catch (e) { console.error('[hubla-webhook] reembolso express:', e) }
+        await logEvent(eventType, email, null, 'ignorado', 'reembolso da Estrutura Express: acesso ao menu removido, plano da plataforma mantido')
+        return NextResponse.json({ received: true, express: true })
+      }
+    }
+
     // Guarda o dia da compra (com e-mail e telefone) para aparecer no cabecalho do chat de atendimento
     if (eventType === 'invoice.payment_succeeded' || eventType === 'customer.member_added' || eventType === 'subscription.activated') {
       try {
