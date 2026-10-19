@@ -71,6 +71,11 @@ export default function PlanosPage() {
   const [loading, setLoading] = useState('')
   const [userEmail, setUserEmail] = useState('')
   const [createdAt, setCreatedAt] = useState<string | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [libEmail, setLibEmail] = useState('')
+  const [libPlano, setLibPlano] = useState('Starter')
+  const [libMsg, setLibMsg] = useState('')
+  const [libBusy, setLibBusy] = useState(false)
   const supabase = createClient()
   const timeLeft = useCountdown(createdAt)
   const showTimer = timeLeft !== null && timeLeft > 0
@@ -84,11 +89,12 @@ export default function PlanosPage() {
 
       const profileResult = await supabase
         .from('profiles')
-        .select('created_at, subscription_status')
+        .select('created_at, subscription_status, is_admin')
         .eq('id', user.id)
         .single()
 
       const data = profileResult.data
+      if (data && (data as any).is_admin) setIsAdmin(true)
       if (data && data.subscription_status !== 'active') {
         setCreatedAt(data.created_at)
       }
@@ -108,6 +114,21 @@ export default function PlanosPage() {
     window.location.href = baseUrl
   }
 
+  // Admin: libera um plano para o aluno pelo e-mail
+  async function liberarPlano() {
+    const email = libEmail.trim()
+    if (!email || libBusy) return
+    if (!window.confirm('Liberar o plano ' + libPlano + ' para ' + email + '?')) return
+    setLibBusy(true); setLibMsg('')
+    try {
+      const r = await fetch('/api/admin/liberar-plano', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email, plano: libPlano }) })
+      const j = await r.json().catch(function() { return {} })
+      if (!r.ok) setLibMsg('⚠ ' + (j.error || 'Não foi possível liberar.'))
+      else { setLibMsg('✓ Plano ' + j.plano + ' liberado para ' + (j.nome || j.email) + ' (' + j.email + ').'); setLibEmail('') }
+    } catch (e) { setLibMsg('⚠ Sem conexão. Tente de novo.') }
+    setLibBusy(false)
+  }
+
   const timer = timeLeft && timeLeft > 0 ? formatTime(timeLeft) : null
 
   return (
@@ -119,6 +140,22 @@ export default function PlanosPage() {
         </div>
       </div>
       <div className={styles.content}>
+
+        {/* Somente admin: liberar plano pelo e-mail do aluno */}
+        {isAdmin && (
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '16px 18px', marginBottom: 24 }}>
+            <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 15, color: 'var(--text)', marginBottom: 2 }}>🔑 Liberar plano para um aluno</div>
+            <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginBottom: 12 }}>Digite o e-mail do aluno, escolha o plano e libere na hora. Só o admin vê esta barra.</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <input type="email" value={libEmail} onChange={function(e) { setLibEmail(e.target.value) }} onKeyDown={function(e) { if (e.key === 'Enter') liberarPlano() }} placeholder="E-mail do aluno" style={{ flex: '1 1 240px', minWidth: 0, border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 10, padding: '10px 12px', fontSize: 14 }} />
+              <select value={libPlano} onChange={function(e) { setLibPlano(e.target.value) }} style={{ border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 10, padding: '10px 12px', fontSize: 14, fontWeight: 700 }}>
+                {plans.map(function(p: any) { return <option key={p.name} value={p.name}>{p.name} · R$ {p.price.toFixed(2).replace('.', ',')}</option> })}
+              </select>
+              <button onClick={liberarPlano} disabled={libBusy || !libEmail.trim()} style={{ cursor: libBusy || !libEmail.trim() ? 'default' : 'pointer', border: 0, background: '#16a34a', color: '#fff', borderRadius: 10, padding: '10px 16px', fontWeight: 800, fontSize: 14, opacity: libBusy || !libEmail.trim() ? 0.6 : 1 }}>{libBusy ? 'Liberando…' : 'Liberar plano'}</button>
+            </div>
+            {libMsg && <div style={{ marginTop: 10, fontSize: 13, fontWeight: 700, color: libMsg.indexOf('✓') === 0 ? '#16a34a' : '#dc2626' }}>{libMsg}</div>}
+          </div>
+        )}
 
         {/* Banner cronometro de boas-vindas */}
         {showTimer && timer && (
