@@ -40,9 +40,10 @@ export function validSignature(raw: string, header: string | null, secret: strin
 // Quem esta logado e e' da equipe (admin ou atendente)? Devolve o id ou null.
 export async function requireStaff(): Promise<string | null> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // As duas consultas rodam juntas (a funcao wa_is_staff usa o login do proprio pedido)
+  const [u, r] = await Promise.all([supabase.auth.getUser(), supabase.rpc('wa_is_staff')])
+  const user = u.data.user
   if (!user) return null
-  const r = await supabase.rpc('wa_is_staff')
   return r.data === true ? user.id : null
 }
 
@@ -58,18 +59,24 @@ export async function graphFetch(path: string, init?: RequestInit & { json?: any
 }
 
 // Admin ve tudo; atendente ve as conversas dele e as que estao em espera (sem atendente)
-export async function canAccessConv(userId: string, convId: string): Promise<boolean> {
-  const admin = adminClient()
-  const p = await admin.from('profiles').select('is_admin, wa_scope').eq('id', userId).maybeSingle()
-  if ((p.data as any)?.is_admin) return true
-  const c = await admin.from('wa_conversations').select('assigned_to, connection_id').eq('id', convId).maybeSingle()
-  if (!c.data) return false
-  const a = (c.data as any).assigned_to
+export function acessoPermitido(userId: string, perfil: any, conv: any): boolean {
+  if (perfil?.is_admin) return true
+  if (!conv) return false
+  const a = conv.assigned_to
   if (a && a !== userId) return false
   // Escopo do atendente: suporte, recuperacao ou todos
-  const escopo = String((p.data as any)?.wa_scope || 'suporte')
+  const escopo = String(perfil?.wa_scope || 'suporte')
   if (escopo === 'todos') return true
-  return (escopo === 'recuperacao') === !!(c.data as any).connection_id
+  return (escopo === 'recuperacao') === !!conv.connection_id
+}
+
+export async function canAccessConv(userId: string, convId: string): Promise<boolean> {
+  const admin = adminClient()
+  const [p, c] = await Promise.all([
+    admin.from('profiles').select('is_admin, wa_scope').eq('id', userId).maybeSingle(),
+    admin.from('wa_conversations').select('assigned_to, connection_id').eq('id', convId).maybeSingle(),
+  ])
+  return acessoPermitido(userId, p.data, c.data)
 }
 
 // 'suporte' | 'recuperacao' | 'todos' (admin = todos) do usuario logado
@@ -141,8 +148,13 @@ export function graphError(data: any): string {
 }
 
 // Qual numero (Phone Number ID) atende uma conversa: sem conexao = o numero de suporte (Vercel)
+const phoneCache = new Map<string, { v: string; exp: number }>()
 export async function phoneIdDaConversa(admin: any, connectionId: string | null): Promise<string> {
   if (!connectionId) return waConfig().phoneId
+  const hit = phoneCache.get(connectionId)
+  if (hit && hit.exp > Date.now()) return hit.v
   const c = await admin.from('wa_connections').select('phone_number_id').eq('id', connectionId).maybeSingle()
-  return String(c.data?.phone_number_id || '')
+  const v = String(c.data?.phone_number_id || '')
+  if (v) phoneCache.set(connectionId, { v, exp: Date.now() + 60000 })
+  return v
 }

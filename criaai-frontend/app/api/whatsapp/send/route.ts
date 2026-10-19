@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adminClient, canAccessConv, GRAPH, graphError, phoneIdDaConversa, postMessage, requireStaff, waConfig } from '@/lib/whatsapp'
+import { acessoPermitido, adminClient, canAccessConv, GRAPH, graphError, phoneIdDaConversa, postMessage, requireStaff, waConfig } from '@/lib/whatsapp'
 import { classificar } from '@/lib/waMedia'
 
 export const maxDuration = 60
@@ -21,10 +21,14 @@ export async function POST(req: NextRequest) {
   if (!convId || (!text && !tpl && !media)) return NextResponse.json({ error: 'Escreva uma mensagem.' }, { status: 400 })
   if (text.length > 4000) return NextResponse.json({ error: 'Mensagem muito longa.' }, { status: 400 })
 
-  if (!(await canAccessConv(staffId, convId))) return NextResponse.json({ error: 'Essa conversa nao esta com voce.' }, { status: 403 })
+  // Perfil e conversa buscados juntos (menos idas ao banco = envio mais rapido)
   const admin = adminClient()
-  const c = await admin.from('wa_conversations').select('id, wa_id, last_inbound_at, assigned_to, connection_id').eq('id', convId).maybeSingle()
+  const [perfil, c] = await Promise.all([
+    admin.from('profiles').select('is_admin, wa_scope').eq('id', staffId).maybeSingle(),
+    admin.from('wa_conversations').select('id, wa_id, last_inbound_at, assigned_to, connection_id').eq('id', convId).maybeSingle(),
+  ])
   if (!c.data) return NextResponse.json({ error: 'Conversa nao encontrada.' }, { status: 404 })
+  if (!acessoPermitido(staffId, perfil.data, c.data)) return NextResponse.json({ error: 'Essa conversa nao esta com voce.' }, { status: 403 })
   // Cada conversa responde pelo numero em que aconteceu (suporte ou recuperacao)
   const phoneId = await phoneIdDaConversa(admin, (c.data as any).connection_id || null)
   if (!phoneId) return NextResponse.json({ error: 'O numero desta conversa nao esta mais cadastrado em Conexoes.' }, { status: 400 })
@@ -115,14 +119,20 @@ export async function POST(req: NextRequest) {
 
   const waId = r.data?.messages?.[0]?.id || null
   const now = new Date().toISOString()
-  await admin.from('wa_messages').insert({ conversation_id: convId, wa_message_id: waId, direction: 'out', type, body: shown || null, media_path: mediaPath, mime: mediaMime, status: 'sent', sent_by: staffId, reply_to_wa_id: ctxId, created_at: now })
-  if (assumiu) {
-    const pr = await admin.from('profiles').select('full_name, email').eq('id', staffId).maybeSingle()
-    const nome = ((pr.data as any)?.full_name || String((pr.data as any)?.email || 'Atendente').split('@')[0]).trim().split(/\s+/).slice(0, 2).join(' ')
-    await admin.from('wa_messages').insert({ conversation_id: convId, direction: 'out', type: 'system', body: 'Conversa atribuída a ' + nome + ' por envio de mensagem.', status: 'sent', sent_by: staffId, created_at: new Date(new Date(now).getTime() - 2).toISOString() })
-  }
   const rotulo = type === 'image' ? '📷 ' + (shown || 'Imagem') : type === 'video' ? '🎬 ' + (shown || 'Vídeo') : type === 'audio' ? '🎤 Áudio' : type === 'document' ? '📎 ' + shown : shown
   const upd: any = { last_message_at: now, last_text: 'Você: ' + rotulo.slice(0, 120), status: 'aberta', unread: 0 }
-  await admin.from('wa_conversations').update(upd).eq('id', convId)
+  // Tudo que falta gravar roda junto (antes era um depois do outro)
+  const gravar: PromiseLike<any>[] = [
+    admin.from('wa_messages').insert({ conversation_id: convId, wa_message_id: waId, direction: 'out', type, body: shown || null, media_path: mediaPath, mime: mediaMime, status: 'sent', sent_by: staffId, reply_to_wa_id: ctxId, created_at: now }),
+    admin.from('wa_conversations').update(upd).eq('id', convId),
+  ]
+  if (assumiu) {
+    gravar.push((async function() {
+      const pr = await admin.from('profiles').select('full_name, email').eq('id', staffId).maybeSingle()
+      const nome = ((pr.data as any)?.full_name || String((pr.data as any)?.email || 'Atendente').split('@')[0]).trim().split(/\s+/).slice(0, 2).join(' ')
+      await admin.from('wa_messages').insert({ conversation_id: convId, direction: 'out', type: 'system', body: 'Conversa atribuída a ' + nome + ' por envio de mensagem.', status: 'sent', sent_by: staffId, created_at: new Date(new Date(now).getTime() - 2).toISOString() })
+    })())
+  }
+  await Promise.all(gravar)
   return NextResponse.json({ ok: true })
 }

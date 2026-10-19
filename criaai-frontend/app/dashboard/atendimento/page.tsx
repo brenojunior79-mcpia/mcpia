@@ -55,6 +55,7 @@ function inicial(c: Conv): string { return (nomeDe(c).replace(/[^A-Za-zÀ-ú0-9]
 
 function Tick({ s }: { s: string }) {
   if (s === 'failed') return <span title="Falhou" style={{ color: '#ef4444' }}>⚠</span>
+  if (s === 'sending') return <span title="Enviando" style={{ opacity: 0.6 }}>🕓</span>
   if (s === 'read') return <span style={{ color: '#34b7f1' }}>✓✓</span>
   if (s === 'delivered') return <span style={{ opacity: 0.6 }}>✓✓</span>
   return <span style={{ opacity: 0.6 }}>✓</span>
@@ -106,6 +107,7 @@ export default function AtendimentoPage() {
   const [filtro, setFiltro] = useState<string>('todas')
   const [menuAberto, setMenuAberto] = useState(false)
   const fim = useRef<HTMLDivElement>(null)
+  const filaEnvio = useRef<Promise<void>>(Promise.resolve())
   const selRef = useRef<string | null>(null)
   selRef.current = sel
 
@@ -118,9 +120,23 @@ export default function AtendimentoPage() {
     if (!a.error && a.data) setConvs((a.data as Conv[]).concat(!b.error && b.data ? (b.data as Conv[]) : []))
   }, [])
 
-  const carregarMsgs = useCallback(async function(id: string) {
+  const carregarMsgs = useCallback(async function(id: string, descartar?: string) {
     const r = await supabase.from('wa_messages').select('id, conversation_id, direction, sent_by, type, body, media_path, mime, status, error, created_at, wa_message_id, reply_to_wa_id').eq('conversation_id', id).order('created_at', { ascending: true }).limit(500)
-    if (!r.error && r.data && selRef.current === id) setMsgs(r.data as Msg[])
+    if (!r.error && r.data && selRef.current === id) {
+      const reais = r.data as Msg[]
+      // Mantem as mensagens ainda "enviando" (provisorias), sem duplicar as que ja chegaram do banco
+      setMsgs(function(old) {
+        const usadas: Record<string, boolean> = {}
+        const pend = old.filter(function(m) {
+          if (m.id.indexOf('tmp-') !== 0 || m.conversation_id !== id || m.id === descartar) return false
+          const t = new Date(m.created_at).getTime() - 10000
+          const par = reais.find(function(x) { return !usadas[x.id] && x.direction === 'out' && x.type === 'text' && x.body === m.body && new Date(x.created_at).getTime() >= t && x.sent_by })
+          if (par) { usadas[par.id] = true; return false }
+          return true
+        })
+        return pend.length ? reais.concat(pend) : reais
+      })
+    }
   }, [])
 
   const carregarTpls = useCallback(async function() {
@@ -246,25 +262,51 @@ export default function AtendimentoPage() {
   const janelaAberta = !!(atual && atual.last_inbound_at && Date.now() - new Date(atual.last_inbound_at).getTime() < WIN)
   const horasRestantes = atual && atual.last_inbound_at ? Math.max(0, Math.ceil((WIN - (Date.now() - new Date(atual.last_inbound_at).getTime())) / 3600000)) : 0
 
-  async function enviar(modelo?: TplSend, pronto?: string) {
+  // Texto e mensagens prontas: aparece na hora no chat e o envio acontece por tras (em fila, para manter a ordem)
+  function enviar(modelo?: TplSend, pronto?: string) {
+    if (!atual) return
+    if (modelo) { enviarModelo(modelo); return }
+    const conv = atual.id
+    const corpo = pronto ? pronto : texto.trim()
+    if (!corpo) return
+    setErro('')
+    const citar = !pronto && respondendo && respondendo.wa_message_id ? respondendo.wa_message_id : undefined
+    const tmpId = 'tmp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)
+    const tmp: Msg = { id: tmpId, conversation_id: conv, direction: 'out', sent_by: meuId || null, type: 'text', body: corpo, media_path: null, mime: null, status: 'sending', error: null, created_at: new Date().toISOString(), reply_to_wa_id: citar || null }
+    setMsgs(function(l) { return l.concat([tmp]) })
+    if (!pronto) { setTexto(''); setRespondendo(null) }
+    const body: any = { conversationId: conv, text: corpo }
+    if (citar) body.replyTo = citar
+    function falhou(msg: string) {
+      setMsgs(function(l) { return l.filter(function(m) { return m.id !== tmpId }) })
+      if (selRef.current === conv) {
+        setErro(msg)
+        if (!pronto) setTexto(function(t) { return t ? t : corpo })
+      }
+    }
+    filaEnvio.current = filaEnvio.current.then(async function() {
+      try {
+        const r = await fetch('/api/whatsapp/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+        const j = await r.json().catch(function() { return {} })
+        if (!r.ok) { falhou(j.error || 'Nao foi possivel enviar.'); return }
+        fetch('/api/whatsapp/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId: conv }) }).catch(function() {})
+        await carregarMsgs(conv, tmpId)
+        carregarConvs()
+      } catch (e) { falhou('Sem conexao. Tente de novo.') }
+    })
+  }
+
+  async function enviarModelo(modelo: TplSend) {
     if (!atual || enviando) return
     setErro('')
     const body: any = { conversationId: atual.id }
-    if (modelo) {
-      body.template = { name: modelo.name, language: modelo.language, params: modelo.params, preview: modelo.preview }
-    } else if (pronto) {
-      body.text = pronto
-    } else {
-      if (!texto.trim()) return
-      body.text = texto
-      if (respondendo && respondendo.wa_message_id) body.replyTo = respondendo.wa_message_id
-    }
+    body.template = { name: modelo.name, language: modelo.language, params: modelo.params, preview: modelo.preview }
     setEnviando(true)
     try {
       const r = await fetch('/api/whatsapp/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const j = await r.json().catch(function() { return {} })
       if (!r.ok) setErro(j.error || 'Nao foi possivel enviar.')
-      else { if (!pronto) { setTexto(''); setRespondendo(null) } setMostrarTpl(false); fetch('/api/whatsapp/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId: atual.id }) }).catch(function() {}); await carregarMsgs(atual.id); carregarConvs() }
+      else { setTexto(''); setRespondendo(null); setMostrarTpl(false); fetch('/api/whatsapp/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId: atual.id }) }).catch(function() {}); await carregarMsgs(atual.id); carregarConvs() }
     } catch (e) { setErro('Sem conexao. Tente de novo.') }
     setEnviando(false)
   }
