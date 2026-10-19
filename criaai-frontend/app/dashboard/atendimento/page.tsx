@@ -51,6 +51,11 @@ function diaMsg(iso: string): string {
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })
 }
 function nomeDe(c: Conv): string { return c.name || fmtPhone(c.wa_id) }
+const CORES_AVATAR = ['linear-gradient(135deg,#16a34a,#4ade80)', 'linear-gradient(135deg,#2563eb,#60a5fa)', 'linear-gradient(135deg,#7c3aed,#a78bfa)', 'linear-gradient(135deg,#db2777,#f472b6)', 'linear-gradient(135deg,#ea580c,#fb923c)', 'linear-gradient(135deg,#0d9488,#2dd4bf)', 'linear-gradient(135deg,#ca8a04,#facc15)', 'linear-gradient(135deg,#475569,#94a3b8)']
+function corAvatar(c: Conv): string { let h = 0; const t = String(c.wa_id || c.id); for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0; return CORES_AVATAR[h % CORES_AVATAR.length] }
+function Avatar({ c, size }: { c: Conv; size: number }) {
+  return <div style={{ width: size, height: size, borderRadius: '50%', background: corAvatar(c), color: '#fff', fontWeight: 800, fontSize: Math.round(size * 0.42), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 3px rgba(0,0,0,0.18)' }}>{inicial(c)}</div>
+}
 function inicial(c: Conv): string { return (nomeDe(c).replace(/[^A-Za-zÀ-ú0-9]/g, '')[0] || '?').toUpperCase() }
 
 function Tick({ s }: { s: string }) {
@@ -560,6 +565,11 @@ export default function AtendimentoPage() {
         .at-list { width: 340px; flex-shrink: 0; border-right: 1px solid var(--border); display: flex; flex-direction: column; background: var(--surface); }
         .at-chat { flex: 1; min-width: 0; display: flex; flex-direction: column; }
         .at-back { display: none; }
+        .at-head { padding: 10px 14px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .at-head-info { flex: 1 1 180px; min-width: 0; }
+        .at-head-acoes { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .at-head-sub { font-size: 12px; color: var(--muted2); line-height: 1.45; }
+        @media (max-width: 760px) { .at-head-acoes { flex: 1 1 100%; padding-left: 0; } .at-head-acoes > * { flex: 0 0 auto; } }
         .at-item:hover { background: var(--surface2); }
         .at-resp { opacity: 0; transition: opacity .12s; }
         .at-bolha:hover .at-resp, .at-resp:focus { opacity: 1; }
@@ -744,7 +754,7 @@ export default function AtendimentoPage() {
               return (
                 <div key={c.id} className="at-item" onClick={function() { if (modoSel) setMarcadas(function(m) { const n = { ...m }; if (n[c.id]) delete n[c.id]; else n[c.id] = true; return n }); else abrir(c) }} style={{ display: 'flex', gap: 10, padding: '11px 12px', cursor: 'pointer', borderBottom: '1px solid var(--border)', background: modoSel && marcadas[c.id] ? 'rgba(37,99,235,0.10)' : on ? 'var(--accent-light)' : undefined, alignItems: modoSel ? 'center' : undefined }}>
                   {modoSel && <input type="checkbox" readOnly checked={!!marcadas[c.id]} style={{ width: 18, height: 18, flexShrink: 0, pointerEvents: 'none' }} />}
-                  <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'linear-gradient(135deg,#16a34a,#4ade80)', color: '#fff', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{inicial(c)}</div>
+                  <Avatar c={c} size={44} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
                       <div style={{ fontWeight: c.unread > 0 ? 800 : 600, fontSize: 14, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomeDe(c)}</div>
@@ -770,11 +780,12 @@ export default function AtendimentoPage() {
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted2)', fontSize: 14, textAlign: 'center', padding: 20 }}>{canal === 'recuperacao' ? 'Aqui ficam as mensagens enviadas pelos fluxos da Hubla e as respostas das pessoas.' : 'Escolha uma conversa à esquerda para responder.'}</div>
           ) : (
             <>
-              <div style={{ padding: '10px 14px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div className="at-head">
                 <button className="at-back" onClick={function() { setSel(null) }} style={{ border: 0, background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>←</button>
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <Avatar c={atual} size={42} />
+                <div className="at-head-info">
                   <div style={{ fontWeight: 800, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomeDe(atual)}{atual.connection_id && <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 800, color: '#c2410c', border: '1px solid rgba(194,65,12,0.45)', borderRadius: 999, padding: '1px 8px' }}>🛒 Recuperação</span>}</div>
-                  <div style={{ fontSize: 12, color: 'var(--muted2)' }}>{fmtPhone(atual.wa_id)}{atual.profile_label ? ' · 🎓 ' + (info ? atual.profile_label.split(' · ')[0] + ' · ' + (info.plano || 'Sem plano') : atual.profile_label) : ''}
+                  <div className="at-head-sub">{fmtPhone(atual.wa_id)}{atual.profile_label ? ' · 🎓 ' + (info ? atual.profile_label.split(' · ')[0] + ' · ' + (info.plano || 'Sem plano') : atual.profile_label) : ''}
                     {compra && (compra.comprou_em
                       ? <span style={{ color: '#15803d', fontWeight: 700 }}> · 🛒 {compra.cat === 'm' || !compra.produto ? 'Comprou a Mentoria em ' : 'Comprou ' + compra.produto + ' em '}{fmtDia(compra.comprou_em)}{compra.por === 'nome' ? ' (pelo nome)' : ''}</span>
                       : info && info.plano
@@ -783,6 +794,7 @@ export default function AtendimentoPage() {
                     {info && info.reembolso_em && <span style={{ color: '#b91c1c', fontWeight: 700 }}> · Reembolsado em {fmtDia(info.reembolso_em)}</span>}
                   </div>
                 </div>
+                <div className="at-head-acoes">
                 {isAdmin
                   ? <button onClick={function() { alternarIA([atual.id], !atual.ia_ativa) }} title={atual.ia_ativa ? 'O assistente está respondendo sozinho nesta conversa. Clique para desligar.' : 'Clique para o assistente de IA passar a responder sozinho nesta conversa.'} style={{ cursor: 'pointer', border: '1px solid ' + (atual.ia_ativa ? '#7c3aed' : 'var(--border2)'), background: atual.ia_ativa ? '#7c3aed' : 'var(--surface2)', color: atual.ia_ativa ? '#fff' : 'var(--text)', borderRadius: 8, padding: '7px 10px', fontWeight: 800, fontSize: 12.5, whiteSpace: 'nowrap' }}>🤖 {atual.ia_ativa ? 'Assistente ligado' : 'Ligar assistente'}</button>
                   : atual.ia_ativa ? <span title="O assistente de IA está respondendo esta conversa" style={{ border: '1px solid #7c3aed', color: '#7c3aed', borderRadius: 8, padding: '6px 9px', fontWeight: 800, fontSize: 12, whiteSpace: 'nowrap' }}>🤖 Assistente ativo</span> : null}
@@ -795,6 +807,7 @@ export default function AtendimentoPage() {
                 {atual.status === 'resolvida'
                   ? <button onClick={function() { mudarStatus('aberta') }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 10px', fontWeight: 700, fontSize: 12.5 }}>Reabrir</button>
                   : <button onClick={function() { mudarStatus('resolvida') }} style={{ cursor: 'pointer', border: 0, background: '#16a34a', color: '#fff', borderRadius: 8, padding: '7px 10px', fontWeight: 800, fontSize: 12.5 }}>✓ Finalizar</button>}
+                </div>
               </div>
 
               <div style={{ flex: 1, overflowY: 'auto', padding: '14px 14px 6px', display: 'flex', flexDirection: 'column', gap: 4 }}>

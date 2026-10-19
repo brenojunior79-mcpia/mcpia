@@ -1,5 +1,5 @@
 // Fluxos automaticos do WhatsApp disparados por eventos da Hubla (recuperacao de vendas etc.)
-import { GRAPH } from '@/lib/whatsapp'
+import { GRAPH, graphFetch } from '@/lib/whatsapp'
 import { normalizarNumero, primeiroNome, payloadModelo } from '@/lib/waBroadcast'
 
 import { EVENTOS, type Metodo, type Passo, type FluxoAuto } from '@/lib/waAutoTipos'
@@ -118,6 +118,8 @@ export async function tratarEventoHubla(admin: any, eventType: string, payload: 
     if (!passaFiltro(fx.trigger_filter || {}, info)) continue
     const steps: Passo[] = Array.isArray(fx.steps) ? fx.steps : []
     const p = quando(steps, 0, agora)
+    // Cobranca gerada: espera 2 minutos antes do 1o envio, para dar tempo do aviso de pagamento chegar (cartao aprova em segundos)
+    if (eventType === 'invoice.created' && p.at < agora + 120000) p.at = agora + 120000
     await admin.from('wa_auto_runs').upsert({
       flow_id: fx.id, dedupe_key: eventType + ':' + info.chave, wa_id: info.wa, email: info.email || null, name: info.nome || null,
       event_type: eventType, data: { produto: info.produto, link: info.link, metodo: info.metodo },
@@ -158,6 +160,65 @@ async function registrarNaConversa(admin: any, connId: string, run: any, texto: 
     await admin.from('wa_messages').insert({ conversation_id: cid, wa_message_id: waMsgId || null, direction: 'out', type: 'template', body: texto, status: 'sent', created_at: agora })
     await admin.from('wa_conversations').update({ last_message_at: agora, last_text: '🤖 ' + texto.slice(0, 120) }).eq('id', cid)
   } catch (e) {}
+}
+
+// Texto que a pessoa recebeu (titulo, corpo, rodape e botoes do modelo, com as variaveis preenchidas)
+const cacheModelos: Record<string, { t: number; comps: any[] }> = {}
+async function textoDoModelo(cn: any, p: Extract<Passo, { tipo: 'modelo' }>, run: any): Promise<string> {
+  const reserva = '[Modelo: ' + p.template + ']'
+  try {
+    const waba = String(cn?.waba_id || '')
+    if (!waba) return reserva
+    const key = waba + '|' + p.template + '|' + p.language
+    let c = cacheModelos[key]
+    if (!c || Date.now() - c.t > 10 * 60000) {
+      const r = await graphFetch(waba + '/message_templates?name=' + encodeURIComponent(p.template) + '&fields=name,language,components&limit=50')
+      const t = (r.data?.data || []).find(function(x: any) { return x.name === p.template && x.language === p.language }) || (r.data?.data || []).find(function(x: any) { return x.name === p.template })
+      if (!r.ok || !t) return reserva
+      c = cacheModelos[key] = { t: Date.now(), comps: t.components || [] }
+    }
+    const vals = montar(p.params, run)
+    const preenche = function(txt: string) { return String(txt || '').replace(/\{\{(\d+)\}\}/g, function(_m, n) { return vals[parseInt(n, 10) - 1] || '' }) }
+    const h = c.comps.find(function(x: any) { return x.type === 'HEADER' })
+    const b = c.comps.find(function(x: any) { return x.type === 'BODY' })
+    const f = c.comps.find(function(x: any) { return x.type === 'FOOTER' })
+    const bt = c.comps.find(function(x: any) { return x.type === 'BUTTONS' })
+    const partes: string[] = []
+    if (h && h.format === 'TEXT' && h.text) partes.push(preenche(h.text))
+    else if (h && h.format && h.format !== 'TEXT') partes.push('[' + String(h.format).toLowerCase() + ']')
+    if (b?.text) partes.push(preenche(b.text))
+    if (f?.text) partes.push(String(f.text))
+    const botoes: string[] = (bt?.buttons || []).map(function(x: any) { return '🔘 ' + String(x.text || '') })
+    if (botoes.length) partes.push(botoes.join('\n'))
+    const txt = partes.join('\n\n').trim()
+    return txt ? '📄 ' + txt.slice(0, 1500) : reserva
+  } catch (e) {
+    return reserva
+  }
+}
+
+// A pessoa ja pagou? (evita mandar "Pix gerado", carrinho abandonado etc. para quem ja comprou)
+async function jaPagou(admin: any, run: any): Promise<boolean> {
+  try {
+    const email = String(run.email || '').toLowerCase()
+    const wa = String(run.wa_id || '')
+    const desde = new Date(new Date(run.created_at || Date.now()).getTime() - 5 * 60000).toISOString()
+    if (email) {
+      const a = await admin.from('hubla_events').select('id', { head: true, count: 'exact' }).in('event_type', COMPRA).eq('email', email).gte('created_at', desde)
+      if ((a.count || 0) > 0) return true
+      const b = await admin.from('hubla_compras').select('id', { head: true, count: 'exact' }).eq('email', email).gte('paid_at', desde)
+      if ((b.count || 0) > 0) return true
+    }
+    if (wa) {
+      const c = await admin.from('hubla_compras').select('id', { head: true, count: 'exact' }).eq('wa', wa).gte('paid_at', desde)
+      if ((c.count || 0) > 0) return true
+    }
+    // Outro fluxo de "compra aprovada" ja rodou para essa pessoa depois do inicio deste
+    const q = await admin.from('wa_auto_runs').select('id, email, wa_id').in('event_type', COMPRA).eq('is_test', false).gte('created_at', desde).limit(200)
+    return (q.data || []).some(function(r: any) { return (!!email && String(r.email || '').toLowerCase() === email) || (!!wa && r.wa_id === wa) })
+  } catch (e) {
+    return false
+  }
 }
 
 const LIMITE = [130429, 131048, 80007, 4, 17, 32, 613]
@@ -230,11 +291,17 @@ export async function processarFluxos(admin: any, token: string): Promise<{ proc
         parou = true
         break
       }
+      // Antes de falar de cobranca/carrinho, confere se a pessoa ja pagou
+      if (!run.is_test && fx.cancel_on_purchase !== false && COMPRA.indexOf(run.event_type) < 0 && await jaPagou(admin, run)) {
+        await fim('cancelado', 'A pessoa já pagou', { step_index: idx, sent_count: enviados })
+        parou = true
+        break
+      }
       const r = await enviar(token, cn.phone_number_id, run.wa_id, s, run)
       if (r.ok) {
         enviados++; out.enviados++; idx++
         await admin.from('wa_auto_sends').insert({ run_id: run.id, flow_id: run.flow_id, wa_message_id: r.msgId, to_wa: run.wa_id, template: s.template, status: 'sent', is_test: run.is_test === true })
-        await registrarNaConversa(admin, fx.connection_id, run, 'Fluxo “' + fx.name + '”: modelo ' + s.template + (s.params.length ? ' — ' + montar(s.params, run).join(' | ') : ''), r.msgId)
+        await registrarNaConversa(admin, fx.connection_id, run, await textoDoModelo(cn, s, run), r.msgId)
         continue
       }
       if (LIMITE.indexOf(r.code) >= 0 || r.code === -1) {
