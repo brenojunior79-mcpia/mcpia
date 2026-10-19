@@ -14,9 +14,10 @@ export async function GET() {
 
   const [acessoR, perfilR] = await Promise.all([
     supabase.rpc('tem_estrutura_express'),
-    supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle(),
+    supabase.from('profiles').select('is_admin, is_support').eq('id', user.id).maybeSingle(),
   ])
-  const acesso = acessoR.data === true
+  // Atendentes (equipe de suporte) tambem tem acesso ao menu, sem precisar de compra
+  const acesso = acessoR.data === true || !!(perfilR.data as any)?.is_support
   const isAdmin = !!(perfilR.data as any)?.is_admin
   if (!acesso) return NextResponse.json({ acesso: false, isAdmin: false })
 
