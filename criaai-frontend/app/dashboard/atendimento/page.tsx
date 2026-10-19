@@ -170,6 +170,12 @@ export default function AtendimentoPage() {
   const [menuAberto, setMenuAberto] = useState(false)
   const fim = useRef<HTMLDivElement>(null)
   const filaEnvio = useRef<Promise<void>>(Promise.resolve())
+  const [modoSel, setModoSel] = useState(false)
+  const [marcadas, setMarcadas] = useState<Record<string, boolean>>({})
+  const [destino, setDestino] = useState('__')
+  const [acaoRodando, setAcaoRodando] = useState(false)
+  const [acaoMsg, setAcaoMsg] = useState('')
+  useEffect(function() { setModoSel(false); setMarcadas({}) }, [canal, aba])
   const selRef = useRef<string | null>(null)
   selRef.current = sel
 
@@ -463,6 +469,45 @@ export default function AtendimentoPage() {
     if (r.error) setErro(r.error.message)
     await carregarConvs()
   }
+  // Acoes em massa: vale so para as conversas que estao na lista (e marcadas) neste momento
+  async function acaoMassa(tipo: 'finalizar' | 'reabrir' | 'transferir') {
+    const ids = lista.filter(function(c) { return marcadas[c.id] }).map(function(c) { return c.id })
+    if (ids.length === 0 || acaoRodando) return
+    const n = ids.length
+    const plural = n === 1 ? 'conversa' : 'conversas'
+    let pergunta = ''
+    if (tipo === 'finalizar') pergunta = 'Finalizar ' + n + ' ' + plural + '?'
+    else if (tipo === 'reabrir') pergunta = 'Reabrir ' + n + ' ' + plural + '?'
+    else {
+      if (destino === '__') return
+      pergunta = 'Transferir ' + n + ' ' + plural + ' para ' + (destino ? primeiroNome(destino) : 'a fila de espera') + '?'
+    }
+    if (!window.confirm(pergunta)) return
+    setAcaoRodando(true); setErro(''); setAcaoMsg('')
+    try {
+      if (tipo === 'transferir') {
+        const r = await supabase.rpc('wa_assign_many', { p_convs: ids, p_user: destino || null })
+        if (r.error) setAcaoMsg('⚠ ' + r.error.message)
+        else {
+          const d = (r.data || {}) as any
+          setAcaoMsg('✓ ' + (d.ok || 0) + ' transferida(s)' + (d.falhou ? ' · ' + d.falhou + ' não foi possível' + (d.erro ? ' (' + d.erro + ')' : '') : ''))
+        }
+      } else {
+        const novo = tipo === 'finalizar' ? 'resolvida' : 'aberta'
+        const r = await supabase.rpc('wa_set_status_many', { p_convs: ids, p_status: novo })
+        if (r.error) setAcaoMsg('⚠ ' + r.error.message)
+        else {
+          const d = (r.data || {}) as any
+          setAcaoMsg('✓ ' + (d.ok || 0) + (tipo === 'finalizar' ? ' finalizada(s)' : ' reaberta(s)'))
+          if (sel && ids.indexOf(sel) >= 0) setSel(null)
+        }
+      }
+    } catch (e) { setAcaoMsg('⚠ Sem conexão. Tente de novo.') }
+    await carregarConvs()
+    setMarcadas({}); setModoSel(false); setDestino('__')
+    setAcaoRodando(false)
+  }
+
   function primeiroNome(id: string | null): string {
     if (!id) return 'Em espera'
     if (nomes[id]) return nomes[id]
@@ -633,13 +678,50 @@ export default function AtendimentoPage() {
                 </button>
               })}
             </div>
+            {!modoSel && lista.length > 0 && <button onClick={function() { setModoSel(true); setMarcadas({}); setAcaoMsg('') }} style={{ cursor: 'pointer', border: '1px dashed var(--border2)', background: 'transparent', color: 'var(--muted2)', borderRadius: 8, padding: '6px 8px', fontWeight: 700, fontSize: 12.5 }}>☑ Selecionar várias conversas</button>}
+            {acaoMsg && !modoSel && <div style={{ fontSize: 12.5, color: acaoMsg.indexOf('⚠') === 0 ? '#b91c1c' : '#15803d', fontWeight: 700 }}>{acaoMsg}</div>}
+            {modoSel && (function() {
+              const marcadasAgora = lista.filter(function(c) { return marcadas[c.id] })
+              const todas = lista.length > 0 && marcadasAgora.length === lista.length
+              const pessoasDestino = pessoas.filter(function(x) { return atendeCanal(x, canal === 'recuperacao') })
+              const btn = function(cor: string, off: boolean): React.CSSProperties { return { cursor: off ? 'default' : 'pointer', border: 0, borderRadius: 8, padding: '7px 10px', fontWeight: 800, fontSize: 12.5, background: cor, color: '#fff', opacity: off ? 0.5 : 1 } }
+              return (
+                <div style={{ background: 'var(--surface2)', borderRadius: 10, padding: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 800, fontSize: 13, color: 'var(--text)', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={todas} onChange={function() { const n: Record<string, boolean> = {}; if (!todas) lista.forEach(function(c) { n[c.id] = true }); setMarcadas(n) }} style={{ width: 18, height: 18 }} />
+                      Selecionar todas ({lista.length})
+                    </label>
+                    <button onClick={function() { setModoSel(false); setMarcadas({}) }} style={{ cursor: 'pointer', border: 0, background: 'transparent', color: 'var(--muted2)', fontWeight: 700, fontSize: 12.5 }}>Cancelar</button>
+                  </div>
+                  <div style={{ fontSize: 12.5, color: 'var(--muted2)', fontWeight: 700 }}>{marcadasAgora.length} selecionada(s)</div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {aba === 'resolvidas'
+                      ? <button disabled={acaoRodando || marcadasAgora.length === 0} onClick={function() { acaoMassa('reabrir') }} style={btn('#1f7a5a', acaoRodando || marcadasAgora.length === 0)}>↩ Reabrir</button>
+                      : <button disabled={acaoRodando || marcadasAgora.length === 0} onClick={function() { acaoMassa('finalizar') }} style={btn('#16a34a', acaoRodando || marcadasAgora.length === 0)}>✓ Finalizar</button>}
+                  </div>
+                  {isAdmin && (
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <select value={destino} onChange={function(e) { setDestino(e.target.value) }} style={{ flex: 1, minWidth: 0, border: '1px solid var(--border2)', background: 'var(--surface)', color: 'var(--text)', borderRadius: 8, padding: '6px 8px', fontSize: 12.5, fontWeight: 700 }}>
+                        <option value="__">Transferir para…</option>
+                        <option value="">⏳ Fila de espera</option>
+                        {pessoasDestino.map(function(pp) { return <option key={pp.id} value={pp.id}>{pp.id === meuId ? 'Eu (' + (pp.nome || pp.email) + ')' : (pp.nome || pp.email)}</option> })}
+                      </select>
+                      <button disabled={acaoRodando || marcadasAgora.length === 0 || destino === '__'} onClick={function() { acaoMassa('transferir') }} style={btn('#2563eb', acaoRodando || marcadasAgora.length === 0 || destino === '__')}>Transferir</button>
+                    </div>
+                  )}
+                  {acaoRodando && <div style={{ fontSize: 12.5, color: 'var(--muted2)' }}>Aplicando…</div>}
+                </div>
+              )
+            })()}
           </div>
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {lista.length === 0 && <div style={{ padding: 20, fontSize: 13.5, color: 'var(--muted2)', textAlign: 'center' }}>{aba === 'abertas' ? 'Nenhuma conversa aberta.' : aba === 'naolidas' ? 'Nenhuma mensagem não lida. 🎉' : 'Nenhuma conversa finalizada.'}</div>}
             {lista.map(function(c) {
               const on = c.id === sel
               return (
-                <div key={c.id} className="at-item" onClick={function() { abrir(c) }} style={{ display: 'flex', gap: 10, padding: '11px 12px', cursor: 'pointer', borderBottom: '1px solid var(--border)', background: on ? 'var(--accent-light)' : undefined }}>
+                <div key={c.id} className="at-item" onClick={function() { if (modoSel) setMarcadas(function(m) { const n = { ...m }; if (n[c.id]) delete n[c.id]; else n[c.id] = true; return n }); else abrir(c) }} style={{ display: 'flex', gap: 10, padding: '11px 12px', cursor: 'pointer', borderBottom: '1px solid var(--border)', background: modoSel && marcadas[c.id] ? 'rgba(37,99,235,0.10)' : on ? 'var(--accent-light)' : undefined, alignItems: modoSel ? 'center' : undefined }}>
+                  {modoSel && <input type="checkbox" readOnly checked={!!marcadas[c.id]} style={{ width: 18, height: 18, flexShrink: 0, pointerEvents: 'none' }} />}
                   <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'linear-gradient(135deg,#16a34a,#4ade80)', color: '#fff', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{inicial(c)}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
