@@ -84,6 +84,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
     { href: '/dashboard/criativos-manuais', icon: 'ti-video', label: 'Criativos Manuais', locked: false },
     { href: '/dashboard/indique', icon: 'ti-gift', label: 'Indique e ganhe', locked: false, highlight: true },
     { href: '/dashboard/vendas', icon: 'ti-rocket', label: 'Vendendo no Automatico', locked: false },
+    { href: '/dashboard/metricas', icon: 'ti-chart-bar', label: 'Analisando Métricas', locked: false },
     { href: '/dashboard/estrutura-express', icon: 'ti-bolt', label: 'Estrutura Express', locked: false, badge: 'NOVO' },
     { href: '/dashboard/anuncios', icon: 'ti-brand-meta', label: 'Gerenciador de Anuncios', locked: !isAdmin },
     { href: '/dashboard/suporte', icon: 'ti-brand-whatsapp', label: 'WhatsApp de Suporte', locked: false },

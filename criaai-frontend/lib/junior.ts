@@ -841,7 +841,7 @@ CTR acima de ~2% costuma indicar interesse; abaixo de ~1%, analisar criativo/gan
 
 # MCP IA PARA METRICAS
 
-O menu "Gerenciador de Anuncios" da plataforma tem um botao de analise automatica das metricas por IA, que o aluno pode usar como apoio.
+O menu "Analisando Metricas" da plataforma (liberado para todos) analisa as metricas por IA: o aluno preenche os numeros ou envia prints do Gerenciador de Anuncios. Indique esse menu quando o aluno quiser entender os resultados do anuncio, alem de pedir os numeros aqui no chat. O menu "Gerenciador de Anuncios" da plataforma (hoje oculto) tambem tem um botao de analise automatica das metricas.
 
 # ESPECIALISTA EM METRICAS - TRAFEGO DIRETO E X1
 
@@ -879,10 +879,11 @@ Mentoria Individual: https://docs.google.com/forms/d/e/1FAIpQLSeiQwD-PE0-VOycdnO
 
 Esta secao descreve o que existe de verdade em cada menu lateral da plataforma. Use para dizer ao aluno ONDE clicar e O QUE ele vai encontrar. Se esta secao disser que um menu esta bloqueado, em atualizacao ou oculto, isso vale mais do que qualquer outra parte da base sobre a disponibilidade dele. Nunca invente botoes alem dos que estao listados aqui.
 
-Menu lateral (ordem): Painel do Aluno, Assistente IA, Plataformas, Produtos em Alta, Gerador de Ebook, Gerador de Site, Gerador de Criativos, Criativos Manuais, Vendendo no Automatico, Estrutura Express, WhatsApp de Suporte, Aulas ao Vivo, Planos. No topo do menu aparece o nome e o e-mail do aluno, e um botao para trocar entre tema claro e escuro. No celular o menu abre pelo botao de tres tracinhos no canto.
+Menu lateral (ordem): Painel do Aluno, Assistente IA, Plataformas, Produtos em Alta, Gerador de Ebook, Gerador de Site, Gerador de Criativos, Criativos Manuais, Vendendo no Automatico, Analisando Metricas, Estrutura Express, WhatsApp de Suporte, Aulas ao Vivo, Planos. No topo do menu aparece o nome e o e-mail do aluno, e um botao para trocar entre tema claro e escuro. No celular o menu abre pelo botao de tres tracinhos no canto.
 
 Status atual dos menus:
-- Painel do Aluno, Assistente IA, Plataformas, Produtos em Alta, Gerador de Ebook, Criativos Manuais, Vendendo no Automatico, WhatsApp de Suporte e Aulas ao Vivo: liberados.
+- Painel do Aluno, Assistente IA, Plataformas, Produtos em Alta, Gerador de Ebook, Criativos Manuais, Vendendo no Automatico, Analisando Metricas, WhatsApp de Suporte e Aulas ao Vivo: liberados.
+- Analisando Metricas: menu liberado para todos os alunos, de graca e sem plano. O aluno escolhe entre PREENCHER os numeros do anuncio (valor investido, compras, impressoes, cliques, CPM, CTR, CPC, visualizacoes da pagina, inicio de checkout) ou ENVIAR ate 3 prints do Gerenciador de Anuncios. A IA mostra uma nota, onde o funil esta perdendo, o que esta bom, os pontos de atencao e o que fazer agora. Vale 15 analises por dia por aluno. E um apoio, nao garante resultado.
 - Indique e ganhe: o menu nao aparece para os alunos no momento (oculto). Se o aluno perguntar, diga que esse menu nao esta liberado agora e que, quando voltar, ele sera avisado. Nao explique o funcionamento nem os valores do programa enquanto ele estiver oculto.
 - Gerador de Site: nos primeiros 7 dias depois do cadastro, para quem ainda nao tem plano, aparece bloqueado com o aviso "Em atualizacao". Depois disso abre normalmente (e exige plano para gerar).
 - Gerador de Criativos: aparece bloqueado com o aviso "Em atualizacao" para os alunos. Nao da para usar agora. Se o aluno perguntar, diga que esta em atualizacao e que enquanto isso ele cria os criativos pelo menu Criativos Manuais (gratis).

@@ -2,12 +2,45 @@
 import { useState } from 'react'
 import styles from './metricas.module.css'
 
+type Metrica = { label: string; valor: string; status: string; benchmark: string }
+type Resultado = {
+  nota: number; resumo: string; onde_esta_a_perda: string; metricas: Metrica[]
+  positivos: string[]; atencao: string[]; problemas: string[]
+  recomendacoes: { titulo: string; descricao: string }[]; faltando: string[]
+}
+
+// Reduz o print antes de enviar (celular gera foto grande): no maximo 1600px, JPEG
+function reduzirImagem(file: File): Promise<string> {
+  return new Promise(function(resolve, reject) {
+    const reader = new FileReader()
+    reader.onerror = function() { reject(new Error('Não consegui abrir essa imagem.')) }
+    reader.onload = function() {
+      const img = new Image()
+      img.onerror = function() { reject(new Error('Esse arquivo não parece ser uma imagem. Use JPG ou PNG.')) }
+      img.onload = function() {
+        const max = 1600
+        const esc = Math.min(1, max / Math.max(img.width, img.height))
+        const c = document.createElement('canvas')
+        c.width = Math.round(img.width * esc); c.height = Math.round(img.height * esc)
+        const ctx = c.getContext('2d')
+        if (!ctx) { reject(new Error('Não consegui processar a imagem.')); return }
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, c.width, c.height)
+        ctx.drawImage(img, 0, 0, c.width, c.height)
+        resolve(c.toDataURL('image/jpeg', 0.85))
+      }
+      img.src = String(reader.result)
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
 export default function MetricasPage() {
-  const [mode, setMode] = useState<'manual'|'print'>('manual')
+  const [mode, setMode] = useState<'manual' | 'print'>('manual')
   const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState<any>(null)
-  const [printPreview, setPrintPreview] = useState('')
   const [loadingMsg, setLoadingMsg] = useState('')
+  const [erro, setErro] = useState('')
+  const [result, setResult] = useState<Resultado | null>(null)
+  const [prints, setPrints] = useState<string[]>([])
 
   const [inv, setInv] = useState('')
   const [res, setRes] = useState('')
@@ -16,238 +49,201 @@ export default function MetricasPage() {
   const [cpm, setCpm] = useState('')
   const [ctr, setCtr] = useState('')
   const [cpc, setCpc] = useState('')
-  const [obj, setObj] = useState('vendas')
-  const [nicho, setNicho] = useState('')
-  const [ticket, setTicket] = useState('')
-  const [dias, setDias] = useState('')
   const [viewPagina, setViewPagina] = useState('')
   const [iniciouCheckout, setIniciouCheckout] = useState('')
-  const [cliquesLink, setCliquesLink] = useState('')
-  const [descricaoAnuncio, setDescricaoAnuncio] = useState('')
-  const [nichoPrint, setNichoPrint] = useState('')
-  const [objPrint, setObjPrint] = useState('vendas')
+  const [ticket, setTicket] = useState('')
+  const [obj, setObj] = useState('vendas')
+  const [nicho, setNicho] = useState('')
+  const [dias, setDias] = useState('')
+  const [descricao, setDescricao] = useState('')
 
-  function handlePrint(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = ev => setPrintPreview(ev.target?.result as string)
-    reader.readAsDataURL(file)
+  async function addPrints(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || [])
+    e.target.value = ''
+    if (files.length === 0) return
+    setErro('')
+    try {
+      const novos: string[] = []
+      for (const f of files.slice(0, 3 - prints.length)) novos.push(await reduzirImagem(f))
+      setPrints(function(p) { return p.concat(novos).slice(0, 3) })
+    } catch (err: any) { setErro(err?.message || 'Não consegui abrir a imagem.') }
   }
 
-  function scoreColor(s: number) {
-    return s >= 8 ? '#22c55e' : s >= 6 ? '#f59e0b' : '#ef4444'
-  }
+  function scoreColor(s: number) { return s >= 8 ? '#22c55e' : s >= 6 ? '#f59e0b' : '#ef4444' }
+  const cor = function(st: string) { return st === 'bom' ? '#22c55e' : st === 'atencao' ? '#f59e0b' : st === 'ruim' ? '#ef4444' : 'var(--muted2)' }
 
-  function gerarAnalise(d: any) {
-    const { invN, resN, cpmN, ctrN, cpcN, objV, nichoV, ticketN, diasN, viewN, checkN, cliN } = d
-    let score = 5
-    const pos: string[] = [], atc: string[] = [], neg: string[] = [], met: any[] = [], rec: any[] = []
-    const cpaN = resN > 0 ? invN / resN : 0
-    const roasN = ticketN > 0 && resN > 0 ? (resN * ticketN) / invN : 0
-    const cpcCalc = cpcN || (parseFloat(cli) > 0 ? invN / parseFloat(cli) : 0)
-    const ctrCalc = ctrN || (parseFloat(imp) > 0 && parseFloat(cli) > 0 ? (parseFloat(cli) / parseFloat(imp)) * 100 : 0)
-    const taxaConvPagina = viewN > 0 && resN > 0 ? ((resN / viewN) * 100) : 0
-    const taxaCheckout = checkN > 0 && resN > 0 ? ((resN / checkN) * 100) : 0
-
-    if (ctrCalc >= 2) { score += 1; pos.push(`CTR de ${ctrCalc.toFixed(1)}% acima da média (benchmark: 1.5-2%)`) }
-    else if (ctrCalc >= 1) atc.push(`CTR de ${ctrCalc.toFixed(1)}% na média — criativos mais impactantes podem melhorar`)
-    else if (ctrCalc > 0) { score -= 1; neg.push(`CTR de ${ctrCalc.toFixed(1)}% abaixo do esperado`) }
-
-    if (cpmN > 0 && cpmN <= 20) { score += 0.5; pos.push(`CPM de R$${cpmN} competitivo para o mercado brasileiro`) }
-    else if (cpmN > 20 && cpmN <= 40) atc.push(`CPM de R$${cpmN} elevado — teste novos públicos`)
-    else if (cpmN > 40) { score -= 0.5; neg.push(`CPM de R$${cpmN} muito alto — audiência saturada`) }
-
-    if (objV === 'vendas' && roasN > 0) {
-      if (roasN >= 3) { score += 1.5; pos.push(`ROAS de ${roasN.toFixed(1)}x excelente`) }
-      else if (roasN >= 1.5) atc.push(`ROAS de ${roasN.toFixed(1)}x positivo — meta ideal é 3x+`)
-      else { score -= 1; neg.push(`ROAS de ${roasN.toFixed(1)}x abaixo do equilíbrio`) }
-    }
-
-    if (taxaConvPagina > 0) {
-      if (taxaConvPagina >= 3) { score += 0.5; pos.push(`Taxa de conversão da página de ${taxaConvPagina.toFixed(1)}% está ótima`) }
-      else if (taxaConvPagina >= 1) atc.push(`Taxa de conversão da página de ${taxaConvPagina.toFixed(1)}% pode melhorar — revise a oferta`)
-      else neg.push(`Taxa de conversão da página de ${taxaConvPagina.toFixed(1)}% está muito baixa — problema na página de vendas`)
-    }
-
-    if (taxaCheckout > 0) {
-      if (taxaCheckout >= 50) { score += 0.5; pos.push(`${taxaCheckout.toFixed(0)}% dos que iniciaram checkout concluíram — ótimo!`) }
-      else atc.push(`Apenas ${taxaCheckout.toFixed(0)}% dos que iniciaram checkout concluíram — simplifique o processo`)
-    }
-
-    if (invN > 0 && diasN > 0) {
-      const dd = invN / diasN
-      if (dd >= 30) pos.push(`Orçamento diário de R$${dd.toFixed(0)} adequado`)
-      else atc.push(`Orçamento diário de R$${dd.toFixed(0)} pode ser insuficiente — considere R$30+`)
-    }
-
-    score = Math.min(10, Math.max(0, score))
-
-    met.push({ label: 'CTR', valor: ctrCalc > 0 ? ctrCalc.toFixed(1) + '%' : 'N/A', status: ctrCalc >= 2 ? 'bom' : ctrCalc >= 1 ? 'atencao' : 'ruim', benchmark: 'Meta: 2%+' })
-    met.push({ label: 'CPM', valor: cpmN > 0 ? 'R$' + cpmN : 'N/A', status: cpmN <= 20 ? 'bom' : cpmN <= 40 ? 'atencao' : 'ruim', benchmark: 'Meta: <R$20' })
-    met.push({ label: 'CPC', valor: cpcCalc > 0 ? 'R$' + cpcCalc.toFixed(2) : 'N/A', status: cpcCalc > 0 && cpcCalc <= 1 ? 'bom' : cpcCalc <= 2 ? 'atencao' : 'ruim', benchmark: 'Meta: <R$1' })
-    met.push({ label: 'CPA', valor: cpaN > 0 ? 'R$' + cpaN.toFixed(2) : 'N/A', status: ticketN > 0 && cpaN > 0 ? (cpaN < ticketN * 0.3 ? 'bom' : cpaN < ticketN * 0.5 ? 'atencao' : 'ruim') : 'atencao', benchmark: 'Meta: <30% ticket' })
-    met.push({ label: 'ROAS', valor: roasN > 0 ? roasN.toFixed(1) + 'x' : 'N/A', status: roasN >= 3 ? 'bom' : roasN >= 1.5 ? 'atencao' : 'ruim', benchmark: 'Meta: 3x+' })
-    met.push({ label: 'Conv. Página', valor: taxaConvPagina > 0 ? taxaConvPagina.toFixed(1) + '%' : 'N/A', status: taxaConvPagina >= 3 ? 'bom' : taxaConvPagina >= 1 ? 'atencao' : 'ruim', benchmark: 'Meta: 3%+' })
-    met.push({ label: 'Checkout', valor: taxaCheckout > 0 ? taxaCheckout.toFixed(0) + '%' : 'N/A', status: taxaCheckout >= 50 ? 'bom' : taxaCheckout >= 25 ? 'atencao' : 'ruim', benchmark: 'Meta: 50%+' })
-    met.push({ label: 'Cliques Link', valor: cliN > 0 ? cliN.toString() : 'N/A', status: 'atencao', benchmark: 'Total' })
-
-    rec.push({ titulo: 'Teste novos criativos', descricao: `Para ${nichoV || 'seu produto'}, experimente criativos com prova social, demonstração em uso e urgência.` })
-    if (ctrCalc < 2) rec.push({ titulo: 'Melhore o hook do criativo', descricao: 'Os primeiros 3 segundos são decisivos. Teste iniciar com pergunta provocativa ou resultado surpreendente.' })
-    if (cpmN > 25) rec.push({ titulo: 'Expanda os públicos', descricao: 'CPM alto indica audiência saturada. Teste Lookalike 2-5% ou interesses mais amplos.' })
-    if (taxaConvPagina > 0 && taxaConvPagina < 2) rec.push({ titulo: 'Otimize a página de vendas', descricao: 'Taxa de conversão baixa indica problema na página. Verifique velocidade, clareza da oferta e depoimentos.' })
-    if (taxaCheckout > 0 && taxaCheckout < 50) rec.push({ titulo: 'Reduza o abandono no checkout', descricao: 'Muitos iniciam mas não concluem. Simplifique o processo, ofereça mais formas de pagamento e adicione garantia visível.' })
-
-    const resumo = score >= 8 ? 'Excelente performance — foque em escalar' : score >= 6 ? 'Bom desempenho com oportunidades de melhoria' : score >= 4 ? 'Performance mediana — ajustes necessários' : 'Abaixo do esperado — revisão completa recomendada'
-    return { score, resumo, metricas: met, positivos: pos, atencao: atc, negativos: neg, recomendacoes: rec }
-  }
-
-  async function analisar(isManual: boolean) {
-    setLoading(true); setResult(null)
-    const msgs = ['Calculando métricas...', 'Comparando benchmarks...', 'Gerando diagnóstico...', 'Elaborando recomendações...']
+  async function analisar() {
+    setErro(''); setResult(null); setLoading(true)
+    const msgs = ['Lendo os números...', 'Olhando o funil, etapa por etapa...', 'Procurando onde está a perda...', 'Montando as recomendações...']
     let mi = 0
-    const iv = setInterval(() => setLoadingMsg(msgs[mi++ % msgs.length]), 1200)
-    await new Promise(r => setTimeout(r, isManual ? 4000 : 5000))
-    clearInterval(iv)
-    const data = isManual
-      ? gerarAnalise({ invN: +inv, resN: +res, cpmN: +cpm, ctrN: +ctr, cpcN: +cpc, objV: obj, nichoV: nicho, ticketN: +ticket, diasN: +dias || 1, viewN: +viewPagina, checkN: +iniciouCheckout, cliN: +cliquesLink })
-      : gerarAnalise({ invN: 200, resN: 8, cpmN: 16.6, ctrN: 2.3, cpcN: 0.71, objV: objPrint, nichoV: nichoPrint, ticketN: 197, diasN: 5, viewN: 180, checkN: 25, cliN: 280 })
-    setResult(data)
-    setLoading(false)
+    setLoadingMsg(msgs[0])
+    const iv = setInterval(function() { mi++; setLoadingMsg(msgs[mi % msgs.length]) }, 2500)
+    try {
+      const body: any = {
+        modo: mode,
+        contexto: { objetivo: obj, nicho, dias, ticket, descricao },
+      }
+      if (mode === 'manual') body.dados = { investimento: inv, resultados: res, impressoes: imp, cliques: cli, cpm, ctr, cpc, visualizacoes: viewPagina, checkout: iniciouCheckout }
+      else body.imagens = prints
+      const r = await fetch('/api/metricas/analisar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      const j = await r.json().catch(function() { return {} })
+      if (!r.ok) setErro(j.error || 'Não consegui analisar agora. Tente de novo.')
+      else if (j.ok === false) setErro(j.erro || 'Não consegui ler os números desse print.')
+      else setResult(j.resultado)
+    } catch (e) {
+      setErro('Sem conexão. Verifique a internet e tente de novo.')
+    } finally {
+      clearInterval(iv); setLoading(false)
+    }
   }
+
+  const campoContexto = (
+    <div className={styles.section}>
+      <div className={styles.sectionTitle}>Contexto do anúncio</div>
+      <div className={`${styles.grid} ${styles.grid3}`} style={{ marginBottom: 14 }}>
+        <div className={styles.field}><label>Nicho / produto</label><input type="text" value={nicho} onChange={e => setNicho(e.target.value)} placeholder="Ex: ebook de receitas" /></div>
+        <div className={styles.field}><label>Dias rodando</label><input type="number" value={dias} onChange={e => setDias(e.target.value)} placeholder="Ex: 3" /></div>
+        <div className={styles.field}><label>Objetivo</label>
+          <select value={obj} onChange={e => setObj(e.target.value)}>
+            <option value="vendas">Vendas / Conversão</option>
+            <option value="leads">Geração de leads</option>
+            <option value="trafego">Tráfego</option>
+          </select>
+        </div>
+      </div>
+      {mode === 'print' && (
+        <div className={styles.field} style={{ marginBottom: 14 }}><label>Preço do produto (R$) — opcional</label><input type="number" value={ticket} onChange={e => setTicket(e.target.value)} placeholder="Ex: 47" /></div>
+      )}
+      <div className={styles.field}>
+        <label>Quer contar algo mais? (opcional)</label>
+        <textarea value={descricao} onChange={e => setDescricao(e.target.value)} rows={3} placeholder="Ex: anúncio em vídeo, público mulheres 30-50 anos, orçamento de R$ 20 por dia..." style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 9, padding: '10px 14px', color: 'var(--text)', fontSize: 14, fontFamily: 'DM Sans, sans-serif', outline: 'none', resize: 'vertical' }} />
+      </div>
+    </div>
+  )
 
   return (
     <div className={styles.page}>
       <div className={styles.topbar}>
-        <div className={styles.title}>Análise de Métricas</div>
-        <div className={styles.sub}>Insira os dados do seu anúncio e receba um diagnóstico completo com IA</div>
+        <div className={styles.title}>Analisando Métricas</div>
+        <div className={styles.sub}>Preencha os números do seu anúncio ou envie um print do Gerenciador de Anúncios e a IA mostra onde está o problema</div>
       </div>
       <div className={styles.content}>
         <div className={styles.modeTabs}>
-          <div className={`${styles.mtab} ${mode==='manual'?styles.mtabOn:''}`} onClick={()=>setMode('manual')}><i className="ti ti-forms"/> Inserir manualmente</div>
-          <div className={`${styles.mtab} ${mode==='print'?styles.mtabOn:''}`} onClick={()=>setMode('print')}><i className="ti ti-photo"/> Enviar print</div>
+          <div className={`${styles.mtab} ${mode === 'manual' ? styles.mtabOn : ''}`} onClick={() => { setMode('manual'); setErro('') }}><i className="ti ti-forms" /> Preencher os números</div>
+          <div className={`${styles.mtab} ${mode === 'print' ? styles.mtabOn : ''}`} onClick={() => { setMode('print'); setErro('') }}><i className="ti ti-photo" /> Enviar print</div>
         </div>
 
         {mode === 'manual' && (<>
           <div className={styles.section}>
-            <div className={styles.sectionTitle}>Dados do anúncio</div>
-            <div className={`${styles.grid} ${styles.grid2}`} style={{marginBottom:14}}>
-              <div className={styles.field}><label>Investimento (R$)</label><input type="number" value={inv} onChange={e=>setInv(e.target.value)} placeholder="Ex: 150"/></div>
-              <div className={styles.field}><label>Resultado (conversões)</label><input type="number" value={res} onChange={e=>setRes(e.target.value)} placeholder="Ex: 12"/></div>
+            <div className={styles.sectionTitle}>Números do anúncio</div>
+            <div className={styles.dica}>Só o valor investido é obrigatório. Quanto mais números você colocar, melhor fica a análise. Copie do Gerenciador de Anúncios.</div>
+            <div className={`${styles.grid} ${styles.grid2}`} style={{ marginBottom: 14 }}>
+              <div className={styles.field}><label>Valor investido (R$)</label><input type="number" inputMode="decimal" value={inv} onChange={e => setInv(e.target.value)} placeholder="Ex: 150" /></div>
+              <div className={styles.field}><label>Compras (resultados)</label><input type="number" inputMode="decimal" value={res} onChange={e => setRes(e.target.value)} placeholder="Ex: 3" /></div>
             </div>
-            <div className={`${styles.grid} ${styles.grid3}`} style={{marginBottom:14}}>
-              <div className={styles.field}><label>Impressões</label><input type="number" value={imp} onChange={e=>setImp(e.target.value)} placeholder="Ex: 15000"/></div>
-              <div className={styles.field}><label>Cliques no link</label><input type="number" value={cliquesLink} onChange={e=>setCliquesLink(e.target.value)} placeholder="Ex: 320"/></div>
-              <div className={styles.field}><label>CPM (R$)</label><input type="number" value={cpm} onChange={e=>setCpm(e.target.value)} placeholder="Ex: 18"/></div>
+            <div className={`${styles.grid} ${styles.grid3}`} style={{ marginBottom: 14 }}>
+              <div className={styles.field}><label>Impressões</label><input type="number" inputMode="decimal" value={imp} onChange={e => setImp(e.target.value)} placeholder="Ex: 15000" /></div>
+              <div className={styles.field}><label>Cliques no link</label><input type="number" inputMode="decimal" value={cli} onChange={e => setCli(e.target.value)} placeholder="Ex: 320" /></div>
+              <div className={styles.field}><label>CPM (R$)</label><input type="number" inputMode="decimal" value={cpm} onChange={e => setCpm(e.target.value)} placeholder="Ex: 18" /></div>
             </div>
-            <div className={`${styles.grid} ${styles.grid3}`} style={{marginBottom:14}}>
-              <div className={styles.field}><label>CTR (%)</label><input type="number" value={ctr} onChange={e=>setCtr(e.target.value)} placeholder="Ex: 2.1" step="0.1"/></div>
-              <div className={styles.field}><label>CPC (R$)</label><input type="number" value={cpc} onChange={e=>setCpc(e.target.value)} placeholder="Ex: 0.47" step="0.01"/></div>
-              <div className={styles.field}><label>Objetivo</label>
-                <select value={obj} onChange={e=>setObj(e.target.value)}>
-                  <option value="vendas">Vendas / Conversão</option>
-                  <option value="leads">Geração de leads</option>
-                  <option value="trafego">Tráfego</option>
-                  <option value="alcance">Alcance / Branding</option>
-                </select>
-              </div>
+            <div className={`${styles.grid} ${styles.grid3}`} style={{ marginBottom: 14 }}>
+              <div className={styles.field}><label>CTR do link (%)</label><input type="number" inputMode="decimal" value={ctr} onChange={e => setCtr(e.target.value)} placeholder="Ex: 2.1" step="0.1" /></div>
+              <div className={styles.field}><label>CPC do link (R$)</label><input type="number" inputMode="decimal" value={cpc} onChange={e => setCpc(e.target.value)} placeholder="Ex: 0.47" step="0.01" /></div>
+              <div className={styles.field}><label>Preço do produto (R$)</label><input type="number" inputMode="decimal" value={ticket} onChange={e => setTicket(e.target.value)} placeholder="Ex: 47" /></div>
             </div>
-            <div className={`${styles.grid} ${styles.grid3}`}>
-              <div className={styles.field}><label>Visualiz. pág. destino</label><input type="number" value={viewPagina} onChange={e=>setViewPagina(e.target.value)} placeholder="Ex: 180"/></div>
-              <div className={styles.field}><label>Iniciou checkout</label><input type="number" value={iniciouCheckout} onChange={e=>setIniciouCheckout(e.target.value)} placeholder="Ex: 25"/></div>
-              <div className={styles.field}><label>Ticket médio (R$)</label><input type="number" value={ticket} onChange={e=>setTicket(e.target.value)} placeholder="Ex: 197"/></div>
+            <div className={`${styles.grid} ${styles.grid2}`}>
+              <div className={styles.field}><label>Visualizações da página</label><input type="number" inputMode="decimal" value={viewPagina} onChange={e => setViewPagina(e.target.value)} placeholder="Ex: 180" /></div>
+              <div className={styles.field}><label>Iniciou checkout</label><input type="number" inputMode="decimal" value={iniciouCheckout} onChange={e => setIniciouCheckout(e.target.value)} placeholder="Ex: 25" /></div>
             </div>
           </div>
-          <div className={styles.section}>
-            <div className={styles.sectionTitle}>Contexto do anúncio</div>
-            <div className={`${styles.grid} ${styles.grid2}`} style={{marginBottom:14}}>
-              <div className={styles.field}><label>Nicho / produto</label><input type="text" value={nicho} onChange={e=>setNicho(e.target.value)} placeholder="Ex: suplemento, curso..."/></div>
-              <div className={styles.field}><label>Dias rodando</label><input type="number" value={dias} onChange={e=>setDias(e.target.value)} placeholder="Ex: 7"/></div>
-            </div>
-            <div className={styles.field}>
-              <label>Descreva seu anúncio com suas palavras (opcional)</label>
-              <textarea
-                value={descricaoAnuncio}
-                onChange={e=>setDescricaoAnuncio(e.target.value)}
-                placeholder="Ex: estou rodando um anúncio de vídeo para um suplemento de emagrecimento, público feminino 25-45 anos, objetivo compra, campanha rodando há 5 dias..."
-                rows={3}
-                style={{width:'100%',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:9,padding:'10px 14px',color:'var(--text)',fontSize:14,fontFamily:'DM Sans, sans-serif',outline:'none',resize:'vertical'}}
-              />
-            </div>
-          </div>
-          <button className={styles.btnAnalyze} onClick={()=>analisar(true)} disabled={loading || !inv}>
-            <i className="ti ti-sparkles"/> {loading ? loadingMsg : 'Analisar com IA'}
-          </button>
+          {campoContexto}
         </>)}
 
         {mode === 'print' && (<>
           <div className={styles.section}>
-            <div className={styles.sectionTitle}>Print do gerenciador</div>
-            <div className={`${styles.uploadBox} ${printPreview?styles.hasImg:''}`} onClick={()=>document.getElementById('print-input')?.click()}>
-              <input id="print-input" type="file" accept="image/*" style={{display:'none'}} onChange={handlePrint}/>
-              {printPreview ? (<><img src={printPreview} alt="print" className={styles.previewImg}/><div className={styles.uploadSub}>Clique para trocar</div></>) : (<><i className="ti ti-photo-up" style={{fontSize:36,color:'var(--muted)',display:'block',marginBottom:12}}/><div className={styles.uploadTitle}>Clique para enviar o print</div><div className={styles.uploadSub}>Facebook Ads Manager, Google Ads, etc.</div></>)}
+            <div className={styles.sectionTitle}>Prints do Gerenciador de Anúncios</div>
+            <div className={styles.dica}>Envie até 3 prints da tabela de campanhas ou anúncios, com as colunas de gasto, impressões, CPM, CTR, cliques, resultados e checkout. Se os números não aparecerem todos em uma tela, mande mais de um print.</div>
+            <div className={`${styles.uploadBox} ${prints.length ? styles.hasImg : ''}`} onClick={() => { if (prints.length < 3) document.getElementById('print-input')?.click() }}>
+              <input id="print-input" type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={addPrints} />
+              <i className="ti ti-photo-up" style={{ fontSize: 36, color: 'var(--muted)', display: 'block', marginBottom: 12 }} />
+              <div className={styles.uploadTitle}>{prints.length === 0 ? 'Toque para enviar o print' : prints.length < 3 ? 'Toque para adicionar outro print' : 'Máximo de 3 prints'}</div>
+              <div className={styles.uploadSub}>JPG ou PNG. Não envie senhas nem dados de cartão.</div>
+              {prints.length > 0 && (
+                <div className={styles.thumbs} onClick={e => e.stopPropagation()}>
+                  {prints.map(function(p, i) {
+                    return <div key={i} className={styles.thumb}><img src={p} alt={'print ' + (i + 1)} /><button type="button" className={styles.thumbX} onClick={() => setPrints(prints.filter(function(_x, k) { return k !== i }))} aria-label="Remover print">×</button></div>
+                  })}
+                </div>
+              )}
             </div>
           </div>
-          <div className={styles.section}>
-            <div className={styles.sectionTitle}>Contexto adicional</div>
-            <div className={`${styles.grid} ${styles.grid2}`} style={{marginBottom:14}}>
-              <div className={styles.field}><label>Nicho</label><input type="text" value={nichoPrint} onChange={e=>setNichoPrint(e.target.value)} placeholder="Ex: suplemento..."/></div>
-              <div className={styles.field}><label>Objetivo</label>
-                <select value={objPrint} onChange={e=>setObjPrint(e.target.value)}>
-                  <option value="vendas">Vendas</option>
-                  <option value="leads">Leads</option>
-                  <option value="trafego">Tráfego</option>
-                </select>
-              </div>
-            </div>
-            <div className={styles.field}>
-              <label>Descreva seu anúncio (opcional)</label>
-              <textarea
-                value={descricaoAnuncio}
-                onChange={e=>setDescricaoAnuncio(e.target.value)}
-                placeholder="Ex: anúncio de vídeo para produto de beleza, público 25-45 anos..."
-                rows={3}
-                style={{width:'100%',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:9,padding:'10px 14px',color:'var(--text)',fontSize:14,fontFamily:'DM Sans, sans-serif',outline:'none',resize:'vertical'}}
-              />
-            </div>
-          </div>
-          <button className={styles.btnAnalyze} onClick={()=>analisar(false)} disabled={loading || !printPreview}>
-            <i className="ti ti-sparkles"/> {loading ? loadingMsg : 'Analisar print com IA'}
-          </button>
+          {campoContexto}
         </>)}
+
+        {erro && <div className={styles.erroBox}>{erro}</div>}
+
+        <button className={styles.btnAnalyze} onClick={analisar} disabled={loading || (mode === 'manual' ? !inv : prints.length === 0)}>
+          <i className="ti ti-sparkles" /> {loading ? loadingMsg : mode === 'manual' ? 'Analisar com IA' : 'Analisar prints com IA'}
+        </button>
 
         {result && (
           <div className={styles.resultSection}>
             <div className={styles.scoreCard}>
               <div className={styles.scoreLabel}>Nota do anúncio</div>
-              <div className={styles.scoreValue} style={{color:scoreColor(result.score)}}>{result.score.toFixed(1)}</div>
+              <div className={styles.scoreValue} style={{ color: scoreColor(result.nota) }}>{result.nota.toFixed(1)}</div>
               <div className={styles.scoreDesc}>{result.resumo}</div>
             </div>
-            <div className={styles.metricsGrid}>
-              {result.metricas.map((m:any,i:number)=>(
-                <div key={i} className={styles.metricCard}>
-                  <div className={styles.metricLabel}>{m.label}</div>
-                  <div className={styles.metricValue} style={{color:m.status==='bom'?'#22c55e':m.status==='atencao'?'#f59e0b':'#ef4444'}}>{m.valor}</div>
-                  <div className={`${styles.metricStatus} ${m.status==='bom'?styles.good:m.status==='atencao'?styles.warn:styles.bad}`}>{m.benchmark}</div>
-                </div>
-              ))}
-            </div>
-            <div className={styles.section}>
-              <div className={styles.sectionTitle}>Diagnóstico</div>
-              {result.positivos.length>0&&<div className={styles.analysisBlock}><div className={`${styles.analysisTitle} ${styles.good}`}><i className="ti ti-circle-check"/>Pontos positivos</div>{result.positivos.map((p:string,i:number)=><div key={i} className={styles.analysisItem}><div className={styles.dotGood}/><span>{p}</span></div>)}</div>}
-              {result.atencao.length>0&&<div className={styles.analysisBlock}><div className={`${styles.analysisTitle} ${styles.warn}`}><i className="ti ti-alert-triangle"/>Pontos de atenção</div>{result.atencao.map((p:string,i:number)=><div key={i} className={styles.analysisItem}><div className={styles.dotWarn}/><span>{p}</span></div>)}</div>}
-              {result.negativos.length>0&&<div className={styles.analysisBlock}><div className={`${styles.analysisTitle} ${styles.bad}`}><i className="ti ti-circle-x"/>Problemas identificados</div>{result.negativos.map((p:string,i:number)=><div key={i} className={styles.analysisItem}><div className={styles.dotBad}/><span>{p}</span></div>)}</div>}
-            </div>
-            <div className={styles.section}>
-              <div className={styles.sectionTitle}>Recomendações</div>
-              {result.recomendacoes.map((r:any,i:number)=>(
-                <div key={i} className={styles.recCard}>
-                  <div className={styles.recTitle}><i className="ti ti-bulb"/>{i+1}. {r.titulo}</div>
-                  <div className={styles.recText}>{r.descricao}</div>
-                </div>
-              ))}
-            </div>
-            <button className={styles.btnReset} onClick={()=>setResult(null)}><i className="ti ti-refresh"/> Nova análise</button>
+
+            {result.onde_esta_a_perda && (
+              <div className={styles.perdaBox}><b>Onde está a perda</b>{result.onde_esta_a_perda}</div>
+            )}
+
+            {result.metricas.length > 0 && (
+              <div className={styles.metricsGrid}>
+                {result.metricas.map(function(m, i) {
+                  return (
+                    <div key={i} className={styles.metricCard}>
+                      <div className={styles.metricLabel}>{m.label}</div>
+                      <div className={styles.metricValue} style={{ color: cor(m.status) }}>{m.valor}</div>
+                      <div className={styles.metricStatus}>{m.benchmark}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {(result.positivos.length > 0 || result.atencao.length > 0 || result.problemas.length > 0) && (
+              <div className={styles.section}>
+                <div className={styles.sectionTitle}>Diagnóstico</div>
+                {result.positivos.length > 0 && <div className={styles.analysisBlock}><div className={`${styles.analysisTitle} ${styles.good}`}><i className="ti ti-circle-check" />Pontos positivos</div>{result.positivos.map(function(p, i) { return <div key={i} className={styles.analysisItem}><div className={styles.dotGood} /><span>{p}</span></div> })}</div>}
+                {result.atencao.length > 0 && <div className={styles.analysisBlock}><div className={`${styles.analysisTitle} ${styles.warn}`}><i className="ti ti-alert-triangle" />Pontos de atenção</div>{result.atencao.map(function(p, i) { return <div key={i} className={styles.analysisItem}><div className={styles.dotWarn} /><span>{p}</span></div> })}</div>}
+                {result.problemas.length > 0 && <div className={styles.analysisBlock}><div className={`${styles.analysisTitle} ${styles.bad}`}><i className="ti ti-circle-x" />Problemas identificados</div>{result.problemas.map(function(p, i) { return <div key={i} className={styles.analysisItem}><div className={styles.dotBad} /><span>{p}</span></div> })}</div>}
+              </div>
+            )}
+
+            {result.recomendacoes.length > 0 && (
+              <div className={styles.section}>
+                <div className={styles.sectionTitle}>O que fazer agora</div>
+                {result.recomendacoes.map(function(r, i) {
+                  return (
+                    <div key={i} className={styles.recCard}>
+                      <div className={styles.recTitle}><i className="ti ti-bulb" />{i + 1}. {r.titulo}</div>
+                      <div className={styles.recText}>{r.descricao}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {result.faltando.length > 0 && (
+              <div className={styles.section}>
+                <div className={styles.sectionTitle}>Para uma análise melhor, informe também</div>
+                {result.faltando.map(function(f, i) { return <div key={i} className={styles.analysisItem}><div className={styles.dotWarn} /><span>{f}</span></div> })}
+              </div>
+            )}
+
+            <div className={styles.dica}>A análise é um apoio e não garante resultado. Com poucos dias ou pouco gasto, espere cerca de 48 horas de entrega antes de tomar decisões grandes.</div>
+            <button className={styles.btnReset} onClick={() => setResult(null)}><i className="ti ti-refresh" /> Nova análise</button>
           </div>
         )}
       </div>
