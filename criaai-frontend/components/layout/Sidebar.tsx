@@ -231,20 +231,6 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
               <i className="ti ti-logout" />
             </button>
           </div>
-          {!hidePlans && (
-          <div className={styles.creditsBox}>
-            <div className={styles.creditsLabel}>Creditos de video</div>
-            <div className={styles.creditsCount}>
-              {plan?.is_unlimited ? '∞' : videosUsed} <span>/ {plan?.is_unlimited ? '∞' : videosLimit}</span>
-            </div>
-            <div className={styles.creditsBar}>
-              <div className={styles.creditsFill} style={{ width: creditPct + '%' }} />
-            </div>
-            <Link href="/dashboard/creditos" className={styles.addCreditsBtn}>
-              <i className="ti ti-plus" /> Adicionar creditos
-            </Link>
-          </div>
-          )}
         </div>
       </aside>
     </>
