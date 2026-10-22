@@ -4,7 +4,7 @@ import { input, botaoClaro } from './ui'
 
 export type Clipe = {
   id: string; nome: string
-  origem: 'vecteezy' | 'arquivo' | 'link'
+  origem: 'pixabay' | 'arquivo' | 'link'
   url: string          // para pre-visualizar
   thumb?: string
   duracao?: number
@@ -57,33 +57,33 @@ export default function CardVideos({ clipes, setClipes, onSeguir }: { clipes: Cl
 
   function alternar(v: Video) {
     setMsg('')
-    const i = indice('vecteezy-' + v.id)
-    if (i >= 0) { setClipes(clipes.filter(function(c) { return c.id !== 'vecteezy-' + v.id })); return }
+    const i = indice('pixabay-' + v.id)
+    if (i >= 0) { setClipes(clipes.filter(function(c) { return c.id !== 'pixabay-' + v.id })); return }
     if (clipes.length >= MAX_CLIPES) { setMsg('No máximo ' + MAX_CLIPES + ' vídeos por criativo.'); return }
-    setClipes(clipes.concat([{ id: 'vecteezy-' + v.id, nome: v.titulo || 'Vídeo ' + v.id, origem: 'vecteezy', url: v.previa, thumb: v.thumb, duracao: v.duracao, fonte: v.arquivo }]))
+    setClipes(clipes.concat([{ id: 'pixabay-' + v.id, nome: v.titulo || 'Vídeo ' + v.id, origem: 'pixabay', url: v.previa, thumb: v.thumb, duracao: v.duracao, fonte: v.arquivo }]))
   }
 
   async function adicionarLink() {
     setMsg('')
     const t = link.trim()
     if (!t) return
-    const pix = /vecteezy\.com\/.*?-(\d+)\/?(?:\?.*)?$/i.exec(t)
+    const pix = /pixabay\.com\/(?:[a-z]{2}\/)?videos\/.*-(\d+)\/?(?:\?.*)?$/i.exec(t)
     if (pix) {
       try {
         const r = await fetch('/api/criativo/videos?id=' + pix[1])
         const j = await r.json()
         if (j.videos && j.videos[0]) { alternarSeNovo(j.videos[0]); setLink(''); return }
       } catch (e) {}
-      setMsg('Não encontrei esse vídeo no Vecteezy.'); return
+      setMsg('Não encontrei esse vídeo no Pixabay.'); return
     }
     if (/^https:\/\/.+\.(mp4|mov|m4v|webm)(\?.*)?$/i.test(t)) {
       if (clipes.length >= MAX_CLIPES) { setMsg('No máximo ' + MAX_CLIPES + ' vídeos por criativo.'); return }
       setClipes(clipes.concat([{ id: 'link-' + Math.random().toString(36).slice(2), nome: t.split('/').pop() || 'Vídeo do link', origem: 'link', url: t, fonte: t }]))
       setLink(''); return
     }
-    setMsg('Cole o link de um vídeo do Vecteezy ou o endereço direto de um arquivo de vídeo (.mp4).')
+    setMsg('Cole o link de um vídeo do Pixabay ou o endereço direto de um arquivo de vídeo (.mp4).')
   }
-  function alternarSeNovo(v: Video) { if (indice('vecteezy-' + v.id) === -1) alternar(v) }
+  function alternarSeNovo(v: Video) { if (indice('pixabay-' + v.id) === -1) alternar(v) }
 
   function adicionarArquivos(files: FileList | null) {
     setMsg('')
@@ -110,7 +110,7 @@ export default function CardVideos({ clipes, setClipes, onSeguir }: { clipes: Cl
         let href = c.url
         let revogar = false
         if (c.fonte) {
-          const r = await fetch(c.origem === 'vecteezy' ? '/api/criativo/videos/arquivo?id=' + encodeURIComponent(c.fonte) : c.fonte)
+          const r = await fetch(c.origem === 'pixabay' ? '/api/criativo/videos/arquivo?u=' + encodeURIComponent(c.fonte) : c.fonte)
           if (!r.ok) throw new Error('falhou')
           href = URL.createObjectURL(await r.blob()); revogar = true
         }
@@ -130,17 +130,17 @@ export default function CardVideos({ clipes, setClipes, onSeguir }: { clipes: Cl
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 240 }}>
           <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 22 }}>3 · Buscar vídeos</div>
-          <div style={{ fontSize: 13.5, color: 'var(--muted2)', marginTop: 2 }}>Procure cenas no Vecteezy, com licença para usar em anúncio. Marque as que quiser e baixe ou mande direto para a edição.</div>
+          <div style={{ fontSize: 13.5, color: 'var(--muted2)', marginTop: 2 }}>Procure cenas grátis no Pixabay, liberadas para usar em anúncio. Marque as que quiser e baixe ou mande direto para a edição.</div>
         </div>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#16161d', color: '#fff', fontWeight: 800, fontSize: 13, padding: '9px 14px', borderRadius: 999 }}>
-          Vecteezy
+          Pixabay
           <span style={{ background: conectado === false ? '#fde2e2' : '#dcf5e6', color: conectado === false ? '#b91c1c' : verde, fontSize: 11.5, fontWeight: 800, padding: '2px 9px', borderRadius: 999 }}>{conectado === false ? 'não conectado' : 'conectado'}</span>
         </span>
       </div>
 
       <form onSubmit={function(e) { e.preventDefault(); buscar(q.trim(), formato) }} style={{ marginTop: 16, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <div style={{ flex: 1, minWidth: 220 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 5 }}>Buscar no Vecteezy</div>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 5 }}>Buscar no Pixabay</div>
           <input style={{ ...input, padding: '13px 14px', borderRadius: 12, background: 'var(--surface)' }} value={q} onChange={function(e) { setQ(e.target.value) }} placeholder="Ex: criança no celular, mulher sorrindo..." />
         </div>
         <div>
@@ -176,21 +176,21 @@ export default function CardVideos({ clipes, setClipes, onSeguir }: { clipes: Cl
 
       {conectado === false ? (
         <div style={{ marginTop: 14, background: '#fef3c7', border: '1px solid #fcd34d', color: '#92400e', borderRadius: 12, padding: '12px 14px', fontSize: 13.5 }}>
-          A galeria do Vecteezy ainda não está conectada. Falta cadastrar a chave de acesso (VECTEEZY_API_KEY e VECTEEZY_ACCOUNT_ID) na Vercel.
+          A galeria do Pixabay ainda não está conectada. Falta cadastrar a chave de acesso (PIXABAY_API_KEY) na Vercel.
         </div>
       ) : erro ? (
         <div style={{ marginTop: 14, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 14px', fontSize: 13.5 }}>{erro}</div>
       ) : (
         <div style={{ marginTop: 14, background: '#e8eefc', borderRadius: 12, padding: '11px 14px', fontSize: 13.5, color: '#1e3a8a' }}>
           {carregando ? 'Buscando vídeos...' : (
-            <span><b>{videos.length} vídeos encontrados no Vecteezy</b>{buscado ? ' para “' + buscado + '”' : ' (os mais populares)'}. Aperte o play para assistir e “+ Escolher” para usar no criativo.</span>
+            <span><b>{videos.length} vídeos encontrados no Pixabay</b>{buscado ? ' para “' + buscado + '”' : ' (os mais populares)'}. Aperte o play para assistir e “+ Escolher” para usar no criativo.</span>
           )}
         </div>
       )}
 
       <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 14, opacity: carregando ? 0.55 : 1, transition: 'opacity .2s' }}>
         {videos.map(function(v) {
-          const i = indice('vecteezy-' + v.id)
+          const i = indice('pixabay-' + v.id)
           const on = i >= 0
           const reproduzindo = tocando === v.id
           return (
@@ -216,12 +216,12 @@ export default function CardVideos({ clipes, setClipes, onSeguir }: { clipes: Cl
         })}
       </div>
 
-      {clipes.some(function(c) { return c.origem !== 'vecteezy' }) && (
+      {clipes.some(function(c) { return c.origem !== 'pixabay' }) && (
         <div style={{ marginTop: 14 }}>
           <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 6 }}>Seus vídeos adicionados</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {clipes.map(function(c, i) {
-              if (c.origem === 'vecteezy') return null
+              if (c.origem === 'pixabay') return null
               return (
                 <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, background: 'var(--surface2)', borderRadius: 10, padding: '6px 10px' }}>
                   <b style={{ color: verde }}>{i + 1}º</b><span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.nome}</span>
@@ -238,7 +238,7 @@ export default function CardVideos({ clipes, setClipes, onSeguir }: { clipes: Cl
         <button onClick={baixarSelecionados} disabled={!clipes.length || baixando} style={{ ...botaoClaro, padding: '12px 20px', fontSize: 14, background: 'var(--surface)', opacity: !clipes.length || baixando ? 0.5 : 1 }}>{baixando ? 'Baixando...' : 'Baixar selecionados'}</button>
         <button onClick={onSeguir} disabled={!clipes.length} style={{ cursor: clipes.length ? 'pointer' : 'default', border: 0, background: verde, color: '#fff', fontWeight: 800, fontSize: 14, padding: '13px 22px', borderRadius: 12, opacity: clipes.length ? 1 : 0.5 }}>Próximo: edição</button>
       </div>
-      <div style={{ marginTop: 8, fontSize: 11.5, color: 'var(--muted2)' }}>Vídeos fornecidos pelo Vecteezy.</div>
+      <div style={{ marginTop: 8, fontSize: 11.5, color: 'var(--muted2)' }}>Vídeos fornecidos pelo Pixabay.</div>
     </div>
   )
 }

@@ -6,26 +6,25 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
-// Busca de videos no Vecteezy (licenca comercial inclusa).
-// Precisa das variaveis VECTEEZY_API_KEY e VECTEEZY_ACCOUNT_ID (a chave e o ID da conta vem do painel de API do Vecteezy).
-// Cada busca custa centavos e cada download conta na cota do plano, por isso os resultados ficam 24h em memoria.
-const BASE = (process.env.VECTEEZY_API_BASE || 'https://api.vecteezy.com').replace(/\/$/, '')
+// Busca de videos gratis no Pixabay (liberados para uso comercial).
+// Regras do Pixabay: guardar os resultados por 24h e mostrar de onde vem.
 type Video = { id: string; titulo: string; duracao: number; thumb: string; previa: string; arquivo: string; largura: number; altura: number; pagina: string }
 const cache = new Map<string, { t: number; dados: { videos: Video[]; total: number } }>()
 const DIA = 24 * 60 * 60 * 1000
 
 
 function formatar(h: any): Video | null {
-  if (!h || h.id === undefined || h.id === null) return null
-  const previa = h.preview_url || h.video_preview_url || h.preview_video_url || h.preview?.url || ''
-  const thumb = h.thumbnail_url || h.thumbnail || h.preview_image_url || h.thumb || ''
-  if (!previa && !thumb) return null
+  const v = h?.videos
+  if (!v) return null
+  const edicao = v.small?.url ? v.small : v.medium?.url ? v.medium : v.tiny
+  const previa = v.tiny?.url ? v.tiny : edicao
+  if (!edicao?.url) return null
   return {
-    id: String(h.id), titulo: String(h.title || h.name || '').trim(),
+    id: String(h.id), titulo: String(h.tags || '').split(',').slice(0, 3).map(function(t: string) { return t.trim() }).filter(Boolean).join(', '),
     duracao: Number(h.duration) || 0,
-    thumb: String(thumb), previa: String(previa), arquivo: String(h.id),
-    largura: Number(h.width) || 0, altura: Number(h.height) || 0,
-    pagina: String(h.url || h.permalink || h.page_url || ''),
+    thumb: String(v.tiny?.thumbnail || v.small?.thumbnail || v.medium?.thumbnail || ''),
+    previa: String(previa.url), arquivo: String(edicao.url), largura: Number(edicao.width) || 0, altura: Number(edicao.height) || 0,
+    pagina: String(h.pageURL || ''),
   }
 }
 
@@ -49,9 +48,8 @@ async function traduzirTitulos(videos: Video[]): Promise<void> {
 export async function GET(req: NextRequest) {
   const u = await usuarioCriativo()
   if (!u) return NextResponse.json({ error: 'Este recurso esta em atualizacao no momento.' }, { status: 403 })
-  const chave = process.env.VECTEEZY_API_KEY
-  const conta = process.env.VECTEEZY_ACCOUNT_ID
-  if (!chave || !conta) return NextResponse.json({ conectado: false, videos: [], total: 0, error: 'A chave do Vecteezy ainda nao foi configurada.' })
+  const chave = process.env.PIXABAY_API_KEY
+  if (!chave) return NextResponse.json({ conectado: false, videos: [], total: 0, error: 'A chave do Pixabay ainda nao foi configurada.' })
 
   const sp = req.nextUrl.searchParams
   const q = String(sp.get('q') || '').trim().slice(0, 100)
@@ -63,15 +61,14 @@ export async function GET(req: NextRequest) {
   const guardado = cache.get(chaveCache)
   if (guardado && Date.now() - guardado.t < DIA) return NextResponse.json({ conectado: true, ...guardado.dados })
 
-  const url = BASE + '/v2/' + encodeURIComponent(conta) + '/resources' + (id ? '/' + id : '?content_type=video&per_page=48&page=' + pagina + '&term=' + encodeURIComponent(q || 'business'))
+  const url = 'https://pixabay.com/api/videos/?key=' + encodeURIComponent(chave) + '&lang=pt&safesearch=true&order=popular'
+    + (id ? '&id=' + id : '&per_page=100&page=' + pagina + (q ? '&q=' + encodeURIComponent(q) : ''))
   try {
-    const r = await fetch(url, { headers: { Authorization: 'Bearer ' + chave, Accept: 'application/json' } })
+    const r = await fetch(url)
     if (r.status === 429) return NextResponse.json({ conectado: true, videos: [], total: 0, error: 'Muitas buscas seguidas. Espere um minuto e tente de novo.' })
-    if (r.status === 401 || r.status === 403) return NextResponse.json({ conectado: true, videos: [], total: 0, error: 'O Vecteezy recusou a chave de acesso. Confira VECTEEZY_API_KEY e VECTEEZY_ACCOUNT_ID.' })
-    if (!r.ok) return NextResponse.json({ conectado: true, videos: [], total: 0, error: 'O Vecteezy não respondeu agora. Tente de novo.' })
+    if (!r.ok) return NextResponse.json({ conectado: true, videos: [], total: 0, error: 'O Pixabay não respondeu agora. Tente de novo.' })
     const j: any = await r.json()
-    const itens: any[] = id ? [j.resource || j.data || j] : (j.resources || j.data || j.results || [])
-    const todos: Video[] = itens.map(formatar).filter(Boolean) as Video[]
+    const todos: Video[] = (j.hits || []).map(formatar).filter(Boolean) as Video[]
     const filtrados = id ? todos : todos.filter(function(v) {
       if (!v.largura || !v.altura) return true
       const prop = v.largura / v.altura
