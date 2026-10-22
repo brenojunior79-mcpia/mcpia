@@ -17,16 +17,19 @@ export async function GET() {
     supabase.from('profiles').select('is_admin, is_support').eq('id', user.id).maybeSingle(),
   ])
   // Atendentes (equipe de suporte) tambem tem acesso ao menu, sem precisar de compra
-  const acesso = acessoR.data === true || !!(perfilR.data as any)?.is_support
+  const isSupport = !!(perfilR.data as any)?.is_support
+  const acesso = acessoR.data === true || isSupport
   const isAdmin = !!(perfilR.data as any)?.is_admin
-  if (!acesso) return NextResponse.json({ acesso: false, isAdmin: false })
+  // Admin e atendentes podem liberar alunos manualmente
+  const podeLiberar = isAdmin || isSupport
+  if (!acesso) return NextResponse.json({ acesso: false, isAdmin: false, podeLiberar: false })
 
   const admin = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } })
   const aulas = await admin.from('estrutura_aulas').select('id, ordem, titulo, descricao, video_id, material_label, material_url, material_aviso').eq('ativo', true).order('ordem', { ascending: true }).order('created_at', { ascending: true })
   let liberados: any[] = []
-  if (isAdmin) {
-    const l = await admin.from('estrutura_liberados').select('email, nota, created_at').order('created_at', { ascending: false })
+  if (podeLiberar) {
+    const l = await admin.from('estrutura_liberados').select('email, nota, created_at, liberado_por').order('created_at', { ascending: false })
     liberados = l.data || []
   }
-  return NextResponse.json({ acesso: true, isAdmin, aulas: aulas.data || [], liberados })
+  return NextResponse.json({ acesso: true, isAdmin, podeLiberar, aulas: aulas.data || [], liberados })
 }

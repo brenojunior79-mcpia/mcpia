@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 type Aula = { id: string; ordem: number; titulo: string; descricao: string | null; video_id: string; material_label: string | null; material_url: string | null; material_aviso: string | null }
-type Liberado = { email: string; nota: string | null; created_at: string }
+type Liberado = { email: string; nota: string | null; created_at: string; liberado_por?: string | null }
 type Thumb = { img: string; dur: number }
 
 const LINK_COMPRA = 'https://pay.hub.la/EzX4EkF4HSfNfHn2QH4z'
@@ -56,6 +56,7 @@ export default function EstruturaExpressPage() {
   const [estado, setEstado] = useState<'carregando' | 'bloqueado' | 'liberado' | 'erro'>('carregando')
   const [aulas, setAulas] = useState<Aula[]>([])
   const [isAdmin, setIsAdmin] = useState(false)
+  const [podeLiberar, setPodeLiberar] = useState(false)
   const [liberados, setLiberados] = useState<Liberado[]>([])
   const [atual, setAtual] = useState(0)
   const [tocando, setTocando] = useState<string | null>(null)
@@ -73,7 +74,7 @@ export default function EstruturaExpressPage() {
       .then(function(r) { return r.json() })
       .then(function(j) {
         if (j && j.acesso) {
-          setAulas(j.aulas || []); setIsAdmin(!!j.isAdmin); setLiberados(j.liberados || [])
+          setAulas(j.aulas || []); setIsAdmin(!!j.isAdmin); setPodeLiberar(!!j.podeLiberar || !!j.isAdmin); setLiberados(j.liberados || [])
           // Admin pode ver como o aluno sem acesso enxerga: /dashboard/estrutura-express?bloqueado=1
           let previa = false
           try { previa = !!j.isAdmin && new URLSearchParams(window.location.search).get('bloqueado') === '1' } catch (e) {}
@@ -307,10 +308,10 @@ export default function EstruturaExpressPage() {
           </div>
         )}
 
-        {isAdmin && (
+        {podeLiberar && (
           <div className="ee-up" style={{ animationDelay: '0.3s', marginTop: 26, background: 'var(--surface)', border: '1px dashed var(--border2)', borderRadius: 18, padding: '18px 18px' }}>
-            <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 16, marginBottom: 4 }}>🔧 Admin · Liberar aluno manualmente</div>
-            <div style={{ fontSize: 13, color: 'var(--muted2)', marginBottom: 12 }}>Quem comprou a Estrutura Express é liberado automaticamente (pelo e-mail ou telefone da compra). Use aqui só quando alguém comprou com outro e-mail ou precisa de acesso por cortesia. O e-mail precisa ser o do cadastro na plataforma.</div>
+            <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 16, marginBottom: 4 }}>🔧 Equipe · Liberar aluno manualmente</div>
+            <div style={{ fontSize: 13, color: 'var(--muted2)', marginBottom: 12 }}>Quem comprou a Estrutura Express é liberado automaticamente (pelo e-mail ou telefone da compra). Use aqui só quando alguém comprou com outro e-mail ou precisa de acesso por cortesia. O e-mail precisa ser o mesmo que o aluno usou para se cadastrar na plataforma.</div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <input value={novoEmail} onChange={function(e) { setNovoEmail(e.target.value) }} placeholder="E-mail do aluno" style={{ flex: '2 1 220px', minWidth: 0, padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', fontSize: 14 }} />
               <input value={novaNota} onChange={function(e) { setNovaNota(e.target.value) }} placeholder="Observação (opcional)" style={{ flex: '1 1 160px', minWidth: 0, padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', fontSize: 14 }} />
@@ -324,7 +325,8 @@ export default function EstruturaExpressPage() {
                     <div key={l.email} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface2)', borderRadius: 10, padding: '8px 12px', fontSize: 13.5 }}>
                       <span style={{ fontWeight: 700, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.email}</span>
                       {l.nota && <span style={{ color: 'var(--muted2)' }}>{l.nota}</span>}
-                      <button onClick={function() { desliberar(l.email) }} title="Tirar liberação" style={{ cursor: 'pointer', border: 0, background: 'transparent', color: '#b91c1c', fontWeight: 800, fontSize: 15 }}>✕</button>
+                      {l.liberado_por && <span style={{ color: 'var(--muted2)', fontSize: 12 }}>por {l.liberado_por}</span>}
+                      {isAdmin && <button onClick={function() { desliberar(l.email) }} title="Tirar liberação" style={{ cursor: 'pointer', border: 0, background: 'transparent', color: '#b91c1c', fontWeight: 800, fontSize: 15 }}>✕</button>}
                     </div>
                   )
                 })}
