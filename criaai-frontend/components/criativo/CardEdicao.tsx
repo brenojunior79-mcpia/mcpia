@@ -78,7 +78,7 @@ export default function CardEdicao({ clipes, narracao, onIrVideos, onIrNarracao 
         let b: Blob | undefined = c.blob || blobsBaixados.current[c.id]
         if (!b) {
           setEtapa('Baixando os vídeos (' + (i + 1) + ' de ' + clipes.length + ')...'); setFracao(0.02 + 0.03 * (i / clipes.length))
-          const r = await fetch(c.origem === 'pixabay' ? '/api/criativo/videos/arquivo?u=' + encodeURIComponent(c.fonte || '') : (c.fonte || c.url))
+          const r = await fetch(c.origem === 'vecteezy' ? '/api/criativo/videos/arquivo?id=' + encodeURIComponent(c.fonte || '') : (c.fonte || c.url))
           if (!r.ok) throw new Error('Não consegui baixar o vídeo "' + c.nome + '". Tire-o da lista e tente de novo.')
           b = await r.blob()
           blobsBaixados.current[c.id] = b

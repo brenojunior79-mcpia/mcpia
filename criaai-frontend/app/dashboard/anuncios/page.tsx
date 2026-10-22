@@ -5,6 +5,7 @@ import { calcular, relatorioDoFunil } from '@/lib/anuncios'
 import Funil from '@/components/anuncios/Funil'
 import GuiaFunil from '@/components/anuncios/GuiaFunil'
 import CampanhasTabela from '@/components/anuncios/CampanhasTabela'
+import CriativosAnuncios from '@/components/anuncios/CriativosAnuncios'
 import { orcamentoDiario } from '@/components/anuncios/CampanhaCard'
 import { cartao, titulo, moeda } from '@/components/anuncios/estilo'
 
@@ -25,6 +26,10 @@ export default function AnunciosPage() {
   const [selecionada, setSelecionada] = useState('todas')
   const [ocupadoId, setOcupadoId] = useState<string | null>(null)
   const [aviso, setAviso] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null)
+
+  const [criativos, setCriativos] = useState<any[] | null>(null)
+  const [criativosLoading, setCriativosLoading] = useState(false)
+  const [criativosErro, setCriativosErro] = useState<string | null>(null)
 
   const [analyzing, setAnalyzing] = useState(false)
   const [analysis, setAnalysis] = useState<string | null>(null)
@@ -52,7 +57,7 @@ export default function AnunciosPage() {
       const res = await fetch('/api/facebook/ad-accounts')
       const data = await res.json()
       setConnection(data)
-      if (data.connected && data.adAccountId) loadCampaigns(periodo)
+      if (data.connected && data.adAccountId) { loadCampaigns(periodo); loadCriativos(periodo) }
     } catch (err) {
       setError('Erro ao carregar conexao')
     } finally {
@@ -73,6 +78,18 @@ export default function AnunciosPage() {
     } finally {
       if (!silencioso) setCampaignsLoading(false)
     }
+  }
+
+  async function loadCriativos(p?: string) {
+    setCriativosLoading(true); setCriativosErro(null)
+    try {
+      const res = await fetch('/api/facebook/criativos?datePreset=' + (p || periodo), { cache: 'no-store' })
+      const data = await res.json()
+      if (!res.ok) setCriativosErro(data.error || 'Erro ao carregar criativos')
+      else setCriativos(data.criativos || [])
+    } catch (err) {
+      setCriativosErro('Erro ao carregar criativos')
+    } finally { setCriativosLoading(false) }
   }
 
   async function selectAccount(accountId: string) {
@@ -191,14 +208,14 @@ export default function AnunciosPage() {
             ) : (
               <>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <select value={periodo} onChange={function(e) { setPeriodo(e.target.value); loadCampaigns(e.target.value) }} style={sel}>
+                  <select value={periodo} onChange={function(e) { setPeriodo(e.target.value); loadCampaigns(e.target.value); loadCriativos(e.target.value) }} style={sel}>
                     {PERIODOS.map(function(p) { return <option key={p[0]} value={p[0]}>{p[1]}</option> })}
                   </select>
                   <select value={selecionada} onChange={function(e) { setSelecionada(e.target.value) }} style={sel}>
                     <option value="todas">Funil de: todas as campanhas</option>
                     {comDados.map(function(c) { return <option key={c.id} value={c.id}>{'Funil de: ' + c.name}</option> })}
                   </select>
-                  <button onClick={function() { loadCampaigns() }} disabled={campaignsLoading} style={{ ...sel, cursor: 'pointer' }}>{campaignsLoading ? 'Atualizando...' : '🔄 Atualizar'}</button>
+                  <button onClick={function() { loadCampaigns(); loadCriativos() }} disabled={campaignsLoading} style={{ ...sel, cursor: 'pointer' }}>{campaignsLoading ? 'Atualizando...' : '🔄 Atualizar'}</button>
                 </div>
 
                 {campaignsError && <div style={{ fontSize: 13, color: '#b91c1c', background: 'rgba(239,68,68,0.08)', borderRadius: 9, padding: '12px 16px' }}>{campaignsError}</div>}
@@ -228,6 +245,8 @@ export default function AnunciosPage() {
                           onVerFunil={function(c) { setSelecionada(c.id); window.scrollTo({ top: 0, behavior: 'smooth' }) }} />
                       )}
                     </div>
+
+                    <CriativosAnuncios criativos={criativos} carregando={criativosLoading} erro={criativosErro} />
                   </>
                 )}
                 {campaignsLoading && <p style={{ color: 'var(--muted2)', fontSize: 13 }}>Carregando campanhas...</p>}
