@@ -68,34 +68,48 @@ export default function AnunciosPage() {
   }
 
   async function loadCampaigns(p?: string, silencioso?: boolean) {
-    if (!silencioso) { setCampaignsLoading(true); setAnalysis(null) }
+    const per = p || periodo
+    // Mostra na hora o que foi carregado da ultima vez e atualiza por tras
+    let temCache = false
+    if (!silencioso) {
+      try { const g = localStorage.getItem('anuncios_camp_' + per); if (g) { setCampaignsData(JSON.parse(g)); temCache = true } } catch (e) {}
+    }
+    if (!silencioso && !temCache) { setCampaignsLoading(true); setAnalysis(null) }
     setCampaignsError(null)
     try {
-      const res = await fetch('/api/facebook/campaigns?datePreset=' + (p || periodo), { cache: 'no-store' })
+      const res = await fetch('/api/facebook/campaigns?datePreset=' + per, { cache: 'no-store' })
       const data = await res.json()
       if (!res.ok) setCampaignsError(data.error || 'Erro ao carregar campanhas')
-      else setCampaignsData(data)
+      else { setCampaignsData(data); try { localStorage.setItem('anuncios_camp_' + per, JSON.stringify(data)) } catch (e) {} }
     } catch (err) {
       setCampaignsError('Erro ao carregar campanhas')
     } finally {
-      if (!silencioso) setCampaignsLoading(false)
+      setCampaignsLoading(false)
     }
   }
 
   async function loadCriativos(p?: string) {
-    setCriativosLoading(true); setCriativosErro(null)
+    const per = p || periodo
+    let temCache = false
+    try { const g = localStorage.getItem('anuncios_criativos_' + per); if (g) { setCriativos(JSON.parse(g)); temCache = true } } catch (e) {}
+    if (!temCache) setCriativosLoading(true)
+    setCriativosErro(null)
     try {
-      const res = await fetch('/api/facebook/criativos?datePreset=' + (p || periodo), { cache: 'no-store' })
+      const res = await fetch('/api/facebook/criativos?datePreset=' + per, { cache: 'no-store' })
       const data = await res.json()
       if (!res.ok) setCriativosErro(data.error || 'Erro ao carregar criativos')
-      else setCriativos(data.criativos || [])
+      else { setCriativos(data.criativos || []); try { localStorage.setItem('anuncios_criativos_' + per, JSON.stringify(data.criativos || [])) } catch (e) {} }
     } catch (err) {
       setCriativosErro('Erro ao carregar criativos')
     } finally { setCriativosLoading(false) }
   }
 
+  function limparCache() {
+    try { Object.keys(localStorage).forEach(function(k) { if (k.indexOf('anuncios_camp_') === 0 || k.indexOf('anuncios_criativos_') === 0) localStorage.removeItem(k) }) } catch (e) {}
+  }
+
   async function selectAccount(accountId: string) {
-    setSwitching(true)
+    setSwitching(true); limparCache(); setCampaignsData(null); setCriativos(null)
     try {
       await fetch('/api/facebook/select-account', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accountId }) })
       setSelecionada('todas')
@@ -104,7 +118,7 @@ export default function AnunciosPage() {
   }
 
   async function disconnect() {
-    setDisconnecting(true)
+    setDisconnecting(true); limparCache()
     try {
       await fetch('/api/facebook/ad-accounts', { method: 'DELETE' })
       await loadConnection()

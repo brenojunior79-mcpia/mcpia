@@ -92,13 +92,15 @@ export async function GET(req: NextRequest) {
       'creative.thumbnail_width(480).thumbnail_height(480){thumbnail_url,image_url,video_id,instagram_permalink_url,effective_object_story_id,url_tags,object_story_spec}'
 
     const detalhes = new Map<string, any>()
-    for (let i = 0; i < ids.length; i += 25) {
-      const lote = ids.slice(i, i + 25)
-      const res = await fetch(BASE + '/?ids=' + lote.join(',') + '&fields=' + encodeURIComponent(campos) + '&access_token=' + token)
-      const data: any = await res.json()
-      if (data.error) { console.error('[facebook-criativos] erro detalhes:', data.error); continue }
-      Object.keys(data).forEach(function(k) { detalhes.set(k, data[k]) })
-    }
+    const lotes: string[][] = []
+    for (let i = 0; i < ids.length; i += 25) lotes.push(ids.slice(i, i + 25))
+    // v26 nao aceita mais ?ids=, entao buscamos pela lista de anuncios da conta filtrando por id
+    await Promise.all(lotes.map(async function(lote) {
+      const filtro = encodeURIComponent(JSON.stringify([{ field: 'id', operator: 'IN', value: lote }]))
+      const r = await buscarTudo(BASE + '/' + conta + '/ads?fields=' + encodeURIComponent(campos) + '&limit=50&filtering=' + filtro + '&access_token=' + token)
+      if (r.error) { console.error('[facebook-criativos] erro detalhes:', r.error); return }
+      r.data.forEach(function(ad: any) { detalhes.set(ad.id, ad) })
+    }))
 
     const criativos = ids.map(function(id) {
       const ad = detalhes.get(id) || { id, name: 'Anuncio ' + id }

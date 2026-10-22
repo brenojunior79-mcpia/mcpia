@@ -102,24 +102,38 @@ export async function GET(req: NextRequest) {
   const datePreset = req.nextUrl.searchParams.get('datePreset') || 'last_30d'
 
   try {
-    // 1. Estrutura (campanhas, conjuntos, anuncios) + 2 niveis de insight (campanha e anuncio)
-    const [campaignsResult, adSetsResult, adsResult, campaignInsightsResult, adInsightsResult, accountReachResult] = await Promise.all([
-      fetchAll('https://graph.facebook.com/' + GRAPH_VERSION + '/' + adAccountId + '/campaigns?fields=id,name,status,effective_status,objective,daily_budget,lifetime_budget&limit=200&access_token=' + accessToken),
-      fetchAll('https://graph.facebook.com/' + GRAPH_VERSION + '/' + adAccountId + '/adsets?fields=id,name,campaign_id,status,effective_status,daily_budget&limit=200&access_token=' + accessToken),
-      fetchAll('https://graph.facebook.com/' + GRAPH_VERSION + '/' + adAccountId + '/ads?fields=id,name,adset_id,status,effective_status&limit=200&access_token=' + accessToken),
-      fetchAll('https://graph.facebook.com/' + GRAPH_VERSION + '/' + adAccountId + '/insights?level=campaign&fields=' + INSIGHT_FIELDS + '&date_preset=' + datePreset + '&limit=200&access_token=' + accessToken),
-      fetchAll('https://graph.facebook.com/' + GRAPH_VERSION + '/' + adAccountId + '/insights?level=ad&fields=' + INSIGHT_FIELDS + '&date_preset=' + datePreset + '&limit=500&access_token=' + accessToken),
-      fetchAll('https://graph.facebook.com/' + GRAPH_VERSION + '/' + adAccountId + '/insights?level=account&fields=reach,frequency&date_preset=' + datePreset + '&access_token=' + accessToken),
+    // A conta pode ter centenas de campanhas antigas. Para ficar rapido, buscamos so as ATIVAS
+    // e as que tiveram movimento no periodo (as outras nao aparecem nem pesam).
+    const G = 'https://graph.facebook.com/' + GRAPH_VERSION + '/' + adAccountId
+    const CAMPOS_CAMP = 'id,name,status,effective_status,objective,daily_budget,lifetime_budget'
+    const filtro = function(campo: string, valores: string[]) { return '&filtering=' + encodeURIComponent(JSON.stringify([{ field: campo, operator: 'IN', value: valores }])) }
+    const [ativasResult, campaignInsightsResult, accountReachResult] = await Promise.all([
+      fetchAll(G + '/campaigns?fields=' + CAMPOS_CAMP + '&limit=200' + filtro('effective_status', ['ACTIVE']) + '&access_token=' + accessToken),
+      fetchAll(G + '/insights?level=campaign&fields=' + INSIGHT_FIELDS + '&date_preset=' + datePreset + '&limit=200&access_token=' + accessToken),
+      fetchAll(G + '/insights?level=account&fields=reach,frequency&date_preset=' + datePreset + '&access_token=' + accessToken),
     ])
 
-    if (campaignsResult.error) {
-      console.error('[facebook-campaigns] erro campanhas:', campaignsResult.error)
-      return NextResponse.json({ error: campaignsResult.error.message }, { status: 500 })
+    if (ativasResult.error) {
+      console.error('[facebook-campaigns] erro campanhas:', ativasResult.error)
+      return NextResponse.json({ error: ativasResult.error.message }, { status: 500 })
     }
     if (campaignInsightsResult.error) console.error('[facebook-campaigns] erro insights campanha:', campaignInsightsResult.error)
-    if (adInsightsResult.error) console.error('[facebook-campaigns] erro insights anuncio:', adInsightsResult.error)
 
-    console.log('[facebook-campaigns] campanhas:', campaignsResult.data.length, 'conjuntos:', adSetsResult.data.length, 'anuncios:', adsResult.data.length, 'insights-campanha:', campaignInsightsResult.data.length, 'insights-anuncio:', adInsightsResult.data.length)
+    const idsAtivas = new Set<string>(ativasResult.data.map(function(c: any) { return c.id }))
+    const idsExtras: string[] = []
+    campaignInsightsResult.data.forEach(function(r: any) { if (!idsAtivas.has(r.campaign_id) && idsExtras.indexOf(r.campaign_id) < 0) idsExtras.push(r.campaign_id) })
+    const todosIds = Array.from(idsAtivas).concat(idsExtras)
+
+    const lotesIds: string[][] = []
+    for (let i = 0; i < todosIds.length; i += 50) lotesIds.push(todosIds.slice(i, i + 50))
+    const [extrasResult, ...adSetsLotes] = await Promise.all([
+      idsExtras.length ? fetchAll(G + '/campaigns?fields=' + CAMPOS_CAMP + '&limit=200' + filtro('id', idsExtras) + '&access_token=' + accessToken) : Promise.resolve({ data: [] as any[], error: null }),
+      ...lotesIds.map(function(lote) { return fetchAll(G + '/adsets?fields=id,name,campaign_id,status,effective_status,daily_budget&limit=200' + filtro('campaign.id', lote) + '&access_token=' + accessToken) }),
+    ])
+    const campaignsResult = { data: ativasResult.data.concat(extrasResult.data || []) }
+    const adSetsResult = { data: ([] as any[]).concat(...adSetsLotes.map(function(r: any) { return r.data || [] })) }
+
+    console.log('[facebook-campaigns] campanhas:', campaignsResult.data.length, 'conjuntos:', adSetsResult.data.length, 'insights-campanha:', campaignInsightsResult.data.length)
 
     // 2. Mapa de insight direto por campanha (fonte confiavel pro numero principal)
     const campaignInsightsMap = new Map<string, any>()
@@ -129,30 +143,10 @@ export async function GET(req: NextRequest) {
       campaignInsightsMap.set(row.campaign_id, finalizeTotals(totals))
     }
 
-    // 3. Mapa de insight por anuncio (usado so pra montar o detalhe interno)
-    const adInsightsMap = new Map<string, any>()
-    for (const row of adInsightsResult.data) {
-      const totals = emptyTotals()
-      addRawInsightToTotals(totals, row)
-      adInsightsMap.set(row.ad_id, finalizeTotals(totals))
-    }
-
-    // 4. Monta anuncios agrupados por conjunto
-    const adsByAdSetId = new Map<string, any[]>()
-    for (const ad of adsResult.data) {
-      const insights = adInsightsMap.get(ad.id) || finalizeTotals(emptyTotals())
-      const adWithInsight = { ...ad, insights }
-      if (!adsByAdSetId.has(ad.adset_id)) adsByAdSetId.set(ad.adset_id, [])
-      adsByAdSetId.get(ad.adset_id)!.push(adWithInsight)
-    }
-
     // 5. Monta conjuntos agrupados por campanha (o total do conjunto e a soma dos seus anuncios, so pra exibicao)
     const adSetsByCampaignId = new Map<string, any[]>()
     for (const adSet of adSetsResult.data) {
-      const ads = adsByAdSetId.get(adSet.id) || []
-      const totals = emptyTotals()
-      for (const ad of ads) sumChildTotals(totals, ad)
-      const adSetWithAds = { ...adSet, ads, insights: finalizeTotals(totals) }
+      const adSetWithAds = { ...adSet }
       if (!adSetsByCampaignId.has(adSet.campaign_id)) adSetsByCampaignId.set(adSet.campaign_id, [])
       adSetsByCampaignId.get(adSet.campaign_id)!.push(adSetWithAds)
     }
