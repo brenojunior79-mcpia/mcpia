@@ -21,8 +21,37 @@ export default function CardNarracao({ texto, setTexto, narracao, setNarracao }:
   const [carregando, setCarregando] = useState(false)
   const [msg, setMsg] = useState('')
   const urlAnterior = useRef<string>('')
+  const amostras = useRef<Record<string, string>>({})
+  const player = useRef<HTMLAudioElement | null>(null)
+  const [tocando, setTocando] = useState('') // voz cuja amostra esta carregando/tocando
 
-  useEffect(function() { return function() { if (urlAnterior.current) URL.revokeObjectURL(urlAnterior.current) } }, [])
+  useEffect(function() {
+    return function() {
+      if (urlAnterior.current) URL.revokeObjectURL(urlAnterior.current)
+      Object.keys(amostras.current).forEach(function(k) { URL.revokeObjectURL(amostras.current[k]) })
+      if (player.current) player.current.pause()
+    }
+  }, [])
+
+  async function ouvir(id: string) {
+    setMsg('')
+    if (player.current) { player.current.pause(); player.current = null }
+    if (tocando === id) { setTocando(''); return }
+    setTocando(id)
+    try {
+      let url = amostras.current[id]
+      if (!url) {
+        const r = await fetch('/api/criativo/amostra?voz=' + id)
+        if (!r.ok) { const j = await r.json().catch(function() { return {} }); setMsg(j.error || 'Não foi possível carregar a amostra.'); setTocando(''); return }
+        url = URL.createObjectURL(await r.blob())
+        amostras.current[id] = url
+      }
+      const a = new Audio(url)
+      player.current = a
+      a.onended = function() { setTocando(function(t) { return t === id ? '' : t }) }
+      await a.play()
+    } catch (e) { setTocando('') }
+  }
 
   async function gerar() {
     setMsg('')
@@ -47,10 +76,13 @@ export default function CardNarracao({ texto, setTexto, narracao, setNarracao }:
           {VOZES.filter(function(v) { return v.sexo === sexo }).map(function(v) {
             const on = voz === v.id
             return (
-              <button key={v.id} onClick={function() { setVoz(v.id) }} style={{ cursor: 'pointer', textAlign: 'left', padding: '8px 12px', borderRadius: 12, border: on ? '2px solid #7c5cfc' : '1px solid var(--border2)', background: on ? 'rgba(124,92,252,0.10)' : 'var(--surface2)', color: 'var(--text)', minWidth: 130 }}>
-                <div style={{ fontWeight: 800, fontSize: 14 }}>{v.nome}</div>
-                <div style={{ fontSize: 11.5, color: 'var(--muted2)' }}>{v.desc}</div>
-              </button>
+              <div key={v.id} style={{ display: 'flex', alignItems: 'stretch', borderRadius: 12, border: on ? '2px solid #7c5cfc' : '1px solid var(--border2)', background: on ? 'rgba(124,92,252,0.10)' : 'var(--surface2)', overflow: 'hidden' }}>
+                <button onClick={function() { setVoz(v.id) }} style={{ cursor: 'pointer', textAlign: 'left', padding: '8px 12px', border: 0, background: 'transparent', color: 'var(--text)', minWidth: 120 }}>
+                  <div style={{ fontWeight: 800, fontSize: 14 }}>{on ? '✓ ' : ''}{v.nome}</div>
+                  <div style={{ fontSize: 11.5, color: 'var(--muted2)' }}>{v.desc}</div>
+                </button>
+                <button onClick={function() { ouvir(v.id) }} title="Ouvir esta voz" style={{ cursor: 'pointer', border: 0, borderLeft: '1px solid var(--border)', background: 'transparent', color: '#7c5cfc', fontWeight: 800, fontSize: 12.5, padding: '0 12px' }}>{tocando === v.id ? '■ Parar' : '▶ Ouvir'}</button>
+              </div>
             )
           })}
         </div>

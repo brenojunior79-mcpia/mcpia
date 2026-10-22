@@ -16,8 +16,8 @@ export function roteiroEmTexto(r: Roteiro) {
   return [r.gancho, r.corpo, r.mecanismo, r.cta].map(function(t) { return t.trim() }).filter(Boolean).join('\n\n')
 }
 
-type Form = { produto: string; nicho: string; oQueFaz: string; publico: string; dor: string; resultado: string; mecanismo: string; prova: string; cta: string; tom: string; duracao: string }
-const FORM0: Form = { produto: '', nicho: '', oQueFaz: '', publico: '', dor: '', resultado: '', mecanismo: '', prova: '', cta: '', tom: 'direto', duracao: '30' }
+type Form = { produto: string; oQueFaz: string; publico: string; dor: string }
+const FORM0: Form = { produto: '', oQueFaz: '', publico: '', dor: '' }
 
 export default function CardRoteiro({ roteiro, setRoteiro, onUsar }: { roteiro: Roteiro; setRoteiro: (r: Roteiro) => void; onUsar: () => void }) {
   const [f, setF] = useState<Form>(FORM0)
@@ -32,7 +32,7 @@ export default function CardRoteiro({ roteiro, setRoteiro, onUsar }: { roteiro: 
 
   async function gerar(bloco?: keyof Roteiro) {
     setMsg('')
-    if (!f.produto.trim() || !f.nicho.trim() || !f.oQueFaz.trim()) { setMsg('Preencha pelo menos: produto, nicho e o que o produto faz.'); return }
+    if (!f.produto.trim() || !f.oQueFaz.trim() || !f.publico.trim() || !f.dor.trim()) { setMsg('Responda as 4 perguntas para gerar o roteiro.'); return }
     setCarregando(bloco || 'tudo')
     try {
       const r = await fetch('/api/criativo/roteiro', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...f, bloco, atual: roteiro }) })
@@ -46,40 +46,15 @@ export default function CardRoteiro({ roteiro, setRoteiro, onUsar }: { roteiro: 
     try { await navigator.clipboard.writeText(roteiroEmTexto(roteiro)); setCopiado(true); setTimeout(function() { setCopiado(false) }, 1800) } catch (e) {}
   }
 
-  const grid: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }
-
   return (
     <div>
-      <div style={{ fontSize: 13, color: 'var(--muted2)', marginBottom: 14 }}>Responda as perguntas e a IA escreve o roteiro do seu criativo em 4 partes: gancho, corpo, mecanismo e CTA.</div>
+      <div style={{ fontSize: 13, color: 'var(--muted2)', marginBottom: 14 }}>Responda as 4 perguntas e a IA escreve o roteiro do seu criativo em 4 partes: gancho, corpo, mecanismo e CTA.</div>
 
-      <div style={grid}>
-        <div><label style={label}>Qual é o produto? *</label><input style={input} {...campo('produto')} placeholder="Ex: Curso Emagrecer em Casa" /></div>
-        <div><label style={label}>Qual é o nicho? *</label><input style={input} {...campo('nicho')} placeholder="Ex: emagrecimento, finanças, saúde..." /></div>
-      </div>
-      <div style={{ marginTop: 12 }}>
-        <label style={label}>O que o produto faz? *</label>
-        <textarea style={{ ...input, resize: 'vertical' }} rows={3} {...campo('oQueFaz')} placeholder="Explique com suas palavras o que ele entrega e como a pessoa usa." />
-      </div>
-      <div style={{ ...grid, marginTop: 12 }}>
-        <div><label style={label}>Para quem é? <span style={dica}>(público)</span></label><input style={input} {...campo('publico')} placeholder="Ex: mulheres de 30 a 50 anos" /></div>
-        <div><label style={label}>Qual a maior dor dessa pessoa?</label><input style={input} {...campo('dor')} placeholder="Ex: já tentou várias dietas e desistiu" /></div>
-        <div><label style={label}>Que resultado ela busca?</label><input style={input} {...campo('resultado')} placeholder="Ex: perder barriga sem sofrimento" /></div>
-        <div><label style={label}>Qual o diferencial? <span style={dica}>(mecanismo)</span></label><input style={input} {...campo('mecanismo')} placeholder="Ex: treinos de 15 min em casa" /></div>
-        <div><label style={label}>Tem alguma prova? <span style={dica}>(opcional)</span></label><input style={input} {...campo('prova')} placeholder="Ex: +2.000 alunas, nota 4,9" /></div>
-        <div><label style={label}>O que a pessoa deve fazer no final?</label><input style={input} {...campo('cta')} placeholder="Ex: clicar no botão e garantir a vaga" /></div>
-        <div>
-          <label style={label}>Tom</label>
-          <select style={input} {...campo('tom')}>
-            <option value="direto">Direto e simples</option><option value="emocional">Emocional</option><option value="urgente">Urgente</option>
-            <option value="autoridade">Autoridade</option><option value="humor">Bem-humorado</option>
-          </select>
-        </div>
-        <div>
-          <label style={label}>Duração</label>
-          <select style={input} {...campo('duracao')}>
-            <option value="15">15 segundos</option><option value="30">30 segundos</option><option value="45">45 segundos</option><option value="60">60 segundos</option>
-          </select>
-        </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div><label style={label}>Qual é o seu produto?</label><input style={input} {...campo('produto')} placeholder="Ex: Curso Emagrecer em Casa" /></div>
+        <div><label style={label}>O que o seu produto faz?</label><textarea style={{ ...input, resize: 'vertical' }} rows={3} {...campo('oQueFaz')} placeholder="Explique com suas palavras o que ele entrega e como a pessoa usa." /></div>
+        <div><label style={label}>Para quem é esse produto?</label><input style={input} {...campo('publico')} placeholder="Ex: mulheres de 30 a 50 anos que querem emagrecer" /></div>
+        <div><label style={label}>Qual a maior dor que o seu produto resolve?</label><textarea style={{ ...input, resize: 'vertical' }} rows={2} {...campo('dor')} placeholder="Ex: já tentou várias dietas e sempre desiste" /></div>
       </div>
 
       <div style={{ marginTop: 16, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>

@@ -64,7 +64,9 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
   const HIDDEN_NEW_USER = ['/dashboard/planos']
   const createdAt = profile?.created_at ? new Date(profile.created_at).getTime() : 0
   // Menus ocultos para todos (inclusive admin). Para voltar, remova o item daqui.
-  const HIDDEN_FOR_ALL = ['/dashboard/anuncios', '/dashboard/indique']
+  const HIDDEN_FOR_ALL = ['/dashboard/indique']
+  // Menus ocultos para todos, menos o admin (em teste)
+  const HIDDEN_NON_ADMIN = ['/dashboard/anuncios']
   const isNewUser = !isAdmin && createdAt > 0 && (Date.now() - createdAt) < HIDDEN_DAYS * 24 * 60 * 60 * 1000
   // Nos 7 primeiros dias, quem ainda nao tem plano nao ve nada sobre planos/creditos
   const hasActivePlan = profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing'
@@ -136,7 +138,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
 
         {/* Nav */}
         <nav className={styles.nav}>
-          {navItems.filter(function(item) { return HIDDEN_FOR_ALL.indexOf(item.href) === -1 && !(hidePlans && HIDDEN_NEW_USER.indexOf(item.href) !== -1) }).map(function(item) {
+          {navItems.filter(function(item) { return HIDDEN_FOR_ALL.indexOf(item.href) === -1 && !(!isAdmin && HIDDEN_NON_ADMIN.indexOf(item.href) !== -1) && !(hidePlans && HIDDEN_NEW_USER.indexOf(item.href) !== -1) }).map(function(item) {
             if (item.locked) {
               const status = (item as any).lockStatus || 'Em breve'
               return (

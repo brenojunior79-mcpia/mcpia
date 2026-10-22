@@ -41,15 +41,14 @@ export default function CardVideos({ clipes, setClipes, onSeguir }: { clipes: Cl
 
   return (
     <div>
-      <div style={{ fontSize: 13, color: 'var(--muted2)', marginBottom: 14 }}>Escolha os vídeos que vão aparecer no criativo. Eles entram na ordem da lista, e o tempo de cada um é dividido igualmente durante a narração.</div>
+      <div style={{ fontSize: 13, color: 'var(--muted2)', marginBottom: 14 }}>Selecione os vídeos que vão aparecer no criativo. Eles vão automaticamente para a edição, na ordem da lista, e o tempo de cada um é dividido durante a narração.</div>
 
       <div style={{ border: '1px dashed var(--border2)', borderRadius: 14, padding: 14, marginBottom: 16, background: 'var(--surface2)' }}>
-        <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 2 }}>🔎 Buscar no Vecteezy</div>
-        <div style={{ fontSize: 13, color: 'var(--muted2)' }}>Em breve: a busca e o download de vídeos do Vecteezy entram aqui. Por enquanto, baixe os vídeos no site do Vecteezy e envie abaixo.</div>
-        <a href="https://www.vecteezy.com/free-videos" target="_blank" rel="noreferrer" style={{ ...botaoClaro, display: 'inline-block', textDecoration: 'none', marginTop: 10 }}>Abrir o Vecteezy ↗</a>
+        <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 2 }}>🔎 Galeria de vídeos (Vecteezy)</div>
+        <div style={{ fontSize: 13, color: 'var(--muted2)' }}>Em breve: a galeria aparece aqui já aberta, com busca por nicho. Você só seleciona os vídeos e eles vão direto para a edição, sem precisar baixar nada.</div>
       </div>
 
-      <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 8 }}>📁 Meus vídeos</div>
+      <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 8 }}>📁 Ou use seus próprios vídeos</div>
       <input ref={inputRef} type="file" accept="video/*,.mp4,.mov,.m4v,.webm" multiple onChange={function(e) { adicionar(e.target.files) }} style={{ display: 'none' }} />
       <button onClick={function() { inputRef.current && inputRef.current.click() }} disabled={clipes.length >= MAX_CLIPES} style={{ ...botao, opacity: clipes.length >= MAX_CLIPES ? 0.5 : 1 }}>+ Enviar vídeos</button>
       <span style={{ ...dica, marginLeft: 10 }}>{clipes.length} de {MAX_CLIPES} · {totalMb.toFixed(0)} MB</span>

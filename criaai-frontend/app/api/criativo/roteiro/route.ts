@@ -27,16 +27,11 @@ export async function POST(req: NextRequest) {
   let b: any = {}
   try { b = await req.json() } catch (e) {}
   const produto = clean(b.produto, 150)
-  const nicho = clean(b.nicho, 150)
   const oQueFaz = clean(b.oQueFaz, 500)
-  if (!produto || !nicho || !oQueFaz) return NextResponse.json({ error: 'Preencha o produto, o nicho e o que o produto faz.' }, { status: 400 })
-
   const publico = clean(b.publico, 300)
   const dor = clean(b.dor, 400)
-  const resultado = clean(b.resultado, 400)
-  const mecanismo = clean(b.mecanismo, 400)
-  const prova = clean(b.prova, 300)
-  const cta = clean(b.cta, 200)
+  if (!produto || !oQueFaz || !publico || !dor) return NextResponse.json({ error: 'Responda as 4 perguntas para gerar o roteiro.' }, { status: 400 })
+
   const tom = TONS[String(b.tom)] || TONS.direto
   const segundos = Math.min(90, Math.max(15, parseInt(b.duracao, 10) || 30))
   const palavras = Math.round(segundos * 2.5) // ~150 palavras por minuto falado
@@ -45,11 +40,8 @@ export async function POST(req: NextRequest) {
   const atual = b.atual && typeof b.atual === 'object' ? b.atual : {}
 
   const ficha = [
-    'Produto: ' + produto, 'Nicho: ' + nicho, 'O que o produto faz: ' + oQueFaz,
-    publico && 'Publico: ' + publico, dor && 'Principal dor/problema: ' + dor,
-    resultado && 'Resultado/beneficio prometido: ' + resultado,
-    mecanismo && 'Mecanismo unico (como funciona / por que e diferente): ' + mecanismo,
-    prova && 'Prova/credibilidade: ' + prova, cta && 'Acao desejada no final: ' + cta,
+    'Produto: ' + produto, 'O que o produto faz: ' + oQueFaz,
+    'Para quem e o produto: ' + publico, 'Maior dor que o produto resolve: ' + dor,
   ].filter(Boolean).join('\n')
 
   const sistema =
@@ -60,7 +52,7 @@ export async function POST(req: NextRequest) {
     'mecanismo (explica de forma simples COMO o produto resolve e por que e diferente), ' +
     'cta (chamada final clara para a acao). ' +
     'Regras: texto 100% para ser narrado em voz alta, frases curtas, linguagem do dia a dia, sem emojis, sem hashtags, sem markdown, sem indicacoes de cena ou de camera, sem aspas. ' +
-    'Nao invente numeros, depoimentos, premios ou garantias que nao estejam na ficha. Nao prometa cura, ganho de dinheiro garantido ou resultados milagrosos. ' +
+    'Deduza o nicho, o resultado esperado e o mecanismo a partir da ficha. Nao invente numeros, depoimentos, premios ou garantias que nao estejam na ficha. Nao prometa cura, ganho de dinheiro garantido ou resultados milagrosos. ' +
     'Tom: ' + tom + '. Tamanho total aproximado: ' + palavras + ' palavras (cerca de ' + segundos + ' segundos falados).'
 
   const usuario = bloco

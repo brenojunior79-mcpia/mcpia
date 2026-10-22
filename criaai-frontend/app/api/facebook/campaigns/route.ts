@@ -6,7 +6,7 @@ const GRAPH_VERSION = 'v26.0'
 
 const INSIGHT_FIELDS = [
   'campaign_id', 'adset_id', 'ad_id',
-  'spend', 'impressions', 'clicks', 'ctr', 'cpc', 'cpm',
+  'spend', 'impressions', 'reach', 'frequency', 'clicks', 'inline_link_clicks', 'ctr', 'cpc', 'cpm',
   'inline_link_click_ctr', 'cost_per_inline_link_click',
   'actions', 'action_values',
 ].join(',')
@@ -24,15 +24,18 @@ function extractActionValue(actionValues: any[] | undefined, type: string): numb
 }
 
 function emptyTotals() {
-  return { spend: 0, impressions: 0, clicks: 0, landingPageViews: 0, initiateCheckout: 0, purchaseCount: 0, purchaseValue: 0 }
+  return { spend: 0, impressions: 0, reach: 0, frequency: 0, inlineLinkClicks: 0, clicks: 0, landingPageViews: 0, initiateCheckout: 0, purchaseCount: 0, purchaseValue: 0 }
 }
 
 function addRawInsightToTotals(totals: any, raw: any) {
   totals.spend += Number(raw.spend || 0)
   totals.impressions += Number(raw.impressions || 0)
   totals.clicks += Number(raw.clicks || 0)
+  totals.inlineLinkClicks += Number(raw.inline_link_clicks || 0)
+  totals.reach += Number(raw.reach || 0)
+  totals.frequency = Number(raw.frequency || totals.frequency || 0)
   totals.landingPageViews += extractAction(raw.actions, 'landing_page_view')
-  totals.initiateCheckout += extractAction(raw.actions, 'initiate_checkout')
+  totals.initiateCheckout += extractAction(raw.actions, 'omni_initiated_checkout') || extractAction(raw.actions, 'initiate_checkout')
   totals.purchaseCount += extractAction(raw.actions, 'omni_purchase') || extractAction(raw.actions, 'purchase')
   totals.purchaseValue += extractActionValue(raw.action_values, 'omni_purchase') || extractActionValue(raw.action_values, 'purchase')
 }
@@ -41,6 +44,8 @@ function sumChildTotals(totals: any, child: any) {
   totals.spend += child.insights.spend
   totals.impressions += child.insights.impressions
   totals.clicks += child.insights.clicks
+  totals.inlineLinkClicks += child.insights.inlineLinkClicks || 0
+  totals.reach += child.insights.reach || 0
   totals.landingPageViews += child.insights.landingPageViews
   totals.initiateCheckout += child.insights.initiateCheckout
   totals.purchaseCount += child.insights.purchaseCount
@@ -50,9 +55,11 @@ function sumChildTotals(totals: any, child: any) {
 function finalizeTotals(totals: any) {
   const ctr = totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : 0
   const cpc = totals.clicks > 0 ? totals.spend / totals.clicks : 0
+  const linkCtr = totals.impressions > 0 ? (totals.inlineLinkClicks / totals.impressions) * 100 : 0
+  const linkCpc = totals.inlineLinkClicks > 0 ? totals.spend / totals.inlineLinkClicks : 0
   const cpm = totals.impressions > 0 ? (totals.spend / totals.impressions) * 1000 : 0
   const roas = totals.spend > 0 ? totals.purchaseValue / totals.spend : 0
-  return { ...totals, ctr, cpc, cpm, linkCtr: ctr, linkCpc: cpc, roas }
+  return { ...totals, ctr, cpc, cpm, linkCtr, linkCpc, roas }
 }
 
 async function fetchAll(url: string) {
@@ -96,12 +103,13 @@ export async function GET(req: NextRequest) {
 
   try {
     // 1. Estrutura (campanhas, conjuntos, anuncios) + 2 niveis de insight (campanha e anuncio)
-    const [campaignsResult, adSetsResult, adsResult, campaignInsightsResult, adInsightsResult] = await Promise.all([
+    const [campaignsResult, adSetsResult, adsResult, campaignInsightsResult, adInsightsResult, accountReachResult] = await Promise.all([
       fetchAll('https://graph.facebook.com/' + GRAPH_VERSION + '/' + adAccountId + '/campaigns?fields=id,name,status,effective_status,objective,daily_budget,lifetime_budget&limit=200&access_token=' + accessToken),
       fetchAll('https://graph.facebook.com/' + GRAPH_VERSION + '/' + adAccountId + '/adsets?fields=id,name,campaign_id,status,effective_status,daily_budget&limit=200&access_token=' + accessToken),
       fetchAll('https://graph.facebook.com/' + GRAPH_VERSION + '/' + adAccountId + '/ads?fields=id,name,adset_id,status,effective_status&limit=200&access_token=' + accessToken),
       fetchAll('https://graph.facebook.com/' + GRAPH_VERSION + '/' + adAccountId + '/insights?level=campaign&fields=' + INSIGHT_FIELDS + '&date_preset=' + datePreset + '&limit=200&access_token=' + accessToken),
       fetchAll('https://graph.facebook.com/' + GRAPH_VERSION + '/' + adAccountId + '/insights?level=ad&fields=' + INSIGHT_FIELDS + '&date_preset=' + datePreset + '&limit=500&access_token=' + accessToken),
+      fetchAll('https://graph.facebook.com/' + GRAPH_VERSION + '/' + adAccountId + '/insights?level=account&fields=reach,frequency&date_preset=' + datePreset + '&access_token=' + accessToken),
     ])
 
     if (campaignsResult.error) {
@@ -162,6 +170,9 @@ export async function GET(req: NextRequest) {
     for (const row of campaignInsightsResult.data) {
       addRawInsightToTotals(accountTotals, row)
     }
+    // Alcance e frequencia da conta vem do proprio insight da conta (pessoas unicas; nao pode somar campanhas)
+    const accRow = accountReachResult.data[0]
+    if (accRow) { accountTotals.reach = Number(accRow.reach || 0); accountTotals.frequency = Number(accRow.frequency || 0) }
     const accountInsights = finalizeTotals(accountTotals)
 
     return NextResponse.json({
