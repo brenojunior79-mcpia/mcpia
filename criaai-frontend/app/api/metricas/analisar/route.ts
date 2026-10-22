@@ -6,7 +6,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-const LIMITE_DIA = 15 // analises por aluno a cada 24 horas (admin sem limite)
+const LIMITE_SEMANA = 3 // analises por aluno a cada 7 dias (admin sem limite). So aparece para o aluno quando ele atinge.
 
 const METODO = `Voce e o analista de metricas da mentoria Cristao Prospero. O aluno vende produtos digitais com anuncios de trafego direto no Gerenciador de Anuncios do Facebook/Instagram. Analise as metricas que ele enviou e explique onde o funil esta quebrando, em portugues do Brasil, simples e direto, como um mentor que fala com iniciante.
 
@@ -81,14 +81,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Informe pelo menos o valor investido.' }, { status: 400 })
   }
 
-  // Limite diario por aluno (admin sem limite)
+  // Limite por aluno: LIMITE_SEMANA analises a cada 7 dias (admin sem limite)
   const admin = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } })
   const perfil = await admin.from('profiles').select('is_admin').eq('id', user.id).maybeSingle()
   const souAdmin = (perfil.data as any)?.is_admin === true
   if (!souAdmin) {
-    const desde = new Date(Date.now() - 24 * 3600 * 1000).toISOString()
-    const c = await admin.from('metricas_analises').select('id', { count: 'exact', head: true }).eq('user_id', user.id).gte('created_at', desde)
-    if ((c.count || 0) >= LIMITE_DIA) return NextResponse.json({ error: 'Você já fez ' + LIMITE_DIA + ' análises nas últimas 24 horas. Volte amanhã para fazer outras.' }, { status: 429 })
+    const desde = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString()
+    const q = await admin.from('metricas_analises').select('created_at').eq('user_id', user.id).gte('created_at', desde).order('created_at', { ascending: true }).limit(50)
+    const usadas: any[] = q.data || []
+    if (usadas.length >= LIMITE_SEMANA) {
+      // libera de novo quando a analise mais antiga das ultimas 3 completar 7 dias
+      const ref = usadas[usadas.length - LIMITE_SEMANA]
+      const liberaEm = new Date(ref.created_at).getTime() + 7 * 24 * 3600 * 1000
+      const dias = Math.max(1, Math.ceil((liberaEm - Date.now()) / (24 * 3600 * 1000)))
+      return NextResponse.json({ error: 'Você já usou suas análises desta semana. Você poderá fazer uma nova ' + (dias <= 1 ? 'amanhã.' : 'em ' + dias + ' dias.') }, { status: 429 })
+    }
   }
 
   const calculados = modo === 'manual' ? calcular(dados) : {}
