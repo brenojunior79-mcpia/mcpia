@@ -24,6 +24,8 @@ export default function AnunciosPage() {
   const [campaignsData, setCampaignsData] = useState<any>(null)
   const [campaignsError, setCampaignsError] = useState<string | null>(null)
   const [selecionada, setSelecionada] = useState('todas')
+  const [filtroCamp, setFiltroCamp] = useState<'ativas' | 'desativadas'>('ativas')
+  const [verTodas, setVerTodas] = useState(false)
   const [ocupadoId, setOcupadoId] = useState<string | null>(null)
   const [aviso, setAviso] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null)
 
@@ -152,6 +154,10 @@ export default function AnunciosPage() {
   const todas: any[] = campaignsData?.campaigns || []
   const todasOrdenadas = todas.slice().sort(function(a, b) { return (b.status === 'ACTIVE' ? 1 : 0) - (a.status === 'ACTIVE' ? 1 : 0) || Number(b.insights?.spend || 0) - Number(a.insights?.spend || 0) })
   const comDados = todasOrdenadas.filter(function(c) { return c.status === 'ACTIVE' || Number(c.insights?.spend || 0) > 0 })
+  const ativas = todasOrdenadas.filter(function(c) { return c.status === 'ACTIVE' })
+  const desativadas = todasOrdenadas.filter(function(c) { return c.status !== 'ACTIVE' })
+  const listaCamp = filtroCamp === 'ativas' ? ativas : desativadas
+  const mostradas = verTodas ? listaCamp : listaCamp.slice(0, 3)
   const camp = selecionada === 'todas' ? null : todas.find(function(c) { return c.id === selecionada }) || null
   const mFunil = calcular(camp ? camp.insights : campaignsData?.accountInsights)
   const relatorio = relatorioDoFunil(mFunil)
@@ -237,12 +243,31 @@ export default function AnunciosPage() {
                     <div>
                       <h2 style={{ ...titulo, marginBottom: 4 }}>🚀 Suas campanhas</h2>
                       <div style={{ fontSize: 13, color: 'var(--muted2)', marginBottom: 12 }}>O selo diz o que fazer com cada campanha. Os pontinhos coloridos mostram se o número está bom, em atenção ou ruim. Toque no nome da campanha para ver as dicas e o que cada número significa.</div>
-                      {!todasOrdenadas.length ? (
-                        <p style={{ color: 'var(--muted2)', fontSize: 13 }}>Nenhuma campanha encontrada.</p>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                        {([['ativas', 'Campanhas ativas', ativas.length], ['desativadas', 'Campanhas desativadas', desativadas.length]] as ['ativas' | 'desativadas', string, number][]).map(function(ch) {
+                          const ativo = filtroCamp === ch[0]
+                          return (
+                            <button key={ch[0]} onClick={function() { setFiltroCamp(ch[0]); setVerTodas(false) }} style={{ cursor: 'pointer', fontSize: 12.5, fontWeight: 700, padding: '7px 14px', borderRadius: 999, border: '1px solid ' + (ativo ? 'var(--text)' : 'var(--border2)'), background: ativo ? 'var(--text)' : 'var(--surface)', color: ativo ? 'var(--bg)' : 'var(--text)' }}>
+                              {ch[1]} · {ch[2]}
+                            </button>
+                          )
+                        })}
+                      </div>
+                      {!listaCamp.length ? (
+                        <p style={{ color: 'var(--muted2)', fontSize: 13 }}>{filtroCamp === 'ativas' ? 'Nenhuma campanha ativa no momento.' : 'Nenhuma campanha desativada.'}</p>
                       ) : (
-                        <CampanhasTabela campanhas={todasOrdenadas} ocupadoId={ocupadoId} selecionadaId={selecionada}
-                          onAlternar={function(c) { alternar(c) }} onOrcamento={function(c, p) { mudarOrcamento(c, p) }}
-                          onVerFunil={function(c) { setSelecionada(c.id); window.scrollTo({ top: 0, behavior: 'smooth' }) }} />
+                        <>
+                          <CampanhasTabela campanhas={mostradas} ocupadoId={ocupadoId} selecionadaId={selecionada}
+                            onAlternar={function(c) { alternar(c) }} onOrcamento={function(c, p) { mudarOrcamento(c, p) }}
+                            onVerFunil={function(c) { setSelecionada(c.id); window.scrollTo({ top: 0, behavior: 'smooth' }) }} />
+                          {listaCamp.length > 3 && (
+                            <div style={{ textAlign: 'center', marginTop: 12 }}>
+                              <button onClick={function() { setVerTodas(!verTodas) }} style={{ cursor: 'pointer', fontSize: 13, fontWeight: 700, padding: '9px 20px', borderRadius: 10, border: '1px solid var(--border2)', background: 'var(--surface)', color: 'var(--text)' }}>
+                                {verTodas ? 'Ver menos' : 'Ver mais (' + (listaCamp.length - 3) + ')'}
+                              </button>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
 
