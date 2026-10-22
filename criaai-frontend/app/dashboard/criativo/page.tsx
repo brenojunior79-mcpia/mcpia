@@ -3,6 +3,8 @@ import { useState } from 'react'
 import styles from '../dashboard.module.css'
 import CardRoteiro, { Roteiro, ROTEIRO_VAZIO, roteiroEmTexto } from '@/components/criativo/CardRoteiro'
 import CardNarracao, { Narracao } from '@/components/criativo/CardNarracao'
+import CardVideos, { Clipe } from '@/components/criativo/CardVideos'
+import CardEdicao from '@/components/criativo/CardEdicao'
 
 type Aba = 'roteiro' | 'narracao' | 'videos' | 'edicao'
 
@@ -11,11 +13,12 @@ export default function CriativoPage() {
   const [roteiro, setRoteiro] = useState<Roteiro>(ROTEIRO_VAZIO)
   const [textoNarracao, setTextoNarracao] = useState('')
   const [narracao, setNarracao] = useState<Narracao | null>(null)
+  const [clipes, setClipes] = useState<Clipe[]>([])
 
   const cards: { id: Aba; n: number; icone: string; titulo: string; sub: string; pronto: boolean }[] = [
     { id: 'roteiro', n: 1, icone: '✍️', titulo: 'Roteiro', sub: 'Gancho, corpo, mecanismo e CTA', pronto: !!roteiroEmTexto(roteiro) },
     { id: 'narracao', n: 2, icone: '🎙️', titulo: 'Narração', sub: 'Texto vira áudio com a voz que você escolher', pronto: !!narracao },
-    { id: 'videos', n: 3, icone: '🎞️', titulo: 'Vídeos', sub: 'Busque e baixe vídeos para o criativo', pronto: false },
+    { id: 'videos', n: 3, icone: '🎞️', titulo: 'Vídeos', sub: 'Escolha os vídeos do criativo', pronto: clipes.length > 0 },
     { id: 'edicao', n: 4, icone: '✂️', titulo: 'Edição', sub: 'Junta vídeo, narração, música e legenda', pronto: false },
   ]
 
@@ -52,8 +55,8 @@ export default function CriativoPage() {
           {aba === 'narracao' && (
             <CardNarracao texto={textoNarracao} setTexto={setTextoNarracao} narracao={narracao} setNarracao={setNarracao} />
           )}
-          {aba === 'videos' && <div style={{ color: 'var(--muted2)', fontSize: 14 }}>Em construção.</div>}
-          {aba === 'edicao' && <div style={{ color: 'var(--muted2)', fontSize: 14 }}>Em construção.</div>}
+          {aba === 'videos' && <CardVideos clipes={clipes} setClipes={setClipes} onSeguir={function() { setAba('edicao') }} />}
+          {aba === 'edicao' && <CardEdicao clipes={clipes} narracao={narracao} onIrVideos={function() { setAba('videos') }} onIrNarracao={function() { setAba('narracao') }} />}
         </div>
       </div>
     </div>

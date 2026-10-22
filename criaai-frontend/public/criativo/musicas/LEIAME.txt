@@ -1,0 +1,2 @@
+Coloque aqui as musicas de fundo (mp3, livres de direitos) e liste cada uma em ../musicas.json:
+{ "animadas": [ { "nome": "Nome da faixa", "arquivo": "/criativo/musicas/arquivo.mp3" } ], "emocionais": [ ... ] }
