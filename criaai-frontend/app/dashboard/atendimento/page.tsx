@@ -18,6 +18,11 @@ type Msg = { wa_message_id?: string | null; reply_to_wa_id?: string | null; id: 
 type Status = { connected: boolean; missing?: string[]; webhookUrl?: string; number?: string; name?: string; quality?: string; error?: string }
 
 // Mensagens prontas do chat de recuperacao: um clique e ja envia
+// Mensagens salvas do chat de SUPORTE (um clique envia na hora)
+const RAPIDAS_SUPORTE: { titulo: string; texto: string }[] = [
+  { titulo: '01 · Acesso às aulas', texto: 'Link da Plataforma: https://www.mcpia.site/login\n\nO acesso às aulas é aqui através dessa plataforma Nova, Basta fazer o cadastro com o mesmo e-mail que você comprou a mentoria.' },
+]
+
 const RAPIDAS: { titulo: string; texto: string }[] = [
   { titulo: 'Link da plataforma', texto: 'Só acessar!\n\nhttps://www.mcpia.site/login' },
   { titulo: 'Acesso Hubla', texto: 'Agora você vai receber um e-mail da Hubla:\n\nAbre o e-mail e você vai conseguir acessar Área de membros pra começar.\n\nAssim que acessar me confirma aqui se deu certinho.\n\nAproveita e já entro no nosso grupo:' },
@@ -852,9 +857,9 @@ export default function AtendimentoPage() {
                 {janelaAberta ? (
                   <>
                     <div style={{ fontSize: 11.5, color: 'var(--muted2)', marginBottom: 6 }}>Você pode responder por mais ~{horasRestantes}h.</div>
-                    {atual.connection_id && (
+                    {(atual.connection_id ? RAPIDAS : RAPIDAS_SUPORTE).length > 0 && (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
-                        {RAPIDAS.map(function(r) {
+                        {(atual.connection_id ? RAPIDAS : RAPIDAS_SUPORTE).map(function(r) {
                           return <button key={r.titulo} disabled={enviando} title={r.texto} onClick={function() { enviar(undefined, r.texto) }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 999, padding: '6px 12px', fontSize: 13, fontWeight: 700, opacity: enviando ? 0.55 : 1 }}>⚡ {r.titulo}</button>
                         })}
                       </div>
