@@ -20,10 +20,15 @@ export async function GET(req: NextRequest) {
   const redirectUri = APP_URL + '/api/facebook/callback'
   const scopes = ['ads_management', 'ads_read', 'business_management', 'pages_show_list', 'public_profile'].join(',')
 
+  // Login do Facebook para Empresas: se existir um Configuration ID, usa a configuracao criada no painel do app
+  // (em vez de pedir as permissoes direto no link). Sem o ID, continua no modo antigo.
+  const configId = process.env.FACEBOOK_LOGIN_CONFIG_ID
   const oauthUrl = 'https://www.facebook.com/v26.0/dialog/oauth'
     + '?client_id=' + FACEBOOK_APP_ID
     + '&redirect_uri=' + encodeURIComponent(redirectUri)
-    + '&scope=' + encodeURIComponent(scopes)
+    + (configId
+      ? '&config_id=' + encodeURIComponent(configId) + '&override_default_response_type=true'
+      : '&scope=' + encodeURIComponent(scopes))
     + '&state=' + state
     + '&response_type=code'
 
