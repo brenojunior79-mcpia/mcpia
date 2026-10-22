@@ -103,9 +103,19 @@ export default function Topbar({ profile, user }: { profile: any, user: any }) {
       paddingLeft: 72,
     }}>
 
-      {/* Esquerda: sininho (do lado do menu) + saudacao + data */}
+      {/* Esquerda: saudacao + data */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-        {/* Sininho de notificacoes (ao lado do menu) */}
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {greeting}, {firstName}! {isFemale ? '👩' : '👋'}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--muted2)', textTransform: 'capitalize' }}>{date}</div>
+        </div>
+      </div>
+
+      {/* Direita: sininho + Minha conta */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        {/* Sininho de notificacoes (ao lado esquerdo do Minha conta) */}
         <div style={{ position: 'relative' }}>
           <button
             onClick={function() { setShowNotif(!showNotif) }}
@@ -153,7 +163,7 @@ export default function Topbar({ profile, user }: { profile: any, user: any }) {
             <div style={{
               position: 'absolute',
               top: 46,
-              left: 0,
+              right: 0,
               width: 320,
               background: 'var(--surface)',
               border: '1px solid var(--border)',
@@ -204,15 +214,7 @@ export default function Topbar({ profile, user }: { profile: any, user: any }) {
         </div>
 
 
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {greeting}, {firstName}! {isFemale ? '👩' : '👋'}
-          </div>
-          <div style={{ fontSize: 11, color: 'var(--muted2)', textTransform: 'capitalize' }}>{date}</div>
-        </div>
-      </div>
 
-      {/* Direita: Minha conta */}
       <div style={{ position: 'relative' }}>
         <button
           onClick={function() { setShowConta(!showConta) }}
@@ -240,6 +242,7 @@ export default function Topbar({ profile, user }: { profile: any, user: any }) {
             </div>
           </>
         )}
+      </div>
       </div>
 
       <style>{`
