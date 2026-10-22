@@ -25,6 +25,25 @@ export default function CardNarracao({ texto, setTexto, narracao, setNarracao }:
   const player = useRef<HTMLAudioElement | null>(null)
   const [tocando, setTocando] = useState('') // voz cuja amostra esta carregando/tocando
 
+  // Pre-carrega as amostras (3 por vez) para o "Ouvir" tocar na hora
+  async function carregarAmostra(id: string): Promise<string | null> {
+    if (amostras.current[id]) return amostras.current[id]
+    try {
+      const r = await fetch('/api/criativo/amostra?voz=' + id)
+      if (!r.ok) return null
+      const url = URL.createObjectURL(await r.blob())
+      amostras.current[id] = url
+      return url
+    } catch (e) { return null }
+  }
+  useEffect(function() {
+    let vivo = true
+    const fila = VOZES.map(function(v) { return v.id })
+    async function trabalhador() { while (vivo && fila.length) { const id = fila.shift() as string; await carregarAmostra(id) } }
+    const t = setTimeout(function() { trabalhador(); trabalhador(); trabalhador() }, 300)
+    return function() { vivo = false; clearTimeout(t) }
+  }, [])
+
   useEffect(function() {
     return function() {
       if (urlAnterior.current) URL.revokeObjectURL(urlAnterior.current)
@@ -38,14 +57,9 @@ export default function CardNarracao({ texto, setTexto, narracao, setNarracao }:
     if (player.current) { player.current.pause(); player.current = null }
     if (tocando === id) { setTocando(''); return }
     setTocando(id)
+    const url = await carregarAmostra(id)
+    if (!url) { setMsg('Não foi possível carregar a amostra.'); setTocando(''); return }
     try {
-      let url = amostras.current[id]
-      if (!url) {
-        const r = await fetch('/api/criativo/amostra?voz=' + id)
-        if (!r.ok) { const j = await r.json().catch(function() { return {} }); setMsg(j.error || 'Não foi possível carregar a amostra.'); setTocando(''); return }
-        url = URL.createObjectURL(await r.blob())
-        amostras.current[id] = url
-      }
       const a = new Audio(url)
       player.current = a
       a.onended = function() { setTocando(function(t) { return t === id ? '' : t }) }

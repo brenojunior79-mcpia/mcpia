@@ -4,7 +4,8 @@ import { createClient } from '@/lib/supabase-browser'
 import { calcular, relatorioDoFunil } from '@/lib/anuncios'
 import Funil from '@/components/anuncios/Funil'
 import GuiaFunil from '@/components/anuncios/GuiaFunil'
-import CampanhaCard, { orcamentoDiario } from '@/components/anuncios/CampanhaCard'
+import CampanhasTabela from '@/components/anuncios/CampanhasTabela'
+import { orcamentoDiario } from '@/components/anuncios/CampanhaCard'
 import { cartao, titulo, moeda } from '@/components/anuncios/estilo'
 
 const PERIODOS: [string, string][] = [['today', 'Hoje'], ['yesterday', 'Ontem'], ['last_7d', 'Últimos 7 dias'], ['last_14d', 'Últimos 14 dias'], ['last_30d', 'Últimos 30 dias'], ['this_month', 'Este mês']]
@@ -24,7 +25,6 @@ export default function AnunciosPage() {
   const [selecionada, setSelecionada] = useState('todas')
   const [ocupadoId, setOcupadoId] = useState<string | null>(null)
   const [aviso, setAviso] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null)
-  const [mostrarSemDados, setMostrarSemDados] = useState(false)
 
   const [analyzing, setAnalyzing] = useState(false)
   const [analysis, setAnalysis] = useState<string | null>(null)
@@ -60,10 +60,9 @@ export default function AnunciosPage() {
     }
   }
 
-  async function loadCampaigns(p?: string) {
-    setCampaignsLoading(true)
+  async function loadCampaigns(p?: string, silencioso?: boolean) {
+    if (!silencioso) { setCampaignsLoading(true); setAnalysis(null) }
     setCampaignsError(null)
-    setAnalysis(null)
     try {
       const res = await fetch('/api/facebook/campaigns?datePreset=' + (p || periodo), { cache: 'no-store' })
       const data = await res.json()
@@ -72,7 +71,7 @@ export default function AnunciosPage() {
     } catch (err) {
       setCampaignsError('Erro ao carregar campanhas')
     } finally {
-      setCampaignsLoading(false)
+      if (!silencioso) setCampaignsLoading(false)
     }
   }
 
@@ -102,7 +101,7 @@ export default function AnunciosPage() {
       const res = await fetch('/api/facebook/campaigns/toggle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ campaignId: c.id, status: novo }) })
       const data = await res.json().catch(function() { return {} })
       if (!res.ok) setAviso({ tipo: 'erro', texto: data.error || 'Nao foi possivel alterar a campanha.' })
-      else { setAviso({ tipo: 'ok', texto: novo === 'ACTIVE' ? 'Campanha ativada.' : 'Campanha pausada.' }); await loadCampaigns() }
+      else { setAviso({ tipo: 'ok', texto: novo === 'ACTIVE' ? 'Campanha ativada.' : 'Campanha pausada.' }); await loadCampaigns(undefined, true) }
     } finally { setOcupadoId(null) }
   }
 
@@ -110,16 +109,17 @@ export default function AnunciosPage() {
     const atual = orcamentoDiario(c) || 0
     const novo = atual * (1 + pct / 100)
     const m = calcular(c.insights)
-    let texto = (pct > 0 ? 'Aumentar' : 'Reduzir') + ' o orçamento de ' + moeda(atual) + ' para ' + moeda(novo) + ' por dia?'
-    if (pct > 0) texto += '\n\nDica: aumente no máximo 20% a cada 2 dias, para o Facebook não "se perder".'
-    if (pct > 0 && m.roas !== null && m.roas < 1) texto += '\n\nAtenção: esta campanha está gastando mais do que vende.'
-    if (!window.confirm(texto)) return
+    // Aplica na hora. So pergunta quando a campanha esta gastando mais do que vende e o aluno vai aumentar.
+    if (pct > 0 && m.gasto >= 50 && m.roas !== null && m.roas < 1) {
+      const texto = 'Esta campanha está gastando mais do que vende. Aumentar o orçamento de ' + moeda(atual) + ' para ' + moeda(novo) + ' por dia mesmo assim?'
+      if (!window.confirm(texto)) return
+    }
     setOcupadoId(c.id); setAviso(null)
     try {
       const res = await fetch('/api/facebook/campaigns/budget', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ campaignId: c.id, percent: pct }) })
       const data = await res.json().catch(function() { return {} })
       if (!res.ok) setAviso({ tipo: 'erro', texto: data.error || 'Nao foi possivel mudar o orçamento.' })
-      else { setAviso({ tipo: 'ok', texto: 'Orçamento atualizado para ' + moeda(data.novoOrcamento) + ' por dia.' }); await loadCampaigns() }
+      else { setAviso({ tipo: 'ok', texto: 'Orçamento de "' + c.name + '" atualizado para ' + moeda(data.novoOrcamento) + ' por dia.' }); await loadCampaigns(undefined, true) }
     } finally { setOcupadoId(null) }
   }
 
@@ -133,9 +133,8 @@ export default function AnunciosPage() {
   }
 
   const todas: any[] = campaignsData?.campaigns || []
-  const comDados = todas.filter(function(c) { return c.status === 'ACTIVE' || Number(c.insights?.spend || 0) > 0 })
-  const semDados = todas.filter(function(c) { return !(c.status === 'ACTIVE' || Number(c.insights?.spend || 0) > 0) })
-  comDados.sort(function(a, b) { return (b.status === 'ACTIVE' ? 1 : 0) - (a.status === 'ACTIVE' ? 1 : 0) || Number(b.insights?.spend || 0) - Number(a.insights?.spend || 0) })
+  const todasOrdenadas = todas.slice().sort(function(a, b) { return (b.status === 'ACTIVE' ? 1 : 0) - (a.status === 'ACTIVE' ? 1 : 0) || Number(b.insights?.spend || 0) - Number(a.insights?.spend || 0) })
+  const comDados = todasOrdenadas.filter(function(c) { return c.status === 'ACTIVE' || Number(c.insights?.spend || 0) > 0 })
   const camp = selecionada === 'todas' ? null : todas.find(function(c) { return c.id === selecionada }) || null
   const mFunil = calcular(camp ? camp.insights : campaignsData?.accountInsights)
   const relatorio = relatorioDoFunil(mFunil)
@@ -220,33 +219,13 @@ export default function AnunciosPage() {
 
                     <div>
                       <h2 style={{ ...titulo, marginBottom: 4 }}>🚀 Suas campanhas</h2>
-                      <div style={{ fontSize: 13, color: 'var(--muted2)', marginBottom: 12 }}>Cada número tem uma nota (bom, atenção ou ruim) e uma dica do que fazer. Toque no “?” para entender o que o número significa.</div>
-                      {!comDados.length ? (
-                        <p style={{ color: 'var(--muted2)', fontSize: 13 }}>Nenhuma campanha com dados neste período.</p>
+                      <div style={{ fontSize: 13, color: 'var(--muted2)', marginBottom: 12 }}>O selo diz o que fazer com cada campanha. Os pontinhos coloridos mostram se o número está bom, em atenção ou ruim. Toque no nome da campanha para ver as dicas e o que cada número significa.</div>
+                      {!todasOrdenadas.length ? (
+                        <p style={{ color: 'var(--muted2)', fontSize: 13 }}>Nenhuma campanha encontrada.</p>
                       ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                          {comDados.map(function(c) {
-                            return <CampanhaCard key={c.id} c={c} selecionada={selecionada === c.id} ocupado={ocupadoId === c.id}
-                              onVerFunil={function() { setSelecionada(c.id); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
-                              onAlternar={function() { alternar(c) }} onOrcamento={function(p) { mudarOrcamento(c, p) }} />
-                          })}
-                        </div>
-                      )}
-                      {semDados.length > 0 && (
-                        <div style={{ marginTop: 14 }}>
-                          <button onClick={function() { setMostrarSemDados(!mostrarSemDados) }} style={{ background: 'transparent', border: 0, color: 'var(--muted2)', fontWeight: 700, fontSize: 13, cursor: 'pointer', padding: '4px 0' }}>
-                            {mostrarSemDados ? '▾ Ocultar' : '▸ Mostrar'} outras campanhas, sem gasto neste período ({semDados.length})
-                          </button>
-                          {mostrarSemDados && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 10 }}>
-                              {semDados.map(function(c) {
-                                return <CampanhaCard key={c.id} c={c} selecionada={false} ocupado={ocupadoId === c.id}
-                                  onVerFunil={function() { setSelecionada(c.id); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
-                                  onAlternar={function() { alternar(c) }} onOrcamento={function(p) { mudarOrcamento(c, p) }} />
-                              })}
-                            </div>
-                          )}
-                        </div>
+                        <CampanhasTabela campanhas={todasOrdenadas} ocupadoId={ocupadoId} selecionadaId={selecionada}
+                          onAlternar={function(c) { alternar(c) }} onOrcamento={function(c, p) { mudarOrcamento(c, p) }}
+                          onVerFunil={function(c) { setSelecionada(c.id); window.scrollTo({ top: 0, behavior: 'smooth' }) }} />
                       )}
                     </div>
                   </>

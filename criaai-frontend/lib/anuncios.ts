@@ -238,3 +238,24 @@ export const GUIA_FUNIL: { icone: string; nome: string; oQue: string; mede: stri
   { icone: '🛒', nome: '4. Clicaram no checkout', oQue: 'Das pessoas que viram a página, quantas clicaram no botão de comprar.', mede: 'Taxa de checkout (meta: acima de 10%).', melhorar: 'Aqui quem manda é a página. Deixe a promessa mais clara, mostre prova (depoimentos), e ponha o botão de comprar bem visível.' },
   { icone: '✅', nome: '5. Compraram', oQue: 'Das pessoas que chegaram no checkout, quantas pagaram.', mede: 'Taxa de compra (meta: acima de 25%), custo por venda e ROAS.', melhorar: 'Confira o preço, ofereça Pix, e teste o checkout no celular. Se o ROAS está bom, aumente o orçamento em até 20% por vez.' },
 ]
+
+// ---------- Veredito da campanha (selo da tabela) ----------
+
+export type Veredito = { rotulo: 'Escalar' | 'Observar' | 'Ajustar' | 'Sem dados'; nivel: Nivel; motivo: string }
+
+export function veredito(m: Metricas): Veredito {
+  if (m.gasto < 20 || m.impressoes < LIMITES.minImpressoes) return { rotulo: 'Sem dados', nivel: 'sem', motivo: 'Ainda poucos dados para decidir.' }
+  const roas = m.roas || 0
+  if (m.compras === 0) {
+    return m.gasto >= 100
+      ? { rotulo: 'Ajustar', nivel: 'ruim', motivo: 'Já gastou ' + valorMoeda(m.gasto) + ' e ainda não vendeu. Veja onde o funil falha.' }
+      : { rotulo: 'Observar', nivel: 'atencao', motivo: 'Ainda sem vendas, mas o gasto é pequeno. Acompanhe.' }
+  }
+  if (roas >= LIMITES.roas.bom) return { rotulo: 'Escalar', nivel: 'bom', motivo: 'ROAS ' + roas.toFixed(2).replace('.', ',') + 'x: dá lucro. Pode aumentar o orçamento aos poucos (+20%).' }
+  if (roas >= LIMITES.roas.atencao) return { rotulo: 'Observar', nivel: 'atencao', motivo: 'Perto de empatar. Otimize antes de aumentar o orçamento.' }
+  return m.gasto >= 50
+    ? { rotulo: 'Ajustar', nivel: 'ruim', motivo: 'Gasta mais do que vende (ROAS ' + roas.toFixed(2).replace('.', ',') + 'x). Otimize ou pause.' }
+    : { rotulo: 'Observar', nivel: 'atencao', motivo: 'ROAS baixo, mas ainda com pouco gasto. Acompanhe.' }
+}
+
+function valorMoeda(v: number) { return 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }

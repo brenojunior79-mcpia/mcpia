@@ -26,6 +26,7 @@ export default function CardEdicao({ clipes, narracao, onIrVideos, onIrNarracao 
   const [msg, setMsg] = useState('')
   const [resultado, setResultado] = useState<{ url: string; mb: number } | null>(null)
   const urlRes = useRef('')
+  const blobsBaixados = useRef<Record<string, Blob>>({})
 
   useEffect(function() {
     fetch('/criativo/musicas.json', { cache: 'no-store' }).then(function(r) { return r.json() }).then(function(j) {
@@ -70,8 +71,23 @@ export default function CardEdicao({ clipes, narracao, onIrVideos, onIrNarracao 
       if (musicaTipo === 'minha') musica = minhaMusica
       else if (musicaTipo !== 'nenhuma' && faixa) musica = await (await fetch(faixa)).blob()
 
+      // Videos da galeria / links: baixa agora (so os escolhidos)
+      const blobsClipes: Blob[] = []
+      for (let i = 0; i < clipes.length; i++) {
+        const c = clipes[i]
+        let b: Blob | undefined = c.blob || blobsBaixados.current[c.id]
+        if (!b) {
+          setEtapa('Baixando os vídeos (' + (i + 1) + ' de ' + clipes.length + ')...'); setFracao(0.02 + 0.03 * (i / clipes.length))
+          const r = await fetch(c.origem === 'pixabay' ? '/api/criativo/videos/arquivo?u=' + encodeURIComponent(c.fonte || '') : (c.fonte || c.url))
+          if (!r.ok) throw new Error('Não consegui baixar o vídeo "' + c.nome + '". Tire-o da lista e tente de novo.')
+          b = await r.blob()
+          blobsBaixados.current[c.id] = b
+        }
+        blobsClipes.push(b)
+      }
+
       const blob = await montarCriativo(ff, {
-        clipes: clipes.map(function(c) { return c.blob }),
+        clipes: blobsClipes,
         narracao: audioFonte.blob, duracaoNarracao: duracao, musica, volumeMusica: volume / 100,
         palavras, formato, estiloLegenda: estilo,
         onProgresso: function(p, e) { setFracao(p); setEtapa(e) },
@@ -96,7 +112,7 @@ export default function CardEdicao({ clipes, narracao, onIrVideos, onIrNarracao 
 
       <div style={bloco}>
         <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 6 }}>1. Vídeos</div>
-        {clipes.length ? <div style={{ fontSize: 13 }}>{clipes.length} vídeo(s) escolhido(s). <button onClick={onIrVideos} style={{ ...botaoClaro, padding: '3px 10px', fontSize: 12 }}>Mudar</button></div>
+        {clipes.length ? <div style={{ fontSize: 13 }}>{clipes.length} vídeo(s) escolhido(s) na galeria. <button onClick={onIrVideos} style={{ ...botaoClaro, padding: '3px 10px', fontSize: 12 }}>Mudar</button></div>
           : <div style={{ fontSize: 13, color: '#b45309' }}>Nenhum vídeo escolhido. <button onClick={onIrVideos} style={{ ...botaoClaro, padding: '3px 10px', fontSize: 12 }}>Escolher no card 3</button></div>}
       </div>
 
