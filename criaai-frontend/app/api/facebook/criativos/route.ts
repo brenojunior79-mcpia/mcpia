@@ -83,24 +83,15 @@ export async function GET(req: NextRequest) {
     const hoje = new Set<string>()
     hojeRes.data.forEach(function(r: any) { if (Number(r.impressions || 0) > 0) hoje.add(r.ad_id) })
 
-    // Anuncios que tiveram gasto no periodo ou estao entregando hoje
-    const ids: string[] = []
-    metricas.forEach(function(m, id) { if (m.spend > 0 || m.impressions > 0) ids.push(id) })
-    hoje.forEach(function(id) { if (ids.indexOf(id) < 0) ids.push(id) })
-
+    // So os anuncios ATIVOS
     const campos = 'id,name,effective_status,created_time,preview_shareable_link,adset{name},campaign{name},' +
       'creative.thumbnail_width(480).thumbnail_height(480){thumbnail_url,image_url,video_id,instagram_permalink_url,effective_object_story_id,url_tags,object_story_spec}'
-
+    const filtro = encodeURIComponent(JSON.stringify([{ field: 'effective_status', operator: 'IN', value: ['ACTIVE'] }]))
+    const ativos = await buscarTudo(BASE + '/' + conta + '/ads?fields=' + encodeURIComponent(campos) + '&limit=25&filtering=' + filtro + '&access_token=' + token)
+    if (ativos.error) return NextResponse.json({ error: ativos.error.message }, { status: 500 })
+    const ids: string[] = []
     const detalhes = new Map<string, any>()
-    const lotes: string[][] = []
-    for (let i = 0; i < ids.length; i += 25) lotes.push(ids.slice(i, i + 25))
-    // v26 nao aceita mais ?ids=, entao buscamos pela lista de anuncios da conta filtrando por id
-    await Promise.all(lotes.map(async function(lote) {
-      const filtro = encodeURIComponent(JSON.stringify([{ field: 'id', operator: 'IN', value: lote }]))
-      const r = await buscarTudo(BASE + '/' + conta + '/ads?fields=' + encodeURIComponent(campos) + '&limit=50&filtering=' + filtro + '&access_token=' + token)
-      if (r.error) { console.error('[facebook-criativos] erro detalhes:', r.error); return }
-      r.data.forEach(function(ad: any) { detalhes.set(ad.id, ad) })
-    }))
+    ativos.data.forEach(function(ad: any) { ids.push(ad.id); detalhes.set(ad.id, ad) })
 
     const criativos = ids.map(function(id) {
       const ad = detalhes.get(id) || { id, name: 'Anuncio ' + id }

@@ -1,9 +1,6 @@
 'use client'
-import { useState } from 'react'
 import { calcular, veredito } from '@/lib/anuncios'
 import { moeda, inteiro, cartao } from './estilo'
-
-type Filtro = 'hoje' | 'gasto' | 'todos'
 
 const SELO: Record<string, React.CSSProperties> = {
   Escalar: { background: '#15803d', color: '#fff', border: '1px solid #15803d' },
@@ -34,8 +31,6 @@ function Caixa({ rotulo, valor }: { rotulo: string; valor: string }) {
 const linkEstilo: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: 'var(--text)', background: 'var(--surface)', border: '1px solid var(--border2)', borderRadius: 8, padding: '6px 10px', textDecoration: 'none', whiteSpace: 'nowrap' }
 
 export default function CriativosAnuncios({ criativos, carregando, erro }: { criativos: any[] | null; carregando: boolean; erro: string | null }) {
-  const [filtro, setFiltro] = useState<Filtro>('gasto')
-
   const lista = (criativos || []).map(function(c) {
     const m = calcular(c.insights)
     return { c, m, v: veredito(m) }
@@ -44,31 +39,16 @@ export default function CriativosAnuncios({ criativos, carregando, erro }: { cri
     return b.m.compras - a.m.compras || (b.m.roas || 0) - (a.m.roas || 0) || b.m.gasto - a.m.gasto
   })
 
-  const hoje = lista.filter(function(x) { return x.c.entregandoHoje })
-  const comGasto = lista.filter(function(x) { return x.m.gasto > 0 })
-  const visiveis = filtro === 'hoje' ? hoje : filtro === 'gasto' ? comGasto : lista
-
-  const chips: [Filtro, string, number][] = [['hoje', 'Entregando hoje', hoje.length], ['gasto', 'Com gasto no período', comGasto.length], ['todos', 'Todos', lista.length]]
+  const visiveis = lista
 
   return (
     <div>
-      <h2 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 18, margin: '0 0 4px' }}>🎬 Criativos</h2>
-      <div style={{ fontSize: 13, color: 'var(--muted2)', marginBottom: 12 }}>Do que mais vendeu para o que menos vendeu. Veja qual criativo manter, qual observar e qual escalar. Vendas e ROAS vêm do pixel do Facebook.</div>
-
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
-        {chips.map(function(ch) {
-          const ativo = filtro === ch[0]
-          return (
-            <button key={ch[0]} onClick={function() { setFiltro(ch[0]) }} style={{ cursor: 'pointer', fontSize: 12.5, fontWeight: 700, padding: '7px 14px', borderRadius: 999, border: '1px solid ' + (ativo ? 'var(--text)' : 'var(--border2)'), background: ativo ? 'var(--text)' : 'var(--surface)', color: ativo ? 'var(--bg)' : 'var(--text)' }}>
-              {ch[1]} · {ch[2]}
-            </button>
-          )
-        })}
-      </div>
+      <h2 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 18, margin: '0 0 4px' }}>🎬 Criativos ativos</h2>
+      <div style={{ fontSize: 13, color: 'var(--muted2)', marginBottom: 12 }}>Só os anúncios que estão ligados, do que mais vendeu para o que menos vendeu. Veja qual criativo manter, qual observar e qual escalar. Vendas e ROAS vêm do pixel do Facebook.</div>
 
       {carregando && <p style={{ color: 'var(--muted2)', fontSize: 13 }}>Carregando criativos...</p>}
       {erro && <div style={{ fontSize: 13, color: '#b91c1c', background: 'rgba(239,68,68,0.08)', borderRadius: 9, padding: '12px 16px' }}>{erro}</div>}
-      {!carregando && !erro && criativos && !visiveis.length && <p style={{ color: 'var(--muted2)', fontSize: 13 }}>Nenhum criativo nesse filtro.</p>}
+      {!carregando && !erro && criativos && !visiveis.length && <p style={{ color: 'var(--muted2)', fontSize: 13 }}>Nenhum criativo ativo no momento.</p>}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {visiveis.map(function(x) {
