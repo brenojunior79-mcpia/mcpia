@@ -159,7 +159,7 @@ export default function AnunciosPage() {
   async function analyzeMetrics() {
     setAnalyzing(true); setAnalysis(null)
     try {
-      const res = await fetch('/api/facebook/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accountInsights: campaignsData?.accountInsights, campaigns: campaignsData?.campaigns || [] }) })
+      const res = await fetch('/api/facebook/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accountInsights: (camp ? camp.insights : ativas.length ? somaAtivas : campaignsData?.accountInsights), campaigns: camp ? [camp] : (ativas.length ? ativas : (campaignsData?.campaigns || [])) }) })
       const data = await res.json()
       setAnalysis(res.ok ? data.analysis : 'Erro ao analisar: ' + (data.error || 'tente novamente'))
     } finally { setAnalyzing(false) }
@@ -173,9 +173,15 @@ export default function AnunciosPage() {
   const listaCamp = filtroCamp === 'ativas' ? ativas : desativadas
   const mostradas = verTodas ? listaCamp : listaCamp.slice(0, 3)
   const camp = selecionada === 'todas' ? null : todas.find(function(c) { return c.id === selecionada }) || null
-  const mFunil = calcular(camp ? camp.insights : campaignsData?.accountInsights)
+  // "Todas" = soma das campanhas ATIVAS (as mesmas da tabela), para o funil bater com os numeros das campanhas
+  const somaAtivas = ativas.reduce(function(t: any, c: any) {
+    const i = c.insights || {}
+    ;['spend', 'impressions', 'reach', 'clicks', 'inlineLinkClicks', 'landingPageViews', 'initiateCheckout', 'purchaseCount', 'purchaseValue'].forEach(function(k) { t[k] += Number(i[k] || 0) })
+    return t
+  }, { spend: 0, impressions: 0, reach: 0, clicks: 0, inlineLinkClicks: 0, landingPageViews: 0, initiateCheckout: 0, purchaseCount: 0, purchaseValue: 0, frequency: 0 })
+  const mFunil = calcular(camp ? camp.insights : ativas.length ? somaAtivas : campaignsData?.accountInsights)
   const relatorio = relatorioDoFunil(mFunil)
-  const nomeFunil = camp ? camp.name : 'Todas as campanhas da conta'
+  const nomeFunil = camp ? camp.name : ativas.length ? (ativas.length === 1 ? ativas[0].name : 'Todas as campanhas ativas (' + ativas.length + ')') : 'Todas as campanhas da conta'
 
   const sel: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border2)', borderRadius: 10, padding: '9px 12px', color: 'var(--text)', fontSize: 13, fontWeight: 600, maxWidth: '100%' }
 
@@ -232,7 +238,7 @@ export default function AnunciosPage() {
                     {PERIODOS.map(function(p) { return <option key={p[0]} value={p[0]}>{p[1]}</option> })}
                   </select>
                   <select value={selecionada} onChange={function(e) { setSelecionada(e.target.value) }} style={sel}>
-                    <option value="todas">Funil de: todas as campanhas</option>
+                    <option value="todas">{ativas.length ? 'Funil de: todas as campanhas ativas' : 'Funil de: todas as campanhas'}</option>
                     {comDados.map(function(c) { return <option key={c.id} value={c.id}>{'Funil de: ' + c.name}</option> })}
                   </select>
                   <button onClick={function() { loadCampaigns(); loadCriativos() }} disabled={campaignsLoading} style={{ ...sel, cursor: 'pointer' }}>{campaignsLoading ? 'Atualizando...' : '🔄 Atualizar'}</button>
