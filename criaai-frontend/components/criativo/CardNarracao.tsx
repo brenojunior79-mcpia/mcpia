@@ -2,12 +2,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { input, label, dica, botao, botaoClaro, erro } from './ui'
 import { carregarEditor, acelerarAudio } from '@/lib/criativoRender'
-import { AVATARES, AvatarId, avatarDataUrl } from '@/lib/avatares'
+import type { AvatarFoto } from '@/lib/avatares'
 
 // blob = audio final (ja na velocidade escolhida); original = audio como a voz falou, sem acelerar
 export type Narracao = { url: string; blob: Blob; original: Blob; velocidade: number; texto: string; voz: string }
 
 const VELOCIDADES = [1.1, 1.2, 1.3, 1.4]
+
+const SLOTS: { nome: string; sexo: 'h' | 'm'; pos: number }[] = [
+  { nome: 'Rafael', sexo: 'h', pos: 0 }, { nome: 'Diego', sexo: 'h', pos: 1 },
+  { nome: 'Camila', sexo: 'm', pos: 0 }, { nome: 'Juliana', sexo: 'm', pos: 1 },
+]
 
 const VOZES: { id: string; nome: string; desc: string; sexo: 'h' | 'm' }[] = [
   { id: 'onyx', nome: 'Rafael', desc: 'grave e firme', sexo: 'h' },
@@ -20,13 +25,28 @@ const VOZES: { id: string; nome: string; desc: string; sexo: 'h' | 'm' }[] = [
   { id: 'sage', nome: 'Patrícia', desc: 'segura e serena', sexo: 'm' },
 ]
 
-export default function CardNarracao({ texto, setTexto, narracao, setNarracao, avatar, setAvatar }: { texto: string; setTexto: (t: string) => void; narracao: Narracao | null; setNarracao: (n: Narracao | null) => void; avatar: AvatarId | null; setAvatar: (a: AvatarId | null) => void }) {
+export default function CardNarracao({ texto, setTexto, narracao, setNarracao, avatar, setAvatar }: { texto: string; setTexto: (t: string) => void; narracao: Narracao | null; setNarracao: (n: Narracao | null) => void; avatar: AvatarFoto | null; setAvatar: (a: AvatarFoto | null) => void }) {
+  const [fotosH, setFotosH] = useState<{ id: string; thumb: string; foto: string }[]>([])
+  const [fotosM, setFotosM] = useState<{ id: string; thumb: string; foto: string }[]>([])
+  const [desl, setDesl] = useState<number[]>([0, 0, 0, 0])
+  const [erroFotos, setErroFotos] = useState('')
   const [voz, setVoz] = useState('onyx')
   const [velocidade, setVelocidade] = useState(1.1)
   const [ajustando, setAjustando] = useState(false)
   const [estilo, setEstilo] = useState('natural')
   const [carregando, setCarregando] = useState(false)
   const [msg, setMsg] = useState('')
+  useEffect(function() {
+    let vivo = true
+    ;(['h', 'm'] as const).forEach(function(sx) {
+      fetch('/api/criativo/avatares?sexo=' + sx).then(function(r) { return r.json() }).then(function(j) {
+        if (!vivo) return
+        if (j.error) { setErroFotos(j.error); return }
+        if (sx === 'h') setFotosH(j.fotos || []); else setFotosM(j.fotos || [])
+      }).catch(function() { if (vivo) setErroFotos('Nao foi possivel carregar as fotos dos avatares.') })
+    })
+    return function() { vivo = false }
+  }, [])
   const urlAnterior = useRef<string>('')
   const amostras = useRef<Record<string, string>>({})
   const player = useRef<HTMLAudioElement | null>(null)
@@ -175,15 +195,22 @@ export default function CardNarracao({ texto, setTexto, narracao, setNarracao, a
 
       <div style={{ marginTop: 18 }}>
         <label style={label}>Avatar do criativo (UGC) <span style={dica}>(aparece no cantinho do vídeo e “fala” junto com a narração)</span></label>
+        {erroFotos && <div style={erro}>{erroFotos}</div>}
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          {AVATARES.map(function(a) {
-            const on = avatar === a.id
+          {SLOTS.map(function(sl, idx) {
+            const lista = sl.sexo === 'h' ? fotosH : fotosM
+            const f = lista.length ? lista[(sl.pos + desl[idx]) % lista.length] : null
+            const id = sl.nome.toLowerCase() + '-' + (f ? f.id : '')
+            const on = !!(avatar && f && avatar.id === id)
             return (
-              <button key={a.id} onClick={function() { setAvatar(on ? null : a.id) }} style={{ cursor: 'pointer', width: 112, padding: '10px 8px', borderRadius: 14, color: 'var(--text)', border: on ? '2px solid #7c5cfc' : '1px solid var(--border2)', background: on ? 'rgba(124,92,252,0.10)' : 'var(--surface2)', textAlign: 'center' }}>
-                <img src={avatarDataUrl(a, 0)} alt={a.nome} width={76} height={76} style={{ display: 'block', margin: '0 auto 6px', borderRadius: '50%' }} />
-                <div style={{ fontWeight: 800, fontSize: 13.5 }}>{on ? '✓ ' : ''}{a.nome}</div>
-                <div style={{ fontSize: 11.5, color: 'var(--muted2)' }}>{a.sexo === 'h' ? 'Homem' : 'Mulher'}</div>
-              </button>
+              <div key={sl.nome} style={{ width: 128, padding: '10px 8px', borderRadius: 14, border: on ? '2px solid #7c5cfc' : '1px solid var(--border2)', background: on ? 'rgba(124,92,252,0.10)' : 'var(--surface2)', textAlign: 'center' }}>
+                <button disabled={!f} onClick={function() { if (f) setAvatar(on ? null : { id, nome: sl.nome, sexo: sl.sexo, foto: '/api/criativo/videos/arquivo?u=' + encodeURIComponent(f.foto) }) }} style={{ cursor: f ? 'pointer' : 'default', background: 'none', border: 0, padding: 0, color: 'var(--text)', width: '100%' }}>
+                  {f ? <img src={f.thumb} alt={sl.nome} width={84} height={84} style={{ display: 'block', margin: '0 auto 6px', borderRadius: '50%', objectFit: 'cover', width: 84, height: 84 }} /> : <div style={{ width: 84, height: 84, borderRadius: '50%', background: 'var(--border)', margin: '0 auto 6px' }} />}
+                  <div style={{ fontWeight: 800, fontSize: 13.5 }}>{on ? '✓ ' : ''}{sl.nome}</div>
+                  <div style={{ fontSize: 11.5, color: 'var(--muted2)' }}>{sl.sexo === 'h' ? 'Homem' : 'Mulher'}</div>
+                </button>
+                <button disabled={!f} onClick={function() { setDesl(desl.map(function(d, k) { return k === idx ? d + 2 : d })); if (on) setAvatar(null) }} style={{ ...botaoClaro, padding: '3px 10px', fontSize: 11.5, marginTop: 6 }}>🔄 Trocar foto</button>
+              </div>
             )
           })}
           <button onClick={function() { setAvatar(null) }} style={{ cursor: 'pointer', width: 112, padding: '10px 8px', borderRadius: 14, color: 'var(--text)', border: avatar === null ? '2px solid #7c5cfc' : '1px solid var(--border2)', background: avatar === null ? 'rgba(124,92,252,0.10)' : 'var(--surface2)', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
@@ -191,6 +218,7 @@ export default function CardNarracao({ texto, setTexto, narracao, setNarracao, a
             <div style={{ fontWeight: 800, fontSize: 13 }}>{avatar === null ? '✓ ' : ''}Sem avatar</div>
           </button>
         </div>
+        <div style={{ ...dica, marginTop: 6 }}>Fotos de pessoas reais (banco de imagens gratuito, Pixabay). Se a foto não agradar, clique em “Trocar foto”. No vídeo, o rosto dá um leve movimento no ritmo da fala.</div>
       </div>
 
 

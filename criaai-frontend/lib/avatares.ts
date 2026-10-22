@@ -11,6 +11,9 @@ export const AVATARES: Avatar[] = [
   { id: 'juliana', nome: 'Juliana', sexo: 'm', fundo: '#e0f2e9', pele: '#8d5a3b', cabelo: '#1f1410', camisa: '#7c3aed', estilo: 'ondulado', batom: '#a3274a' },
 ]
 
+// Avatar com foto de pessoa real (banco de fotos gratis). A foto "fala": da um leve zoom e balanco no ritmo da voz.
+export type AvatarFoto = { id: string; nome: string; sexo: 'h' | 'm'; foto: string }
+
 export type Boca = 0 | 1 | 2 // 0 fechada, 1 meio aberta, 2 aberta
 
 function escurecer(hex: string, f: number): string {
@@ -86,6 +89,28 @@ export function avatarDataUrl(a: Avatar, boca: Boca = 0): string {
   return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(avatarSvg(a, boca, false))
 }
 
+async function fotoParaPng(img: ImageBitmap, boca: Boca, tam: number): Promise<Uint8Array> {
+  const c = document.createElement('canvas')
+  c.width = tam; c.height = tam
+  const g = c.getContext('2d')
+  if (!g) throw new Error('canvas')
+  const r = tam / 2
+  // recorte quadrado do rosto: centralizado na horizontal e puxado para o alto da foto
+  const lado = Math.min(img.width, img.height)
+  const sx = (img.width - lado) / 2
+  const sy = Math.max(0, Math.min(img.height - lado, (img.height - lado) * 0.25))
+  const zoom = 1 + 0.035 * boca
+  const desenho = tam * zoom
+  g.save()
+  g.beginPath(); g.arc(r, r, r - 5, 0, Math.PI * 2); g.clip()
+  g.drawImage(img, sx, sy, lado, lado, r - desenho / 2, r - desenho / 2 + boca * 3, desenho, desenho)
+  g.restore()
+  g.lineWidth = 10; g.strokeStyle = '#ffffff'
+  g.beginPath(); g.arc(r, r, r - 5, 0, Math.PI * 2); g.stroke()
+  const blob: Blob = await new Promise(function(resolve, reject) { c.toBlob(function(b) { if (b) resolve(b); else reject(new Error('png')) }, 'image/png') })
+  return new Uint8Array(await blob.arrayBuffer())
+}
+
 function svgParaPng(svg: string, tam: number): Promise<Uint8Array> {
   return new Promise(function(resolve, reject) {
     const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }))
@@ -131,7 +156,7 @@ export async function envelopeDaVoz(blob: Blob): Promise<number[]> {
 export type Quadro = { arquivo: string; duracao: number }
 
 // Monta as 6 imagens (3 bocas x olho aberto/fechado) e a lista de quadros para o ffmpeg
-export async function prepararAvatar(a: Avatar, voz: Blob, duracaoTotal: number): Promise<{ imagens: { nome: string; dados: Uint8Array }[]; lista: string }> {
+export async function prepararAvatar(a: Avatar | AvatarFoto, voz: Blob, duracaoTotal: number): Promise<{ imagens: { nome: string; dados: Uint8Array }[]; lista: string }> {
   const rms = await envelopeDaVoz(voz)
   const maximo = rms.reduce(function(m, v) { return Math.max(m, v) }, 0.0001)
   const total = Math.ceil(duracaoTotal * FPS_BOCA) + 1
@@ -145,14 +170,21 @@ export async function prepararAvatar(a: Avatar, voz: Blob, duracaoTotal: number)
     ant = b
     const t = i / FPS_BOCA
     const piscar = (t % 3.6) > 3.4 && t > 1.2
-    estados.push(b + (piscar ? 'p' : 'a'))
+    estados.push(b + (piscar && !('foto' in a) ? 'p' : 'a'))
   }
   const usados: Record<string, boolean> = {}
   estados.forEach(function(s) { usados[s] = true })
   const imagens: { nome: string; dados: Uint8Array }[] = []
+  let foto: ImageBitmap | null = null
+  if ('foto' in a) {
+    const resp = await fetch(a.foto)
+    if (!resp.ok) throw new Error('Nao foi possivel carregar a foto do avatar.')
+    foto = await createImageBitmap(await resp.blob())
+  }
   for (const s of Object.keys(usados)) {
     const boca = parseInt(s[0], 10) as Boca
-    imagens.push({ nome: 'av_' + s + '.png', dados: await svgParaPng(avatarSvg(a, boca, s[1] === 'p'), 360) })
+    const dados = foto ? await fotoParaPng(foto, boca, 360) : await svgParaPng(avatarSvg(a as Avatar, boca, s[1] === 'p'), 360)
+    imagens.push({ nome: 'av_' + s + '.png', dados })
   }
   // junta quadros iguais seguidos
   const quadros: Quadro[] = []

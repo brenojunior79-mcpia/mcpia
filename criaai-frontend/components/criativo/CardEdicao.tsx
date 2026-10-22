@@ -4,7 +4,7 @@ import { input, label, dica, botao, botaoClaro, erro } from './ui'
 import type { Narracao } from './CardNarracao'
 import type { Clipe } from './CardVideos'
 import { carregarEditor, montarCriativo, duracaoDoAudio, compactarAudio, EstiloLegenda } from '@/lib/criativoRender'
-import { AVATARES, AvatarId, avatarDataUrl, prepararAvatar } from '@/lib/avatares'
+import { AvatarFoto, prepararAvatar } from '@/lib/avatares'
 
 type Faixa = { nome: string; arquivo: string }
 type Musicas = { animadas: Faixa[]; emocionais: Faixa[] }
@@ -28,7 +28,7 @@ function MiniVideo({ clipe }: { clipe: Clipe }) {
   )
 }
 
-export default function CardEdicao({ clipes, narracao, avatar, onIrVideos, onIrNarracao }: { clipes: Clipe[]; narracao: Narracao | null; avatar: AvatarId | null; onIrVideos: () => void; onIrNarracao: () => void }) {
+export default function CardEdicao({ clipes, narracao, avatar, onIrVideos, onIrNarracao }: { clipes: Clipe[]; narracao: Narracao | null; avatar: AvatarFoto | null; onIrVideos: () => void; onIrNarracao: () => void }) {
   const [audioOutro, setAudioOutro] = useState<File | null>(null)
   const [usarOutro, setUsarOutro] = useState(false)
   const [musicas, setMusicas] = useState<Musicas>({ animadas: [], emocionais: [] })
@@ -65,7 +65,7 @@ export default function CardEdicao({ clipes, narracao, avatar, onIrVideos, onIrN
     a.play().catch(function() { setTocandoFaixa('') })
   }
 
-  const avatarSel = avatar ? AVATARES.filter(function(a) { return a.id === avatar })[0] || null : null
+  const avatarSel = avatar
   const audioFonte: { blob: Blob; texto: string } | null = usarOutro && audioOutro ? { blob: audioOutro, texto: '' } : (narracao ? { blob: narracao.blob, texto: narracao.texto } : null)
 
   async function montar() {
@@ -117,8 +117,7 @@ export default function CardEdicao({ clipes, narracao, avatar, onIrVideos, onIrN
       let av = null
       if (avatar) {
         setEtapa('Preparando o avatar...'); setFracao(0.05)
-        const dados = AVATARES.filter(function(a) { return a.id === avatar })[0]
-        av = await prepararAvatar(dados, audioFonte.blob, duracao + 0.5)
+        av = await prepararAvatar(avatar, audioFonte.blob, duracao + 0.5)
       }
 
       const blob = await montarCriativo(ff, {
@@ -173,7 +172,7 @@ export default function CardEdicao({ clipes, narracao, avatar, onIrVideos, onIrN
           </div>
         )}
         <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          {avatarSel ? <img src={avatarDataUrl(avatarSel, 0)} alt={avatarSel.nome} width={46} height={46} style={{ borderRadius: '50%' }} /> : <span style={{ fontSize: 26 }}>🚫</span>}
+          {avatarSel ? <img src={avatarSel.foto} alt={avatarSel.nome} width={46} height={46} style={{ borderRadius: '50%', objectFit: 'cover', width: 46, height: 46 }} /> : <span style={{ fontSize: 26 }}>🚫</span>}
           <div style={{ fontSize: 13 }}>{avatarSel ? <span>Avatar: <b>{avatarSel.nome}</b>, no cantinho do vídeo, falando junto com a narração.</span> : <span>Sem avatar.</span>} <button onClick={onIrNarracao} style={{ ...botaoClaro, padding: '3px 10px', fontSize: 12 }}>Mudar</button></div>
         </div>
       </div>

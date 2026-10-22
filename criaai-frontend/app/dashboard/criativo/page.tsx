@@ -5,7 +5,7 @@ import CardRoteiro, { Roteiro, ROTEIRO_VAZIO, roteiroEmTexto } from '@/component
 import CardNarracao, { Narracao } from '@/components/criativo/CardNarracao'
 import CardVideos, { Clipe } from '@/components/criativo/CardVideos'
 import CardEdicao from '@/components/criativo/CardEdicao'
-import type { AvatarId } from '@/lib/avatares'
+import type { AvatarFoto } from '@/lib/avatares'
 
 type Aba = 'roteiro' | 'narracao' | 'videos' | 'edicao'
 
@@ -16,7 +16,7 @@ export default function CriativoPage() {
   const [textoNarracao, setTextoNarracao] = useState('')
   const [narracao, setNarracao] = useState<Narracao | null>(null)
   const [clipes, setClipes] = useState<Clipe[]>([])
-  const [avatar, setAvatar] = useState<AvatarId | null>(null)
+  const [avatar, setAvatar] = useState<AvatarFoto | null>(null)
 
   const cards: { id: Aba; n: number; icone: string; titulo: string; sub: string; pronto: boolean }[] = [
     { id: 'roteiro', n: 1, icone: '✍️', titulo: 'Roteiro', sub: 'Gancho, corpo, mecanismo e CTA', pronto: !!roteiroEmTexto(roteiro) },
