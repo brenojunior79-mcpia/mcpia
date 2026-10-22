@@ -4,7 +4,6 @@ import { input, label, dica, botao, botaoClaro, erro } from './ui'
 import type { Narracao } from './CardNarracao'
 import type { Clipe } from './CardVideos'
 import { carregarEditor, montarCriativo, duracaoDoAudio, compactarAudio, EstiloLegenda } from '@/lib/criativoRender'
-import { AvatarFoto, prepararAvatar } from '@/lib/avatares'
 
 type Faixa = { nome: string; arquivo: string }
 type Musicas = { animadas: Faixa[]; emocionais: Faixa[] }
@@ -28,7 +27,7 @@ function MiniVideo({ clipe }: { clipe: Clipe }) {
   )
 }
 
-export default function CardEdicao({ clipes, narracao, avatar, onIrVideos, onIrNarracao }: { clipes: Clipe[]; narracao: Narracao | null; avatar: AvatarFoto | null; onIrVideos: () => void; onIrNarracao: () => void }) {
+export default function CardEdicao({ clipes, narracao, onIrVideos, onIrNarracao }: { clipes: Clipe[]; narracao: Narracao | null; onIrVideos: () => void; onIrNarracao: () => void }) {
   const [audioOutro, setAudioOutro] = useState<File | null>(null)
   const [usarOutro, setUsarOutro] = useState(false)
   const [musicas, setMusicas] = useState<Musicas>({ animadas: [], emocionais: [] })
@@ -65,7 +64,6 @@ export default function CardEdicao({ clipes, narracao, avatar, onIrVideos, onIrN
     a.play().catch(function() { setTocandoFaixa('') })
   }
 
-  const avatarSel = avatar
   const audioFonte: { blob: Blob; texto: string } | null = usarOutro && audioOutro ? { blob: audioOutro, texto: '' } : (narracao ? { blob: narracao.blob, texto: narracao.texto } : null)
 
   async function montar() {
@@ -114,16 +112,10 @@ export default function CardEdicao({ clipes, narracao, avatar, onIrVideos, onIrN
         blobsClipes.push(b)
       }
 
-      let av = null
-      if (avatar) {
-        setEtapa('Preparando o avatar...'); setFracao(0.05)
-        av = await prepararAvatar(avatar, audioFonte.blob, duracao + 0.5)
-      }
-
       const blob = await montarCriativo(ff, {
         clipes: blobsClipes,
         narracao: audioFonte.blob, duracaoNarracao: duracao, musica, volumeMusica: volume / 100,
-        palavras, avatar: av, estiloLegenda: estilo,
+        palavras, estiloLegenda: estilo,
         onProgresso: function(p, e) { setFracao(p); setEtapa(e) },
       })
       if (urlRes.current) URL.revokeObjectURL(urlRes.current)
@@ -142,7 +134,7 @@ export default function CardEdicao({ clipes, narracao, avatar, onIrVideos, onIrN
 
   return (
     <div>
-      <div style={{ fontSize: 13, color: 'var(--muted2)', marginBottom: 14 }}>Confira os vídeos, o áudio e a música. A montagem junta tudo em um Reels no estilo UGC, com avatar e legendas. Ao final você baixa o criativo pronto.</div>
+      <div style={{ fontSize: 13, color: 'var(--muted2)', marginBottom: 14 }}>Confira os vídeos, o áudio e a música. A montagem junta tudo em um Reels com legendas. Ao final você baixa o criativo pronto.</div>
 
       <div style={bloco}>
         <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 8 }}>1. Vídeos escolhidos</div>
@@ -161,7 +153,7 @@ export default function CardEdicao({ clipes, narracao, avatar, onIrVideos, onIrN
         {narracao && !usarOutro && (
           <div>
             <audio controls src={narracao.url} style={{ width: '100%', maxWidth: 420 }} />
-            <div style={{ fontSize: 13, marginTop: 6 }}>Voz na velocidade {narracao.velocidade.toFixed(1).replace('.', ',')}x. <button onClick={onIrNarracao} style={{ ...botaoClaro, padding: '3px 10px', fontSize: 12 }}>Mudar voz, velocidade ou avatar</button> <button onClick={function() { setUsarOutro(true) }} style={{ ...botaoClaro, padding: '3px 10px', fontSize: 12 }}>Enviar outro áudio</button></div>
+            <div style={{ fontSize: 13, marginTop: 6 }}>Voz na velocidade {narracao.velocidade.toFixed(1).replace('.', ',')}x. <button onClick={onIrNarracao} style={{ ...botaoClaro, padding: '3px 10px', fontSize: 12 }}>Mudar voz ou velocidade</button> <button onClick={function() { setUsarOutro(true) }} style={{ ...botaoClaro, padding: '3px 10px', fontSize: 12 }}>Enviar outro áudio</button></div>
           </div>
         )}
         {!narracao && !usarOutro && <div style={{ fontSize: 13, color: '#b45309' }}>Você ainda não gerou a narração. <button onClick={onIrNarracao} style={{ ...botaoClaro, padding: '3px 10px', fontSize: 12 }}>Gerar no card 2</button> <button onClick={function() { setUsarOutro(true) }} style={{ ...botaoClaro, padding: '3px 10px', fontSize: 12 }}>Enviar um áudio</button></div>}
@@ -171,10 +163,6 @@ export default function CardEdicao({ clipes, narracao, avatar, onIrVideos, onIrN
             {narracao && <div style={{ marginTop: 6 }}><button onClick={function() { setUsarOutro(false) }} style={{ ...botaoClaro, padding: '3px 10px', fontSize: 12 }}>Voltar para a narração do card 2</button></div>}
           </div>
         )}
-        <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          {avatarSel ? <img src={avatarSel.foto} alt={avatarSel.nome} width={46} height={46} style={{ borderRadius: '50%', objectFit: 'cover', width: 46, height: 46 }} /> : <span style={{ fontSize: 26 }}>🚫</span>}
-          <div style={{ fontSize: 13 }}>{avatarSel ? <span>Avatar: <b>{avatarSel.nome}</b>, no cantinho do vídeo, falando junto com a narração.</span> : <span>Sem avatar.</span>} <button onClick={onIrNarracao} style={{ ...botaoClaro, padding: '3px 10px', fontSize: 12 }}>Mudar</button></div>
-        </div>
       </div>
 
       <div style={bloco}>
