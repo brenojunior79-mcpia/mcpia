@@ -18,6 +18,15 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
   const ebooksLimit = plan?.is_unlimited ? 999 : ((plan?.credits_ebooks || 0) + (profile?.credits_ebooks_extra || 0))
   const creditPct = plan?.is_unlimited ? 50 : (videosLimit ? Math.round((videosUsed / videosLimit) * 100) : 0)
   const [mobileOpen, setMobileOpen] = useState(false)
+  // Menu "Notificacoes" (agrupa os envios). Abre/fecha com a setinha.
+  const NOTIF_ITENS = [
+    { href: '/dashboard/admin/notificacoes', icon: 'ti-bell-ringing', label: 'Envio de notificação' },
+    { href: '/dashboard/admin/emails', icon: 'ti-mail', label: 'Envio de e-mail' },
+    { href: '/dashboard/admin/sms', icon: 'ti-message', label: 'Envio de SMS' },
+  ]
+  const noGrupoNotif = NOTIF_ITENS.some(function(i) { return pathname === i.href || (pathname || '').indexOf(i.href + '/') === 0 })
+  const [notifAberto, setNotifAberto] = useState(false)
+  useEffect(function() { if (noGrupoNotif) setNotifAberto(true) }, [noGrupoNotif])
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   // Bolinha de notificacao do menu "Indique e ganhe": some depois da primeira visita
   const [indiqueSeen, setIndiqueSeen] = useState(true)
@@ -86,7 +95,6 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
     { href: '/dashboard/criativos-manuais', icon: 'ti-video', label: 'Criativos Manuais', locked: false },
     { href: '/dashboard/indique', icon: 'ti-gift', label: 'Indique e ganhe', locked: false, highlight: true },
     { href: '/dashboard/vendas', icon: 'ti-rocket', label: 'Vendendo no Automatico', locked: false },
-    { href: '/dashboard/metricas', icon: 'ti-chart-bar', label: 'Analisando Métricas', locked: false },
     { href: '/dashboard/estrutura-express', icon: 'ti-bolt', label: 'Estrutura Express', locked: false, badge: 'NOVO' },
     { href: '/dashboard/anuncios', icon: 'ti-brand-meta', label: 'Gerenciador de Anuncios', locked: !isAdmin },
     { href: '/dashboard/suporte', icon: 'ti-brand-whatsapp', label: 'WhatsApp de Suporte', locked: false },
@@ -95,9 +103,6 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
     ...((isAdmin || profile?.is_support) ? [{ href: '/dashboard/atendimento', icon: 'ti-brand-whatsapp', label: 'Atendimento WhatsApp', locked: false }] : []),
     ...(isAdmin ? [{ href: '/dashboard/admin', icon: 'ti-shield', label: 'Admin', locked: false }] : []),
     ...(isAdmin ? [{ href: '/dashboard/admin/conversas', icon: 'ti-message-2', label: 'Conversas (Junior)', locked: false }] : []),
-    ...(isAdmin ? [{ href: '/dashboard/admin/notificacoes', icon: 'ti-bell-ringing', label: 'Notificacoes (envio)', locked: false }] : []),
-    ...(isAdmin ? [{ href: '/dashboard/admin/emails', icon: 'ti-mail', label: 'E-mails (envio)', locked: false }] : []),
-    ...(isAdmin ? [{ href: '/dashboard/admin/sms', icon: 'ti-message', label: 'SMS (envio)', locked: false }] : []),
   ]
 
   return (
@@ -183,6 +188,34 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
               </Link>
             )
           })}
+
+          {isAdmin && (
+            <div>
+              <button
+                type="button"
+                onClick={function() { setNotifAberto(!notifAberto) }}
+                aria-expanded={notifAberto}
+                className={styles.navItem + (noGrupoNotif && !notifAberto ? ' ' + styles.active : '')}
+                style={{ width: '100%', background: 'transparent', border: 0, cursor: 'pointer', textAlign: 'left', font: 'inherit' }}
+              >
+                <i className="ti ti-bell" />
+                Notificações
+                <i className={'ti ' + (notifAberto ? 'ti-chevron-up' : 'ti-chevron-down')} style={{ marginLeft: 'auto', width: 'auto', fontSize: 15 }} />
+              </button>
+              {notifAberto && (
+                <div style={{ display: 'flex', flexDirection: 'column', marginLeft: 14, paddingLeft: 8, borderLeft: '1px solid var(--border2)' }}>
+                  {NOTIF_ITENS.map(function(i) {
+                    return (
+                      <Link key={i.href} href={i.href} prefetch={false} onClick={function() { setMobileOpen(false) }} className={styles.navItem + (pathname === i.href ? ' ' + styles.active : '')} style={{ fontSize: 13.5 }}>
+                        <i className={'ti ' + i.icon} />
+                        {i.label}
+                      </Link>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </nav>
 
         {/* Bottom */}

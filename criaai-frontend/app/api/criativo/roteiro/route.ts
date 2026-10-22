@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { usuarioCriativo } from '@/lib/criativoAuth'
+import { createClient } from '@/lib/supabase-server'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -73,7 +74,16 @@ export async function POST(req: NextRequest) {
     const out: Record<string, string> = {}
     for (const k of (bloco ? [bloco] : BLOCOS)) out[k] = String(j[k] || '').trim()
     if (Object.values(out).some(function(v) { return !v })) return NextResponse.json({ error: 'A IA nao devolveu o roteiro completo. Tente de novo.' }, { status: 502 })
-    return NextResponse.json(out)
+    // Roteiro completo novo: guarda no historico da pessoa (se falhar, o roteiro ainda aparece)
+    let id: string | null = null
+    if (!bloco) {
+      try {
+        const ins = await createClient().from('criativo_roteiros').insert({ user_id: u.id, produto, o_que_faz: oQueFaz, publico, dor, gancho: out.gancho, corpo: out.corpo, mecanismo: out.mecanismo, cta: out.cta }).select('id').single()
+        if (ins.error) console.error('[criativo/roteiro] historico:', ins.error.message)
+        else id = (ins.data as any).id
+      } catch (e) { console.error('[criativo/roteiro] historico:', e) }
+    }
+    return NextResponse.json({ ...out, id })
   } catch (e: any) {
     console.error('[criativo/roteiro]', e?.message || e)
     return NextResponse.json({ error: 'Nao foi possivel gerar o roteiro agora. Tente de novo.' }, { status: 502 })

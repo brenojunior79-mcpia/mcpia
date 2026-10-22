@@ -12,6 +12,7 @@ type Aba = 'roteiro' | 'narracao' | 'videos' | 'edicao'
 export default function CriativoPage() {
   const [aba, setAba] = useState<Aba>('roteiro')
   const [roteiro, setRoteiro] = useState<Roteiro>(ROTEIRO_VAZIO)
+  const [roteiroId, setRoteiroId] = useState<string | null>(null)
   const [textoNarracao, setTextoNarracao] = useState('')
   const [narracao, setNarracao] = useState<Narracao | null>(null)
   const [clipes, setClipes] = useState<Clipe[]>([])
@@ -52,7 +53,7 @@ export default function CriativoPage() {
 
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 18, padding: 20, maxWidth: 860, boxShadow: 'var(--shadow-sm)' }}>
           {aba === 'roteiro' && (
-            <CardRoteiro roteiro={roteiro} setRoteiro={setRoteiro} onUsar={function() { setTextoNarracao(roteiroEmTexto(roteiro)); setAba('narracao') }} />
+            <CardRoteiro roteiro={roteiro} setRoteiro={setRoteiro} roteiroId={roteiroId} setRoteiroId={setRoteiroId} onUsar={function() { setTextoNarracao(roteiroEmTexto(roteiro)); setAba('narracao') }} onUsarTexto={function(t) { setTextoNarracao(t); setAba('narracao') }} />
           )}
           {aba === 'narracao' && (
             <CardNarracao texto={textoNarracao} setTexto={setTextoNarracao} narracao={narracao} setNarracao={setNarracao} avatar={avatar} setAvatar={setAvatar} />

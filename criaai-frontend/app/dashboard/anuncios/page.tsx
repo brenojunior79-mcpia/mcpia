@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase-browser'
 import { calcular, relatorioDoFunil } from '@/lib/anuncios'
 import Funil from '@/components/anuncios/Funil'
 import ResumoFinanceiro from '@/components/anuncios/ResumoFinanceiro'
+import AnalisandoMetricas from '@/components/metricas/AnalisandoMetricas'
 import CampanhasTabela from '@/components/anuncios/CampanhasTabela'
 import CriativosAnuncios from '@/components/anuncios/CriativosAnuncios'
 import { orcamentoDiario } from '@/components/anuncios/CampanhaCard'
@@ -292,6 +293,8 @@ export default function AnunciosPage() {
                     </div>
 
                     <CriativosAnuncios criativos={criativos} carregando={criativosLoading} erro={criativosErro} />
+
+                    <AnalisandoMetricas embutido />
                   </>
                 )}
                 {campaignsLoading && <p style={{ color: 'var(--muted2)', fontSize: 13 }}>Carregando campanhas...</p>}
