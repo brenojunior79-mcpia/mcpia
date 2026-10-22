@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { calcular, relatorioDoFunil } from '@/lib/anuncios'
 import Funil from '@/components/anuncios/Funil'
-import GuiaFunil from '@/components/anuncios/GuiaFunil'
+import ResumoFinanceiro from '@/components/anuncios/ResumoFinanceiro'
 import CampanhasTabela from '@/components/anuncios/CampanhasTabela'
 import CriativosAnuncios from '@/components/anuncios/CriativosAnuncios'
 import { orcamentoDiario } from '@/components/anuncios/CampanhaCard'
@@ -249,6 +249,8 @@ export default function AnunciosPage() {
 
                 {campaignsData && !campaignsLoading && (
                   <>
+                    <ResumoFinanceiro periodo={periodo} />
+
                     <Funil m={mFunil} relatorio={relatorio} nomeCampanha={nomeFunil} />
 
                     <div>
@@ -257,8 +259,6 @@ export default function AnunciosPage() {
                       </button>
                       {analysis && <div style={{ ...cartao, marginTop: 12, fontSize: 13.5, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{analysis}</div>}
                     </div>
-
-                    <GuiaFunil />
 
                     <div>
                       <h2 style={{ ...titulo, marginBottom: 4 }}>🚀 Suas campanhas</h2>
