@@ -14,6 +14,7 @@ const PERIODOS: [string, string][] = [['today', 'Hoje'], ['yesterday', 'Ontem'],
 
 export default function AnunciosPage() {
   const [permitido, setPermitido] = useState<boolean | null>(null)
+  const [ehAdmin, setEhAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
   const [connection, setConnection] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
@@ -43,14 +44,14 @@ export default function AnunciosPage() {
     const params = new URLSearchParams(window.location.search)
     if (params.get('error')) setError(params.get('error'))
     if (params.get('connected')) window.history.replaceState({}, '', '/dashboard/anuncios')
-    // Por enquanto so o admin usa este menu
+    // Liberado para os alunos; os cards de faturamento/lucro da plataforma continuam so para o admin
     supabase.auth.getUser().then(async function(r) {
       const uid = r.data.user ? r.data.user.id : null
       if (!uid) { setPermitido(false); return }
       const p = await supabase.from('profiles').select('is_admin').eq('id', uid).maybeSingle()
-      const ok = !!(p.data && (p.data as any).is_admin)
-      setPermitido(ok)
-      if (ok) loadConnection()
+      setEhAdmin(!!(p.data && (p.data as any).is_admin))
+      setPermitido(true)
+      loadConnection()
     })
   }, [])
 
@@ -250,7 +251,7 @@ export default function AnunciosPage() {
 
                 {campaignsData && !campaignsLoading && (
                   <>
-                    <ResumoFinanceiro periodo={periodo} />
+                    {ehAdmin && <ResumoFinanceiro periodo={periodo} />}
 
                     <Funil m={mFunil} relatorio={relatorio} nomeCampanha={nomeFunil} />
 

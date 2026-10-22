@@ -74,8 +74,8 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
   const createdAt = profile?.created_at ? new Date(profile.created_at).getTime() : 0
   // Menus ocultos para todos (inclusive admin). Para voltar, remova o item daqui.
   const HIDDEN_FOR_ALL = ['/dashboard/indique']
-  // Menus ocultos para todos, menos o admin (em teste)
-  const HIDDEN_NON_ADMIN = ['/dashboard/anuncios']
+  // Menus ocultos para todos, menos o admin (em teste). Gerenciador de Anuncios liberado para os alunos.
+  const HIDDEN_NON_ADMIN: string[] = []
   const isNewUser = !isAdmin && createdAt > 0 && (Date.now() - createdAt) < HIDDEN_DAYS * 24 * 60 * 60 * 1000
   // Nos 7 primeiros dias, quem ainda nao tem plano nao ve nada sobre planos/creditos
   const hasActivePlan = profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing'
