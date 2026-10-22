@@ -7,6 +7,8 @@ import Atendentes from '@/components/whatsapp/Atendentes'
 import Fluxos from '@/components/whatsapp/Fluxos'
 import Conexoes from '@/components/whatsapp/Conexoes'
 import Disparo from '@/components/whatsapp/Disparo'
+import EditorImagem from '@/components/whatsapp/EditorImagem'
+import GerenciarRapidas, { type Rapida } from '@/components/whatsapp/GerenciarRapidas'
 import { paraMp3 } from '@/lib/audioMp3'
 import { classificar } from '@/lib/waMedia'
 
@@ -168,6 +170,9 @@ export default function AtendimentoPage() {
   const recCancel = useRef(false)
   const recTimer = useRef<any>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const [rapidasDb, setRapidasDb] = useState<{ suporte: Rapida[] | null; recuperacao: Rapida[] | null }>({ suporte: null, recuperacao: null })
+  const [gerRapidas, setGerRapidas] = useState(false)
+  const [editorImg, setEditorImg] = useState<Blob | null>(null)
   const [ferramentas, setFerramentas] = useState(false)
   const [pessoas, setPessoas] = useState<Pessoa[]>([])
   const [nomes, setNomes] = useState<Record<string, string>>({})
@@ -338,6 +343,55 @@ export default function AtendimentoPage() {
   }, [atualConexao])
   const tplsDaConversa = atualConexao ? tplsRec : tpls
   const janelaAberta = !!(atual && atual.last_inbound_at && Date.now() - new Date(atual.last_inbound_at).getTime() < WIN)
+  const canalConv: 'suporte' | 'recuperacao' = atual && atual.connection_id ? 'recuperacao' : 'suporte'
+  const carregarRapidas = useCallback(async function(c: 'suporte' | 'recuperacao') {
+    try {
+      const r = await fetch('/api/whatsapp/rapidas?canal=' + c, { cache: 'no-store' })
+      const j = await r.json().catch(function() { return {} })
+      if (r.ok && Array.isArray(j.rapidas)) setRapidasDb(function(x) { return { ...x, [c]: j.rapidas } })
+    } catch (e) {}
+  }, [])
+  useEffect(function() { if (atual) carregarRapidas(canalConv) }, [atual ? atual.id : '', canalConv])
+
+  // Ctrl+V com um print copiado: abre a tela de envio (so quando da para responder)
+  useEffect(function() {
+    const onPaste = function(e: ClipboardEvent) {
+      if (!atual || !janelaAberta || editorImg || gerRapidas) return
+      const t = e.target as HTMLElement | null
+      const campoOutro = !!t && (t.tagName === 'INPUT' || (t.tagName === 'TEXTAREA' && !t.dataset.msg))
+      if (campoOutro) return
+      const itens = e.clipboardData ? Array.from(e.clipboardData.items) : []
+      const it = itens.find(function(x) { return x.kind === 'file' && /^image\/(png|jpeg)$/.test(x.type) })
+      const f = it ? it.getAsFile() : null
+      if (!f) return
+      e.preventDefault()
+      setErro('')
+      setEditorImg(f)
+    }
+    document.addEventListener('paste', onPaste)
+    return function() { document.removeEventListener('paste', onPaste) }
+  }, [atual ? atual.id : '', janelaAberta, editorImg, gerRapidas])
+
+  // Botao "Colar print" (celular ou quando o Ctrl+V nao funciona)
+  async function colarDaAreaDeTransferencia() {
+    setErro('')
+    try {
+      const itens = await (navigator as any).clipboard.read()
+      for (const it of itens) {
+        const tipo = (it.types as string[]).find(function(t) { return t === 'image/png' || t === 'image/jpeg' })
+        if (tipo) { setEditorImg(await it.getType(tipo)); return }
+      }
+      setErro('Não há nenhum print copiado. Tire o print (ou copie uma imagem) e tente de novo.')
+    } catch (e) {
+      setErro('Não consegui ler o que foi copiado. Clique no campo de mensagem e use Ctrl+V.')
+    }
+  }
+
+  function usarRapida(r: { texto: string }) {
+    const primeiro = (atual && atual.name ? atual.name : '').trim().split(/\s+/)[0] || ''
+    const txt = r.texto.indexOf('{{nome}}') >= 0 ? r.texto.split('{{nome}}').join(primeiro).replace(/\s+([,.!?])/g, '$1') : r.texto
+    enviar(undefined, txt)
+  }
   const horasRestantes = atual && atual.last_inbound_at ? Math.max(0, Math.ceil((WIN - (Date.now() - new Date(atual.last_inbound_at).getTime())) / 3600000)) : 0
 
   // Texto e mensagens prontas: aparece na hora no chat e o envio acontece por tras (em fila, para manter a ordem)
@@ -404,25 +458,29 @@ export default function AtendimentoPage() {
     const c = classificar(mimeDe(f))
     if ('erro' in c) { setErro(c.erro); return }
     if (f.size > c.max) { setErro('Arquivo grande demais (máximo ' + Math.round(c.max / 1048576) + ' MB para este tipo).'); return }
+    // Foto/print: abre a tela de envio onde da para rabiscar e escrever a legenda
+    if (/^image\/(jpeg|png)$/.test(mimeDe(f))) { setEditorImg(f); return }
     setAnexo(f)
   }
 
   // Envia um arquivo (ou audio gravado): sobe direto ao armazenamento e depois manda pelo WhatsApp
-  async function enviarArquivo(file: Blob, nome: string, mime: string, legenda: string) {
-    if (!atual || enviando) return
+  async function enviarArquivo(file: Blob, nome: string, mime: string, legenda: string): Promise<boolean> {
+    if (!atual || enviando) return false
     setEnviando(true); setErro('')
+    let ok = false
     try {
       const u = await fetch('/api/whatsapp/upload-url', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId: atual.id, filename: nome, mime, size: file.size }) })
       const uj = await u.json().catch(function() { return {} })
-      if (!u.ok) { setErro(uj.error || 'Não foi possível preparar o envio.'); setEnviando(false); return }
+      if (!u.ok) { setErro(uj.error || 'Não foi possível preparar o envio.'); setEnviando(false); return false }
       const up = await supabase.storage.from('wa-media').uploadToSignedUrl(uj.path, uj.token, file, { contentType: mime })
-      if (up.error) { setErro('Não foi possível enviar o arquivo. Tente de novo.'); setEnviando(false); return }
+      if (up.error) { setErro('Não foi possível enviar o arquivo. Tente de novo.'); setEnviando(false); return false }
       const r = await fetch('/api/whatsapp/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId: atual.id, replyTo: respondendo && respondendo.wa_message_id ? respondendo.wa_message_id : undefined, media: { path: uj.path, mime, filename: nome, caption: legenda } }) })
       const j = await r.json().catch(function() { return {} })
       if (!r.ok) setErro(j.error || 'Não foi possível enviar.')
-      else { setTexto(''); setAnexo(null); setRespondendo(null); fetch('/api/whatsapp/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId: atual.id }) }).catch(function() {}); await carregarMsgs(atual.id); carregarConvs() }
+      else { ok = true; setTexto(''); setAnexo(null); setRespondendo(null); fetch('/api/whatsapp/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId: atual.id }) }).catch(function() {}); await carregarMsgs(atual.id); carregarConvs() }
     } catch (e) { setErro('Sem conexão. Tente de novo.') }
     setEnviando(false)
+    return ok
   }
 
   async function iniciarGravacao() {
@@ -559,7 +617,9 @@ export default function AtendimentoPage() {
 
   return (
     <div style={{ height: 'calc(100vh - 56px)', minHeight: 480, display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
-      {foto && (
+      {editorImg && atual && <EditorImagem blob={editorImg} enviando={enviando} erro={erro} onCancel={function() { setEditorImg(null); setErro('') }} onSend={async function(img, leg) { const ok = await enviarArquivo(img, 'print.jpg', 'image/jpeg', leg); if (ok) setEditorImg(null) }} />}
+        {gerRapidas && isAdmin && <GerenciarRapidas canal={canalConv} lista={(rapidasDb[canalConv] || []) as Rapida[]} onClose={function() { setGerRapidas(false) }} onChanged={function() { carregarRapidas(canalConv) }} />}
+        {foto && (
         <div onClick={function() { setFoto(null) }} style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <button onClick={function() { setFoto(null) }} title="Fechar" style={{ position: 'absolute', top: 14, right: 14, width: 44, height: 44, borderRadius: '50%', border: 0, background: 'rgba(255,255,255,0.18)', color: '#fff', fontSize: 28, lineHeight: 1, cursor: 'pointer' }}>×</button>
           <img src={foto} alt="Imagem" onClick={function(e) { e.stopPropagation() }} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 8 }} />
@@ -857,13 +917,18 @@ export default function AtendimentoPage() {
                 {janelaAberta ? (
                   <>
                     <div style={{ fontSize: 11.5, color: 'var(--muted2)', marginBottom: 6 }}>Você pode responder por mais ~{horasRestantes}h.</div>
-                    {(atual.connection_id ? RAPIDAS : RAPIDAS_SUPORTE).length > 0 && (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
-                        {(atual.connection_id ? RAPIDAS : RAPIDAS_SUPORTE).map(function(r) {
-                          return <button key={r.titulo} disabled={enviando} title={r.texto} onClick={function() { enviar(undefined, r.texto) }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 999, padding: '6px 12px', fontSize: 13, fontWeight: 700, opacity: enviando ? 0.55 : 1 }}>⚡ {r.titulo}</button>
-                        })}
-                      </div>
-                    )}
+                    {(function() {
+                      const lista: { id?: string; titulo: string; texto: string }[] = rapidasDb[canalConv] || (atual.connection_id ? RAPIDAS : RAPIDAS_SUPORTE)
+                      if (lista.length === 0 && !isAdmin) return null
+                      return (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                          {lista.map(function(r) {
+                            return <button key={r.id || r.titulo} disabled={enviando} title={r.texto} onClick={function() { usarRapida(r) }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 999, padding: '6px 12px', fontSize: 13, fontWeight: 700, opacity: enviando ? 0.55 : 1 }}>⚡ {r.titulo}</button>
+                          })}
+                          {isAdmin && <button onClick={function() { setGerRapidas(true) }} title="Adicionar, editar ou apagar mensagens rápidas" style={{ cursor: 'pointer', border: '1px dashed var(--border2)', background: 'transparent', color: 'var(--muted2)', borderRadius: 999, padding: '6px 12px', fontSize: 13, fontWeight: 700 }}>＋ Adicionar / editar</button>}
+                        </div>
+                      )
+                    })()}
                     {mostrarTpl && <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: 10, marginBottom: 8 }}><TemplatePicker tpls={tplsDaConversa} enviando={enviando} onSend={function(t) { enviar(t) }} /></div>}
                     {gravando ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.3)', borderRadius: 12, padding: '10px 12px' }}>
@@ -891,11 +956,12 @@ export default function AtendimentoPage() {
                             <button onClick={function() { setAnexo(null) }} style={{ border: 0, background: 'transparent', color: 'var(--muted2)', cursor: 'pointer', fontSize: 16 }}>×</button>
                           </div>
                         )}
-                        <textarea className="at-input" rows={2} placeholder={anexo ? 'Legenda (opcional)…' : 'Digite a resposta…'} value={texto} onChange={function(e) { setTexto(e.target.value) }}
+                        <textarea className="at-input" data-msg="1" rows={2} placeholder={anexo ? 'Legenda (opcional)…' : 'Digite a resposta…'} value={texto} onChange={function(e) { setTexto(e.target.value) }}
                           onKeyDown={function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (anexo) enviarArquivo(anexo, anexo.name, mimeDe(anexo), texto); else enviar() } }} style={{ resize: 'none' }} />
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
                           <input ref={fileRef} type="file" accept="image/jpeg,image/png,video/mp4,video/3gpp,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv" style={{ display: 'none' }} onChange={function(e) { escolherArquivo(e.target.files && e.target.files[0]); e.target.value = '' }} />
                           <button title="Enviar arquivo, foto ou vídeo" onClick={function() { if (fileRef.current) fileRef.current.click() }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 10px', fontSize: 14, fontWeight: 700 }}>📎 Arquivo</button>
+                          <button title="Colar um print que você copiou (ou use Ctrl+V)" onClick={colarDaAreaDeTransferencia} disabled={enviando} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 10px', fontSize: 14, fontWeight: 700 }}>📋 Colar print</button>
                           <button title="Gravar áudio" onClick={iniciarGravacao} disabled={enviando} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 10px', fontSize: 14, fontWeight: 700 }}>🎤 Áudio</button>
                           <button title="Enviar modelo aprovado" onClick={function() { setMostrarTpl(!mostrarTpl) }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: mostrarTpl ? 'var(--accent-light)' : 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 10px', fontSize: 14, fontWeight: 700 }}>📄 Modelo</button>
                           <div style={{ flex: 1 }} />
