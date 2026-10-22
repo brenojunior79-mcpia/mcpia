@@ -13,7 +13,6 @@ interface Notification {
 export default function Topbar({ profile, user }: { profile: any, user: any }) {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [showNotif, setShowNotif] = useState(false)
-  const [showConta, setShowConta] = useState(false)
   const [date, setDate] = useState('')
   const supabase = createClient()
 
@@ -59,20 +58,6 @@ export default function Topbar({ profile, user }: { profile: any, user: any }) {
     setNotifications(function(prev) {
       return prev.map(function(n) { return { ...n, read: true } })
     })
-  }
-
-  const plan = profile?.plans
-  const creditosRestantes = Math.max(0, ((plan?.credits_videos || 0) + (profile?.credits_videos_extra || 0)) - (profile?.credits_videos_used || 0))
-  // Nos 7 primeiros dias, quem ainda nao tem plano nao ve nada sobre planos/creditos (igual ao menu lateral)
-  const criadoEm = profile?.created_at ? new Date(profile.created_at).getTime() : 0
-  const novoAluno = !profile?.is_admin && criadoEm > 0 && (Date.now() - criadoEm) < 7 * 24 * 60 * 60 * 1000
-  const temPlano = profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing'
-  const hidePlans = novoAluno && !temPlano
-  const itemConta: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, fontSize: 13.5, fontWeight: 600, color: 'var(--text)', textDecoration: 'none' }
-
-  async function sair() {
-    await supabase.auth.signOut()
-    window.location.href = '/login'
   }
 
   // Saudacao por horario
@@ -215,34 +200,14 @@ export default function Topbar({ profile, user }: { profile: any, user: any }) {
 
 
 
-      <div style={{ position: 'relative' }}>
-        <button
-          onClick={function() { setShowConta(!showConta) }}
-          title="Minha conta"
-          style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, height: 38, padding: '0 12px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: 'var(--text)', fontSize: 13, fontWeight: 700 }}
-        >
-          <i className="ti ti-user-circle" style={{ fontSize: 20, color: 'var(--muted2)' }} />
-          <span className="minha-conta-texto">Minha conta</span>
-        </button>
-
-        {showConta && (
-          <>
-            <div onClick={function() { setShowConta(false) }} style={{ position: 'fixed', inset: 0, zIndex: 150 }} />
-            <div style={{ position: 'absolute', top: 46, right: 0, width: 280, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, boxShadow: 'var(--shadow-lg)', zIndex: 200, overflow: 'hidden' }}>
-              <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
-                <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', wordBreak: 'break-word' }}>{(profile?.full_name || '').trim() || 'Usuário'}</div>
-                <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 2, wordBreak: 'break-all' }}>{profile?.email || user?.email}</div>
-                {!hidePlans && <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 6 }}>Plano: <b style={{ color: 'var(--text)' }}>{plan?.name || 'Starter'}</b> · {plan?.is_unlimited ? '∞' : creditosRestantes} créditos</div>}
-              </div>
-              <div style={{ padding: 6 }}>
-                {!hidePlans && <a href="/dashboard/planos" style={itemConta}><i className="ti ti-credit-card" /> Meu plano</a>}
-                {!hidePlans && <a href="/dashboard/creditos" style={itemConta}><i className="ti ti-plus" /> Adicionar créditos</a>}
-                <button onClick={sair} style={{ ...itemConta, width: '100%', background: 'transparent', border: 0, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', color: '#ef4444' }}><i className="ti ti-logout" /> Sair</button>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
+      <a
+        href="/dashboard/conta"
+        title="Minha conta"
+        style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, height: 38, padding: '0 12px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: 'var(--text)', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}
+      >
+        <i className="ti ti-user-circle" style={{ fontSize: 20, color: 'var(--muted2)' }} />
+        <span className="minha-conta-texto">Minha conta</span>
+      </a>
       </div>
 
       <style>{`
