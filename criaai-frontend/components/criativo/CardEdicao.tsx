@@ -3,21 +3,40 @@ import { useEffect, useRef, useState } from 'react'
 import { input, label, dica, botao, botaoClaro, erro } from './ui'
 import type { Narracao } from './CardNarracao'
 import type { Clipe } from './CardVideos'
-import { carregarEditor, montarCriativo, duracaoDoAudio, compactarAudio, Formato, EstiloLegenda } from '@/lib/criativoRender'
+import { carregarEditor, montarCriativo, duracaoDoAudio, compactarAudio, EstiloLegenda } from '@/lib/criativoRender'
+import { AVATARES, AvatarId, avatarDataUrl, prepararAvatar } from '@/lib/avatares'
 
 type Faixa = { nome: string; arquivo: string }
 type Musicas = { animadas: Faixa[]; emocionais: Faixa[] }
-type MusicaOpcao = 'nenhuma' | 'animada' | 'emocional' | 'minha'
 
-export default function CardEdicao({ clipes, narracao, onIrVideos, onIrNarracao }: { clipes: Clipe[]; narracao: Narracao | null; onIrVideos: () => void; onIrNarracao: () => void }) {
+function MiniVideo({ clipe }: { clipe: Clipe }) {
+  const ref = useRef<HTMLVideoElement | null>(null)
+  const [tocando, setTocando] = useState(false)
+  function alternar() {
+    const v = ref.current
+    if (!v) return
+    if (v.paused) { v.play().then(function() { setTocando(true) }).catch(function() {}) } else { v.pause(); setTocando(false) }
+  }
+  return (
+    <div style={{ width: 118 }}>
+      <div style={{ position: 'relative', width: 118, aspectRatio: '9 / 16', borderRadius: 12, overflow: 'hidden', background: '#000' }}>
+        <video ref={ref} src={clipe.url + '#t=0.1'} poster={clipe.thumb} muted loop playsInline preload="metadata" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        <button onClick={alternar} aria-label={tocando ? 'Pausar' : 'Tocar'} style={{ position: 'absolute', inset: 0, cursor: 'pointer', border: 0, background: tocando ? 'transparent' : 'rgba(0,0,0,0.28)', color: '#fff', fontSize: 26 }}>{tocando ? '' : '▶'}</button>
+      </div>
+      <div style={{ fontSize: 11.5, marginTop: 4, color: 'var(--muted2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{clipe.nome}</div>
+    </div>
+  )
+}
+
+export default function CardEdicao({ clipes, narracao, avatar, onIrVideos, onIrNarracao }: { clipes: Clipe[]; narracao: Narracao | null; avatar: AvatarId | null; onIrVideos: () => void; onIrNarracao: () => void }) {
   const [audioOutro, setAudioOutro] = useState<File | null>(null)
   const [usarOutro, setUsarOutro] = useState(false)
   const [musicas, setMusicas] = useState<Musicas>({ animadas: [], emocionais: [] })
-  const [musicaTipo, setMusicaTipo] = useState<MusicaOpcao>('nenhuma')
-  const [faixa, setFaixa] = useState('')
+  const [faixa, setFaixa] = useState('') // '' = sem musica, 'minha' = arquivo enviado, ou o endereco da faixa
+  const [tocandoFaixa, setTocandoFaixa] = useState('')
+  const playerMusica = useRef<HTMLAudioElement | null>(null)
   const [minhaMusica, setMinhaMusica] = useState<File | null>(null)
   const [volume, setVolume] = useState(15)
-  const [formato, setFormato] = useState<Formato>('9:16')
   const [legendas, setLegendas] = useState(true)
   const [estilo, setEstilo] = useState<EstiloLegenda>('amarelo')
   const [ocupado, setOcupado] = useState(false)
@@ -32,19 +51,28 @@ export default function CardEdicao({ clipes, narracao, onIrVideos, onIrNarracao 
     fetch('/criativo/musicas.json', { cache: 'no-store' }).then(function(r) { return r.json() }).then(function(j) {
       setMusicas({ animadas: Array.isArray(j.animadas) ? j.animadas : [], emocionais: Array.isArray(j.emocionais) ? j.emocionais : [] })
     }).catch(function() {})
-    return function() { if (urlRes.current) URL.revokeObjectURL(urlRes.current) }
+    return function() { if (urlRes.current) URL.revokeObjectURL(urlRes.current); if (playerMusica.current) playerMusica.current.pause() }
   }, [])
 
-  const lista = musicaTipo === 'animada' ? musicas.animadas : musicaTipo === 'emocional' ? musicas.emocionais : []
-  useEffect(function() { setFaixa(lista.length ? lista[0].arquivo : '') }, [musicaTipo, musicas]) // eslint-disable-line
+  function ouvirFaixa(arquivo: string) {
+    if (playerMusica.current) { playerMusica.current.pause(); playerMusica.current = null }
+    if (tocandoFaixa === arquivo) { setTocandoFaixa(''); return }
+    const a = new Audio(arquivo)
+    a.volume = 0.8
+    a.onended = function() { setTocandoFaixa('') }
+    playerMusica.current = a
+    setTocandoFaixa(arquivo)
+    a.play().catch(function() { setTocandoFaixa('') })
+  }
 
+  const avatarSel = avatar ? AVATARES.filter(function(a) { return a.id === avatar })[0] || null : null
   const audioFonte: { blob: Blob; texto: string } | null = usarOutro && audioOutro ? { blob: audioOutro, texto: '' } : (narracao ? { blob: narracao.blob, texto: narracao.texto } : null)
 
   async function montar() {
     setMsg(''); setResultado(null)
     if (!clipes.length) { setMsg('Escolha os vídeos no card 3 primeiro.'); return }
     if (!audioFonte) { setMsg('Gere a narração no card 2 (ou envie um áudio).'); return }
-    if (musicaTipo === 'minha' && !minhaMusica) { setMsg('Envie o arquivo da música ou escolha outra opção.'); return }
+    if (faixa === 'minha' && !minhaMusica) { setMsg('Envie o arquivo da música ou escolha outra opção.'); return }
     setOcupado(true); setFracao(0)
     try {
       setEtapa('Lendo o áudio...')
@@ -68,8 +96,8 @@ export default function CardEdicao({ clipes, narracao, onIrVideos, onIrNarracao 
       }
 
       let musica: Blob | null = null
-      if (musicaTipo === 'minha') musica = minhaMusica
-      else if (musicaTipo !== 'nenhuma' && faixa) musica = await (await fetch(faixa)).blob()
+      if (faixa === 'minha') musica = minhaMusica
+      else if (faixa) musica = await (await fetch(faixa)).blob()
 
       // Videos da galeria / links: baixa agora (so os escolhidos)
       const blobsClipes: Blob[] = []
@@ -86,10 +114,17 @@ export default function CardEdicao({ clipes, narracao, onIrVideos, onIrNarracao 
         blobsClipes.push(b)
       }
 
+      let av = null
+      if (avatar) {
+        setEtapa('Preparando o avatar...'); setFracao(0.05)
+        const dados = AVATARES.filter(function(a) { return a.id === avatar })[0]
+        av = await prepararAvatar(dados, audioFonte.blob, duracao + 0.5)
+      }
+
       const blob = await montarCriativo(ff, {
         clipes: blobsClipes,
         narracao: audioFonte.blob, duracaoNarracao: duracao, musica, volumeMusica: volume / 100,
-        palavras, formato, estiloLegenda: estilo,
+        palavras, avatar: av, estiloLegenda: estilo,
         onProgresso: function(p, e) { setFracao(p); setEtapa(e) },
       })
       if (urlRes.current) URL.revokeObjectURL(urlRes.current)
@@ -108,17 +143,28 @@ export default function CardEdicao({ clipes, narracao, onIrVideos, onIrNarracao 
 
   return (
     <div>
-      <div style={{ fontSize: 13, color: 'var(--muted2)', marginBottom: 14 }}>A montagem junta seus vídeos, a narração e a música de fundo, e coloca as legendas. Ao final você baixa o criativo pronto.</div>
+      <div style={{ fontSize: 13, color: 'var(--muted2)', marginBottom: 14 }}>Confira os vídeos, o áudio e a música. A montagem junta tudo em um Reels no estilo UGC, com avatar e legendas. Ao final você baixa o criativo pronto.</div>
 
       <div style={bloco}>
-        <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 6 }}>1. Vídeos</div>
-        {clipes.length ? <div style={{ fontSize: 13 }}>{clipes.length} vídeo(s) escolhido(s) na galeria. <button onClick={onIrVideos} style={{ ...botaoClaro, padding: '3px 10px', fontSize: 12 }}>Mudar</button></div>
-          : <div style={{ fontSize: 13, color: '#b45309' }}>Nenhum vídeo escolhido. <button onClick={onIrVideos} style={{ ...botaoClaro, padding: '3px 10px', fontSize: 12 }}>Escolher no card 3</button></div>}
+        <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 8 }}>1. Vídeos escolhidos</div>
+        {clipes.length ? (
+          <div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {clipes.map(function(c) { return <MiniVideo key={c.id} clipe={c} /> })}
+            </div>
+            <div style={{ marginTop: 10, fontSize: 13 }}>{clipes.length} vídeo(s), na ordem em que você escolheu. <button onClick={onIrVideos} style={{ ...botaoClaro, padding: '3px 10px', fontSize: 12 }}>Mudar</button></div>
+          </div>
+        ) : <div style={{ fontSize: 13, color: '#b45309' }}>Nenhum vídeo escolhido. <button onClick={onIrVideos} style={{ ...botaoClaro, padding: '3px 10px', fontSize: 12 }}>Escolher no card 3</button></div>}
       </div>
 
       <div style={bloco}>
-        <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 6 }}>2. Áudio (narração)</div>
-        {narracao && !usarOutro && <div style={{ fontSize: 13 }}>✓ Usando a narração do card 2. <button onClick={function() { setUsarOutro(true) }} style={{ ...botaoClaro, padding: '3px 10px', fontSize: 12 }}>Enviar outro áudio</button></div>}
+        <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 8 }}>2. Áudio (narração)</div>
+        {narracao && !usarOutro && (
+          <div>
+            <audio controls src={narracao.url} style={{ width: '100%', maxWidth: 420 }} />
+            <div style={{ fontSize: 13, marginTop: 6 }}>Voz na velocidade {narracao.velocidade.toFixed(1).replace('.', ',')}x. <button onClick={onIrNarracao} style={{ ...botaoClaro, padding: '3px 10px', fontSize: 12 }}>Mudar voz, velocidade ou avatar</button> <button onClick={function() { setUsarOutro(true) }} style={{ ...botaoClaro, padding: '3px 10px', fontSize: 12 }}>Enviar outro áudio</button></div>
+          </div>
+        )}
         {!narracao && !usarOutro && <div style={{ fontSize: 13, color: '#b45309' }}>Você ainda não gerou a narração. <button onClick={onIrNarracao} style={{ ...botaoClaro, padding: '3px 10px', fontSize: 12 }}>Gerar no card 2</button> <button onClick={function() { setUsarOutro(true) }} style={{ ...botaoClaro, padding: '3px 10px', fontSize: 12 }}>Enviar um áudio</button></div>}
         {usarOutro && (
           <div>
@@ -126,31 +172,45 @@ export default function CardEdicao({ clipes, narracao, onIrVideos, onIrNarracao 
             {narracao && <div style={{ marginTop: 6 }}><button onClick={function() { setUsarOutro(false) }} style={{ ...botaoClaro, padding: '3px 10px', fontSize: 12 }}>Voltar para a narração do card 2</button></div>}
           </div>
         )}
+        <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          {avatarSel ? <img src={avatarDataUrl(avatarSel, 0)} alt={avatarSel.nome} width={46} height={46} style={{ borderRadius: '50%' }} /> : <span style={{ fontSize: 26 }}>🚫</span>}
+          <div style={{ fontSize: 13 }}>{avatarSel ? <span>Avatar: <b>{avatarSel.nome}</b>, no cantinho do vídeo, falando junto com a narração.</span> : <span>Sem avatar.</span>} <button onClick={onIrNarracao} style={{ ...botaoClaro, padding: '3px 10px', fontSize: 12 }}>Mudar</button></div>
+        </div>
       </div>
 
       <div style={bloco}>
-        <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 8 }}>3. Música de fundo</div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {([['nenhuma', 'Sem música'], ['animada', '🎉 Animada'], ['emocional', '💛 Emocional'], ['minha', '📁 Enviar a minha']] as [MusicaOpcao, string][]).map(function(o) {
-            return <button key={o[0]} onClick={function() { setMusicaTipo(o[0]) }} style={chip(musicaTipo === o[0])}>{o[1]}</button>
-          })}
-        </div>
-        {(musicaTipo === 'animada' || musicaTipo === 'emocional') && (
-          <div style={{ marginTop: 10 }}>
-            {lista.length ? (
-              <div>
-                <select style={{ ...input, maxWidth: 360 }} value={faixa} onChange={function(e) { setFaixa(e.target.value) }}>
-                  {lista.map(function(f) { return <option key={f.arquivo} value={f.arquivo}>{f.nome}</option> })}
-                </select>
-                {faixa && <audio controls src={faixa} style={{ width: '100%', maxWidth: 360, marginTop: 8 }} />}
+        <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 4 }}>3. Música de fundo</div>
+        <div style={{ ...dica, marginBottom: 10 }}>Toque no ▶ para ouvir e marque a que você quer no criativo.</div>
+
+        <button onClick={function() { setFaixa('') }} style={{ ...chip(faixa === ''), marginBottom: 10 }}>{faixa === '' ? '✓ ' : ''}Sem música</button>
+
+        {([['🎉 Animadas', musicas.animadas], ['💛 Emocionais', musicas.emocionais]] as [string, Faixa[]][]).map(function(grp) {
+          return grp[1].length ? (
+            <div key={grp[0]} style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--muted2)', marginBottom: 6 }}>{grp[0]}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxWidth: 420 }}>
+                {grp[1].map(function(f) {
+                  const on = faixa === f.arquivo
+                  return (
+                    <div key={f.arquivo} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 12, border: on ? '2px solid #7c5cfc' : '1px solid var(--border2)', background: on ? 'rgba(124,92,252,0.10)' : 'var(--surface)' }}>
+                      <button onClick={function() { ouvirFaixa(f.arquivo) }} aria-label={tocandoFaixa === f.arquivo ? 'Parar' : 'Ouvir'} style={{ cursor: 'pointer', width: 36, height: 36, borderRadius: '50%', border: 0, background: '#7c5cfc', color: '#fff', fontSize: 14, fontWeight: 800, flexShrink: 0 }}>{tocandoFaixa === f.arquivo ? '■' : '▶'}</button>
+                      <div style={{ flex: 1, fontWeight: 700, fontSize: 14 }}>{f.nome}</div>
+                      <button onClick={function() { setFaixa(on ? '' : f.arquivo) }} style={{ cursor: 'pointer', padding: '6px 12px', borderRadius: 999, fontSize: 12.5, fontWeight: 800, border: on ? '0' : '1px solid var(--border2)', background: on ? '#15803d' : 'var(--surface2)', color: on ? '#fff' : 'var(--text)' }}>{on ? '✓ Escolhida' : 'Escolher'}</button>
+                    </div>
+                  )
+                })}
               </div>
-            ) : <div style={{ fontSize: 13, color: 'var(--muted2)' }}>As músicas desta categoria ainda não foram adicionadas. Use “Enviar a minha” por enquanto.</div>}
-          </div>
-        )}
-        {musicaTipo === 'minha' && (
-          <div style={{ marginTop: 10 }}><input type="file" accept="audio/*,.mp3,.wav,.m4a,.ogg" onChange={function(e) { setMinhaMusica(e.target.files && e.target.files[0] ? e.target.files[0] : null) }} style={{ fontSize: 13 }} /></div>
-        )}
-        {musicaTipo !== 'nenhuma' && (
+            </div>
+          ) : null
+        })}
+        {!musicas.animadas.length && !musicas.emocionais.length && <div style={{ fontSize: 13, color: 'var(--muted2)', marginBottom: 8 }}>As músicas ainda não foram adicionadas. Use “Enviar a minha”.</div>}
+
+        <div style={{ marginTop: 4 }}>
+          <button onClick={function() { setFaixa('minha') }} style={chip(faixa === 'minha')}>{faixa === 'minha' ? '✓ ' : ''}📁 Enviar a minha</button>
+          {faixa === 'minha' && <div style={{ marginTop: 8 }}><input type="file" accept="audio/*,.mp3,.wav,.m4a,.ogg" onChange={function(e) { setMinhaMusica(e.target.files && e.target.files[0] ? e.target.files[0] : null) }} style={{ fontSize: 13 }} /></div>}
+        </div>
+
+        {faixa !== '' && (
           <div style={{ marginTop: 12, maxWidth: 360 }}>
             <label style={label}>Volume da música: {volume}% <span style={dica}>(a voz fica sempre mais alta)</span></label>
             <input type="range" min={5} max={40} value={volume} onChange={function(e) { setVolume(parseInt(e.target.value, 10)) }} style={{ width: '100%' }} />
@@ -159,15 +219,10 @@ export default function CardEdicao({ clipes, narracao, onIrVideos, onIrNarracao 
       </div>
 
       <div style={bloco}>
-        <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 8 }}>4. Formato e legendas</div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
-          {([['9:16', '9:16 · Reels / Stories'], ['1:1', '1:1 · Feed'], ['16:9', '16:9 · Horizontal']] as [Formato, string][]).map(function(o) {
-            return <button key={o[0]} onClick={function() { setFormato(o[0]) }} style={chip(formato === o[0])}>{o[1]}</button>
-          })}
+        <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 8 }}>4. Legendas <span style={{ ...dica, fontWeight: 400 }}>(o criativo sai em formato Reels, 9:16)</span></div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 700 }}>
+          <input id="leg-check" type="checkbox" checked={legendas} onChange={function(e) { setLegendas(e.target.checked) }} style={{ cursor: 'pointer', width: 18, height: 18, flex: 'none', padding: 0 }} /> <span onClick={function() { setLegendas(!legendas) }} style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>Colocar legendas</span>
         </div>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
-          <input type="checkbox" checked={legendas} onChange={function(e) { setLegendas(e.target.checked) }} /> Colocar legendas
-        </label>
         {legendas && (
           <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
             <button onClick={function() { setEstilo('amarelo') }} style={chip(estilo === 'amarelo')}>Palavra em amarelo</button>
@@ -192,7 +247,7 @@ export default function CardEdicao({ clipes, narracao, onIrVideos, onIrNarracao 
       {resultado && (
         <div style={{ marginTop: 18, ...bloco }}>
           <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 8 }}>✓ Criativo pronto ({resultado.mb.toFixed(1)} MB)</div>
-          <video src={resultado.url} controls playsInline style={{ width: '100%', maxWidth: formato === '16:9' ? 640 : 360, borderRadius: 12, background: '#000', display: 'block' }} />
+          <video src={resultado.url} controls playsInline style={{ width: '100%', maxWidth: 360, borderRadius: 12, background: '#000', display: 'block' }} />
           <div style={{ marginTop: 10 }}>
             <a href={resultado.url} download="criativo.mp4" style={{ ...botao, textDecoration: 'none', display: 'inline-block' }}>⬇ Baixar criativo (MP4)</a>
           </div>

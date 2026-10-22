@@ -1,8 +1,13 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { input, label, dica, botao, botaoClaro, erro } from './ui'
+import { carregarEditor, acelerarAudio } from '@/lib/criativoRender'
+import { AVATARES, AvatarId, avatarDataUrl } from '@/lib/avatares'
 
-export type Narracao = { url: string; blob: Blob; texto: string; voz: string }
+// blob = audio final (ja na velocidade escolhida); original = audio como a voz falou, sem acelerar
+export type Narracao = { url: string; blob: Blob; original: Blob; velocidade: number; texto: string; voz: string }
+
+const VELOCIDADES = [1.1, 1.2, 1.3, 1.4]
 
 const VOZES: { id: string; nome: string; desc: string; sexo: 'h' | 'm' }[] = [
   { id: 'onyx', nome: 'Rafael', desc: 'grave e firme', sexo: 'h' },
@@ -15,8 +20,10 @@ const VOZES: { id: string; nome: string; desc: string; sexo: 'h' | 'm' }[] = [
   { id: 'sage', nome: 'Patrícia', desc: 'segura e serena', sexo: 'm' },
 ]
 
-export default function CardNarracao({ texto, setTexto, narracao, setNarracao }: { texto: string; setTexto: (t: string) => void; narracao: Narracao | null; setNarracao: (n: Narracao | null) => void }) {
+export default function CardNarracao({ texto, setTexto, narracao, setNarracao, avatar, setAvatar }: { texto: string; setTexto: (t: string) => void; narracao: Narracao | null; setNarracao: (n: Narracao | null) => void; avatar: AvatarId | null; setAvatar: (a: AvatarId | null) => void }) {
   const [voz, setVoz] = useState('onyx')
+  const [velocidade, setVelocidade] = useState(1.1)
+  const [ajustando, setAjustando] = useState(false)
   const [estilo, setEstilo] = useState('natural')
   const [carregando, setCarregando] = useState(false)
   const [msg, setMsg] = useState('')
@@ -61,10 +68,38 @@ export default function CardNarracao({ texto, setTexto, narracao, setNarracao }:
     if (!url) { setMsg('Não foi possível carregar a amostra.'); setTocando(''); return }
     try {
       const a = new Audio(url)
+      a.playbackRate = velocidade
+      ;(a as any).preservesPitch = true
       player.current = a
       a.onended = function() { setTocando(function(t) { return t === id ? '' : t }) }
       await a.play()
     } catch (e) { setTocando('') }
+  }
+
+  // Aplica a velocidade escolhida (sem mudar o tom da voz)
+  async function comVelocidade(original: Blob, v: number): Promise<Blob> {
+    try {
+      const ff = await carregarEditor(function() { setMsg('Preparando o ajuste de velocidade (só na primeira vez)...') })
+      const out = await acelerarAudio(ff, original, v)
+      setMsg('')
+      return out
+    } catch (e) {
+      setMsg('Não consegui mudar a velocidade agora. O áudio ficou na velocidade normal.')
+      return original
+    }
+  }
+
+  async function mudarVelocidade(v: number) {
+    setVelocidade(v)
+    if (!narracao || ajustando) return
+    setAjustando(true); setMsg('')
+    try {
+      const final = await comVelocidade(narracao.original, v)
+      if (urlAnterior.current) URL.revokeObjectURL(urlAnterior.current)
+      const url = URL.createObjectURL(final)
+      urlAnterior.current = url
+      setNarracao({ ...narracao, url, blob: final, velocidade: v })
+    } finally { setAjustando(false) }
   }
 
   async function gerar() {
@@ -74,11 +109,12 @@ export default function CardNarracao({ texto, setTexto, narracao, setNarracao }:
     try {
       const r = await fetch('/api/criativo/narrar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ texto, voz, estilo }) })
       if (!r.ok) { const j = await r.json().catch(function() { return {} }); setMsg(j.error || 'Não foi possível gerar a narração agora.'); return }
-      const blob = await r.blob()
+      const original = await r.blob()
+      const final = await comVelocidade(original, velocidade)
       if (urlAnterior.current) URL.revokeObjectURL(urlAnterior.current)
-      const url = URL.createObjectURL(blob)
+      const url = URL.createObjectURL(final)
       urlAnterior.current = url
-      setNarracao({ url, blob, texto, voz })
+      setNarracao({ url, blob: final, original, velocidade, texto, voz })
     } catch (e) { setMsg('Sem conexão. Tente de novo.') } finally { setCarregando(false) }
   }
 
@@ -107,7 +143,7 @@ export default function CardNarracao({ texto, setTexto, narracao, setNarracao }:
   const chars = texto.length
   return (
     <div>
-      <div style={{ fontSize: 13, color: 'var(--muted2)', marginBottom: 14 }}>Cole o texto, escolha a voz e baixe o áudio da narração.</div>
+      <div style={{ fontSize: 13, color: 'var(--muted2)', marginBottom: 14 }}>Cole o texto, escolha a voz, a velocidade e o avatar. Depois gere e baixe o áudio da narração.</div>
 
       <label style={label}>Texto da narração</label>
       <textarea style={{ ...input, resize: 'vertical' }} rows={7} value={texto} onChange={function(e) { setTexto(e.target.value) }} placeholder="Cole aqui o texto (ou traga do card Roteiro)." />
@@ -125,6 +161,38 @@ export default function CardNarracao({ texto, setTexto, narracao, setNarracao }:
           <option value="natural">Natural</option><option value="vendedor">Animado (vendedor)</option><option value="emocional">Emocional e calmo</option>
         </select>
       </div>
+
+      <div style={{ marginTop: 14 }}>
+        <label style={label}>Velocidade da voz <span style={dica}>(1.1 a 1.4, sem mudar o tom)</span></label>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {VELOCIDADES.map(function(v) {
+            const on = velocidade === v
+            return <button key={v} onClick={function() { mudarVelocidade(v) }} disabled={ajustando} style={{ cursor: 'pointer', padding: '9px 18px', borderRadius: 999, fontSize: 14, fontWeight: 800, color: 'var(--text)', border: on ? '2px solid #7c5cfc' : '1px solid var(--border2)', background: on ? 'rgba(124,92,252,0.10)' : 'var(--surface2)' }}>{on ? '✓ ' : ''}{v.toFixed(1).replace('.', ',')}x</button>
+          })}
+        </div>
+        {ajustando && <div style={{ ...dica, marginTop: 6 }}>Ajustando a velocidade...</div>}
+      </div>
+
+      <div style={{ marginTop: 18 }}>
+        <label style={label}>Avatar do criativo (UGC) <span style={dica}>(aparece no cantinho do vídeo e “fala” junto com a narração)</span></label>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          {AVATARES.map(function(a) {
+            const on = avatar === a.id
+            return (
+              <button key={a.id} onClick={function() { setAvatar(on ? null : a.id) }} style={{ cursor: 'pointer', width: 112, padding: '10px 8px', borderRadius: 14, color: 'var(--text)', border: on ? '2px solid #7c5cfc' : '1px solid var(--border2)', background: on ? 'rgba(124,92,252,0.10)' : 'var(--surface2)', textAlign: 'center' }}>
+                <img src={avatarDataUrl(a, 0)} alt={a.nome} width={76} height={76} style={{ display: 'block', margin: '0 auto 6px', borderRadius: '50%' }} />
+                <div style={{ fontWeight: 800, fontSize: 13.5 }}>{on ? '✓ ' : ''}{a.nome}</div>
+                <div style={{ fontSize: 11.5, color: 'var(--muted2)' }}>{a.sexo === 'h' ? 'Homem' : 'Mulher'}</div>
+              </button>
+            )
+          })}
+          <button onClick={function() { setAvatar(null) }} style={{ cursor: 'pointer', width: 112, padding: '10px 8px', borderRadius: 14, color: 'var(--text)', border: avatar === null ? '2px solid #7c5cfc' : '1px solid var(--border2)', background: avatar === null ? 'rgba(124,92,252,0.10)' : 'var(--surface2)', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+            <span style={{ fontSize: 28 }}>🚫</span>
+            <div style={{ fontWeight: 800, fontSize: 13 }}>{avatar === null ? '✓ ' : ''}Sem avatar</div>
+          </button>
+        </div>
+      </div>
+
 
       <div style={{ marginTop: 16, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
         <button onClick={gerar} disabled={carregando || chars > 3000} style={{ ...botao, opacity: carregando || chars > 3000 ? 0.6 : 1 }}>{carregando ? 'Gerando áudio...' : (narracao ? '🎙️ Gerar de novo' : '🎙️ Gerar narração')}</button>

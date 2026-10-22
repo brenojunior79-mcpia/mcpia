@@ -5,6 +5,7 @@ import CardRoteiro, { Roteiro, ROTEIRO_VAZIO, roteiroEmTexto } from '@/component
 import CardNarracao, { Narracao } from '@/components/criativo/CardNarracao'
 import CardVideos, { Clipe } from '@/components/criativo/CardVideos'
 import CardEdicao from '@/components/criativo/CardEdicao'
+import type { AvatarId } from '@/lib/avatares'
 
 type Aba = 'roteiro' | 'narracao' | 'videos' | 'edicao'
 
@@ -14,12 +15,13 @@ export default function CriativoPage() {
   const [textoNarracao, setTextoNarracao] = useState('')
   const [narracao, setNarracao] = useState<Narracao | null>(null)
   const [clipes, setClipes] = useState<Clipe[]>([])
+  const [avatar, setAvatar] = useState<AvatarId | null>(null)
 
   const cards: { id: Aba; n: number; icone: string; titulo: string; sub: string; pronto: boolean }[] = [
     { id: 'roteiro', n: 1, icone: '✍️', titulo: 'Roteiro', sub: 'Gancho, corpo, mecanismo e CTA', pronto: !!roteiroEmTexto(roteiro) },
-    { id: 'narracao', n: 2, icone: '🎙️', titulo: 'Narração', sub: 'Texto vira áudio com a voz que você escolher', pronto: !!narracao },
+    { id: 'narracao', n: 2, icone: '🎙️', titulo: 'Narração', sub: 'Voz, velocidade e avatar do criativo', pronto: !!narracao },
     { id: 'videos', n: 3, icone: '🎞️', titulo: 'Vídeos', sub: 'Escolha os vídeos do criativo', pronto: clipes.length > 0 },
-    { id: 'edicao', n: 4, icone: '✂️', titulo: 'Edição', sub: 'Junta vídeo, narração, música e legenda', pronto: false },
+    { id: 'edicao', n: 4, icone: '✂️', titulo: 'Edição', sub: 'Vídeos, áudio e música em um Reels UGC', pronto: false },
   ]
 
   return (
@@ -53,10 +55,10 @@ export default function CriativoPage() {
             <CardRoteiro roteiro={roteiro} setRoteiro={setRoteiro} onUsar={function() { setTextoNarracao(roteiroEmTexto(roteiro)); setAba('narracao') }} />
           )}
           {aba === 'narracao' && (
-            <CardNarracao texto={textoNarracao} setTexto={setTextoNarracao} narracao={narracao} setNarracao={setNarracao} />
+            <CardNarracao texto={textoNarracao} setTexto={setTextoNarracao} narracao={narracao} setNarracao={setNarracao} avatar={avatar} setAvatar={setAvatar} />
           )}
           {aba === 'videos' && <CardVideos clipes={clipes} setClipes={setClipes} onSeguir={function() { setAba('edicao') }} />}
-          {aba === 'edicao' && <CardEdicao clipes={clipes} narracao={narracao} onIrVideos={function() { setAba('videos') }} onIrNarracao={function() { setAba('narracao') }} />}
+          {aba === 'edicao' && <CardEdicao clipes={clipes} narracao={narracao} avatar={avatar} onIrVideos={function() { setAba('videos') }} onIrNarracao={function() { setAba('narracao') }} />}
         </div>
       </div>
     </div>

@@ -1,4 +1,12 @@
 {
-  "animadas": [],
-  "emocionais": []
+  "animadas": [
+    { "nome": "Ritmo Alegre", "arquivo": "/criativo/musicas/ritmo-alegre.mp3" },
+    { "nome": "Energia Positiva", "arquivo": "/criativo/musicas/energia-positiva.mp3" },
+    { "nome": "Vibe Leve", "arquivo": "/criativo/musicas/vibe-leve.mp3" }
+  ],
+  "emocionais": [
+    { "nome": "Esperança", "arquivo": "/criativo/musicas/esperanca.mp3" },
+    { "nome": "Coração Aberto", "arquivo": "/criativo/musicas/coracao-aberto.mp3" },
+    { "nome": "Amanhecer", "arquivo": "/criativo/musicas/amanhecer.mp3" }
+  ]
 }

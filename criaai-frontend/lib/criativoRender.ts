@@ -19,7 +19,7 @@ export type OpcoesRender = {
   musica?: Blob | null
   volumeMusica: number // 0 a 1
   palavras: Palavra[] | null // null = sem legenda
-  formato: Formato
+  avatar?: { imagens: { nome: string; dados: Uint8Array }[]; lista: string } | null // avatar no canto (UGC)
   estiloLegenda: EstiloLegenda
   onProgresso: (fracao: number, etapa: string) => void
 }
@@ -65,9 +65,10 @@ export function agruparPalavras(palavras: Palavra[]): Palavra[][] {
   return grupos
 }
 
-export function gerarAss(palavras: Palavra[], w: number, h: number, estilo: EstiloLegenda): string {
+export function gerarAss(palavras: Palavra[], w: number, h: number, estilo: EstiloLegenda, comAvatar = false): string {
   const tam = Math.round(w * (w > h ? 0.05 : 0.075))
-  const margemV = Math.round(h * (w > h ? 0.1 : 0.2))
+  // com avatar no canto, a legenda sobe um pouco para nao ficar por cima dele
+  const margemV = Math.round(h * (w > h ? 0.1 : comAvatar ? 0.3 : 0.2))
   const destaque = estilo === 'amarelo' ? '&H0000FFFF&' : '&H00FFFFFF&' // BGR: amarelo = 00FFFF
   const normal = '&H00FFFFFF&'
   const linhas: string[] = []
@@ -108,7 +109,7 @@ async function bytes(b: Blob): Promise<Uint8Array> {
 }
 
 export async function montarCriativo(ff: FFmpeg, o: OpcoesRender): Promise<Blob> {
-  const { w, h } = DIMENSOES[o.formato]
+  const { w, h } = DIMENSOES['9:16'] // so Reels
   const n = o.clipes.length
   if (!n) throw new Error('Escolha pelo menos um video.')
   const total = Math.max(3, o.duracaoNarracao + 0.5)
@@ -136,13 +137,20 @@ export async function montarCriativo(ff: FFmpeg, o: OpcoesRender): Promise<Blob>
       try { await ff.createDir('/fonts') } catch (e) {}
       const fonte = new Uint8Array(await (await fetch('/fonts/Montserrat-ExtraBold.ttf')).arrayBuffer())
       await ff.writeFile('/fonts/Montserrat-ExtraBold.ttf', fonte); arquivos.push('/fonts/Montserrat-ExtraBold.ttf')
-      await grava('legenda.ass', gerarAss(o.palavras as Palavra[], w, h, o.estiloLegenda))
+      await grava('legenda.ass', gerarAss(o.palavras as Palavra[], w, h, o.estiloLegenda, !!o.avatar))
+    }
+
+    const temAvatar = !!(o.avatar && o.avatar.imagens.length)
+    if (o.avatar && temAvatar) {
+      for (const im of o.avatar.imagens) await grava(im.nome, im.dados)
+      await grava('avatar.txt', o.avatar.lista)
     }
 
     const args: string[] = []
     for (let i = 0; i < n; i++) args.push('-stream_loop', '-1', '-t', seg.toFixed(3), '-i', 'c' + i + '.vid')
     args.push('-i', 'narr.aud')
     if (temMusica) args.push('-stream_loop', '-1', '-i', 'musica.aud')
+    if (temAvatar) args.push('-f', 'concat', '-safe', '0', '-i', 'avatar.txt')
 
     const f: string[] = []
     for (let i = 0; i < n; i++) {
@@ -151,7 +159,15 @@ export async function montarCriativo(ff: FFmpeg, o: OpcoesRender): Promise<Blob>
     let cadeia = ''
     for (let i = 0; i < n; i++) cadeia += '[v' + i + ']'
     f.push(cadeia + 'concat=n=' + n + ':v=1:a=0[vc]')
-    f.push(comLegenda ? '[vc]subtitles=legenda.ass:fontsdir=/fonts[vout]' : '[vc]null[vout]')
+    const iAv = n + 1 + (temMusica ? 1 : 0)
+    const tamAv = 230
+    f.push(comLegenda ? '[vc]subtitles=legenda.ass:fontsdir=/fonts[vs]' : '[vc]null[vs]')
+    if (temAvatar) {
+      f.push('[' + iAv + ':v]format=rgba,scale=' + tamAv + ':' + tamAv + ',fps=30[av]')
+      f.push('[vs][av]overlay=W-w-34:H-h-120:format=auto[vout]')
+    } else {
+      f.push('[vs]null[vout]')
+    }
 
     const iN = n
     const fade = 'afade=t=out:st=' + Math.max(0, total - 1.5).toFixed(2) + ':d=1.5'
@@ -192,5 +208,21 @@ export async function compactarAudio(ff: FFmpeg, blob: Blob): Promise<Blob> {
   } finally {
     try { await ff.deleteFile('in.aud') } catch (e) {}
     try { await ff.deleteFile('out.mp3') } catch (e) {}
+  }
+}
+
+// Muda a velocidade da voz sem mudar o tom (de 1.0 a 2.0)
+export async function acelerarAudio(ff: FFmpeg, blob: Blob, velocidade: number): Promise<Blob> {
+  const v = Math.min(2, Math.max(0.5, velocidade))
+  if (Math.abs(v - 1) < 0.001) return blob
+  await ff.writeFile('vel_in.aud', new Uint8Array(await blob.arrayBuffer()))
+  try {
+    const code = await ff.exec(['-i', 'vel_in.aud', '-vn', '-filter:a', 'atempo=' + v.toFixed(3), '-ar', '44100', '-b:a', '128k', '-y', 'vel_out.mp3'])
+    if (code !== 0) throw new Error('Nao foi possivel mudar a velocidade do audio.')
+    const out = (await ff.readFile('vel_out.mp3')) as Uint8Array
+    return new Blob([out as any], { type: 'audio/mpeg' })
+  } finally {
+    try { await ff.deleteFile('vel_in.aud') } catch (e) {}
+    try { await ff.deleteFile('vel_out.mp3') } catch (e) {}
   }
 }
