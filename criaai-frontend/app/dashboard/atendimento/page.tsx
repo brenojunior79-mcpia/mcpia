@@ -60,23 +60,8 @@ function diaMsg(iso: string): string {
 function nomeDe(c: Conv): string { return c.name || fmtPhone(c.wa_id) }
 const CORES_AVATAR = ['linear-gradient(135deg,#16a34a,#4ade80)', 'linear-gradient(135deg,#2563eb,#60a5fa)', 'linear-gradient(135deg,#7c3aed,#a78bfa)', 'linear-gradient(135deg,#db2777,#f472b6)', 'linear-gradient(135deg,#ea580c,#fb923c)', 'linear-gradient(135deg,#0d9488,#2dd4bf)', 'linear-gradient(135deg,#ca8a04,#facc15)', 'linear-gradient(135deg,#475569,#94a3b8)']
 function corAvatar(c: Conv): string { let h = 0; const t = String(c.wa_id || c.id); for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0; return CORES_AVATAR[h % CORES_AVATAR.length] }
-// Online na plataforma: o aluno avisa a cada 1 minuto enquanto a tela esta aberta; passou de ~2,5 min = offline
-const ONLINE_MS = 150 * 1000
-function estaOnline(visto: string | undefined, agora: number): boolean {
-  return !!visto && agora - new Date(visto).getTime() < ONLINE_MS
-}
-function textoVisto(visto: string | undefined, agora: number): string {
-  if (!visto) return 'nunca entrou na plataforma'
-  const min = Math.max(0, Math.round((agora - new Date(visto).getTime()) / 60000))
-  if (min < 60) return 'visto há ' + Math.max(1, min) + ' min'
-  const h = Math.round(min / 60)
-  if (h < 24) return 'visto há ' + h + ' h'
-  const d = Math.round(h / 24)
-  return 'visto há ' + d + (d === 1 ? ' dia' : ' dias')
-}
-
-function Avatar({ c, size, online }: { c: Conv; size: number; online?: boolean }) {
-  return <div style={{ position: 'relative', flexShrink: 0, width: size, height: size }}><div style={{ width: size, height: size, borderRadius: '50%', background: corAvatar(c), color: '#fff', fontWeight: 800, fontSize: Math.round(size * 0.42), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 3px rgba(0,0,0,0.18)' }}>{inicial(c)}</div>{online && <span title="Online na plataforma" style={{ position: 'absolute', right: 0, bottom: 0, width: Math.max(10, Math.round(size * 0.27)), height: Math.max(10, Math.round(size * 0.27)), borderRadius: '50%', background: '#22c55e', border: '2px solid var(--surface, #fff)', boxSizing: 'border-box' }} />}</div>
+function Avatar({ c, size }: { c: Conv; size: number }) {
+  return <div style={{ width: size, height: size, borderRadius: '50%', background: corAvatar(c), color: '#fff', fontWeight: 800, fontSize: Math.round(size * 0.42), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 3px rgba(0,0,0,0.18)' }}>{inicial(c)}</div>
 }
 function inicial(c: Conv): string { return (nomeDe(c).replace(/[^A-Za-zÀ-ú0-9]/g, '')[0] || '?').toUpperCase() }
 
@@ -341,21 +326,6 @@ export default function AtendimentoPage() {
   const [compra, setCompra] = useState<{ comprou_em: string | null; produto: string | null; cat: string | null; por: string | null } | null>(null)
   const perfilAtual = atual ? atual.profile_id || '' : ''
   const waAtual = atual ? atual.wa_id : ''
-  // Quem esta online na plataforma agora (so alunos com conta ligada a conversa)
-  const [presenca, setPresenca] = useState<Record<string, string>>({})
-  const [agoraMs, setAgoraMs] = useState(Date.now())
-  const idsPresenca = convs.filter(function(c) { return !!c.profile_id && (canal === 'recuperacao') === !!c.connection_id && c.status !== 'resolvida' }).map(function(c) { return c.profile_id as string }).filter(function(v, i, a) { return a.indexOf(v) === i }).slice(0, 300).join(',')
-  useEffect(function() {
-    if (!idsPresenca) { setPresenca({}); return }
-    let vivo = true
-    function buscar() {
-      if (document.visibilityState !== 'visible') return
-      fetch('/api/whatsapp/presenca?ids=' + idsPresenca, { cache: 'no-store' }).then(function(r) { return r.json() }).then(function(j) { if (vivo && j && j.presenca) { setPresenca(j.presenca); setAgoraMs(j.agora ? new Date(j.agora).getTime() : Date.now()) } }).catch(function() {})
-    }
-    buscar()
-    const t = setInterval(buscar, 30000)
-    return function() { vivo = false; clearInterval(t) }
-  }, [idsPresenca])
   const nomeAtual = atual ? (atual.name || '') : ''
   useEffect(function() {
     setInfo(null); setCompra(null)
@@ -849,7 +819,7 @@ export default function AtendimentoPage() {
               return (
                 <div key={c.id} className="at-item" onClick={function() { if (modoSel) setMarcadas(function(m) { const n = { ...m }; if (n[c.id]) delete n[c.id]; else n[c.id] = true; return n }); else abrir(c) }} style={{ display: 'flex', gap: 10, padding: '11px 12px', cursor: 'pointer', borderBottom: '1px solid var(--border)', background: modoSel && marcadas[c.id] ? 'rgba(37,99,235,0.10)' : on ? 'var(--accent-light)' : undefined, alignItems: modoSel ? 'center' : undefined }}>
                   {modoSel && <input type="checkbox" readOnly checked={!!marcadas[c.id]} style={{ width: 18, height: 18, flexShrink: 0, pointerEvents: 'none' }} />}
-                  <Avatar c={c} size={44} online={!!c.profile_id && estaOnline(presenca[c.profile_id], agoraMs)} />
+                  <Avatar c={c} size={44} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
                       <div style={{ fontWeight: c.unread > 0 ? 800 : 600, fontSize: 14, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomeDe(c)}</div>
@@ -877,14 +847,10 @@ export default function AtendimentoPage() {
             <>
               <div className="at-head">
                 <button className="at-back" onClick={function() { setSel(null) }} style={{ border: 0, background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>←</button>
-                <Avatar c={atual} size={42} online={!!atual.profile_id && estaOnline(presenca[atual.profile_id], agoraMs)} />
+                <Avatar c={atual} size={42} />
                 <div className="at-head-info">
                   <div style={{ fontWeight: 800, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomeDe(atual)}{atual.connection_id && <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 800, color: '#c2410c', border: '1px solid rgba(194,65,12,0.45)', borderRadius: 999, padding: '1px 8px' }}>🛒 Recuperação</span>}</div>
-                  <div className="at-head-sub">{atual.profile_id
-                    ? (estaOnline(presenca[atual.profile_id], agoraMs)
-                      ? <span style={{ color: '#16a34a', fontWeight: 800 }}>🟢 Online na plataforma · </span>
-                      : <span style={{ color: 'var(--muted2)', fontWeight: 700 }}>⚪ Offline ({textoVisto(presenca[atual.profile_id], agoraMs)}) · </span>)
-                    : <span style={{ color: 'var(--muted2)', fontWeight: 700 }}>⚪ Sem conta na plataforma · </span>}{fmtPhone(atual.wa_id)}{atual.profile_label ? ' · 🎓 ' + (info ? atual.profile_label.split(' · ')[0] + ' · ' + (info.plano || 'Sem plano') : atual.profile_label) : ''}
+                  <div className="at-head-sub">{fmtPhone(atual.wa_id)}{atual.profile_label ? ' · 🎓 ' + (info ? atual.profile_label.split(' · ')[0] + ' · ' + (info.plano || 'Sem plano') : atual.profile_label) : ''}
                     {compra && (compra.comprou_em
                       ? <span style={{ color: '#15803d', fontWeight: 700 }}> · 🛒 {compra.cat === 'm' || !compra.produto ? 'Comprou a Mentoria em ' : 'Comprou ' + compra.produto + ' em '}{fmtDia(compra.comprou_em)}{compra.por === 'nome' ? ' (pelo nome)' : ''}</span>
                       : info && info.plano
