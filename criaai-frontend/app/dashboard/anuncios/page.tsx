@@ -9,6 +9,7 @@ import CampanhasTabela from '@/components/anuncios/CampanhasTabela'
 import CriativosAnuncios from '@/components/anuncios/CriativosAnuncios'
 import { orcamentoDiario } from '@/components/anuncios/CampanhaCard'
 import { cartao, titulo, moeda } from '@/components/anuncios/estilo'
+import { podeUsarAnuncios } from '@/lib/acessoAnuncios'
 
 const PERIODOS: [string, string][] = [['today', 'Hoje'], ['yesterday', 'Ontem'], ['last_7d', 'Últimos 7 dias'], ['last_14d', 'Últimos 14 dias'], ['last_30d', 'Últimos 30 dias'], ['this_month', 'Este mês']]
 
@@ -48,8 +49,11 @@ export default function AnunciosPage() {
     supabase.auth.getUser().then(async function(r) {
       const uid = r.data.user ? r.data.user.id : null
       if (!uid) { setPermitido(false); return }
-      const p = await supabase.from('profiles').select('is_admin').eq('id', uid).maybeSingle()
-      setEhAdmin(!!(p.data && (p.data as any).is_admin))
+      const p = await supabase.from('profiles').select('is_admin, email').eq('id', uid).maybeSingle()
+      const admin = !!(p.data && (p.data as any).is_admin)
+      setEhAdmin(admin)
+      const email = (p.data && (p.data as any).email) || (r.data.user ? r.data.user.email : null)
+      if (!podeUsarAnuncios(admin, email)) { setPermitido(false); return }
       setPermitido(true)
       loadConnection()
     })
