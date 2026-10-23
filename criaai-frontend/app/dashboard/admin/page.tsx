@@ -290,6 +290,8 @@ export default function AdminPage() {
               <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{presence ? presence.ultimos15 : 0}</b><br />Últimos 15 minutos</div>
               <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{presence ? presence.hoje : 0}</b><br />Entraram hoje</div>
               <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{presence && presence.ontem !== undefined ? presence.ontem : 0}</b><br />Entraram ontem</div>
+              <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{presence && presence.ultimos7 !== undefined ? presence.ultimos7 : 0}</b><br />Entraram nos últimos 7 dias</div>
+              <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{presence && presence.mes !== undefined ? presence.mes : 0}</b><br />Entraram neste mês</div>
             </div>
             <button
               onClick={function() { setShowOnline(!showOnline) }}
