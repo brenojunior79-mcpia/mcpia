@@ -445,18 +445,36 @@ export default function AdminPage() {
               <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{expCliques ? expCliques.resumo.cliques7 : 0}</b><br />Cliques (7 dias)</div>
               <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{expCliques ? expCliques.resumo.totalCliques : 0}</b><br />Cliques no total</div>
               <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{expCliques ? expCliques.resumo.pessoasViram : 0}</b><br />Viram a tela de venda</div>
+              <div><b style={{ color: '#16a34a', fontSize: 18 }}>{expCliques ? expCliques.resumo.compraram : 0}</b><br />Compraram</div>
+              <div><b style={{ color: '#16a34a', fontSize: 18 }}>{expCliques ? expCliques.resumo.vendasHoje : 0}</b><br />Vendas hoje</div>
+              <div><b style={{ color: '#16a34a', fontSize: 18 }}>{expCliques ? expCliques.resumo.vendas7 : 0}</b><br />Vendas (7 dias)</div>
+              <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{expCliques && expCliques.resumo.pessoasClicaram > 0 ? Math.round(expCliques.resumo.compraramQueClicaram / expCliques.resumo.pessoasClicaram * 100) : 0}%</b><br />Clicaram e compraram</div>
             </div>
           </div>
           {expCliques && expCliques.pessoas && expCliques.pessoas.length > 0 ? (
-            <div style={{ marginTop: 14, borderTop: '1px solid var(--border)', paddingTop: 10, maxHeight: 340, overflowY: 'auto' }}>
-              {expCliques.pessoas.map(function(p: any, i: number) {
-                const quando = p.ultimoClique || p.ultimaVisita
+            <div style={{ marginTop: 14, borderTop: '1px solid var(--border)', paddingTop: 10, maxHeight: 420, overflowY: 'auto' }}>
+              {[
+                { chave: 'comprou', titulo: '✅ Compraram', cor: '#16a34a', filtro: function(p: any) { return !!p.comprouEm } },
+                { chave: 'liberado', titulo: '🔓 Liberados na mão (sem compra)', cor: '#2563eb', filtro: function(p: any) { return !p.comprouEm && p.liberado } },
+                { chave: 'clicou', titulo: '🛒 Só clicaram', cor: '#f97316', filtro: function(p: any) { return !p.comprouEm && !p.liberado && p.cliques > 0 } },
+                { chave: 'viu', titulo: '👀 Só viram a tela', cor: 'var(--muted2)', filtro: function(p: any) { return !p.comprouEm && !p.liberado && !(p.cliques > 0) } },
+              ].map(function(g) {
+                const grupo = expCliques.pessoas.filter(g.filtro)
+                if (!grupo.length) return null
                 return (
-                  <div key={(p.email || 'x') + i} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '6px 0', fontSize: 13, flexWrap: 'wrap' }}>
-                    <span style={{ color: 'var(--text)', fontWeight: 600 }}>{p.nome || 'Sem nome'} <span style={{ color: 'var(--muted2)', fontWeight: 400 }}>· {p.email}{p.whatsapp ? ' · ' + p.whatsapp : ''}</span></span>
-                    <span style={{ color: p.cliques > 0 ? '#f97316' : 'var(--muted2)', whiteSpace: 'nowrap', fontWeight: p.cliques > 0 ? 700 : 400 }}>
-                      {p.cliques > 0 ? '🛒 clicou' + (p.cliques > 1 ? ' ' + p.cliques + 'x' : '') : '👀 só viu a tela'} · {quando ? new Date(quando).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}
-                    </span>
+                  <div key={g.chave} style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 800, color: g.cor, marginBottom: 4 }}>{g.titulo} ({grupo.length})</div>
+                    {grupo.map(function(p: any, i: number) {
+                      const quando = g.chave === 'comprou' ? p.comprouEm : (p.ultimoClique || p.ultimaVisita)
+                      return (
+                        <div key={g.chave + (p.email || 'x') + i} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '6px 0', fontSize: 13, flexWrap: 'wrap' }}>
+                          <span style={{ color: 'var(--text)', fontWeight: 600 }}>{p.nome || 'Sem nome'} <span style={{ color: 'var(--muted2)', fontWeight: 400 }}>· {p.email}{p.whatsapp ? ' · ' + p.whatsapp : ''}</span></span>
+                          <span style={{ color: g.cor, whiteSpace: 'nowrap', fontWeight: g.chave === 'viu' ? 400 : 700 }}>
+                            {g.chave === 'comprou' ? '💰 comprou' + (p.cliques > 0 ? ' · clicou' + (p.cliques > 1 ? ' ' + p.cliques + 'x' : '') : '') : g.chave === 'liberado' ? '🔓 liberado' : g.chave === 'clicou' ? '🛒 clicou' + (p.cliques > 1 ? ' ' + p.cliques + 'x' : '') : '👀 só viu a tela'} · {quando ? new Date(quando).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}
+                          </span>
+                        </div>
+                      )
+                    })}
                   </div>
                 )
               })}
