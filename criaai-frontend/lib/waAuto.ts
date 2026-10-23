@@ -148,8 +148,12 @@ export async function criarTeste(admin: any, fluxo: any, numero: string, nome: s
 async function registrarNaConversa(admin: any, connId: string, run: any, texto: string, waMsgId: string): Promise<void> {
   try {
     let cid: string | null = null
-    const ex = await admin.from('wa_conversations').select('id').eq('wa_id', run.wa_id).eq('connection_id', connId).maybeSingle()
-    cid = ex.data?.id || null
+    // Numero brasileiro com e sem o 9 e a mesma pessoa (o WhatsApp devolve a resposta sem o 9): usa a conversa que ja existe
+    const m9 = String(run.wa_id || '').match(/^55(\d{2})(9?)(\d{8})$/)
+    const variantes = m9 ? [run.wa_id, '55' + m9[1] + (m9[2] ? '' : '9') + m9[3]] : [run.wa_id]
+    const ex = await admin.from('wa_conversations').select('id, wa_id, last_message_at').in('wa_id', variantes).eq('connection_id', connId).order('last_message_at', { ascending: false })
+    const achadas: any[] = ex.data || []
+    cid = (achadas.find(function(x: any) { return x.wa_id === run.wa_id }) || achadas[0] || {}).id || null
     const agora = new Date().toISOString()
     if (!cid) {
       const m = await admin.rpc('wa_match_profile', { p_wa: run.wa_id })
