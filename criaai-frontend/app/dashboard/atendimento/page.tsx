@@ -60,6 +60,32 @@ function diaMsg(iso: string): string {
 function nomeDe(c: Conv): string { return c.name || fmtPhone(c.wa_id) }
 const CORES_AVATAR = ['linear-gradient(135deg,#16a34a,#4ade80)', 'linear-gradient(135deg,#2563eb,#60a5fa)', 'linear-gradient(135deg,#7c3aed,#a78bfa)', 'linear-gradient(135deg,#db2777,#f472b6)', 'linear-gradient(135deg,#ea580c,#fb923c)', 'linear-gradient(135deg,#0d9488,#2dd4bf)', 'linear-gradient(135deg,#ca8a04,#facc15)', 'linear-gradient(135deg,#475569,#94a3b8)']
 function corAvatar(c: Conv): string { let h = 0; const t = String(c.wa_id || c.id); for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0; return CORES_AVATAR[h % CORES_AVATAR.length] }
+// Emojis para as mensagens (escolhe e entra no texto, na posicao do cursor)
+const EMOJIS: { nome: string; icone: string; lista: string[] }[] = [
+  { nome: 'Carinhas', icone: '😀', lista: ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '🙂', '😉', '😍', '🥰', '😘', '😋', '😎', '🤗', '🤔', '😮', '😢', '😭', '😇', '🥳', '😴'] },
+  { nome: 'Mãos', icone: '🙏', lista: ['🙏', '👍', '👏', '🙌', '🤝', '💪', '👌', '✌️', '🤞', '👋', '🤙', '👇', '👉', '👆', '☝️', '🫶', '🤲'] },
+  { nome: 'Fé e corações', icone: '❤️', lista: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🤍', '💖', '💕', '✝️', '🕊️', '🙏', '✨', '🌟', '🌈', '🔥', '🌹', '📖', '😇', '🎉'] },
+  { nome: 'Outros', icone: '✅', lista: ['✅', '❌', '⚠️', '❗', '❓', '⏰', '📅', '📱', '💻', '🔗', '🔒', '🔑', '💰', '💵', '🎁', '🚀', '📌', '📞', '💬', '🎓', '📚', '🛒', '👉', '⭐'] },
+]
+
+function EmojiPicker({ onPick }: { onPick: (e: string) => void }) {
+  const [cat, setCat] = useState(0)
+  return (
+    <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: 8, marginBottom: 8 }}>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
+        {EMOJIS.map(function(g, i) {
+          return <button key={g.nome} type="button" title={g.nome} onClick={function() { setCat(i) }} style={{ cursor: 'pointer', border: 0, borderRadius: 8, padding: '4px 9px', fontSize: 18, background: i === cat ? 'var(--accent-light)' : 'transparent' }}>{g.icone}</button>
+        })}
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2, maxHeight: 132, overflowY: 'auto' }}>
+        {EMOJIS[cat].lista.map(function(e, i) {
+          return <button key={e + i} type="button" onClick={function() { onPick(e) }} style={{ cursor: 'pointer', border: 0, background: 'transparent', borderRadius: 8, width: 38, height: 38, fontSize: 22, lineHeight: 1 }}>{e}</button>
+        })}
+      </div>
+    </div>
+  )
+}
+
 function Avatar({ c, size }: { c: Conv; size: number }) {
   return <div style={{ width: size, height: size, borderRadius: '50%', background: corAvatar(c), color: '#fff', fontWeight: 800, fontSize: Math.round(size * 0.42), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 3px rgba(0,0,0,0.18)' }}>{inicial(c)}</div>
 }
@@ -163,6 +189,7 @@ export default function AtendimentoPage() {
   const [tplErro, setTplErro] = useState('')
   const [tplCarregando, setTplCarregando] = useState(false)
   const [mostrarTpl, setMostrarTpl] = useState(false)
+  const [mostrarEmoji, setMostrarEmoji] = useState(false)
   const [anexo, setAnexo] = useState<File | null>(null)
   const [gravando, setGravando] = useState(false)
   const [segs, setSegs] = useState(0)
@@ -521,6 +548,16 @@ export default function AtendimentoPage() {
   function pararGravacao(cancelar: boolean) {
     recCancel.current = cancelar
     if (recRef.current && recRef.current.state !== 'inactive') recRef.current.stop()
+  }
+
+  // Coloca o emoji no texto, onde esta o cursor (ou no fim)
+  function inserirEmoji(e: string) {
+    const t = document.querySelector('textarea.at-input[data-msg="1"]') as HTMLTextAreaElement | null
+    const ini = t && typeof t.selectionStart === 'number' ? t.selectionStart : texto.length
+    const fim2 = t && typeof t.selectionEnd === 'number' ? t.selectionEnd : texto.length
+    setTexto(texto.slice(0, ini) + e + texto.slice(fim2))
+    const pos = ini + e.length
+    setTimeout(function() { const x = document.querySelector('textarea.at-input[data-msg="1"]') as HTMLTextAreaElement | null; if (x) { x.focus(); try { x.setSelectionRange(pos, pos) } catch (err) {} } }, 0)
   }
 
   async function mudarStatus(novo: 'aberta' | 'resolvida') {
@@ -956,6 +993,7 @@ export default function AtendimentoPage() {
                             <button onClick={function() { setAnexo(null) }} style={{ border: 0, background: 'transparent', color: 'var(--muted2)', cursor: 'pointer', fontSize: 16 }}>×</button>
                           </div>
                         )}
+                        {mostrarEmoji && <EmojiPicker onPick={inserirEmoji} />}
                         <textarea className="at-input" data-msg="1" rows={2} placeholder={anexo ? 'Legenda (opcional)…' : 'Digite a resposta…'} value={texto} onChange={function(e) { setTexto(e.target.value) }}
                           onKeyDown={function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (anexo) enviarArquivo(anexo, anexo.name, mimeDe(anexo), texto); else enviar() } }} style={{ resize: 'none' }} />
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
@@ -963,6 +1001,7 @@ export default function AtendimentoPage() {
                           <button title="Enviar arquivo, foto ou vídeo" onClick={function() { if (fileRef.current) fileRef.current.click() }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 10px', fontSize: 14, fontWeight: 700 }}>📎 Arquivo</button>
                           <button title="Colar um print que você copiou (ou use Ctrl+V)" onClick={colarDaAreaDeTransferencia} disabled={enviando} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 10px', fontSize: 14, fontWeight: 700 }}>📋 Colar print</button>
                           <button title="Gravar áudio" onClick={iniciarGravacao} disabled={enviando} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 10px', fontSize: 14, fontWeight: 700 }}>🎤 Áudio</button>
+                          <button title="Colocar emoji na mensagem" onClick={function() { setMostrarEmoji(!mostrarEmoji) }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: mostrarEmoji ? 'var(--accent-light)' : 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 10px', fontSize: 14, fontWeight: 700 }}>😊 Emoji</button>
                           <button title="Enviar modelo aprovado" onClick={function() { setMostrarTpl(!mostrarTpl) }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: mostrarTpl ? 'var(--accent-light)' : 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 10px', fontSize: 14, fontWeight: 700 }}>📄 Modelo</button>
                           <div style={{ flex: 1 }} />
                           <button disabled={enviando || (!texto.trim() && !anexo)} onClick={function() { if (anexo) enviarArquivo(anexo, anexo.name, mimeDe(anexo), texto); else enviar() }} style={{ cursor: 'pointer', border: 0, background: '#16a34a', color: '#fff', borderRadius: 10, padding: '10px 18px', fontWeight: 800, fontSize: 14, opacity: enviando || (!texto.trim() && !anexo) ? 0.55 : 1 }}>{enviando ? '…' : 'Enviar'}</button>
