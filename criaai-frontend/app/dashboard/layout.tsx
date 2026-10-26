@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import Sidebar from '@/components/layout/Sidebar'
 import Topbar from '@/components/layout/Topbar'
-import PlanPopup from '@/components/layout/PlanPopup'
 import InstallTracker from '@/components/layout/InstallTracker'
 import PushSetup from '@/components/layout/PushSetup'
 import PresenceTracker from '@/components/layout/PresenceTracker'
@@ -29,7 +28,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       <Sidebar profile={profile} user={user} />
-      <PlanPopup profile={profile} user={user} />
+      {/* Pop-up de plano (cupom FE10) desligado. Para voltar: importe PlanPopup de '@/components/layout/PlanPopup' e coloque <PlanPopup profile={profile} user={user} /> aqui. */}
       <InstallTracker />
       <PresenceTracker />
       <ReferralClaim />
