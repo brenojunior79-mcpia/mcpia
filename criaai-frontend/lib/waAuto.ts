@@ -116,6 +116,13 @@ export async function tratarEventoHubla(admin: any, eventType: string, payload: 
   const agora = Date.now()
   for (const fx of fluxos) {
     if (!passaFiltro(fx.trigger_filter || {}, info)) continue
+    // Compra aprovada: a mesma pessoa pode pagar dois produtos seguidos (ex.: Mentoria e Estrutura Express) e receberia a mensagem repetida.
+    // Se ja existe um envio (ou um agendado) desse fluxo para o mesmo numero nas ultimas 24 horas, nao agenda outro.
+    if (eventType === 'invoice.payment_succeeded') {
+      const desde = new Date(agora - 24 * 3600 * 1000).toISOString()
+      const ja = await admin.from('wa_auto_runs').select('id').eq('flow_id', fx.id).eq('wa_id', info.wa).eq('is_test', false).in('status', ['ativo', 'concluido']).gte('created_at', desde).limit(1)
+      if (ja.data && ja.data.length > 0) continue
+    }
     const steps: Passo[] = Array.isArray(fx.steps) ? fx.steps : []
     const p = quando(steps, 0, agora)
     // Cobranca gerada: espera 2 minutos antes do 1o envio, para dar tempo do aviso de pagamento chegar (cartao aprova em segundos)
