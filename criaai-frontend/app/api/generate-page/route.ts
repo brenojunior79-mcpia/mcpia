@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { renderSalesPage, safeAccent, safePixel, safeUrl, Section } from '@/lib/sales-page'
+import { gerarImagemOpenAI } from '@/lib/openaiImage'
 
 export const maxDuration = 60
 
@@ -83,19 +84,13 @@ async function generateCopy(f: any): Promise<any> {
 
 async function generateImage(f: any): Promise<string | null> {
   try {
-    const res = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'gpt-image-1',
-        prompt: 'Professional product mockup for "' + f.productName + '" targeting ' + (f.audience || 'general audience') + '. Clean modern design, premium feel, no text or words, vibrant colors, studio lighting.',
-        n: 1, size: '1024x1024', quality: 'medium',
-      }),
+    const img = await gerarImagemOpenAI({
+      prompt: 'Professional product mockup for "' + f.productName + '" targeting ' + (f.audience || 'general audience') + '. Clean modern design, premium feel, no text or words, vibrant colors, studio lighting.',
+      size: '1024x1024', quality: 'medium',
     })
-    const data = await res.json()
-    const b64: string | null = data.data?.[0]?.b64_json || null
+    const b64: string | null = img.b64
     if (b64) return b64
-    const url: string | null = data.data?.[0]?.url || null
+    const url: string | null = img.url
     if (url) {
       const imgRes = await fetch(url)
       return Buffer.from(await imgRes.arrayBuffer()).toString('base64')
