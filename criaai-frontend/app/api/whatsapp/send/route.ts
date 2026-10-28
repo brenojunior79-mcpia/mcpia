@@ -54,6 +54,7 @@ export async function POST(req: NextRequest) {
   let type = 'text'
   let mediaPath: string | null = null
   let mediaMime: string | null = null
+  let tplSalvo: any = null
   if (media) {
     const last = c.data.last_inbound_at ? new Date(c.data.last_inbound_at).getTime() : 0
     if (Date.now() - last > 24 * 60 * 60 * 1000) {
@@ -99,6 +100,7 @@ export async function POST(req: NextRequest) {
     const preview = typeof tpl.preview === 'string' ? tpl.preview.trim().slice(0, 1500) : ''
     shown = preview ? '📄 ' + preview : '[Modelo: ' + String(tpl.name).trim() + ']' + (params.length ? ' ' + params.join(' | ') : '')
     type = 'template'
+    tplSalvo = { name: String(tpl.name).trim(), language: String(tpl.language || 'pt_BR').trim(), params }
   } else {
     const last = c.data.last_inbound_at ? new Date(c.data.last_inbound_at).getTime() : 0
     if (Date.now() - last > 24 * 60 * 60 * 1000) {
@@ -123,7 +125,7 @@ export async function POST(req: NextRequest) {
   const upd: any = { last_message_at: now, last_text: 'Você: ' + rotulo.slice(0, 120), status: 'aberta', unread: 0 }
   // Tudo que falta gravar roda junto (antes era um depois do outro)
   const gravar: PromiseLike<any>[] = [
-    admin.from('wa_messages').insert({ conversation_id: convId, wa_message_id: waId, direction: 'out', type, body: shown || null, media_path: mediaPath, mime: mediaMime, status: 'sent', sent_by: staffId, reply_to_wa_id: ctxId, created_at: now }),
+    admin.from('wa_messages').insert({ conversation_id: convId, wa_message_id: waId, direction: 'out', type, body: shown || null, media_path: mediaPath, mime: mediaMime, status: 'sent', sent_by: staffId, reply_to_wa_id: ctxId, created_at: now, template: tplSalvo }),
     admin.from('wa_conversations').update(upd).eq('id', convId),
   ]
   if (assumiu) {

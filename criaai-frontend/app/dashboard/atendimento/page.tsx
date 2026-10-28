@@ -17,7 +17,7 @@ type Pessoa = { id: string; nome: string; email: string; admin: boolean; escopo?
 // Quem atende aquele chat (admin e 'todos' atendem os dois)
 function atendeCanal(p: Pessoa, rec: boolean): boolean { return p.admin || p.escopo === 'todos' || (p.escopo === 'recuperacao') === rec }
 type Conv = { profile_id?: string | null; connection_id: string | null; id: string; assigned_to: string | null; wa_id: string; name: string | null; profile_label: string | null; status: string; unread: number; last_text: string | null; last_message_at: string; last_inbound_at: string | null; ia_ativa?: boolean }
-type Msg = { wa_message_id?: string | null; reply_to_wa_id?: string | null; id: string; conversation_id: string; direction: 'in' | 'out'; sent_by?: string | null; type: string; body: string | null; media_path: string | null; mime: string | null; status: string; error: string | null; created_at: string }
+type Msg = { wa_message_id?: string | null; reply_to_wa_id?: string | null; id: string; conversation_id: string; direction: 'in' | 'out'; sent_by?: string | null; type: string; body: string | null; media_path: string | null; mime: string | null; status: string; error: string | null; created_at: string; template?: { name: string; language: string; params: string[] } | null }
 type Status = { connected: boolean; missing?: string[]; webhookUrl?: string; number?: string; name?: string; quality?: string; error?: string }
 
 // Mensagens prontas do chat de recuperacao: um clique e ja envia
@@ -241,7 +241,7 @@ export default function AtendimentoPage() {
   }, [])
 
   const carregarMsgs = useCallback(async function(id: string, descartar?: string) {
-    const r = await supabase.from('wa_messages').select('id, conversation_id, direction, sent_by, type, body, media_path, mime, status, error, created_at, wa_message_id, reply_to_wa_id').eq('conversation_id', id).order('created_at', { ascending: true }).limit(500)
+    const r = await supabase.from('wa_messages').select('id, conversation_id, direction, sent_by, type, body, media_path, mime, status, error, created_at, wa_message_id, reply_to_wa_id, template').eq('conversation_id', id).order('created_at', { ascending: true }).limit(500)
     if (!r.error && r.data && selRef.current === id) {
       const reais = r.data as Msg[]
       // Mantem as mensagens ainda "enviando" (provisorias), sem duplicar as que ja chegaram do banco
@@ -480,6 +480,23 @@ export default function AtendimentoPage() {
         carregarConvs()
       } catch (e) { falhou('Sem conexao. Tente de novo.') }
     })
+  }
+
+  // Reenvia uma mensagem que falhou (texto ou modelo)
+  function reenviar(m: Msg) {
+    if (!atual || enviando) return
+    setErro('')
+    if (m.type === 'template') {
+      if (m.template && m.template.name) {
+        enviarModelo({ name: m.template.name, language: m.template.language || 'pt_BR', params: m.template.params || [], preview: String(m.body || '').replace(/^📄\s*/, '') })
+      } else {
+        setErro('Não guardei os dados deste modelo. Escolha o modelo de novo no botão de modelos, ao lado do campo de mensagem.')
+        setMostrarTpl(true)
+      }
+      return
+    }
+    if (m.type === 'text' && m.body) { enviar(undefined, m.body); return }
+    setErro('Este tipo de mensagem não dá para reenviar por aqui. Envie o arquivo de novo.')
   }
 
   async function enviarModelo(modelo: TplSend) {
@@ -967,6 +984,8 @@ export default function AtendimentoPage() {
                         {!m.media_path && m.type !== 'text' && m.type !== 'template' && !m.body && <div style={{ opacity: 0.7 }}>[{m.type}]</div>}
                         <div style={{ fontSize: 10.5, opacity: 0.65, textAlign: 'right', marginTop: 2 }}>{horaMsg(m.created_at)} {meu && <Tick s={m.status} />}</div>
                         {m.status === 'failed' && m.error && <div style={{ fontSize: 11.5, color: '#b91c1c' }}>{m.error}</div>}
+                        {m.status === 'failed' && /part of an experiment/i.test(m.error || '') && <div style={{ fontSize: 11.5, color: '#92400e', marginTop: 2 }}>A Meta bloqueou modelos de marketing para este número (experimento dela). Não há como contornar: fale com a pessoa por outro canal e peça para ela mandar uma mensagem primeiro.</div>}
+                        {meu && m.status === 'failed' && (m.type === 'text' || m.type === 'template') && <button onClick={function() { reenviar(m) }} disabled={enviando} style={{ cursor: enviando ? 'not-allowed' : 'pointer', marginTop: 4, border: '1px solid #b91c1c', background: '#fff', color: '#b91c1c', borderRadius: 8, padding: '4px 10px', fontSize: 12, fontWeight: 800, opacity: enviando ? 0.6 : 1 }}>↻ Reenviar</button>}
                       </div>
                       {m.wa_message_id && janelaAberta && <button className="at-resp" title="Responder esta mensagem" onClick={function() { setRespondendo(m); const t = document.querySelector('textarea.at-input') as HTMLTextAreaElement | null; if (t) t.focus() }} style={{ cursor: 'pointer', border: 0, background: 'var(--surface2)', color: 'var(--muted2)', borderRadius: '50%', width: 28, height: 28, fontSize: 14, flexShrink: 0 }}>↩</button>}
                       </div>
