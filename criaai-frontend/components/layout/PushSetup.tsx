@@ -5,7 +5,8 @@ import { VAPID_PUBLIC_KEY } from '@/lib/push-config'
 
 // Registra o service worker, pede (de forma educada) para o aluno ativar as notificacoes
 // e guarda o aparelho dele no banco. Qualquer erro e ignorado para nunca atrapalhar o aluno.
-const ASK_AGAIN_DAYS = 7
+// O aviso aparece em TODA abertura/login da plataforma ate a pessoa ativar. "Agora nao" so
+// esconde o aviso ate ela abrir a plataforma de novo (nao fica atras dela a cada clique).
 
 function urlBase64ToUint8Array(base64: string) {
   const padding = '='.repeat((4 - (base64.length % 4)) % 4)
@@ -26,7 +27,7 @@ function detectPlatform(): string {
 }
 
 export default function PushSetup({ user }: { user: any }) {
-  const [mode, setMode] = useState<'hidden' | 'ask' | 'ios' | 'done'>('hidden')
+  const [mode, setMode] = useState<'hidden' | 'ask' | 'ios' | 'blocked' | 'done'>('hidden')
   const [busy, setBusy] = useState(false)
   const dismissKey = 'mcpia_push_dismissed_' + (user?.id || 'anon')
 
@@ -63,15 +64,12 @@ export default function PushSetup({ user }: { user: any }) {
         const hasPush = 'PushManager' in window && 'Notification' in window
 
         let dismissedRecently = false
-        try {
-          const last = Number(localStorage.getItem(dismissKey) || 0)
-          dismissedRecently = !!last && (Date.now() - last) < ASK_AGAIN_DAYS * 24 * 60 * 60 * 1000
-        } catch (e) {}
+        try { dismissedRecently = sessionStorage.getItem(dismissKey) === '1' } catch (e) {}
 
         // iPhone fora do app instalado: so funciona depois de adicionar a tela inicial
         if (!hasPush) {
           if (platform === 'ios' && !standalone && !dismissedRecently) {
-            timer = setTimeout(function() { setMode('ios') }, 6000)
+            timer = setTimeout(function() { setMode('ios') }, 4000)
           }
           return
         }
@@ -89,7 +87,11 @@ export default function PushSetup({ user }: { user: any }) {
         }
 
         if (Notification.permission === 'default' && !dismissedRecently) {
-          timer = setTimeout(function() { setMode('ask') }, 6000)
+          timer = setTimeout(function() { setMode('ask') }, 4000)
+        }
+        // Bloqueou antes: o navegador nao deixa pedir de novo, entao mostramos como desbloquear
+        if (Notification.permission === 'denied' && !dismissedRecently) {
+          timer = setTimeout(function() { setMode('blocked') }, 4000)
         }
       } catch (e) {}
     }
@@ -99,7 +101,7 @@ export default function PushSetup({ user }: { user: any }) {
 
   function dismiss() {
     setMode('hidden')
-    try { localStorage.setItem(dismissKey, String(Date.now())) } catch (e) {}
+    try { sessionStorage.setItem(dismissKey, '1') } catch (e) {}
   }
 
   async function enable() {
@@ -136,6 +138,14 @@ export default function PushSetup({ user }: { user: any }) {
               <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>Receba as novidades no iPhone</div>
               <div style={{ fontSize: 12.5, color: 'var(--muted2)', lineHeight: 1.5, marginBottom: 10 }}>
                 Toque em <b>Compartilhar</b> (o quadradinho com a seta) e depois em <b>Adicionar à Tela de Início</b>. Depois abra a plataforma pelo ícone e ative as notificações.
+              </div>
+              <button onClick={dismiss} style={{ padding: '8px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', background: 'var(--surface2)', color: 'var(--text)', fontWeight: 700, fontSize: 13 }}>Entendi</button>
+            </>
+          ) : mode === 'blocked' ? (
+            <>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>Ative as notificações</div>
+              <div style={{ fontSize: 12.5, color: 'var(--muted2)', lineHeight: 1.5, marginBottom: 10 }}>
+                As notificações estão bloqueadas neste aparelho. Toque no <b>cadeado</b> ao lado do endereço do site, escolha <b>Notificações</b> e mude para <b>Permitir</b>. Depois atualize a página.
               </div>
               <button onClick={dismiss} style={{ padding: '8px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', background: 'var(--surface2)', color: 'var(--text)', fontWeight: 700, fontSize: 13 }}>Entendi</button>
             </>
