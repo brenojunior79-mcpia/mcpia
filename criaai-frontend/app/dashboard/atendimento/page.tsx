@@ -6,6 +6,7 @@ import TemplatePicker, { type TplSend } from '@/components/whatsapp/TemplatePick
 import Atendentes from '@/components/whatsapp/Atendentes'
 import Fluxos from '@/components/whatsapp/Fluxos'
 import Conexoes from '@/components/whatsapp/Conexoes'
+import Eventos from '@/components/whatsapp/Eventos'
 import Disparo from '@/components/whatsapp/Disparo'
 import EditorImagem from '@/components/whatsapp/EditorImagem'
 import GerenciarRapidas, { type Rapida } from '@/components/whatsapp/GerenciarRapidas'
@@ -183,7 +184,7 @@ export default function AtendimentoPage() {
   const [status, setStatus] = useState<Status | null>(null)
   const [staff, setStaff] = useState<boolean | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
-  const [tab, setTab] = useState<'conversas' | 'atendentes' | 'modelos' | 'disparo' | 'fluxos' | 'conexoes'>('conversas')
+  const [tab, setTab] = useState<'conversas' | 'atendentes' | 'modelos' | 'disparo' | 'fluxos' | 'eventos' | 'conexoes'>('conversas')
   const [tpls, setTpls] = useState<Tpl[] | null>(null)
   const [disparoAberto, setDisparoAberto] = useState(false)
   const [tplErro, setTplErro] = useState('')
@@ -227,7 +228,16 @@ export default function AtendimentoPage() {
       supabase.from('wa_conversations').select('*').is('connection_id', null).order('last_message_at', { ascending: false }).limit(300),
       supabase.from('wa_conversations').select('*').not('connection_id', 'is', null).order('last_message_at', { ascending: false }).limit(300),
     ])
-    if (!a.error && a.data) setConvs((a.data as Conv[]).concat(!b.error && b.data ? (b.data as Conv[]) : []))
+    if (!a.error && a.data) {
+      const todas = (a.data as Conv[]).concat(!b.error && b.data ? (b.data as Conv[]) : [])
+      // Chat aberto pela aba Eventos pode ser mais antigo que o limite da lista: nao deixa sumir
+      const aberta = selRef.current
+      if (aberta && !todas.some(function(x) { return x.id === aberta })) {
+        const um = await supabase.from('wa_conversations').select('*').eq('id', aberta).maybeSingle()
+        if (um.data) todas.push(um.data as Conv)
+      }
+      setConvs(todas)
+    }
   }, [])
 
   const carregarMsgs = useCallback(async function(id: string, descartar?: string) {
@@ -334,6 +344,23 @@ export default function AtendimentoPage() {
       setConvs(function(l) { return l.map(function(x) { return x.id === c.id ? { ...x, unread: 0 } : x }) })
       fetch('/api/whatsapp/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId: c.id }) }).catch(function() {})
     }
+  }
+
+  // Vem da aba Eventos: abre o chat de recuperacao da pessoa
+  async function abrirDeEvento(id: string) {
+    let c = convs.find(function(x) { return x.id === id }) || null
+    if (!c) {
+      const r = await supabase.from('wa_conversations').select('*').eq('id', id).maybeSingle()
+      if (r.error || !r.data) return
+      c = r.data as Conv
+      const nova = c
+      setConvs(function(l) { return l.some(function(x) { return x.id === id }) ? l : l.concat([nova]) })
+    }
+    setCanal(c.connection_id ? 'recuperacao' : 'suporte')
+    setAba(c.status === 'resolvida' ? 'resolvidas' : 'abertas')
+    setFiltro('todas'); setBusca('')
+    setTab('conversas')
+    await abrir(c)
   }
 
   const atual = convs.find(function(c) { return c.id === sel }) || null
@@ -718,7 +745,7 @@ export default function AtendimentoPage() {
 
       {/* Abas */}
       <div style={{ display: 'flex', gap: 6, padding: '8px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface)', overflowX: 'auto' }}>
-        {([['conversas', '💬 Conversas'], ['atendentes', '👥 Atendentes'], ['modelos', '📄 Modelos'], ['disparo', '📣 Disparo'], ['fluxos', '⚡ Fluxos'], ['conexoes', '🔌 Conexões']] as const).filter(function(t) { return (t[0] !== 'atendentes' && t[0] !== 'fluxos' && t[0] !== 'disparo' && t[0] !== 'conexoes') || isAdmin }).map(function(t) {
+        {([['conversas', '💬 Conversas'], ['atendentes', '👥 Atendentes'], ['modelos', '📄 Modelos'], ['disparo', '📣 Disparo'], ['fluxos', '⚡ Fluxos'], ['eventos', '🔔 Eventos'], ['conexoes', '🔌 Conexões']] as const).filter(function(t) { return (t[0] !== 'atendentes' && t[0] !== 'fluxos' && t[0] !== 'disparo' && t[0] !== 'eventos' && t[0] !== 'conexoes') || isAdmin }).map(function(t) {
           const on = tab === t[0]
           return <button key={t[0]} onClick={function() { setTab(t[0]); if (t[0] === 'modelos') carregarTpls(); if (t[0] === 'disparo') setDisparoAberto(true) }} style={{ cursor: 'pointer', border: 0, borderRadius: 8, padding: '7px 14px', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', background: on ? 'var(--accent-light)' : 'var(--surface2)', color: on ? 'var(--accent)' : 'var(--muted2)' }}>{t[1]}</button>
         })}
@@ -737,6 +764,7 @@ export default function AtendimentoPage() {
       {tab === 'atendentes' && isAdmin && <Atendentes />}
       {disparoAberto && isAdmin && <div style={tab === 'disparo' ? { display: 'contents' } : { display: 'none' }}><Disparo tpls={tpls} onLoadTpls={carregarTpls} /></div>}
       {tab === 'fluxos' && isAdmin && <Fluxos />}
+      {tab === 'eventos' && isAdmin && <Eventos onAbrir={abrirDeEvento} />}
       {tab === 'conexoes' && isAdmin && <Conexoes />}
 
       <div className="at-wrap" style={tab === 'conversas' ? undefined : { display: 'none' }}>

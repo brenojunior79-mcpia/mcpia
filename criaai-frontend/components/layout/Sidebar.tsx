@@ -101,7 +101,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
     { href: '/dashboard/suporte', icon: 'ti-brand-whatsapp', label: 'WhatsApp de Suporte', locked: false },
     { href: '/dashboard/aulas', icon: 'ti-device-tv', label: 'Aulas ao Vivo', locked: false },
     { href: '/dashboard/planos', icon: 'ti-credit-card', label: 'Planos', locked: false },
-    ...((isAdmin || profile?.is_support) ? [{ href: '/dashboard/atendimento', icon: 'ti-brand-whatsapp', label: 'Atendimento WhatsApp', locked: false }] : []),
+    ...((isAdmin || profile?.is_support) ? [{ href: '/dashboard/atendimento', icon: 'ti-brand-whatsapp', label: 'Atendimento WhatsApp', locked: false, badge: 'NOVO', tone: 'green' }] : []),
     ...(isAdmin ? [{ href: '/dashboard/admin', icon: 'ti-shield', label: 'Admin', locked: false }] : []),
     ...(isAdmin ? [{ href: '/dashboard/admin/conversas', icon: 'ti-message-2', label: 'Conversas (Junior)', locked: false }] : []),
   ]
@@ -181,11 +181,11 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
                 prefetch={false}
                 onClick={function() { setMobileOpen(false) }}
                 className={styles.navItem + (pathname === item.href ? ' ' + styles.active : '')}
-                style={(item as any).badge ? { background: 'linear-gradient(135deg,#f59e0b,#f97316)', color: '#fff', fontWeight: 700, boxShadow: '0 4px 14px rgba(249,115,22,0.35)' } : undefined}
+                style={(item as any).badge ? ((item as any).tone === 'green' ? { background: 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff', fontWeight: 700, boxShadow: '0 4px 14px rgba(22,163,74,0.35)' } : { background: 'linear-gradient(135deg,#f59e0b,#f97316)', color: '#fff', fontWeight: 700, boxShadow: '0 4px 14px rgba(249,115,22,0.35)' }) : undefined}
               >
                 <i className={'ti ' + item.icon} />
                 {item.label}
-                {(item as any).badge && <span style={{ marginLeft: 'auto', background: '#fff', color: '#ea580c', fontSize: 9.5, fontWeight: 800, letterSpacing: 0.4, borderRadius: 999, padding: '2px 7px' }}>{(item as any).badge}</span>}
+                {(item as any).badge && <span style={{ marginLeft: 'auto', background: '#fff', color: (item as any).tone === 'green' ? '#15803d' : '#ea580c', fontSize: 9.5, fontWeight: 800, letterSpacing: 0.4, borderRadius: 999, padding: '2px 7px' }}>{(item as any).badge}</span>}
               </Link>
             )
           })}
