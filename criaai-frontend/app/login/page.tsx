@@ -12,6 +12,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [resetSent, setResetSent] = useState(false)
+  const [resetError, setResetError] = useState('')
   const [showReset, setShowReset] = useState(false)
   const [resetEmail, setResetEmail] = useState('')
   const [resetLoading, setResetLoading] = useState(false)
@@ -88,10 +89,21 @@ export default function LoginPage() {
       return
     }
     setResetLoading(true)
-    await supabase.auth.resetPasswordForEmail(resetEmail.trim(), {
+    setResetError('')
+    const r = await supabase.auth.resetPasswordForEmail(resetEmail.trim(), {
       redirectTo: window.location.origin + '/auth/callback?type=recovery',
     })
     setResetLoading(false)
+    // Antes a tela sempre dizia "Link enviado" mesmo quando o envio falhava (ex.: pediu 2 vezes seguidas)
+    if (r.error) {
+      const m = String(r.error.message || '')
+      if (/only request this after|security purposes|rate limit/i.test(m)) {
+        setResetError('Você já pediu o link agora há pouco. Aguarde 1 minuto, confira o e-mail (e o spam) e tente de novo só se não chegar.')
+      } else {
+        setResetError('Não foi possível enviar o e-mail agora. Tente de novo em alguns minutos ou fale com o suporte.')
+      }
+      return
+    }
     setResetSent(true)
   }
 
@@ -150,7 +162,7 @@ export default function LoginPage() {
           {showReset ? (
             <div>
               <button
-                onClick={function() { setShowReset(false); setResetSent(false); setError('') }}
+                onClick={function() { setShowReset(false); setResetSent(false); setResetError(''); setError('') }}
                 style={{ background: 'none', border: 'none', color: '#5b4ef8', fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 20, fontFamily: 'Inter, sans-serif', padding: 0 }}
               >
                 ← Voltar para o login
@@ -165,7 +177,7 @@ export default function LoginPage() {
                   </p>
                   <p style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e', marginBottom: 12 }}>{resetEmail}</p>
                   <p style={{ fontSize: 12, color: '#9b9aaa', marginBottom: 20 }}>
-                    Não encontrou? Confira a pasta de <strong>spam</strong> ou <strong>lixo eletrônico</strong>.
+                    Não encontrou? Confira a pasta de <strong>spam</strong> ou <strong>lixo eletrônico</strong>. Só chega se este for o e-mail usado no cadastro.
                   </p>
                   <button
                     onClick={function() { setResetSent(false) }}
@@ -191,6 +203,9 @@ export default function LoginPage() {
                       style={inputStyle}
                     />
                   </div>
+                  {resetError && (
+                    <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', borderRadius: 10, padding: '10px 12px', fontSize: 13, marginBottom: 14, lineHeight: 1.5 }}>{resetError}</div>
+                  )}
                   <button
                     type="submit"
                     disabled={resetLoading}
