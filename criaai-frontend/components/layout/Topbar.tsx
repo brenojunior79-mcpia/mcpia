@@ -94,19 +94,10 @@ export default function Topbar({ profile, user }: { profile: any, user: any }) {
       paddingLeft: 72,
     }}>
 
-      {/* Esquerda: saudacao + data */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {greeting}, {firstName}! {isFemale ? '👩' : '👋'}
-          </div>
-          <div style={{ fontSize: 11, color: 'var(--muted2)', textTransform: 'capitalize' }}>{date}</div>
-        </div>
-      </div>
       <style>{`@media (max-width: 640px) { .tb-instalar-txt { display: none } }`}</style>
 
       {/* Direita: sininho + Minha conta */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
         {/* Como instalar (some quando a plataforma ja foi aberta pelo icone instalado) */}
         {!jaInstalado && (
           <button onClick={function() { setInstalarAberto(true) }} title="Como instalar a plataforma no seu aparelho"
