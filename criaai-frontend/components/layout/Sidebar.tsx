@@ -75,11 +75,9 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
 
   // Saudacao do cartao do topo do menu (calculada no navegador, no horario de quem esta usando)
   const [saudacao, setSaudacao] = useState('Olá')
-  const [dataCurta, setDataCurta] = useState('')
   useEffect(function() {
     const h = new Date().getHours()
     setSaudacao(h >= 18 ? 'Boa noite' : h >= 12 ? 'Boa tarde' : 'Bom dia')
-    try { setDataCurta(new Date().toLocaleDateString('pt-BR', { weekday: 'long' })) } catch (e) {}
   }, [])
   const nomeCurto = ((profile?.full_name || '').split(' ')[0] || '').toLowerCase()
   const ehMulher = nomeCurto.length > 3 && ['a', 'e', 'i', 'y'].some(function(end) { return nomeCurto.endsWith(end) })
@@ -189,7 +187,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
                 )}
               </button>
               <div style={{ minWidth: 0, lineHeight: 1.25 }}>
-                <div style={{ fontSize: 11.5, color: 'var(--muted2)', whiteSpace: 'nowrap' }}>{saudacao} {ehMulher ? '👩' : '👋'}<span style={{ textTransform: 'capitalize' }}>{dataCurta ? ' · ' + dataCurta : ''}</span></div>
+                <div style={{ fontSize: 11.5, color: 'var(--muted2)', whiteSpace: 'nowrap' }}>{saudacao} {ehMulher ? '👩' : '👋'}</div>
                 <div className={styles.logoUserName} title={profile?.full_name || ''} style={{ margin: 0, fontSize: 14, fontWeight: 800 }}>{(profile?.full_name || '').trim() || firstName}</div>
               </div>
             </div>

@@ -606,7 +606,13 @@ export default function AdminPage() {
                   <tr key={p.id}>
                     <td>
                       <div className={styles.userCell}>
-                        <div className={styles.avatar}>{(p.full_name || p.email || '?')[0].toUpperCase()}</div>
+                        {p.avatar_url ? (
+                          <a href={p.avatar_url} target="_blank" rel="noopener noreferrer" title="Ver a foto de perfil" style={{ flexShrink: 0, display: 'block', width: 38, height: 38 }}>
+                            <img src={p.avatar_url} alt="" style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', display: 'block', border: '1px solid var(--border2)' }} />
+                          </a>
+                        ) : (
+                          <div className={styles.avatar}>{(p.full_name || p.email || '?')[0].toUpperCase()}</div>
+                        )}
                         <div>
                           <div className={styles.userName}>{p.full_name || '—'}</div>
                           <div className={styles.userEmail}>{p.email}</div>
