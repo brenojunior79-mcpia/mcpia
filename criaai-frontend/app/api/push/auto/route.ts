@@ -39,8 +39,9 @@ async function carregarConfig(admin: any): Promise<Record<string, Aviso & { ativ
   return out
 }
 
-async function enviar(admin: any, alvos: any[], aviso: { title: string; body: string; url: string }) {
-  const payload = JSON.stringify(aviso)
+async function enviar(admin: any, alvos: any[], aviso: { title: string; body: string; url: string }, tipo?: string) {
+  // 'tipo' faz o aparelho avisar quando a notificacao chega e quando a pessoa clica (relatorio em Admin > Notificacoes)
+  const payload = JSON.stringify(tipo ? { title: aviso.title, body: aviso.body, url: aviso.url, tipo } : aviso)
   const mortos: string[] = []
   const okUsers: Record<string, boolean> = {}
   let enviados = 0, falhas = 0
@@ -112,7 +113,7 @@ async function rodarTodos(admin: any, so: string) {
     if (q.error) { resultado[tipo] = { erro: q.error.message }; continue }
     const alvos = (q.data || []) as any[]
     if (!alvos.length) { resultado[tipo] = { pessoas: 0, enviados: 0 }; continue }
-    const r = await enviar(admin, alvos, cfg[tipo])
+    const r = await enviar(admin, alvos, cfg[tipo], tipo)
     if (r.pessoas.length) {
       await admin.from('push_auto_envios').insert(r.pessoas.map(function(id) { return { user_id: id, tipo } }))
     }

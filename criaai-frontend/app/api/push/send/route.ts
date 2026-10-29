@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { randomUUID } from 'crypto'
 import webpush from 'web-push'
 import { createClient } from '@/lib/supabase-server'
 import { VAPID_PUBLIC_KEY } from '@/lib/push-config'
@@ -75,7 +76,9 @@ export async function POST(req: NextRequest) {
       }, { status: 400 })
     }
 
-    const payload = JSON.stringify({ title, body: message, url })
+    const broadcastId = randomUUID()
+    // Envios de teste nao entram no relatorio
+    const payload = JSON.stringify(audience === 'teste' ? { title, body: message, url } : { title, body: message, url, tipo: 'broadcast', ref: broadcastId })
     let sent = 0
     let failed = 0
     const deadIds: string[] = []
@@ -107,7 +110,7 @@ export async function POST(req: NextRequest) {
     }
 
     await supabase.from('push_broadcasts').insert({
-      title, body: message, url, audience, sent_by: user.id,
+      id: broadcastId, title, body: message, url, audience, sent_by: user.id,
       total: targets.length, sent_count: sent, failed_count: failed,
     })
 

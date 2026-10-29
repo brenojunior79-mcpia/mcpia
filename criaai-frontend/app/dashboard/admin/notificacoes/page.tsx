@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 import styles from '../admin.module.css'
 import PushAutoCard from '@/components/admin/PushAutoCard'
+import PushRelatorioCard from '@/components/admin/PushRelatorioCard'
 
 const LINKS = [
   { value: '/dashboard', label: 'Painel do Aluno' },
@@ -161,6 +162,7 @@ export default function NotificacoesPage() {
         </div>
 
         <PushAutoCard />
+        <PushRelatorioCard />
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 18, marginBottom: 28 }}>
           {/* Formulario */}
