@@ -118,6 +118,18 @@ export default function PushAutoCard() {
     setBusy('')
   }
 
+  async function enviarUm(i: any) {
+    if (!window.confirm('Enviar AGORA "' + INFO[i.tipo].nome + '" para as ' + i.entrariamAgora + ' pessoa(s) que entram na regra? Isso manda notificação de verdade para os alunos.')) return
+    setBusy(i.tipo + 'e')
+    try {
+      const r = await fetch('/api/push/auto?executar=1&tipo=' + i.tipo, { cache: 'no-store' })
+      const j = await r.json().catch(function() { return {} })
+      if (!r.ok) aviso(i.tipo, false, j.error || 'Não foi possível enviar.')
+      else { const x = j[i.tipo] || {}; aviso(i.tipo, !x.erro, x.erro ? 'Erro: ' + x.erro : x.desligado ? 'Este aviso está desligado.' : '✓ Enviado para ' + (x.pessoas || 0) + ' pessoa(s).'); await carregar() }
+    } catch (e) { aviso(i.tipo, false, 'Sem conexão.') }
+    setBusy('')
+  }
+
   async function executarAgora() {
     if (!window.confirm('Enviar AGORA os dois avisos para todos que entram na regra? Isso manda notificação de verdade para os alunos.')) return
     setRodando(true)
@@ -243,6 +255,7 @@ export default function PushAutoCard() {
                 <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
                   <button className="pa-btn" onClick={function() { testar(i) }} disabled={busy !== ''} style={botao}>{busy === i.tipo + 't' ? 'Enviando…' : '📲 Testar no meu celular'}</button>
                   <button className="pa-btn" onClick={function() { setAberto(edit ? '' : i.tipo) }} style={botao}>{edit ? '✕ Fechar' : '✎ Editar'}</button>
+                  <button className="pa-btn" onClick={function() { enviarUm(i) }} disabled={busy !== '' || !on} title={on ? '' : 'Ligue o aviso para enviar'} style={{ ...botao, border: 0, color: '#fff', background: 'linear-gradient(135deg,' + inf.cor + ',' + inf.cor2 + ')' }}>{busy === i.tipo + 'e' ? 'Enviando…' : '⚡ Enviar agora'}</button>
                 </div>
                 {m && <div style={{ marginTop: 8, fontSize: 12, fontWeight: 700, color: m.ok ? 'var(--green)' : 'var(--red)' }}>{m.t}</div>}
 

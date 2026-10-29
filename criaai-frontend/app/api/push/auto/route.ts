@@ -79,7 +79,7 @@ async function tratar(req: NextRequest) {
     const me = await admin.from('profiles').select('is_admin').eq('id', user.id).maybeSingle()
     if (!me.data?.is_admin) return NextResponse.json({ error: 'Somente o admin' }, { status: 403 })
     // Admin pode disparar agora o envio de verdade (mesma regra do envio das 18h)
-    if (req.nextUrl.searchParams.get('executar') === '1') return NextResponse.json(await rodarTodos(admin, ''))
+    if (req.nextUrl.searchParams.get('executar') === '1') { const so1 = String(req.nextUrl.searchParams.get('tipo') || ''); return NextResponse.json(await rodarTodos(admin, PADRAO[so1] ? so1 : '')) }
     const tipo = String(req.nextUrl.searchParams.get('tipo') || '')
     const subs = await admin.from('push_subscriptions').select('id, endpoint, p256dh, auth, user_id').eq('user_id', user.id)
     const meus = (subs.data || []).map(function(s: any) { return { sub_id: s.id, endpoint: s.endpoint, p256dh: s.p256dh, auth: s.auth, user_id: s.user_id } })
