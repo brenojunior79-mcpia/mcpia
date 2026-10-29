@@ -4,6 +4,7 @@ import { recordPayment, clearBilling, firstFutureDate, toAmount } from '@/lib/bi
 import { recordSale, markRefunded } from '@/lib/sales-ledger'
 import { trackReferralSale, trackReferralRefund } from '@/lib/referrals'
 import { tratarEventoHubla, lerEvento } from '@/lib/waAuto'
+import { avisarVendaAdmin } from '@/lib/pushAdmin'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -78,6 +79,29 @@ async function trackSale(admin2: any, eventType: string, payload: any, email: st
   }
 }
 
+// Avisa o admin no celular quando cai uma venda ou renovacao paga
+async function avisarVendaHubla(payload: any, email: string | null): Promise<void> {
+  try {
+    const inv = payload.event?.invoice || {}
+    const products: any[] = payload.event?.products || (payload.event?.product ? [payload.event.product] : [])
+    const planName = resolvePlanName(payload)
+    const nomes = products.map(function(x: any) { return String(x?.name || '').trim() }).filter(Boolean)
+    const produto = planName ? 'Plano ' + planName : (nomes.join(' + ') || 'Produto')
+    const a = inv.amount || {}
+    const cents = Number(a.totalCents ?? a.subtotalCents)
+    const u = payload.event?.user || {}
+    const nome = String(u.fullName || u.name || ((u.firstName || '') + ' ' + (u.lastName || '')) || '').trim()
+    // Renovacao: plano que a pessoa ja tinha ativo na mesma assinatura
+    let renovacao = false
+    const paidSub: string | null = inv.subscriptionId || payload.event?.subscription?.id || null
+    if (planName && paidSub && email) {
+      const cur = await admin.from('profiles').select('hubla_subscription_id, subscription_status').eq('email', email.toLowerCase().trim()).maybeSingle()
+      renovacao = cur.data?.hubla_subscription_id === paidSub && cur.data?.subscription_status === 'active'
+    }
+    await avisarVendaAdmin(admin, { chave: 'hubla:' + (inv.id || (email + ':' + Date.now())), renovacao, produto, valor: isFinite(cents) && cents > 0 ? cents / 100 : null, email, nome, origem: 'Hubla' })
+  } catch (e) { console.error('[hubla-webhook] aviso venda:', e) }
+}
+
 // Registra a data do pagamento e da proxima cobranca (card "Assinaturas" do admin)
 async function trackBilling(userId: string, payload: any, planName: string | null): Promise<void> {
   const sub = payload.event?.subscription || {}
@@ -103,6 +127,7 @@ export async function POST(req: NextRequest) {
     const email = payload.event?.user?.email || null
 
     await trackSale(admin, eventType, payload, email)
+    if (eventType === 'invoice.payment_succeeded') await avisarVendaHubla(payload, email)
 
     // Reembolso da Estrutura Express (upsell): so tira o acesso ao menu Estrutura Express.
     // Nao pode cancelar o plano da plataforma nem bloquear a conta do aluno.

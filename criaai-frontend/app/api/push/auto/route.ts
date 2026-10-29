@@ -3,6 +3,7 @@ import webpush from 'web-push'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase-server'
 import { VAPID_PUBLIC_KEY } from '@/lib/push-config'
+import { testeVendaAdmin } from '@/lib/pushAdmin'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -81,6 +82,11 @@ async function tratar(req: NextRequest) {
     // Admin pode disparar agora o envio de verdade (mesma regra do envio das 18h)
     if (req.nextUrl.searchParams.get('executar') === '1') { const so1 = String(req.nextUrl.searchParams.get('tipo') || ''); return NextResponse.json(await rodarTodos(admin, PADRAO[so1] ? so1 : '')) }
     const tipo = String(req.nextUrl.searchParams.get('tipo') || '')
+    if (tipo === 'venda_admin') {
+      const n = await testeVendaAdmin(admin)
+      if (!n) return NextResponse.json({ error: 'Seu aparelho ainda nao esta cadastrado. Abra a plataforma no celular e ative as notificacoes.' }, { status: 400 })
+      return NextResponse.json({ teste: true, venda_admin: { enviados: n } })
+    }
     const subs = await admin.from('push_subscriptions').select('id, endpoint, p256dh, auth, user_id').eq('user_id', user.id)
     const meus = (subs.data || []).map(function(s: any) { return { sub_id: s.id, endpoint: s.endpoint, p256dh: s.p256dh, auth: s.auth, user_id: s.user_id } })
     if (!meus.length) return NextResponse.json({ error: 'Seu aparelho ainda nao esta cadastrado. Abra a plataforma no celular e ative as notificacoes.' }, { status: 400 })

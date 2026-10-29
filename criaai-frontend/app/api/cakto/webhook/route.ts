@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { recordPayment, clearBilling, firstFutureDate, toAmount } from '@/lib/billing'
 import { recordSale, markRefunded } from '@/lib/sales-ledger'
+import { avisarVendaAdmin } from '@/lib/pushAdmin'
 import { trackReferralSale, trackReferralRefund } from '@/lib/referrals'
 
 const admin = createClient(
@@ -93,6 +94,22 @@ async function trackSale(eventName: string, payload: any, email: string | null):
   }
 }
 
+// Avisa o admin no celular quando cai uma venda ou renovacao paga
+async function avisarVendaCakto(eventName: string, payload: any, email: string | null): Promise<void> {
+  try {
+    if (eventName !== 'purchase_approved' && eventName !== 'subscription_renewed') return
+    const d = payload.data || {}
+    const planName = resolvePlanName(payload)
+    const pack = resolveCreditsPackage(payload)
+    const produto = planName ? 'Plano ' + planName : pack ? 'Pacote de ' + pack + ' criativos' : String(d.product?.name || d.offer?.name || 'Produto')
+    const v = Number(d.amount ?? d.baseAmount ?? d.offer?.price)
+    const renovacao = eventName === 'subscription_renewed'
+    const dia = new Date().toISOString().slice(0, 10)
+    const chave = renovacao ? 'cakto-ren:' + (d.subscription?.id || d.id) + ':' + dia : 'cakto:' + (d.refId || d.id)
+    await avisarVendaAdmin(admin, { chave, renovacao, produto, valor: isFinite(v) && v > 0 ? v : null, email, nome: d.customer?.name || '', origem: 'Cakto' })
+  } catch (e) { console.error('[cakto-webhook] aviso venda:', e) }
+}
+
 // Registra a data do pagamento e da proxima cobranca (card "Assinaturas" do admin)
 async function trackBilling(userId: string, payload: any, planName: string | null): Promise<void> {
   const sub = payload.data?.subscription || {}
@@ -134,6 +151,7 @@ export async function POST(req: NextRequest) {
     const email = getCustomerEmail(payload)
 
     await trackSale(eventName, payload, email)
+    await avisarVendaCakto(eventName, payload, email)
 
     if (!email) {
       console.error('[cakto-webhook] sem email no payload')

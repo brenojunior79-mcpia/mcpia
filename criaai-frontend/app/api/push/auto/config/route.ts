@@ -38,7 +38,8 @@ export async function GET() {
       enviados24h: s1.count || 0, enviados7d: s7.count || 0,
     })
   }
-  return NextResponse.json({ itens })
+  const v = ((cfg.data || []) as any[]).find(function(x) { return x.tipo === 'venda_admin' })
+  return NextResponse.json({ itens, vendaAdmin: { ativo: v ? v.ativo !== false : true } })
 }
 
 export async function POST(req: NextRequest) {
@@ -47,6 +48,11 @@ export async function POST(req: NextRequest) {
   let b: any = {}
   try { b = await req.json() } catch (e) {}
   const tipo = String(b.tipo || '')
+  if (tipo === 'venda_admin') {
+    const r0 = await admin.from('push_auto_config').update({ ativo: !!b.ativo, atualizado_em: new Date().toISOString() }).eq('tipo', 'venda_admin')
+    if (r0.error) return NextResponse.json({ error: 'Nao foi possivel salvar: ' + r0.error.message }, { status: 500 })
+    return NextResponse.json({ ok: true })
+  }
   if (TIPOS.indexOf(tipo) === -1) return NextResponse.json({ error: 'Aviso invalido.' }, { status: 400 })
   const titulo = String(b.titulo || '').trim()
   const mensagem = String(b.mensagem || '').trim()

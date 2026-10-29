@@ -71,6 +71,7 @@ function falta(hora: number, agora: number) {
 
 export default function PushAutoCard() {
   const [itens, setItens] = useState<any[] | null>(null)
+  const [vendaOn, setVendaOn] = useState(true)
   const [erro, setErro] = useState('')
   const [msg, setMsg] = useState<Record<string, { ok: boolean; t: string }>>({})
   const [busy, setBusy] = useState('')
@@ -84,6 +85,7 @@ export default function PushAutoCard() {
       const j = await r.json()
       if (!r.ok) { setErro(j.error || 'Não foi possível carregar.'); return }
       setErro('')
+      setVendaOn(!(j.vendaAdmin && j.vendaAdmin.ativo === false))
       setItens((j.itens || []).map(function(i: any) { return { ...i, form: { ...(i.config || {}) } } }))
     } catch (e) { setErro('Sem conexão.') }
   }
@@ -115,6 +117,28 @@ export default function PushAutoCard() {
       if (!r.ok) aviso(i.tipo, false, j.error || 'Não foi possível enviar o teste.')
       else aviso(i.tipo, true, '✓ Teste enviado para o seu celular (salve antes se mudou o texto).')
     } catch (e) { aviso(i.tipo, false, 'Sem conexão.') }
+    setBusy('')
+  }
+
+  async function ligarVenda(novo: boolean) {
+    setBusy('vs')
+    try {
+      const r = await fetch('/api/push/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'venda_admin', ativo: novo }) })
+      const j = await r.json().catch(function() { return {} })
+      if (!r.ok) aviso('venda', false, j.error || 'Não foi possível salvar.')
+      else { setVendaOn(novo); aviso('venda', true, novo ? '✓ Ligado.' : '✓ Desligado.') }
+    } catch (e) { aviso('venda', false, 'Sem conexão.') }
+    setBusy('')
+  }
+
+  async function testarVenda() {
+    setBusy('vt')
+    try {
+      const r = await fetch('/api/push/auto?teste=1&tipo=venda_admin', { cache: 'no-store' })
+      const j = await r.json().catch(function() { return {} })
+      if (!r.ok) aviso('venda', false, j.error || 'Não foi possível enviar o teste.')
+      else aviso('venda', true, '✓ Exemplo enviado para o seu celular.')
+    } catch (e) { aviso('venda', false, 'Sem conexão.') }
     setBusy('')
   }
 
@@ -289,6 +313,23 @@ export default function PushAutoCard() {
           )
         })}
       </div>
+
+      {/* Aviso de venda: so para o admin */}
+      {itens && (
+        <div className="pa-card pa-up" style={{ animationDelay: '0.35s', marginTop: 14, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden', opacity: vendaOn ? 1 : 0.8 }}>
+          <div style={{ height: 5, background: vendaOn ? 'linear-gradient(90deg,#16a34a,#22c55e)' : 'var(--border2)' }} />
+          <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ width: 38, height: 38, borderRadius: 12, background: 'linear-gradient(135deg,#16a34a,#22c55e)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>💰</div>
+            <div style={{ flex: '1 1 240px', minWidth: 0 }}>
+              <div style={{ fontWeight: 800, fontSize: 14.5 }}>Aviso de venda <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted2)' }}>· só para você</span></div>
+              <div style={{ fontSize: 11.5, color: 'var(--muted2)' }}>Na hora que cair uma venda ou renovação (Hubla e Cakto), chega no seu celular: “💰 Venda aprovada! Plano Pro · R$ 39,90 · nome”.</div>
+              {msg.venda && <div style={{ marginTop: 4, fontSize: 12, fontWeight: 700, color: msg.venda.ok ? 'var(--green)' : 'var(--red)' }}>{msg.venda.t}</div>}
+            </div>
+            <button className="pa-btn" onClick={testarVenda} disabled={busy !== ''} style={botao}>{busy === 'vt' ? 'Enviando…' : '📲 Ver exemplo'}</button>
+            <button className={'pa-sw' + (vendaOn ? ' on' : '')} title={vendaOn ? 'Desligar' : 'Ligar'} disabled={busy !== ''} onClick={function() { ligarVenda(!vendaOn) }} style={{ background: vendaOn ? '#22c55e' : 'var(--border2)' }} />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
