@@ -59,6 +59,17 @@ export async function GET(req: NextRequest) {
   const pagina = Math.min(5, Math.max(1, parseInt(sp.get('pagina') || '1', 10) || 1))
   const id = String(sp.get('id') || '').replace(/\D/g, '')
 
+  // Diagnostico (so admin): /api/criativo/videos?debug=1&q=igreja mostra a resposta crua do Vecteezy (sem a chave)
+  if (u.admin && sp.get('debug')) {
+    try {
+      const extra = String(sp.get('extra') || '').replace(/[^a-zA-Z0-9_=&.\-]/g, '').slice(0, 120)
+      const du = BASE + '/v2/' + encodeURIComponent(conta) + '/resources?content_type=video&per_page=3&term=' + encodeURIComponent(q || 'business') + (extra ? '&' + extra : '')
+      const dr = await fetch(du, { headers: { Authorization: 'Bearer ' + chave, Accept: 'application/json' } })
+      const txt = await dr.text()
+      return NextResponse.json({ status: dr.status, url: du.replace(String(conta), '<conta>'), corpo: txt.slice(0, 6000) })
+    } catch (e: any) { return NextResponse.json({ erro: String(e?.message || e) }) }
+  }
+
   const chaveCache = [id, q.toLowerCase(), formato, pagina].join('|')
   const guardado = cache.get(chaveCache)
   if (guardado && Date.now() - guardado.t < DIA) return NextResponse.json({ conectado: true, ...guardado.dados })
