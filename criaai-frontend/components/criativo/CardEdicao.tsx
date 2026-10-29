@@ -27,7 +27,18 @@ function MiniVideo({ clipe }: { clipe: Clipe }) {
   )
 }
 
-export default function CardEdicao({ clipes, narracao, onIrVideos, onIrNarracao }: { clipes: Clipe[]; narracao: Narracao | null; onIrVideos: () => void; onIrNarracao: () => void }) {
+export type Gerado = { id: string; url: string; mb: number; duracao: number; nVideos: number; criadoEm: number }
+
+// Descreve o volume com palavras (a porcentagem sozinha nao diz como vai soar)
+function rotuloVolume(v: number): string {
+  if (v <= 10) return 'Bem baixinha (quase só a voz)'
+  if (v <= 20) return 'Baixa (recomendado)'
+  if (v <= 30) return 'Média'
+  return 'Alta (pode atrapalhar a voz)'
+}
+function seg(s: number) { return s.toFixed(1).replace('.', ',') + ' s' }
+
+export default function CardEdicao({ clipes, narracao, onIrVideos, onIrNarracao, onGerado }: { clipes: Clipe[]; narracao: Narracao | null; onIrVideos: () => void; onIrNarracao: () => void; onGerado: (g: Gerado) => void }) {
   const [audioOutro, setAudioOutro] = useState<File | null>(null)
   const [usarOutro, setUsarOutro] = useState(false)
   const [musicas, setMusicas] = useState<Musicas>({ animadas: [], emocionais: [] })
@@ -43,21 +54,60 @@ export default function CardEdicao({ clipes, narracao, onIrVideos, onIrNarracao 
   const [fracao, setFracao] = useState(0)
   const [msg, setMsg] = useState('')
   const [resultado, setResultado] = useState<{ url: string; mb: number } | null>(null)
-  const urlRes = useRef('')
+  const [duracaoAudio, setDuracaoAudio] = useState(0)
+  const [ouvindoMix, setOuvindoMix] = useState(false)
+  const mixNarr = useRef<HTMLAudioElement | null>(null)
+  const mixMus = useRef<HTMLAudioElement | null>(null)
+  const mixUrls = useRef<string[]>([])
   const blobsBaixados = useRef<Record<string, Blob>>({})
 
   useEffect(function() {
     fetch('/criativo/musicas.json', { cache: 'no-store' }).then(function(r) { return r.json() }).then(function(j) {
       setMusicas({ animadas: Array.isArray(j.animadas) ? j.animadas : [], emocionais: Array.isArray(j.emocionais) ? j.emocionais : [] })
     }).catch(function() {})
-    return function() { if (urlRes.current) URL.revokeObjectURL(urlRes.current); if (playerMusica.current) playerMusica.current.pause() }
+    return function() { if (playerMusica.current) playerMusica.current.pause(); pararMistura() }
   }, [])
+
+  // A musica ouvida acompanha o controle de volume na hora (antes ficava sempre no mesmo volume)
+  function mudarVolume(v: number) {
+    setVolume(v)
+    if (playerMusica.current) playerMusica.current.volume = v / 100
+    if (mixMus.current) mixMus.current.volume = v / 100
+  }
+
+  function pararMistura() {
+    if (mixNarr.current) { mixNarr.current.pause(); mixNarr.current = null }
+    if (mixMus.current) { mixMus.current.pause(); mixMus.current = null }
+    mixUrls.current.forEach(function(u) { URL.revokeObjectURL(u) }); mixUrls.current = []
+    setOuvindoMix(false)
+  }
+
+  // Toca a narracao junto com a musica no mesmo volume que vai ficar no criativo
+  function ouvirMistura() {
+    if (ouvindoMix) { pararMistura(); return }
+    if (!audioFonte || !faixa) return
+    if (playerMusica.current) { playerMusica.current.pause(); playerMusica.current = null; setTocandoFaixa('') }
+    let urlMus = faixa
+    if (faixa === 'minha') {
+      if (!minhaMusica) { setMsg('Envie o arquivo da música para ouvir a mistura.'); return }
+      urlMus = URL.createObjectURL(minhaMusica); mixUrls.current.push(urlMus)
+    }
+    const urlNarr = usarOutro && audioOutro ? URL.createObjectURL(audioOutro) : (narracao ? narracao.url : '')
+    if (usarOutro && audioOutro) mixUrls.current.push(urlNarr)
+    if (!urlNarr) return
+    const n = new Audio(urlNarr); n.volume = 1
+    const m = new Audio(urlMus); m.volume = volume / 100; m.loop = true
+    n.onended = function() { pararMistura() }
+    mixNarr.current = n; mixMus.current = m
+    setOuvindoMix(true)
+    Promise.all([n.play(), m.play()]).catch(function() { pararMistura() })
+  }
 
   function ouvirFaixa(arquivo: string) {
     if (playerMusica.current) { playerMusica.current.pause(); playerMusica.current = null }
     if (tocandoFaixa === arquivo) { setTocandoFaixa(''); return }
     const a = new Audio(arquivo)
-    a.volume = 0.8
+    a.volume = volume / 100
     a.onended = function() { setTocandoFaixa('') }
     playerMusica.current = a
     setTocandoFaixa(arquivo)
@@ -65,6 +115,17 @@ export default function CardEdicao({ clipes, narracao, onIrVideos, onIrNarracao 
   }
 
   const audioFonte: { blob: Blob; texto: string } | null = usarOutro && audioOutro ? { blob: audioOutro, texto: '' } : (narracao ? { blob: narracao.blob, texto: narracao.texto } : null)
+
+  // Duracao do audio (para mostrar o tamanho do criativo antes de montar)
+  const blobAudio = audioFonte ? audioFonte.blob : null
+  useEffect(function() {
+    setDuracaoAudio(0)
+    if (!blobAudio) return
+    let vivo = true
+    duracaoDoAudio(blobAudio).then(function(d) { if (vivo) setDuracaoAudio(d) }).catch(function() {})
+    return function() { vivo = false }
+  }, [blobAudio])
+  const duracaoCriativo = duracaoAudio > 0 ? Math.max(3, duracaoAudio + 0.5) : 0
 
   async function montar() {
     setMsg(''); setResultado(null)
@@ -118,10 +179,9 @@ export default function CardEdicao({ clipes, narracao, onIrVideos, onIrNarracao 
         palavras, estiloLegenda: estilo,
         onProgresso: function(p, e) { setFracao(p); setEtapa(e) },
       })
-      if (urlRes.current) URL.revokeObjectURL(urlRes.current)
       const url = URL.createObjectURL(blob)
-      urlRes.current = url
       setResultado({ url, mb: blob.size / 1048576 })
+      onGerado({ id: 'g-' + Date.now(), url, mb: blob.size / 1048576, duracao: Math.max(3, duracao + 0.5), nVideos: clipes.length, criadoEm: Date.now() })
     } catch (e: any) {
       setMsg(e && e.message ? String(e.message) : 'Algo deu errado na montagem. Tente de novo.')
     } finally { setOcupado(false); setEtapa('') }
@@ -199,8 +259,12 @@ export default function CardEdicao({ clipes, narracao, onIrVideos, onIrNarracao 
 
         {faixa !== '' && (
           <div style={{ marginTop: 12, maxWidth: 360 }}>
-            <label style={label}>Volume da música: {volume}% <span style={dica}>(a voz fica sempre mais alta)</span></label>
-            <input type="range" min={5} max={40} value={volume} onChange={function(e) { setVolume(parseInt(e.target.value, 10)) }} style={{ width: '100%' }} />
+            <label style={label}>Volume da música: {volume}% · {rotuloVolume(volume)}</label>
+            <input type="range" min={5} max={40} value={volume} onChange={function(e) { mudarVolume(parseInt(e.target.value, 10)) }} style={{ width: '100%' }} />
+            <div style={{ ...dica, marginTop: 4 }}>Ao mexer, a música que está tocando muda de volume na hora. A voz fica sempre mais alta que a música.</div>
+            {audioFonte && (
+              <button onClick={ouvirMistura} style={{ ...botaoClaro, marginTop: 8 }}>{ouvindoMix ? '■ Parar' : '▶ Ouvir a narração com a música'}</button>
+            )}
           </div>
         )}
       </div>
@@ -216,6 +280,18 @@ export default function CardEdicao({ clipes, narracao, onIrVideos, onIrNarracao 
             <button onClick={function() { setEstilo('branco') }} style={chip(estilo === 'branco')}>Tudo branco</button>
           </div>
         )}
+      </div>
+
+      <div style={bloco}>
+        <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 8 }}>Tamanho do criativo</div>
+        <div style={{ fontSize: 13.5, lineHeight: 1.6 }}>
+          📐 Vídeo em pé (Reels), <b>720 × 1280</b>, MP4.<br />
+          {duracaoCriativo > 0
+            ? <>⏱ Duração: <b>{seg(duracaoCriativo)}</b> (narração {seg(duracaoAudio)} + 0,5 s de respiro no final).{clipes.length > 0 ? <> Cada um dos {clipes.length} vídeo(s) fica cerca de {seg(duracaoCriativo / clipes.length)} na tela.</> : null}</>
+            : <>⏱ Duração: igual à da narração + 0,5 s. Gere a narração para ver o tempo.</>}
+          <br />
+          🎵 A música tem sempre o mesmo tamanho do vídeo: se a faixa for curta ela repete, se for longa ela é cortada no fim do vídeo, baixando aos poucos nos últimos 1,5 s.
+        </div>
       </div>
 
       <button onClick={montar} disabled={ocupado} style={{ ...botao, opacity: ocupado ? 0.6 : 1, padding: '13px 22px', fontSize: 15 }}>{ocupado ? 'Montando...' : '🎬 Montar meu criativo'}</button>

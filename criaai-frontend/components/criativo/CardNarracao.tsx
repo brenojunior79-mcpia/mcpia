@@ -26,6 +26,8 @@ export default function CardNarracao({ texto, setTexto, narracao, setNarracao }:
   const [ajustando, setAjustando] = useState(false)
   const [estilo, setEstilo] = useState('natural')
   const [carregando, setCarregando] = useState(false)
+  const [etapaGer, setEtapaGer] = useState('')
+  const [fracaoGer, setFracaoGer] = useState(0)
   const [msg, setMsg] = useState('')
   const urlAnterior = useRef<string>('')
   const amostras = useRef<Record<string, string>>({})
@@ -51,9 +53,17 @@ export default function CardNarracao({ texto, setTexto, narracao, setNarracao }:
     return function() { vivo = false; clearTimeout(t) }
   }, [])
 
+  // Barrinha de progresso: sobe devagar enquanto a voz e gerada (nao ha como medir o andamento real), e completa ao terminar
+  useEffect(function() {
+    if (!carregando) return
+    setFracaoGer(0.03)
+    const t = setInterval(function() { setFracaoGer(function(p) { return p + (0.93 - p) * 0.05 }) }, 400)
+    return function() { clearInterval(t) }
+  }, [carregando])
+
   useEffect(function() {
     return function() {
-      if (urlAnterior.current) URL.revokeObjectURL(urlAnterior.current)
+      // (o audio gerado continua sendo usado no card Edicao, entao o endereco dele nao e apagado ao trocar de card)
       Object.keys(amostras.current).forEach(function(k) { URL.revokeObjectURL(amostras.current[k]) })
       if (player.current) player.current.pause()
     }
@@ -105,13 +115,14 @@ export default function CardNarracao({ texto, setTexto, narracao, setNarracao }:
   async function gerar() {
     setMsg('')
     if (texto.trim().length < 5) { setMsg('Cole ou escreva o texto que será narrado.'); return }
-    setCarregando(true)
+    setCarregando(true); setEtapaGer('Gerando sua narração...')
     try {
       const r = await fetch('/api/criativo/narrar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ texto, voz, estilo }) })
       if (!r.ok) { const j = await r.json().catch(function() { return {} }); setMsg(j.error || 'Não foi possível gerar a narração agora.'); return }
       const original = await r.blob()
+      setEtapaGer('Ajustando a velocidade da voz...'); setFracaoGer(function(p) { return Math.max(p, 0.8) })
       const final = await comVelocidade(original, velocidade)
-      if (urlAnterior.current) URL.revokeObjectURL(urlAnterior.current)
+      setFracaoGer(1)
       const url = URL.createObjectURL(final)
       urlAnterior.current = url
       setNarracao({ url, blob: final, original, velocidade, texto, voz })
@@ -176,6 +187,15 @@ export default function CardNarracao({ texto, setTexto, narracao, setNarracao }:
       <div style={{ marginTop: 16, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
         <button onClick={gerar} disabled={carregando || chars > 3000} style={{ ...botao, opacity: carregando || chars > 3000 ? 0.6 : 1 }}>{carregando ? 'Gerando áudio...' : (narracao ? '🎙️ Gerar de novo' : '🎙️ Gerar narração')}</button>
       </div>
+      {carregando && (
+        <div style={{ marginTop: 14, maxWidth: 420 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>{etapaGer} {Math.round(fracaoGer * 100)}%</div>
+          <div style={{ height: 10, borderRadius: 999, background: 'var(--surface2)', overflow: 'hidden', border: '1px solid var(--border)' }}>
+            <div style={{ height: '100%', width: Math.round(fracaoGer * 100) + '%', background: '#7c5cfc', transition: 'width .4s' }} />
+          </div>
+          <div style={{ ...dica, marginTop: 6 }}>Pode levar alguns segundos. Não feche esta tela.</div>
+        </div>
+      )}
       {msg && <div style={erro}>{msg}</div>}
 
       {narracao && (
