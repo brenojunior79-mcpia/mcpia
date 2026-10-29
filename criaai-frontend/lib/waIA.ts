@@ -1,5 +1,5 @@
 // Assistente de IA (Junior) dentro das conversas do WhatsApp (suporte e recuperacao).
-// So responde nas conversas em que o ADMIN ligou o assistente (wa_conversations.ia_ativa).
+// So responde nas conversas em que o ADMIN ligou o assistente (wa_conversations.ia_ativa) ou quando ele ligou para todas (wa_ia_config.geral).
 import { JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE } from '@/lib/junior'
 import { phoneIdDaConversa, postMessage } from '@/lib/whatsapp'
 
@@ -23,13 +23,28 @@ function rotuloTipo(t: string): string {
   return t === 'image' ? '[imagem]' : t === 'audio' ? '[audio]' : t === 'video' ? '[video]' : t === 'document' ? '[documento]' : t === 'sticker' ? '[figurinha]' : ''
 }
 
+// Quando o assistente deve responder nesta conversa:
+//  - 'manual': o admin ligou nesta conversa (ia_ativa)
+//  - 'geral': o admin ligou o assistente para TODAS as conversas (wa_ia_config.geral), a conversa nao foi desligada
+//    de proposito (ia_humano) e a equipe nao respondeu nas ultimas 12 horas (nesse caso a equipe segue sozinha)
+async function modoIA(admin: any, conv: any): Promise<'manual' | 'geral' | null> {
+  if (conv.ia_ativa === true) return 'manual'
+  if (conv.ia_humano === true) return null
+  const c = await admin.from('wa_ia_config').select('geral').eq('id', 1).maybeSingle()
+  if ((c.data as any)?.geral !== true) return null
+  const desde = new Date(Date.now() - 12 * 3600 * 1000).toISOString()
+  const h = await admin.from('wa_messages').select('id').eq('conversation_id', conv.id).eq('direction', 'out').not('sent_by', 'is', null).gte('created_at', desde).limit(1)
+  if ((h.data || []).length > 0) return null
+  return 'geral'
+}
+
 // Chamado pelo webhook a cada mensagem recebida.
 // Devolve true quando o assistente esta LIGADO nessa conversa (o webhook entao nao manda o aviso de horario nem os fluxos).
 export async function tratarIA(admin: any, convId: string, waId: string, msgId: string, tipo: string, nomeContato: string | null): Promise<boolean> {
   try {
-    const cv = await admin.from('wa_conversations').select('id, ia_ativa, connection_id, profile_id, name').eq('id', convId).maybeSingle()
+    const cv = await admin.from('wa_conversations').select('id, ia_ativa, ia_humano, connection_id, profile_id, name').eq('id', convId).maybeSingle()
     const conv: any = cv.data
-    if (!conv || conv.ia_ativa !== true) return false
+    if (!conv || !(await modoIA(admin, conv))) return false
     // So responde a mensagens de texto; foto, audio etc. ficam para a equipe ver
     if (tipo !== 'text') return true
     if (!process.env.OPENAI_API_KEY) { console.error('[wa-ia] OPENAI_API_KEY ausente'); return true }
@@ -89,10 +104,10 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
 
     // Depois de pensar: conferir de novo se continua ligado e se nao chegou mensagem mais nova
     const [cv2, ult] = await Promise.all([
-      admin.from('wa_conversations').select('ia_ativa').eq('id', convId).maybeSingle(),
+      admin.from('wa_conversations').select('id, ia_ativa, ia_humano').eq('id', convId).maybeSingle(),
       admin.from('wa_messages').select('id').eq('conversation_id', convId).eq('direction', 'in').order('created_at', { ascending: false }).limit(1).maybeSingle(),
     ])
-    if ((cv2.data as any)?.ia_ativa !== true) return true
+    if (!cv2.data || !(await modoIA(admin, cv2.data))) return true
     if (!ult.data || String((ult.data as any).id) !== String(msgId)) return true
 
     const phoneId = await phoneIdDaConversa(admin, conv.connection_id || null)
@@ -102,7 +117,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     await admin.from('wa_messages').insert({ conversation_id: convId, wa_message_id: r.data?.messages?.[0]?.id || null, direction: 'out', type: 'text', body: texto, status: 'sent', sent_by: null, created_at: agora })
     const upd: any = { last_message_at: agora, last_text: '🤖 ' + texto.slice(0, 120) }
     // Pediu ajuda humana: o assistente se desliga sozinho nessa conversa para a equipe assumir
-    if (passaParaHumano) upd.ia_ativa = false
+    if (passaParaHumano) { upd.ia_ativa = false; upd.ia_humano = true }
     await admin.from('wa_conversations').update(upd).eq('id', convId)
     return true
   } catch (e) {

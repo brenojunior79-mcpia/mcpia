@@ -16,7 +16,7 @@ import { classificar } from '@/lib/waMedia'
 type Pessoa = { id: string; nome: string; email: string; admin: boolean; escopo?: string }
 // Quem atende aquele chat (admin e 'todos' atendem os dois)
 function atendeCanal(p: Pessoa, rec: boolean): boolean { return p.admin || p.escopo === 'todos' || (p.escopo === 'recuperacao') === rec }
-type Conv = { profile_id?: string | null; connection_id: string | null; id: string; assigned_to: string | null; wa_id: string; name: string | null; profile_label: string | null; status: string; unread: number; last_text: string | null; last_message_at: string; last_inbound_at: string | null; ia_ativa?: boolean }
+type Conv = { profile_id?: string | null; connection_id: string | null; id: string; assigned_to: string | null; wa_id: string; name: string | null; profile_label: string | null; status: string; unread: number; last_text: string | null; last_message_at: string; last_inbound_at: string | null; ia_ativa?: boolean; ia_humano?: boolean }
 type Msg = { wa_message_id?: string | null; reply_to_wa_id?: string | null; id: string; conversation_id: string; direction: 'in' | 'out'; sent_by?: string | null; type: string; body: string | null; media_path: string | null; mime: string | null; status: string; error: string | null; created_at: string; template?: { name: string; language: string; params: string[] } | null }
 type Status = { connected: boolean; missing?: string[]; webhookUrl?: string; number?: string; name?: string; quality?: string; error?: string }
 
@@ -186,6 +186,7 @@ export default function AtendimentoPage() {
   const [status, setStatus] = useState<Status | null>(null)
   const [staff, setStaff] = useState<boolean | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [iaGeral, setIaGeral] = useState(false)
   const [tab, setTab] = useState<'conversas' | 'atendentes' | 'modelos' | 'disparo' | 'fluxos' | 'eventos' | 'conexoes'>('conversas')
   const [tpls, setTpls] = useState<Tpl[] | null>(null)
   const [disparoAberto, setDisparoAberto] = useState(false)
@@ -633,11 +634,31 @@ export default function AtendimentoPage() {
     if (r.error) setErro(r.error.message)
     await carregarConvs()
   }
+  // O assistente responde nesta conversa se foi ligado nela, ou se esta ligado para todas e ela nao foi desligada
+  function iaOn(c: Conv | null | undefined): boolean { return !!c && (c.ia_ativa === true || (iaGeral && c.ia_humano !== true)) }
+  useEffect(function() {
+    fetch('/api/whatsapp/ia', { cache: 'no-store' }).then(function(r) { return r.ok ? r.json() : null }).then(function(j) { if (j && typeof j.geral === 'boolean') setIaGeral(j.geral) }).catch(function() {})
+  }, [])
+  async function alternarIAGeral() {
+    if (!isAdmin) return
+    const novo = !iaGeral
+    const aviso = novo
+      ? 'Ligar o assistente de IA em TODAS as conversas (suporte e recuperação, inclusive as novas)? Ele passa a responder sozinho. Se alguém da equipe responder uma conversa, ele deixa a equipe seguir por 12 horas. Você pode desligar em uma conversa específica quando quiser.'
+      : 'Desligar o assistente de IA geral? As conversas em que você ligou o assistente manualmente continuam com ele.'
+    if (!window.confirm(aviso)) return
+    setErro('')
+    try {
+      const r = await fetch('/api/whatsapp/ia', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ geral: novo }) })
+      const j = await r.json().catch(function() { return {} })
+      if (!r.ok) setErro(j.error || 'Não foi possível mudar o assistente geral.')
+      else setIaGeral(novo)
+    } catch (e) { setErro('Sem conexão. Tente de novo.') }
+  }
   // Assistente de IA: so o admin liga/desliga (o servidor tambem confere)
   async function alternarIA(ids: string[], ativo: boolean) {
     if (!isAdmin || ids.length === 0) return
     setErro('')
-    setConvs(function(l) { return l.map(function(x) { return ids.indexOf(x.id) >= 0 ? { ...x, ia_ativa: ativo } : x }) })
+    setConvs(function(l) { return l.map(function(x) { return ids.indexOf(x.id) >= 0 ? { ...x, ia_ativa: ativo, ia_humano: !ativo } : x }) })
     try {
       const r = await fetch('/api/whatsapp/ia', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids, ativo }) })
       const j = await r.json().catch(function() { return {} })
@@ -819,6 +840,12 @@ export default function AtendimentoPage() {
             )}
             {escopo === 'recuperacao' && <div style={{ fontWeight: 800, fontSize: 13.5, color: '#c2410c', background: 'rgba(234,88,12,0.12)', borderRadius: 10, padding: '8px 10px' }}>🛒 Chat de recuperação</div>}
             <input className="at-input" placeholder="Buscar nome ou número" value={busca} onChange={function(e) { setBusca(e.target.value) }} />
+            {isAdmin && (
+              <button onClick={alternarIAGeral} title="Liga ou desliga o assistente de IA em todas as conversas de uma vez (inclusive as novas)" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, border: '1px solid ' + (iaGeral ? '#7c3aed' : 'var(--border2)'), background: iaGeral ? 'rgba(124,58,237,0.12)' : 'var(--surface2)', color: iaGeral ? '#7c3aed' : 'var(--text)', borderRadius: 10, padding: '8px 10px', fontWeight: 800, fontSize: 12.5 }}>
+                <span>🤖 Assistente em todas as conversas</span>
+                <span style={{ background: iaGeral ? '#7c3aed' : 'var(--border2)', color: iaGeral ? '#fff' : 'var(--muted2)', borderRadius: 999, padding: '2px 10px', fontSize: 11.5 }}>{iaGeral ? 'LIGADO' : 'desligado'}</span>
+              </button>
+            )}
             {(function() {
               // Estilo Unnichat: dois botoes fixos (Em espera / Minhas) + menu com as demais visoes (so admin)
               const cont = function(k: string) { return convs.filter(function(c) { return (!!c.connection_id) === (canal === 'recuperacao') && c.status !== 'resolvida' && (k === 'todas' ? true : k === 'sem' ? !c.assigned_to : c.assigned_to === k) }).length }
@@ -930,7 +957,7 @@ export default function AtendimentoPage() {
                       {c.unread > 0 && <span style={{ background: '#16a34a', color: '#fff', borderRadius: 999, minWidth: 20, height: 20, padding: '0 6px', fontSize: 11.5, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' }}>{c.unread}</span>}
                     </div>
                     {(isAdmin || !c.assigned_to) && <div style={{ fontSize: 11, color: c.assigned_to ? 'var(--muted2)' : '#b45309', fontWeight: 700, marginTop: 2 }}>{c.assigned_to ? '👤 ' + primeiroNome(c.assigned_to) : '⏳ Em espera'}</div>}
-                    {c.ia_ativa && <div style={{ fontSize: 11, color: '#7c3aed', fontWeight: 800, marginTop: 2 }}>🤖 Assistente ligado</div>}
+                    {iaOn(c) && <div style={{ fontSize: 11, color: '#7c3aed', fontWeight: 800, marginTop: 2 }}>🤖 Assistente ligado</div>}
                     {c.profile_label && <div style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 700, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>🎓 {c.profile_label}</div>}
                   </div>
                 </div>
@@ -961,8 +988,8 @@ export default function AtendimentoPage() {
                 </div>
                 <div className="at-head-acoes">
                 {isAdmin
-                  ? <button onClick={function() { alternarIA([atual.id], !atual.ia_ativa) }} title={atual.ia_ativa ? 'O assistente está respondendo sozinho nesta conversa. Clique para desligar.' : 'Clique para o assistente de IA passar a responder sozinho nesta conversa.'} style={{ cursor: 'pointer', border: '1px solid ' + (atual.ia_ativa ? '#7c3aed' : 'var(--border2)'), background: atual.ia_ativa ? '#7c3aed' : 'var(--surface2)', color: atual.ia_ativa ? '#fff' : 'var(--text)', borderRadius: 8, padding: '7px 10px', fontWeight: 800, fontSize: 12.5, whiteSpace: 'nowrap' }}>🤖 {atual.ia_ativa ? 'Assistente ligado' : 'Ligar assistente'}</button>
-                  : atual.ia_ativa ? <span title="O assistente de IA está respondendo esta conversa" style={{ border: '1px solid #7c3aed', color: '#7c3aed', borderRadius: 8, padding: '6px 9px', fontWeight: 800, fontSize: 12, whiteSpace: 'nowrap' }}>🤖 Assistente ativo</span> : null}
+                  ? <button onClick={function() { alternarIA([atual.id], !iaOn(atual)) }} title={iaOn(atual) ? 'O assistente está respondendo sozinho nesta conversa. Clique para desligar.' : 'Clique para o assistente de IA passar a responder sozinho nesta conversa.'} style={{ cursor: 'pointer', border: '1px solid ' + (iaOn(atual) ? '#7c3aed' : 'var(--border2)'), background: iaOn(atual) ? '#7c3aed' : 'var(--surface2)', color: iaOn(atual) ? '#fff' : 'var(--text)', borderRadius: 8, padding: '7px 10px', fontWeight: 800, fontSize: 12.5, whiteSpace: 'nowrap' }}>🤖 {iaOn(atual) ? 'Assistente ligado' : 'Ligar assistente'}</button>
+                  : iaOn(atual) ? <span title="O assistente de IA está respondendo esta conversa" style={{ border: '1px solid #7c3aed', color: '#7c3aed', borderRadius: 8, padding: '6px 9px', fontWeight: 800, fontSize: 12, whiteSpace: 'nowrap' }}>🤖 Assistente ativo</span> : null}
                 {isAdmin && (
                   <select value={atual.assigned_to || ''} onChange={function(e) { atribuir(e.target.value) }} title="Atendente desta conversa" style={{ border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '6px 8px', fontSize: 12.5, fontWeight: 700, maxWidth: 150 }}>
                     <option value="">Em espera</option>
