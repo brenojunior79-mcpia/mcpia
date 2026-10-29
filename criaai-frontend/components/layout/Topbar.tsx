@@ -94,16 +94,20 @@ export default function Topbar({ profile, user }: { profile: any, user: any }) {
       paddingLeft: 72,
     }}>
 
-      <style>{`@media (max-width: 640px) { .tb-instalar-txt { display: none } }`}</style>
+      <style>{`
+        .tb-t-mob, .tb-t-min { display: none }
+        @media (max-width: 640px) { .tb-t-desk { display: none } .tb-t-mob { display: inline } .tb-btn-instalar { padding: 0 11px !important; font-size: 12.5px !important; gap: 5px !important } }
+        @media (max-width: 380px) { .tb-t-mob { display: none } .tb-t-min { display: inline } }
+      `}</style>
 
       {/* Direita: sininho + Minha conta */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
         {/* Como instalar (some quando a plataforma ja foi aberta pelo icone instalado) */}
         {!jaInstalado && (
-          <button onClick={function() { setInstalarAberto(true) }} title="Como instalar a plataforma no seu aparelho"
+          <button className="tb-btn-instalar" onClick={function() { setInstalarAberto(true) }} title="Como instalar a plataforma no seu aparelho"
             style={{ display: 'flex', alignItems: 'center', gap: 7, height: 38, padding: '0 14px', borderRadius: 999, cursor: 'pointer', fontWeight: 700, fontSize: 13, color: '#7c5cfc', background: 'rgba(124,92,252,0.10)', border: '1px solid rgba(124,92,252,0.35)', whiteSpace: 'nowrap' }}>
             <i className="ti ti-device-mobile" style={{ fontSize: 17 }} />
-            <span className="tb-instalar-txt">Como instalar</span>
+            <span className="tb-t-desk">Como instalar</span><span className="tb-t-mob">Como baixar o app</span><span className="tb-t-min">Baixar app</span>
           </button>
         )}
         {instalarAberto && <ComoInstalarModal onFechar={function() { setInstalarAberto(false) }} />}
