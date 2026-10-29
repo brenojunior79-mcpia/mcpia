@@ -125,7 +125,7 @@ export default function PushSetup({ user }: { user: any }) {
   if (mode === 'hidden') return null
 
   return (
-    <div style={{ position: 'fixed', left: 16, right: 16, bottom: 16, zIndex: 900, display: 'flex', justifyContent: 'flex-end', pointerEvents: 'none' }}>
+    <div style={{ position: 'fixed', left: 16, right: 16, bottom: 150, zIndex: 900, display: 'flex', justifyContent: 'flex-end', pointerEvents: 'none' }}>
       <div style={{ pointerEvents: 'auto', width: '100%', maxWidth: 380, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 18, boxShadow: '0 18px 50px rgba(0,0,0,0.25)', padding: 16, display: 'flex', gap: 12, animation: 'pushIn 0.4s ease' }}>
         <div style={{ width: 42, height: 42, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg, #5b4ef8, #ec4899)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
           <i className="ti ti-bell-ringing" />

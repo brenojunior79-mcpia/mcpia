@@ -5,6 +5,7 @@ import Topbar from '@/components/layout/Topbar'
 import InstallTracker from '@/components/layout/InstallTracker'
 import PushSetup from '@/components/layout/PushSetup'
 import PresenceTracker from '@/components/layout/PresenceTracker'
+import JuniorFlutuante from '@/components/layout/JuniorFlutuante'
 import RefundBlocked from '@/components/layout/RefundBlocked'
 import ReferralClaim from '@/components/referral/ReferralClaim'
 
@@ -33,6 +34,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <PresenceTracker />
       <ReferralClaim />
       <PushSetup user={user} />
+      <JuniorFlutuante />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <Topbar profile={profile} user={user} />
         <main style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>{children}</main>
