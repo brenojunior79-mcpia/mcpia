@@ -18,6 +18,7 @@ export default function AdminPage() {
   const [heat, setHeat] = useState<any>(null)
   const [popup, setPopup] = useState<any>(null)
   const [pushPeople, setPushPeople] = useState(0)
+  const [pushHoje, setPushHoje] = useState(0)
   const [expCliques, setExpCliques] = useState<any>(null)
   const [billing, setBilling] = useState<any>(null)
   const PAGE_FIRST = 5
@@ -96,17 +97,22 @@ export default function AdminPage() {
       } catch (e) {}
       // Alunos que ativaram as notificacoes (pessoas diferentes, nao aparelhos)
       try {
-        const ids: Record<string, boolean> = {}
+        const ids: Record<string, string> = {}
         let pFrom = 0
         while (true) {
-          const pr = await supabase.from('push_subscriptions').select('user_id').order('id', { ascending: true }).range(pFrom, pFrom + 999)
+          const pr = await supabase.from('push_subscriptions').select('user_id, created_at').order('id', { ascending: true }).range(pFrom, pFrom + 999)
           if (pr.error) break
           const rows = pr.data || []
-          rows.forEach(function(r: any) { ids[r.user_id] = true })
+          // guarda a data da primeira ativacao de cada pessoa
+          rows.forEach(function(r: any) { if (!ids[r.user_id] || (r.created_at && r.created_at < ids[r.user_id])) ids[r.user_id] = r.created_at || '' })
           if (rows.length < 1000) break
           pFrom += 1000
         }
         setPushPeople(Object.keys(ids).length)
+        // Ativaram hoje = primeira ativacao depois da meia-noite de Brasilia
+        const br = new Date(Date.now() - 3 * 3600 * 1000)
+        const inicioHoje = Date.UTC(br.getUTCFullYear(), br.getUTCMonth(), br.getUTCDate(), 3)
+        setPushHoje(Object.keys(ids).filter(function(k) { return ids[k] && new Date(ids[k]).getTime() >= inicioHoje }).length)
       } catch (e) {}
       // Estrutura Express: quem viu a tela de venda e quem clicou no botao de compra
       try {
@@ -265,7 +271,7 @@ export default function AdminPage() {
             <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{installs ? installs.ios : 0}</b><br />iPhone</div>
             <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{installs ? installs.computador : 0}</b><br />Computador</div>
             <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{installs ? installs.ativos7 : 0}</b><br />Abriram o app (7 dias)</div>
-            <div><b style={{ color: 'var(--accent)', fontSize: 18 }}>{pushPeople}</b><br />Ativaram notificações</div>
+            <div><b style={{ color: 'var(--accent)', fontSize: 18 }}>{pushPeople}</b><br />Ativaram notificações<br /><span style={{ fontSize: 12 }}>{pushHoje} hoje</span></div>
           </div>
         </div>
 
