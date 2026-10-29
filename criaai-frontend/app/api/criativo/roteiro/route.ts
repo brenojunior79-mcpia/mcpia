@@ -51,7 +51,11 @@ export async function POST(req: NextRequest) {
     'gancho (primeiros 3 segundos: prende a atencao, fala da dor ou de uma promessa forte), ' +
     'corpo (desenvolve o problema e leva ate a solucao, com historia e identificacao), ' +
     'mecanismo (explica de forma simples COMO o produto resolve e por que e diferente), ' +
-    'cta (chamada final clara para a acao). ' +
+    'cta (chamada final para a acao, um pouco mais longa: de 3 a 4 frases curtas, cerca de 35 a 50 palavras). ' +
+    'O CTA e para anuncio no Gerenciador de Anuncios da Meta, entao SEMPRE manda a pessoa clicar no botao que aparece abaixo do video: ' +
+    'retoma em uma frase o beneficio principal, fala o que ela vai encontrar ao clicar e termina com a acao. ' +
+    'Exemplo de estilo (nao copie igual, adapte ao produto): "Clique no botao abaixo, confira o material e baixe agora. Tudo o que voce viu aqui ja esta te esperando la dentro. Nao deixe para depois, toque no botao agora mesmo." ' +
+    'No CTA nunca mande ir para link na bio, comentar, chamar no direct ou arrastar para cima; so o botao abaixo do video. ' +
     'Regras: texto 100% para ser narrado em voz alta, frases curtas, linguagem do dia a dia, sem emojis, sem hashtags, sem markdown, sem indicacoes de cena ou de camera, sem aspas. ' +
     'Deduza o nicho, o resultado esperado e o mecanismo a partir da ficha. Nao invente numeros, depoimentos, premios ou garantias que nao estejam na ficha. Nao prometa cura, ganho de dinheiro garantido ou resultados milagrosos. ' +
     'Tom: ' + tom + '. Tamanho total aproximado: ' + palavras + ' palavras (cerca de ' + segundos + ' segundos falados).'
