@@ -1024,13 +1024,13 @@ WhatsApp do suporte: https://wa.me/553791348869
 Gravacoes das aulas ao vivo com a comunidade. No momento tem: "Aula 18/09/2026 - Breno Junio" (Conhecendo a plataforma Cristao Prospero). Embaixo tem o botao "Avisar quando lancar", que abre o Grupo de Avisos do WhatsApp para o aluno ser avisado das proximas aulas.
 
 ## 13) PLANOS (planos mensais da MCP IA para os geradores de IA)
-Os planos servem para gerar ebooks, sites e videos de criativos com IA. Nunca sao obrigatorios: as aulas e os Criativos Manuais sao gratis. Os planos sao cobrados por mes.
-- Starter: R$ 29,90 por mes. Inclui 10 videos, 2 ebooks e 2 sites por mes. Checkout: https://pay.hub.la/0AueQQcwJxUeV9BE1ax7
-- Pro (marcado como "Mais popular"): R$ 39,90 por mes. Inclui 18 videos, 3 ebooks e 3 sites por mes. Checkout: https://pay.hub.la/16HkQulcBTksGN8AEnow
-- Premium: R$ 79,90 por mes. Inclui 30 videos, 10 ebooks e 10 sites por mes. Checkout: https://pay.hub.la/TwrkZegsChmWcaJ9LO4z
-- Ao assinar, a tela informa "+5 creditos de video gratis". Tem "Garantia de 7 dias sem risco: se nao gostar por qualquer motivo, devolvemos 100% do valor".
+Os planos servem para gerar ebooks, sites e criativos com IA. Nunca sao obrigatorios: as aulas e os Criativos Manuais sao gratis. Os planos sao cobrados por mes.
+- Starter: R$ 29,90 por mes. Inclui 10 criativos, 2 ebooks e 2 sites por mes. Checkout: https://pay.hub.la/0AueQQcwJxUeV9BE1ax7
+- Pro (marcado como "Mais popular"): R$ 39,90 por mes. Inclui 18 criativos, 3 ebooks e 3 sites por mes. Checkout: https://pay.hub.la/16HkQulcBTksGN8AEnow
+- Premium: R$ 79,90 por mes. Inclui 30 criativos, 10 ebooks e 10 sites por mes. Checkout: https://pay.hub.la/TwrkZegsChmWcaJ9LO4z
+- Ao assinar, a tela informa "+5 creditos de criativo gratis". Tem "Garantia de 7 dias sem risco: se nao gostar por qualquer motivo, devolvemos 100% do valor".
 - Quem acabou de entrar pode ver um cronometro de boas-vindas de 24 horas na tela de Planos.
-- Creditos extras de video (compra avulsa, sem mudar de plano; somam ao saldo, nao expiram e podem ser usados a qualquer momento): Pack 10 por R$ 19,90 (https://pay.cakto.com.br/i74jv7b_943777), Pack 30 por R$ 49,90, o "Mais vendido" (https://pay.cakto.com.br/35j9btc_943780) e Pack 100 por R$ 149,90, o "Melhor preco" (https://pay.cakto.com.br/bjwi3d9_943781). Os creditos entram depois da confirmacao do pagamento. Tambem tem garantia de 7 dias.
+- Creditos extras de criativo (compra avulsa, sem mudar de plano; somam ao saldo, nao expiram e podem ser usados a qualquer momento): Pack 10 por R$ 19,90 (https://pay.cakto.com.br/i74jv7b_943777), Pack 30 por R$ 49,90, o "Mais vendido" (https://pay.cakto.com.br/35j9btc_943780) e Pack 100 por R$ 149,90, o "Melhor preco" (https://pay.cakto.com.br/bjwi3d9_943781). Os creditos entram depois da confirmacao do pagamento. Tambem tem garantia de 7 dias.
 Lembre: so fale de planos, precos e creditos se o aluno perguntar ou se fizer sentido, e nunca para aluno nos primeiros 7 dias sem plano (regra de prioridade maxima no topo).
 
 # PRINCIPIO GERAL DA BASE

@@ -13,20 +13,20 @@ const plans = [
   {
     name: 'Starter',
     price: 29.90,
-    features: ['10 videos/mes', '2 ebooks/mes', '2 sites/mes'],
+    features: ['10 criativos/mes', '2 ebooks/mes', '2 sites/mes'],
     missing: [],
   },
   {
     name: 'Pro',
     price: 39.90,
     featured: true,
-    features: ['18 videos/mes', '3 ebooks/mes', '3 sites/mes'],
+    features: ['18 criativos/mes', '3 ebooks/mes', '3 sites/mes'],
     missing: [],
   },
   {
     name: 'Premium',
     price: 79.90,
-    features: ['30 videos/mes', '10 ebooks/mes', '10 sites/mes'],
+    features: ['30 criativos/mes', '10 ebooks/mes', '10 sites/mes'],
     missing: [],
   },
 ]
@@ -179,7 +179,7 @@ export default function PlanosPage() {
                   Oferta de boas-vindas!
                 </div>
                 <div style={{ fontSize: 14, color: 'var(--text)', fontWeight: 600 }}>
-                  Assine agora e ganhe <span style={{ color: '#4ade80' }}>+5 creditos de video gratis</span>
+                  Assine agora e ganhe <span style={{ color: '#4ade80' }}>+5 creditos de criativo gratis</span>
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 2 }}>
                   Bonus exclusivo para novos membros — valido apenas nas proximas horas

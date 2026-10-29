@@ -96,7 +96,7 @@ export default function ContaPage() {
             <div style={{ fontSize: 14, marginBottom: 14 }}>Plano atual: <b>{plano?.name || 'Starter'}</b></div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
               <div>
-                <div style={{ fontSize: 13, display: 'flex', justifyContent: 'space-between' }}><span>Créditos de vídeo</span><b>{ilimitado ? '∞' : Math.max(0, videosLimite - videosUsados) + ' restantes'}</b></div>
+                <div style={{ fontSize: 13, display: 'flex', justifyContent: 'space-between' }}><span>Créditos de criativo</span><b>{ilimitado ? '∞' : Math.max(0, videosLimite - videosUsados) + ' restantes'}</b></div>
                 {!ilimitado && <Barra usados={videosUsados} limite={videosLimite} />}
                 {!ilimitado && <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 4 }}>{videosUsados} usados de {videosLimite}</div>}
               </div>
@@ -122,7 +122,7 @@ export default function ContaPage() {
             <Numero icone="ti-message-circle" valor={resumo ? resumo.perguntas : null} rotulo="Perguntas ao Assistente IA" />
             <Numero icone="ti-sparkles" valor={resumo ? resumo.roteiros : null} rotulo="Roteiros de criativo" />
             <Numero icone="ti-chart-bar" valor={resumo ? resumo.analises : null} rotulo="Análises de métricas" />
-            <Numero icone="ti-video" valor={resumo ? resumo.criativos : null} rotulo="Vídeos gerados" />
+            <Numero icone="ti-video" valor={resumo ? resumo.criativos : null} rotulo="Criativos gerados" />
           </div>
         </div>
 
