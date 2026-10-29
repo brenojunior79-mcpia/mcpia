@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { podeUsarAnuncios } from '@/lib/acessoAnuncios'
 import styles from './Sidebar.module.css'
@@ -62,6 +62,53 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
       localStorage.setItem('mcpia_theme', next)
       document.documentElement.setAttribute('data-theme', next)
     } catch (e) {}
+  }
+
+  // Foto de perfil: o aluno toca no circulo, escolhe uma imagem e ela e reduzida (256x256) antes de enviar
+  const [fotoUrl, setFotoUrl] = useState<string>(profile?.avatar_url || '')
+  const [fotoBusy, setFotoBusy] = useState(false)
+  const [fotoErro, setFotoErro] = useState('')
+  const fotoInput = useRef<HTMLInputElement>(null)
+
+  function reduzirFoto(file: File): Promise<Blob> {
+    return new Promise(function(resolve, reject) {
+      const url = URL.createObjectURL(file)
+      const img = new Image()
+      img.onload = function() {
+        const lado = Math.min(img.width, img.height)
+        const canvas = document.createElement('canvas')
+        canvas.width = 256; canvas.height = 256
+        const ctx = canvas.getContext('2d')
+        if (!ctx) { URL.revokeObjectURL(url); reject(new Error('sem canvas')); return }
+        ctx.drawImage(img, (img.width - lado) / 2, (img.height - lado) / 2, lado, lado, 0, 0, 256, 256)
+        URL.revokeObjectURL(url)
+        canvas.toBlob(function(b) { b ? resolve(b) : reject(new Error('falha')) }, 'image/jpeg', 0.85)
+      }
+      img.onerror = function() { URL.revokeObjectURL(url); reject(new Error('imagem invalida')) }
+      img.src = url
+    })
+  }
+
+  async function escolherFoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files && e.target.files[0]
+    e.target.value = ''
+    if (!file || !user?.id) return
+    setFotoErro('')
+    if (!file.type.startsWith('image/')) { setFotoErro('Escolha uma imagem.'); return }
+    setFotoBusy(true)
+    try {
+      const blob = await reduzirFoto(file)
+      const caminho = user.id + '/foto.jpg'
+      const up = await supabase.storage.from('avatars').upload(caminho, blob, { contentType: 'image/jpeg', upsert: true })
+      if (up.error) throw up.error
+      const pub = supabase.storage.from('avatars').getPublicUrl(caminho).data.publicUrl + '?v=' + Date.now()
+      const upd = await supabase.from('profiles').update({ avatar_url: pub }).eq('id', user.id)
+      if (upd.error) throw upd.error
+      setFotoUrl(pub)
+    } catch (err) {
+      setFotoErro('Não consegui salvar a foto. Tente outra imagem.')
+    }
+    setFotoBusy(false)
   }
 
   async function logout() {
@@ -222,9 +269,19 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
         {/* Bottom */}
         <div className={styles.bottom}>
           <div className={styles.userRow}>
-            <div className={styles.userAvatar}>{user?.email?.[0].toUpperCase()}</div>
+            <input ref={fotoInput} type="file" accept="image/*" onChange={escolherFoto} style={{ display: 'none' }} />
+            <button type="button" onClick={function() { if (fotoInput.current) fotoInput.current.click() }} title="Trocar foto de perfil" aria-label="Trocar foto de perfil"
+              style={{ position: 'relative', border: 0, padding: 0, background: 'none', cursor: 'pointer', flexShrink: 0, width: 32, height: 32 }}>
+              {fotoUrl ? (
+                <img src={fotoUrl} alt="Foto de perfil" style={{ width: 32, height: 32, borderRadius: 10, objectFit: 'cover', display: 'block', opacity: fotoBusy ? 0.5 : 1 }} />
+              ) : (
+                <div className={styles.userAvatar} style={{ opacity: fotoBusy ? 0.5 : 1 }}>{user?.email?.[0].toUpperCase()}</div>
+              )}
+              <span style={{ position: 'absolute', right: -4, bottom: -4, width: 15, height: 15, borderRadius: '50%', background: 'var(--surface)', border: '1px solid var(--border2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, lineHeight: 1 }}>{fotoBusy ? '…' : '📷'}</span>
+            </button>
             <div className={styles.userInfo}>
               <div className={styles.userName}>{profile?.full_name || 'Usuario'}</div>
+              {fotoErro && <div style={{ fontSize: 10.5, color: '#dc2626', lineHeight: 1.2 }}>{fotoErro}</div>}
               {!hidePlans && <div className={styles.userPlan}>{plan?.name || 'Starter'}</div>}
               {!hidePlans && <div className={styles.userCredits}>{plan?.is_unlimited ? '∞' : videosRestantes} Créditos</div>}
             </div>
