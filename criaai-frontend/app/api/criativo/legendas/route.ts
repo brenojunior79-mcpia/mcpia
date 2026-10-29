@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI, { toFile } from 'openai'
 import { usuarioCriativo } from '@/lib/criativoAuth'
+import { alinharPalavras } from '@/lib/criativoAlinhar'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -17,7 +18,8 @@ export async function POST(req: NextRequest) {
   const arq = fd.get('audio')
   if (!arq || typeof arq === 'string') return NextResponse.json({ error: 'Audio nao recebido.' }, { status: 400 })
   if (arq.size > 4 * 1024 * 1024) return NextResponse.json({ error: 'O audio e grande demais (limite 4 MB).' }, { status: 413 })
-  const dica = String(fd.get('dica') || '').slice(0, 600)
+  // Texto da narracao (quando a pessoa gerou a voz aqui). Serve de base para a legenda sair COMPLETA.
+  const textoNarracao = String(fd.get('dica') || '').slice(0, 3500)
 
   try {
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -27,14 +29,21 @@ export async function POST(req: NextRequest) {
       model: 'whisper-1',
       language: 'pt',
       response_format: 'verbose_json',
-      timestamp_granularities: ['word'],
-      ...(dica ? { prompt: dica } : {}),
+      // Sem "prompt": mandar o texto como dica faz o Whisper pular ou cortar trechos da fala
+      timestamp_granularities: ['word', 'segment'],
     } as any)
-    const palavras = (Array.isArray(r.words) ? r.words : []).map(function(w: any) {
+    const medidas = (Array.isArray(r.words) ? r.words : []).map(function(w: any) {
       return { word: String(w.word || ''), start: Number(w.start) || 0, end: Number(w.end) || 0 }
     }).filter(function(w: any) { return w.word.trim() })
+    const segmentos: any[] = Array.isArray(r.segments) ? r.segments : []
+    const textoSegmentos = segmentos.map(function(sg: any) { return String(sg.text || '') }).join(' ')
+    if (!medidas.length && !textoNarracao.trim() && !textoSegmentos.trim()) return NextResponse.json({ error: 'Nao foi possivel identificar a fala no audio.' }, { status: 422 })
+    const duracao = Number(r.duration) || 0
+    const fimSegmentos = segmentos.length ? Number(segmentos[segmentos.length - 1].end) || 0 : 0
+    // Palavras finais: o texto completo (da narracao, ou o que o Whisper entendeu por segmentos) com os tempos medidos
+    const palavras = alinharPalavras(textoNarracao.trim() || textoSegmentos, medidas, duracao, fimSegmentos)
     if (!palavras.length) return NextResponse.json({ error: 'Nao foi possivel identificar a fala no audio.' }, { status: 422 })
-    return NextResponse.json({ palavras, duracao: Number(r.duration) || null })
+    return NextResponse.json({ palavras, duracao: duracao || null })
   } catch (e: any) {
     console.error('[criativo/legendas]', e?.message || e)
     return NextResponse.json({ error: 'Nao foi possivel criar as legendas agora. Tente de novo.' }, { status: 502 })

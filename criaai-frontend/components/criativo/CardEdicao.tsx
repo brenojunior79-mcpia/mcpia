@@ -147,7 +147,7 @@ export default function CardEdicao({ clipes, narracao, onIrVideos, onIrNarracao,
         if (para.size > 3.5 * 1048576) para = await compactarAudio(ff, para)
         const fd = new FormData()
         fd.append('audio', para, 'narracao.mp3')
-        if (audioFonte.texto) fd.append('dica', audioFonte.texto.slice(0, 600))
+        if (audioFonte.texto) fd.append('dica', audioFonte.texto.slice(0, 3500))
         const r = await fetch('/api/criativo/legendas', { method: 'POST', body: fd })
         const j = await r.json().catch(function() { return {} })
         if (!r.ok) throw new Error(j.error || 'Não foi possível criar as legendas. Tente de novo ou desligue as legendas.')
