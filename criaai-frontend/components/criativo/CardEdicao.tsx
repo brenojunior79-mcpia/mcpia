@@ -137,7 +137,7 @@ export default function CardEdicao({ clipes, narracao, onIrVideos, onIrNarracao,
       setEtapa('Conferindo seus créditos...')
       const sr = await fetch('/api/criativo/saldo', { cache: 'no-store' }).catch(function() { return null })
       const sj: any = sr && sr.ok ? await sr.json().catch(function() { return null }) : null
-      if (sj && !sj.admin && sj.restante <= 0) throw new Error(sj.temPlano || sj.limite > 0 ? 'Seus créditos de criativo acabaram. Veja em Planos como conseguir mais.' : 'Assine um plano para gerar criativos.')
+      if (sj && !sj.admin && sj.restante <= 0) throw new Error(sj.novo ? 'Este recurso está em atualização no momento.' : (sj.temPlano || sj.limite > 0 ? 'Seus créditos de criativo acabaram. Veja em Planos como conseguir mais.' : 'Assine um plano para gerar criativos.'))
       setEtapa('Lendo o áudio...')
       const duracao = await duracaoDoAudio(audioFonte.blob)
       if (duracao > 120) throw new Error('A narração passa de 2 minutos. Use um áudio mais curto.')

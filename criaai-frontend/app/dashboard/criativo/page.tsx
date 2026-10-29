@@ -45,7 +45,15 @@ export default function CriativoPage() {
       </div>
 
       <div className={styles.content}>
-        {saldo && !saldo.ilimitado && (
+        {saldo && !saldo.ilimitado && saldo.novo && (
+          <div style={{ maxWidth: 860, marginBottom: 14, padding: '12px 16px', borderRadius: 14, background: saldo.restante > 0 ? 'rgba(34,197,94,0.10)' : 'rgba(124,92,252,0.10)', border: '1px solid ' + (saldo.restante > 0 ? 'rgba(34,197,94,0.3)' : 'rgba(124,92,252,0.3)'), display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 20 }}>{saldo.restante > 0 ? '🎁' : '🛠️'}</span>
+            <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
+              {saldo.restante > 0 ? 'Você pode gerar ' + saldo.restante + ' criativo' + (saldo.restante === 1 ? '' : 's') + ' de teste.' : 'Este recurso está em atualização no momento.'}
+            </span>
+          </div>
+        )}
+        {saldo && !saldo.ilimitado && !saldo.novo && (
           <div style={{ maxWidth: 860, marginBottom: 14, padding: '12px 16px', borderRadius: 14, background: saldo.restante > 0 ? 'rgba(34,197,94,0.10)' : 'rgba(239,68,68,0.10)', border: '1px solid ' + (saldo.restante > 0 ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'), display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 20 }}>{saldo.restante > 0 ? '🎟️' : '🔒'}</span>
             <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>

@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 export async function GET() {
   const s = await saldoCriativo()
   if (!s) return NextResponse.json({ error: 'Entre na sua conta.' }, { status: 401 })
-  return NextResponse.json({ liberado: s.admin || LIBERADO_ALUNOS, admin: s.admin, ilimitado: s.ilimitado, temPlano: s.temPlano, limite: s.limite, usados: s.usados, restante: s.restante })
+  return NextResponse.json({ liberado: s.admin || LIBERADO_ALUNOS, admin: s.admin, ilimitado: s.ilimitado, temPlano: s.temPlano, novo: s.novo, limite: s.limite, usados: s.usados, restante: s.restante })
 }
 
 // POST: gasta 1 credito quando o criativo fica pronto (admin nao gasta).
