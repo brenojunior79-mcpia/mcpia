@@ -44,6 +44,8 @@ export async function GET(req: NextRequest) {
     if (alvo.protocol !== 'https:' || !/(^|\.)vecteezy\.com$|(^|\.)amazonaws\.com$|(^|\.)cloudfront\.net$/.test(alvo.hostname)) return NextResponse.json({ error: 'Endereco nao permitido.' }, { status: 400 })
     const f = await fetch(alvo.toString())
     if (!f.ok || !f.body) return NextResponse.json({ error: 'Nao foi possivel baixar o video.' }, { status: 502 })
+    // Registra o tamanho real do arquivo para sabermos se o Vecteezy esta entregando video pesado demais para o navegador
+    console.log('[vecteezy/arquivo] id=' + id + ' tipo=' + (f.headers.get('content-type') || '?') + ' mb=' + (Number(f.headers.get('content-length') || 0) / 1048576).toFixed(1))
     return new NextResponse(f.body as any, { status: 200, headers: { 'Content-Type': f.headers.get('content-type') || 'video/mp4', 'Cache-Control': 'private, max-age=3600' } })
   } catch (e) {
     return NextResponse.json({ error: 'Nao foi possivel baixar o video.' }, { status: 502 })
