@@ -12,7 +12,7 @@ export const maxDuration = 60
 //  1) "Sentimos sua falta": quem esta ha 2 dias ou mais sem abrir a plataforma (no maximo 1 vez a cada 7 dias).
 //  2) "Oferta da Estrutura Express": quem ainda nao tem a Estrutura Express (no maximo 1 vez a cada 2 dias).
 // Cada pessoa recebe no maximo 1 aviso automatico por dia. O admin pode testar em /api/push/auto?teste=1 (so no aparelho dele).
-const AVISOS: Record<string, { title: string; body: string; url: string }> = {
+const PADRAO: Record<string, { title: string; body: string; url: string }> = {
   sentimos_falta: {
     title: 'Sentimos sua falta 🙏',
     body: 'Faz alguns dias que você não entra na plataforma. Volte e continue de onde parou!',
@@ -23,6 +23,19 @@ const AVISOS: Record<string, { title: string; body: string; url: string }> = {
     body: 'Produto, site e criativos prontos para você. A oferta termina hoje à meia-noite!',
     url: '/dashboard/estrutura-express',
   },
+}
+
+type Aviso = { title: string; body: string; url: string }
+
+// Le os textos e se esta ligado no banco (card em Admin > Notificacoes); se falhar, usa o padrao
+async function carregarConfig(admin: any): Promise<Record<string, Aviso & { ativo: boolean }>> {
+  const out: Record<string, Aviso & { ativo: boolean }> = {}
+  const r = await admin.from('push_auto_config').select('tipo, ativo, titulo, mensagem, url')
+  for (const t of Object.keys(PADRAO)) out[t] = { ...PADRAO[t], ativo: true }
+  for (const c of (r.data || []) as any[]) {
+    if (out[c.tipo]) out[c.tipo] = { title: c.titulo || out[c.tipo].title, body: c.mensagem || out[c.tipo].body, url: c.url || out[c.tipo].url, ativo: c.ativo !== false }
+  }
+  return out
 }
 
 async function enviar(admin: any, alvos: any[], aviso: { title: string; body: string; url: string }) {
@@ -65,29 +78,39 @@ async function tratar(req: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Nao autorizado' }, { status: 401 })
     const me = await admin.from('profiles').select('is_admin').eq('id', user.id).maybeSingle()
     if (!me.data?.is_admin) return NextResponse.json({ error: 'Somente o admin' }, { status: 403 })
+    // Admin pode disparar agora o envio de verdade (mesma regra do envio das 18h)
+    if (req.nextUrl.searchParams.get('executar') === '1') return NextResponse.json(await rodarTodos(admin))
     const tipo = String(req.nextUrl.searchParams.get('tipo') || '')
     const subs = await admin.from('push_subscriptions').select('id, endpoint, p256dh, auth, user_id').eq('user_id', user.id)
     const meus = (subs.data || []).map(function(s: any) { return { sub_id: s.id, endpoint: s.endpoint, p256dh: s.p256dh, auth: s.auth, user_id: s.user_id } })
     if (!meus.length) return NextResponse.json({ error: 'Seu aparelho ainda nao esta cadastrado. Abra a plataforma no celular e ative as notificacoes.' }, { status: 400 })
-    const tipos = AVISOS[tipo] ? [tipo] : Object.keys(AVISOS)
+    const cfg = await carregarConfig(admin)
+    const tipos = cfg[tipo] ? [tipo] : Object.keys(cfg)
     const out: any = {}
-    for (const t of tipos) { const r = await enviar(admin, meus, AVISOS[t]); out[t] = { enviados: r.enviados, falhas: r.falhas } }
+    for (const t of tipos) { const r = await enviar(admin, meus, cfg[t]); out[t] = { enviados: r.enviados, falhas: r.falhas } }
     return NextResponse.json({ teste: true, ...out })
   }
 
+  return NextResponse.json(await rodarTodos(admin))
+}
+
+// Envio de verdade: so quem esta na regra de cada aviso e ainda nao recebeu dentro do prazo
+async function rodarTodos(admin: any) {
+  const cfg = await carregarConfig(admin)
   const resultado: any = {}
   for (const tipo of ['sentimos_falta', 'oferta_express']) {
+    if (!cfg[tipo].ativo) { resultado[tipo] = { desligado: true, pessoas: 0, enviados: 0 }; continue }
     const q = await admin.rpc('push_auto_alvos', { p_tipo: tipo })
     if (q.error) { resultado[tipo] = { erro: q.error.message }; continue }
     const alvos = (q.data || []) as any[]
     if (!alvos.length) { resultado[tipo] = { pessoas: 0, enviados: 0 }; continue }
-    const r = await enviar(admin, alvos, AVISOS[tipo])
+    const r = await enviar(admin, alvos, cfg[tipo])
     if (r.pessoas.length) {
       await admin.from('push_auto_envios').insert(r.pessoas.map(function(id) { return { user_id: id, tipo } }))
     }
     resultado[tipo] = { pessoas: r.pessoas.length, enviados: r.enviados, falhas: r.falhas, removidos: r.removidos }
   }
-  return NextResponse.json({ ok: true, ...resultado })
+  return { ok: true, ...resultado }
 }
 
 export async function GET(req: NextRequest) { return tratar(req) }

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 import styles from '../admin.module.css'
+import PushAutoCard from '@/components/admin/PushAutoCard'
 
 const LINKS = [
   { value: '/dashboard', label: 'Painel do Aluno' },
@@ -158,6 +159,8 @@ export default function NotificacoesPage() {
             <div className={styles.statUp} style={{ color: 'var(--muted2)' }}>veja o histórico abaixo</div>
           </div>
         </div>
+
+        <PushAutoCard />
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 18, marginBottom: 28 }}>
           {/* Formulario */}
