@@ -73,6 +73,17 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
 
   const [fotoArquivo, setFotoArquivo] = useState<File | null>(null)
 
+  // Saudacao do cartao do topo do menu (calculada no navegador, no horario de quem esta usando)
+  const [saudacao, setSaudacao] = useState('Olá')
+  const [dataCurta, setDataCurta] = useState('')
+  useEffect(function() {
+    const h = new Date().getHours()
+    setSaudacao(h >= 18 ? 'Boa noite' : h >= 12 ? 'Boa tarde' : 'Bom dia')
+    try { setDataCurta(new Date().toLocaleDateString('pt-BR', { weekday: 'long' })) } catch (e) {}
+  }, [])
+  const nomeCurto = ((profile?.full_name || '').split(' ')[0] || '').toLowerCase()
+  const ehMulher = nomeCurto.length > 3 && ['a', 'e', 'i', 'y'].some(function(end) { return nomeCurto.endsWith(end) })
+
   function escolherFoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files && e.target.files[0]
     e.target.value = ''
@@ -168,7 +179,20 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
           <div className={styles.logoTop}>Plataforma do</div>
           <div className={styles.logoBottom}>Cristão Próspero</div>
           <div className={styles.logoUser}>
-            <div className={styles.logoUserName} title={profile?.full_name || ''}>{(profile?.full_name || '').trim() || firstName}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+              <button type="button" onClick={function() { if (fotoInput.current) fotoInput.current.click() }} title="Trocar foto de perfil" aria-label="Trocar foto de perfil"
+                style={{ border: 0, padding: 0, background: 'none', cursor: 'pointer', flexShrink: 0, width: 44, height: 44, borderRadius: '50%' }}>
+                {fotoUrl ? (
+                  <img src={fotoUrl} alt="Foto de perfil" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', display: 'block' }} />
+                ) : (
+                  <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg, #f97316, #ea580c)', color: '#fff', fontWeight: 800, fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{(firstName || user?.email || '?').charAt(0).toUpperCase()}</div>
+                )}
+              </button>
+              <div style={{ minWidth: 0, lineHeight: 1.25 }}>
+                <div style={{ fontSize: 11.5, color: 'var(--muted2)', whiteSpace: 'nowrap' }}>{saudacao} {ehMulher ? '👩' : '👋'}<span style={{ textTransform: 'capitalize' }}>{dataCurta ? ' · ' + dataCurta : ''}</span></div>
+                <div className={styles.logoUserName} title={profile?.full_name || ''} style={{ margin: 0, fontSize: 14, fontWeight: 800 }}>{(profile?.full_name || '').trim() || firstName}</div>
+              </div>
+            </div>
             {(profile?.email || user?.email) && <div className={styles.logoUserEmail} title={profile?.email || user?.email}>{profile?.email || user?.email}</div>}
             <div className={styles.logoUserCredits} style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
               {!hidePlans && <span>{plan?.is_unlimited ? '∞' : videosRestantes} Créditos</span>}

@@ -20,15 +20,7 @@ export default function Topbar({ profile, user }: { profile: any, user: any }) {
   useEffect(function() {
     try { setJaInstalado(window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true) } catch (e) {}
   }, [])
-  const [fotoUrl, setFotoUrl] = useState<string>(profile?.avatar_url || '')
   const supabase = createClient()
-
-  // A foto muda aqui na hora quando a pessoa troca no menu lateral
-  useEffect(function() {
-    function nova(e: any) { if (e && e.detail) setFotoUrl(String(e.detail)) }
-    window.addEventListener('mcpia-foto-atualizada', nova)
-    return function() { window.removeEventListener('mcpia-foto-atualizada', nova) }
-  }, [])
 
   useEffect(function() {
     const now = new Date()
@@ -102,27 +94,16 @@ export default function Topbar({ profile, user }: { profile: any, user: any }) {
       paddingLeft: 72,
     }}>
 
-      {/* Esquerda: foto + saudacao + nome + e-mail */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-        <button type="button" onClick={function() { window.dispatchEvent(new Event('mcpia-trocar-foto')) }} title="Trocar foto de perfil" aria-label="Trocar foto de perfil"
-          style={{ border: 0, padding: 0, background: 'none', cursor: 'pointer', flexShrink: 0, width: 40, height: 40, borderRadius: '50%' }}>
-          {fotoUrl ? (
-            <img src={fotoUrl} alt="Foto de perfil" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', display: 'block' }} />
-          ) : (
-            <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg, #f97316, #ea580c)', color: '#fff', fontWeight: 800, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{(firstName || user?.email || '?').charAt(0).toUpperCase()}</div>
-          )}
-        </button>
-        <div style={{ minWidth: 0, lineHeight: 1.25 }}>
-          <div style={{ fontSize: 11, color: 'var(--muted2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {greeting} {isFemale ? '👩' : '👋'}<span className="tb-data" style={{ textTransform: 'capitalize' }}> · {date}</span>
+      {/* Esquerda: saudacao + data */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {greeting}, {firstName}! {isFemale ? '👩' : '👋'}
           </div>
-          <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {(profile?.full_name || '').trim() || firstName}
-          </div>
-          {(profile?.email || user?.email) && <div className="tb-email" style={{ fontSize: 10.5, color: 'var(--muted2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{profile?.email || user?.email}</div>}
+          <div style={{ fontSize: 11, color: 'var(--muted2)', textTransform: 'capitalize' }}>{date}</div>
         </div>
       </div>
-      <style>{`@media (max-width: 640px) { .tb-data, .tb-email, .tb-instalar-txt { display: none } }`}</style>
+      <style>{`@media (max-width: 640px) { .tb-instalar-txt { display: none } }`}</style>
 
       {/* Direita: sininho + Minha conta */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
