@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-browser'
+import ComoInstalarModal from './ComoInstalarModal'
 
 interface Notification {
   id: string
@@ -14,6 +15,11 @@ export default function Topbar({ profile, user }: { profile: any, user: any }) {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [showNotif, setShowNotif] = useState(false)
   const [date, setDate] = useState('')
+  const [instalarAberto, setInstalarAberto] = useState(false)
+  const [jaInstalado, setJaInstalado] = useState(false)
+  useEffect(function() {
+    try { setJaInstalado(window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true) } catch (e) {}
+  }, [])
   const [fotoUrl, setFotoUrl] = useState<string>(profile?.avatar_url || '')
   const supabase = createClient()
 
@@ -116,10 +122,19 @@ export default function Topbar({ profile, user }: { profile: any, user: any }) {
           {(profile?.email || user?.email) && <div className="tb-email" style={{ fontSize: 10.5, color: 'var(--muted2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{profile?.email || user?.email}</div>}
         </div>
       </div>
-      <style>{`@media (max-width: 640px) { .tb-data, .tb-email { display: none } }`}</style>
+      <style>{`@media (max-width: 640px) { .tb-data, .tb-email, .tb-instalar-txt { display: none } }`}</style>
 
       {/* Direita: sininho + Minha conta */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        {/* Como instalar (some quando a plataforma ja foi aberta pelo icone instalado) */}
+        {!jaInstalado && (
+          <button onClick={function() { setInstalarAberto(true) }} title="Como instalar a plataforma no seu aparelho"
+            style={{ display: 'flex', alignItems: 'center', gap: 7, height: 38, padding: '0 14px', borderRadius: 999, cursor: 'pointer', fontWeight: 700, fontSize: 13, color: '#7c5cfc', background: 'rgba(124,92,252,0.10)', border: '1px solid rgba(124,92,252,0.35)', whiteSpace: 'nowrap' }}>
+            <i className="ti ti-device-mobile" style={{ fontSize: 17 }} />
+            <span className="tb-instalar-txt">Como instalar</span>
+          </button>
+        )}
+        {instalarAberto && <ComoInstalarModal onFechar={function() { setInstalarAberto(false) }} />}
         {/* Sininho de notificacoes (ao lado esquerdo do Minha conta) */}
         <div style={{ position: 'relative' }}>
           <button

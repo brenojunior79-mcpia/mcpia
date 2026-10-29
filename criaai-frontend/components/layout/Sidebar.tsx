@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { podeUsarAnuncios } from '@/lib/acessoAnuncios'
+import FotoPerfilModal from './FotoPerfilModal'
 import styles from './Sidebar.module.css'
 
 export default function Sidebar({ profile, user }: { profile: any, user: any }) {
@@ -70,34 +71,21 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
   const [fotoErro, setFotoErro] = useState('')
   const fotoInput = useRef<HTMLInputElement>(null)
 
-  function reduzirFoto(file: File): Promise<Blob> {
-    return new Promise(function(resolve, reject) {
-      const url = URL.createObjectURL(file)
-      const img = new Image()
-      img.onload = function() {
-        const lado = Math.min(img.width, img.height)
-        const canvas = document.createElement('canvas')
-        canvas.width = 256; canvas.height = 256
-        const ctx = canvas.getContext('2d')
-        if (!ctx) { URL.revokeObjectURL(url); reject(new Error('sem canvas')); return }
-        ctx.drawImage(img, (img.width - lado) / 2, (img.height - lado) / 2, lado, lado, 0, 0, 256, 256)
-        URL.revokeObjectURL(url)
-        canvas.toBlob(function(b) { b ? resolve(b) : reject(new Error('falha')) }, 'image/jpeg', 0.85)
-      }
-      img.onerror = function() { URL.revokeObjectURL(url); reject(new Error('imagem invalida')) }
-      img.src = url
-    })
-  }
+  const [fotoArquivo, setFotoArquivo] = useState<File | null>(null)
 
-  async function escolherFoto(e: React.ChangeEvent<HTMLInputElement>) {
+  function escolherFoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files && e.target.files[0]
     e.target.value = ''
-    if (!file || !user?.id) return
+    if (!file) return
     setFotoErro('')
     if (!file.type.startsWith('image/')) { setFotoErro('Escolha uma imagem.'); return }
-    setFotoBusy(true)
+    setFotoArquivo(file)
+  }
+
+  async function salvarFoto(blob: Blob) {
+    if (!user?.id) return
+    setFotoBusy(true); setFotoErro('')
     try {
-      const blob = await reduzirFoto(file)
       const caminho = user.id + '/foto.jpg'
       const up = await supabase.storage.from('avatars').upload(caminho, blob, { contentType: 'image/jpeg', upsert: true })
       if (up.error) throw up.error
@@ -105,9 +93,12 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
       const upd = await supabase.from('profiles').update({ avatar_url: pub }).eq('id', user.id)
       if (upd.error) throw upd.error
       setFotoUrl(pub)
+      setFotoArquivo(null)
       try { window.dispatchEvent(new CustomEvent('mcpia-foto-atualizada', { detail: pub })) } catch (e) {}
-    } catch (err) {
-      setFotoErro('Não consegui salvar a foto. Tente outra imagem.')
+    } catch (err: any) {
+      console.error('[foto de perfil]', err)
+      setFotoErro('Não consegui salvar a foto. Tente de novo.')
+      setFotoArquivo(null)
     }
     setFotoBusy(false)
   }
@@ -278,6 +269,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
         <div className={styles.bottom}>
           <div className={styles.userRow}>
             <input ref={fotoInput} type="file" accept="image/*" onChange={escolherFoto} style={{ display: 'none' }} />
+            {fotoArquivo && <FotoPerfilModal arquivo={fotoArquivo} salvando={fotoBusy} onCancelar={function() { if (!fotoBusy) setFotoArquivo(null) }} onSalvar={salvarFoto} />}
             <button type="button" onClick={function() { if (fotoInput.current) fotoInput.current.click() }} title="Trocar foto de perfil" aria-label="Trocar foto de perfil"
               style={{ position: 'relative', border: 0, padding: 0, background: 'none', cursor: 'pointer', flexShrink: 0, width: 32, height: 32 }}>
               {fotoUrl ? (
