@@ -227,6 +227,9 @@ export default function AdminPage() {
     if (filter === 'hoje') return isToday(p.created_at)
     if (filter === 'sempagar') return !isPayer(p) && !p.is_admin && p.subscription_status !== 'trialing'
     return true
+  }).sort(function(a: any, b: any) {
+    // Quem tem foto de perfil aparece primeiro (dentro de cada grupo continua do mais novo para o mais antigo)
+    return (b.avatar_url ? 1 : 0) - (a.avatar_url ? 1 : 0)
   })
 
   if (loading) return (
