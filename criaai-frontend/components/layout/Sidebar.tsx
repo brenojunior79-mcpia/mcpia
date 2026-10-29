@@ -179,12 +179,15 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
           <div className={styles.logoUser}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
               <button type="button" onClick={function() { if (fotoInput.current) fotoInput.current.click() }} title="Trocar foto de perfil" aria-label="Trocar foto de perfil"
-                style={{ border: 0, padding: 0, background: 'none', cursor: 'pointer', flexShrink: 0, width: 44, height: 44, borderRadius: '50%' }}>
+                style={{ position: 'relative', border: 0, padding: 0, background: 'none', cursor: 'pointer', flexShrink: 0, width: 44, height: 44, borderRadius: '50%', overflow: 'visible' }}>
                 {fotoUrl ? (
                   <img src={fotoUrl} alt="Foto de perfil" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', display: 'block' }} />
                 ) : (
                   <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg, #f97316, #ea580c)', color: '#fff', fontWeight: 800, fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{(firstName || user?.email || '?').charAt(0).toUpperCase()}</div>
                 )}
+                <span style={{ position: 'absolute', right: -3, bottom: -3, width: 20, height: 20, borderRadius: '50%', background: '#7c5cfc', border: '2px solid var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 4px rgba(0,0,0,.25)' }}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
+                </span>
               </button>
               <div style={{ minWidth: 0, lineHeight: 1.25 }}>
                 <div style={{ fontSize: 11.5, color: 'var(--muted2)', whiteSpace: 'nowrap' }}>{saudacao} {ehMulher ? '👩' : '👋'}</div>
