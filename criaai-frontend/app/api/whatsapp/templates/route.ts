@@ -21,6 +21,10 @@ function maxVar(text: string): number {
   return n
 }
 
+// Guarda a lista por 2 minutos (a Meta e lenta e a lista quase nao muda). ?fresh=1 ignora; criar/apagar limpa.
+const cacheTpl = new Map<string, { t: number; lista: any[] }>()
+const VALE_TPL = 2 * 60 * 1000
+
 // Lista os modelos (templates) da conta
 export async function GET(req: NextRequest) {
   const staffId = await requireStaff()
@@ -34,6 +38,9 @@ export async function GET(req: NextRequest) {
   // Com ?connection=<id> lista os modelos da conta de OUTRO numero (ex.: Recuperacao)
   const waba = await wabaDaPasta(req.nextUrl.searchParams.get('connection') || '')
   if (!waba) return NextResponse.json({ error: SEM_WABA }, { status: 400 })
+
+  const guardado = cacheTpl.get(waba)
+  if (guardado && !req.nextUrl.searchParams.get('fresh') && Date.now() - guardado.t < VALE_TPL) return NextResponse.json({ templates: guardado.lista })
 
   const out: any[] = []
   let url: string | null = waba + '/message_templates?fields=name,language,status,category,components,rejected_reason&limit=100'
@@ -59,11 +66,13 @@ export async function GET(req: NextRequest) {
     url = r.data?.paging?.next || null
   }
   out.sort(function(a, b) { return String(a.name).localeCompare(String(b.name)) })
+  cacheTpl.set(waba, { t: Date.now(), lista: out })
   return NextResponse.json({ templates: out })
 }
 
 // Cria um modelo e manda para analise da Meta (so admin)
 export async function POST(req: NextRequest) {
+  cacheTpl.clear()
   if (!(await requireAdmin())) return NextResponse.json({ error: 'So administradores podem criar modelos.' }, { status: 403 })
   let input: any
   try { input = await req.json() } catch (e) { return NextResponse.json({ error: 'Pedido invalido.' }, { status: 400 }) }
@@ -108,6 +117,7 @@ export async function POST(req: NextRequest) {
 
 // Apaga um modelo pelo nome (todos os idiomas) (so admin)
 export async function DELETE(req: NextRequest) {
+  cacheTpl.clear()
   if (!(await requireAdmin())) return NextResponse.json({ error: 'So administradores podem apagar modelos.' }, { status: 403 })
   const name = new URL(req.url).searchParams.get('name') || ''
   if (!/^[a-z0-9_]{1,100}$/.test(name)) return NextResponse.json({ error: 'Nome invalido.' }, { status: 400 })

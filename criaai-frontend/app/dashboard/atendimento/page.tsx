@@ -165,9 +165,9 @@ function Midia({ m, onFoto }: { m: Msg; onFoto: (src: string) => void }) {
       </div>
     )
   }
-  if (m.type === 'image' || m.type === 'sticker') return <img src={src} alt="Imagem" onClick={function() { onFoto(src) }} style={{ maxWidth: '100%', maxHeight: 280, borderRadius: 8, display: 'block', marginBottom: m.body ? 6 : 0, cursor: 'zoom-in' }} />
-  if (m.type === 'audio') return <audio controls src={src} style={{ maxWidth: '100%', height: 36 }} />
-  if (m.type === 'video') return <video controls src={src} style={{ maxWidth: '100%', maxHeight: 280, borderRadius: 8 }} />
+  if (m.type === 'image' || m.type === 'sticker') return <img src={src} alt="Imagem" loading="lazy" decoding="async" onClick={function() { onFoto(src) }} style={{ maxWidth: '100%', maxHeight: 280, borderRadius: 8, display: 'block', marginBottom: m.body ? 6 : 0, cursor: 'zoom-in' }} />
+  if (m.type === 'audio') return <audio controls preload="none" src={src} style={{ maxWidth: '100%', height: 36 }} />
+  if (m.type === 'video') return <video controls preload="metadata" src={src} style={{ maxWidth: '100%', maxHeight: 280, borderRadius: 8 }} />
   return <a href={src} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', fontWeight: 700 }}>📎 Abrir arquivo</a>
 }
 
@@ -221,6 +221,7 @@ export default function AtendimentoPage() {
   useEffect(function() { setModoSel(false); setMarcadas({}) }, [canal, aba])
   const selRef = useRef<string | null>(null)
   selRef.current = sel
+  const cacheMsgs = useRef<Record<string, Msg[]>>({})
 
   const carregarConvs = useCallback(async function() {
     // Suporte e recuperacao buscados separados, para um nao empurrar o outro para fora do limite
@@ -245,6 +246,7 @@ export default function AtendimentoPage() {
     if (!r.error && r.data && selRef.current === id) {
       const reais = r.data as Msg[]
       // Mantem as mensagens ainda "enviando" (provisorias), sem duplicar as que ja chegaram do banco
+      cacheMsgs.current[id] = reais
       setMsgs(function(old) {
         const usadas: Record<string, boolean> = {}
         const pend = old.filter(function(m) {
@@ -259,10 +261,10 @@ export default function AtendimentoPage() {
     }
   }, [])
 
-  const carregarTpls = useCallback(async function() {
+  const carregarTpls = useCallback(async function(fresh?: boolean) {
     setTplCarregando(true)
     try {
-      const r = await fetch('/api/whatsapp/templates', { cache: 'no-store' })
+      const r = await fetch('/api/whatsapp/templates' + (fresh === true ? '?fresh=1' : ''), { cache: 'no-store' })
       const j = await r.json().catch(function() { return {} })
       if (r.ok) { setTpls(j.templates || []); setTplErro('') }
       else { setTplErro(j.error || 'Não foi possível listar os modelos.'); setTpls(function(x) { return x }) }
@@ -274,24 +276,27 @@ export default function AtendimentoPage() {
     // Ferramentas de conexao ficam escondidas; abrir com ?ferramentas=1 quando precisar (ex.: trocar de numero)
     try { setFerramentas(new URLSearchParams(window.location.search).get('ferramentas') === '1') } catch (e) {}
     ;(async function() {
-      const { data: { user } } = await supabase.auth.getUser()
+      // getSession le o login guardado no aparelho (sem ida ao servidor); o acesso de verdade e checado pelo banco
+      const { data: { session } } = await supabase.auth.getSession()
+      const user = session ? session.user : null
       if (!user) { setStaff(false); return }
       setMeuId(user.id)
-      const p = await supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle()
-      setIsAdmin(!!(p.data as any)?.is_admin)
-      if (!(p.data as any)?.is_admin) setFiltro('sem')
-      if ((p.data as any)?.is_admin) {
-        const pe = await supabase.rpc('wa_assignable')
-        if (!pe.error && pe.data) setPessoas(pe.data as any)
-      }
-      const s = await supabase.rpc('wa_is_staff')
+      // Tudo ao mesmo tempo (antes era um depois do outro). A lista de conversas ja sai junto: o banco so entrega o que a pessoa pode ver.
+      carregarConvs()
+      const [p, s, esc] = await Promise.all([
+        supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle(),
+        supabase.rpc('wa_is_staff'),
+        supabase.rpc('wa_meu_escopo'),
+      ])
+      const admin = !!(p.data as any)?.is_admin
+      setIsAdmin(admin)
+      if (!admin) setFiltro('sem')
+      if (admin) supabase.rpc('wa_assignable').then(function(pe) { if (!pe.error && pe.data) setPessoas(pe.data as any) })
       setStaff(s.data === true)
       if (s.data === true) {
         supabase.rpc('wa_staff_names').then(function(r) {
           if (!r.error && r.data) { const m: Record<string, string> = {}; for (const x of (r.data as any[])) m[x.id] = String(x.nome || '').trim().split(/\s+/).slice(0, 2).join(' '); setNomes(m) }
         })
-        carregarConvs()
-        const esc = await supabase.rpc('wa_meu_escopo')
         const meuEscopo = String(esc.data || 'suporte')
         setEscopo(meuEscopo)
         if (meuEscopo === 'recuperacao') setCanal('recuperacao')
@@ -337,7 +342,7 @@ export default function AtendimentoPage() {
   useEffect(function() { if (fim.current) fim.current.scrollIntoView({ block: 'end' }) }, [msgs.length, sel])
 
   async function abrir(c: Conv) {
-    setSel(c.id); setMsgs([]); setErro(''); setTexto('')
+    setSel(c.id); setMsgs(cacheMsgs.current[c.id] || []); setErro(''); setTexto('')
     selRef.current = c.id
     await carregarMsgs(c.id)
     if (c.unread > 0 && c.assigned_to) {
@@ -777,7 +782,7 @@ export default function AtendimentoPage() {
         </div>
       )}
 
-      {tab === 'modelos' && <Modelos isAdmin={isAdmin} tpls={tpls} erro={tplErro} carregando={tplCarregando} onReload={carregarTpls} canais={canais} escopo={escopo} />}
+      {tab === 'modelos' && <Modelos isAdmin={isAdmin} tpls={tpls} erro={tplErro} carregando={tplCarregando} onReload={function() { carregarTpls(true) }} canais={canais} escopo={escopo} />}
       {tab === 'atendentes' && isAdmin && <Atendentes />}
       {disparoAberto && isAdmin && <div style={tab === 'disparo' ? { display: 'contents' } : { display: 'none' }}><Disparo tpls={tpls} onLoadTpls={carregarTpls} /></div>}
       {tab === 'fluxos' && isAdmin && <Fluxos />}

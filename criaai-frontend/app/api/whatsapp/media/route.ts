@@ -22,5 +22,8 @@ export async function GET(req: NextRequest) {
   }
   const s = await admin.storage.from('wa-media').createSignedUrl(m.data.media_path, 300)
   if (!s.data?.signedUrl) return new NextResponse('Nao encontrado', { status: 404 })
-  return NextResponse.redirect(s.data.signedUrl, 302)
+  // O navegador guarda o redirecionamento por 4 min (o link assinado vale 5): reabrir a conversa nao refaz tudo
+  const red = NextResponse.redirect(s.data.signedUrl, 302)
+  red.headers.set('Cache-Control', 'private, max-age=240')
+  return red
 }
