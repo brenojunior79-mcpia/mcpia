@@ -16,7 +16,7 @@ export const MAX_TOTAL_MB = 250
 
 type Video = { id: string; titulo: string; duracao: number; thumb: string; previa: string; arquivo: string; largura: number; altura: number; pagina: string }
 
-const SUGESTOES = ['mulher sorrindo', 'família feliz', 'trabalhando no computador', 'oração', 'dinheiro', 'pessoa no celular']
+const SUGESTOES = ['maternidade', 'receitas', 'crianças', 'atividades', 'cristão', 'ansiedade']
 const verde = '#15803d'
 
 function mmss(s: number) { const m = Math.floor(s / 60); const r = Math.round(s % 60); return m + ':' + String(r).padStart(2, '0') }
@@ -153,7 +153,7 @@ export default function CardVideos({ clipes, setClipes, onSeguir }: { clipes: Cl
       </form>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
-        <span style={{ fontSize: 12.5, color: 'var(--muted2)' }}>Experimente:</span>
+        <span style={{ fontSize: 12.5, color: 'var(--muted2)' }}>Nichos:</span>
         {SUGESTOES.map(function(s) {
           return <button key={s} onClick={function() { setQ(s); buscar(s, formato) }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface)', color: 'var(--text)', fontSize: 13.5, fontWeight: 600, padding: '8px 14px', borderRadius: 999 }}>{s}</button>
         })}
@@ -188,13 +188,13 @@ export default function CardVideos({ clipes, setClipes, onSeguir }: { clipes: Cl
         </div>
       )}
 
-      <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 14, opacity: carregando ? 0.55 : 1, transition: 'opacity .2s' }}>
+      <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: 14, opacity: carregando ? 0.55 : 1, transition: 'opacity .2s' }}>
         {videos.map(function(v) {
           const i = indice('vecteezy-' + v.id)
           const on = i >= 0
           const reproduzindo = tocando === v.id
           return (
-            <div key={v.id} style={{ position: 'relative', height: 190, borderRadius: 16, overflow: 'hidden', background: '#000', border: on ? '3px solid ' + verde : '3px solid transparent', boxSizing: 'border-box' }}>
+            <div key={v.id} style={{ position: 'relative', aspectRatio: '9 / 16', borderRadius: 16, overflow: 'hidden', background: '#000', border: on ? '3px solid ' + verde : '3px solid transparent', boxSizing: 'border-box' }}>
               {reproduzindo
                 ? <video src={v.previa} autoPlay controls loop playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                 : <div onClick={function() { setTocando(v.id) }} style={{ position: 'absolute', inset: 0, cursor: 'pointer', backgroundImage: 'url("' + v.thumb + '")', backgroundSize: 'cover', backgroundPosition: 'center' }}>
