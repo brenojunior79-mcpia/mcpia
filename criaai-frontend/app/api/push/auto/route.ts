@@ -11,7 +11,7 @@ export const maxDuration = 60
 
 // Notificacoes automaticas no celular. A Vercel chama esta rota todo dia (vercel.json) com o CRON_SECRET.
 //  1) "Sentimos sua falta": quem esta ha 2 dias ou mais sem abrir a plataforma (no maximo 1 vez a cada 7 dias).
-//  2) "Oferta da Estrutura Express": quem ainda nao tem a Estrutura Express (no maximo 1 vez a cada 2 dias).
+//  2) "Oferta da Estrutura Express": quem ainda nao tem a Estrutura Express (no maximo 1 vez por semana; o intervalo fica no card em Admin > Notificacoes).
 // Os horarios ficam no vercel.json: 'Sentimos sua falta' as 9h e 'Oferta Express' as 18h (Brasilia). O admin pode testar em /api/push/auto?teste=1 (so no aparelho dele).
 const PADRAO: Record<string, { title: string; body: string; url: string }> = {
   sentimos_falta: {
