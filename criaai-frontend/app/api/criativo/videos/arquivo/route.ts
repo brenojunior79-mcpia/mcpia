@@ -18,6 +18,17 @@ export async function GET(req: NextRequest) {
   const id = String(req.nextUrl.searchParams.get('id') || '').replace(/\D/g, '')
   if (!id) return NextResponse.json({ error: 'Video invalido.' }, { status: 400 })
 
+  // Diagnostico (so admin): ?debug=1&id=123 mostra como o Vecteezy responde ao pedido de download (conta 1 download da cota)
+  if (u.admin && req.nextUrl.searchParams.get('debug')) {
+    try {
+      const extra = String(req.nextUrl.searchParams.get('extra') || '').replace(/[^a-zA-Z0-9_=&.\-]/g, '').slice(0, 120)
+      const dr = await fetch(BASE + '/v2/' + encodeURIComponent(conta) + '/resources/' + id + '/download' + (extra ? '?' + extra : ''), { headers: { Authorization: 'Bearer ' + chave, Accept: 'application/json' }, redirect: 'manual' })
+      const tipo = dr.headers.get('content-type') || ''
+      const corpo = /video\//.test(tipo) ? '(arquivo de video)' : (await dr.text()).slice(0, 3000)
+      return NextResponse.json({ status: dr.status, tipo, local: dr.headers.get('location') || '', corpo })
+    } catch (e: any) { return NextResponse.json({ erro: String(e?.message || e) }) }
+  }
+
   try {
     const cab = { Authorization: 'Bearer ' + chave, Accept: 'application/json' }
     const r = await fetch(BASE + '/v2/' + encodeURIComponent(conta) + '/resources/' + id + '/download', { headers: cab })

@@ -15,18 +15,43 @@ const cache = new Map<string, { t: number; dados: { videos: Video[]; total: numb
 const DIA = 24 * 60 * 60 * 1000
 
 
+// Os arquivos do Vecteezy trazem "-free-video" (gratis) ou "-pro-video" (pago) no nome. So passam os gratis.
+function ehGratis(h: any): boolean {
+  const alvo = String(h?.thumbnail_url || '') + ' ' + String(h?.preview_url || '')
+  return /-free-video/i.test(alvo)
+}
+
 function formatar(h: any): Video | null {
   if (!h || h.id === undefined || h.id === null) return null
-  const previa = h.preview_url || h.video_preview_url || h.preview_video_url || h.preview?.url || ''
-  const thumb = h.thumbnail_url || h.thumbnail || h.preview_image_url || h.thumb || ''
+  const previa = h.preview_url || ''
+  const thumb = h.thumbnail_2x_url || h.thumbnail_url || ''
   if (!previa && !thumb) return null
+  const tams: any[] = (h.file_metadata && h.file_metadata.available_download_sizes) || []
+  const base = tams.find(function(t) { return t && t.id === 'original' }) || tams[0] || {}
   return {
-    id: String(h.id), titulo: String(h.title || h.name || '').trim(),
+    id: String(h.id), titulo: String(h.title || '').trim(),
     duracao: Number(h.duration) || 0,
     thumb: String(thumb), previa: String(previa), arquivo: String(h.id),
-    largura: Number(h.width) || 0, altura: Number(h.height) || 0,
-    pagina: String(h.url || h.permalink || h.page_url || ''),
+    largura: Number(base.width) || 0, altura: Number(base.height) || 0,
+    pagina: 'https://www.vecteezy.com/video/' + h.id,
   }
+}
+
+// A busca do Vecteezy funciona melhor em ingles: traduz o que a pessoa digitou (se falhar, usa o texto original)
+async function traduzirBusca(q: string): Promise<string> {
+  if (!q || !process.env.OPENAI_API_KEY) return q
+  try {
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+    const r = await openai.chat.completions.create({
+      model: 'gpt-4o-mini', temperature: 0, max_tokens: 40,
+      messages: [
+        { role: 'system', content: 'Traduza o termo de busca de videos para o ingles, curto (ate 5 palavras), sem aspas e sem explicacao. Se ja estiver em ingles, repita igual.' },
+        { role: 'user', content: q },
+      ],
+    })
+    const t = String(r.choices[0]?.message?.content || '').replace(/["\n]/g, ' ').trim()
+    return t && t.length <= 80 ? t : q
+  } catch (e) { return q }
 }
 
 // Titulos em portugues (uma chamada barata para todos os resultados). Se falhar, ficam as tags originais.
@@ -74,7 +99,8 @@ export async function GET(req: NextRequest) {
   const guardado = cache.get(chaveCache)
   if (guardado && Date.now() - guardado.t < DIA) return NextResponse.json({ conectado: true, ...guardado.dados })
 
-  const url = BASE + '/v2/' + encodeURIComponent(conta) + '/resources' + (id ? '/' + id : '?content_type=video&per_page=48&page=' + pagina + '&term=' + encodeURIComponent(q || 'business'))
+  const termo = id ? '' : await traduzirBusca(q)
+  const url = BASE + '/v2/' + encodeURIComponent(conta) + '/resources' + (id ? '/' + id : '?content_type=video&per_page=100&page=' + pagina + '&term=' + encodeURIComponent(termo || 'business'))
   try {
     const r = await fetch(url, { headers: { Authorization: 'Bearer ' + chave, Accept: 'application/json' } })
     if (r.status === 429) return NextResponse.json({ conectado: true, videos: [], total: 0, error: 'Muitas buscas seguidas. Espere um minuto e tente de novo.' })
@@ -82,12 +108,15 @@ export async function GET(req: NextRequest) {
     if (!r.ok) return NextResponse.json({ conectado: true, videos: [], total: 0, error: 'O Vecteezy não respondeu agora. Tente de novo.' })
     const j: any = await r.json()
     const itens: any[] = id ? [j.resource || j.data || j] : (j.resources || j.data || j.results || [])
-    const todos: Video[] = itens.map(formatar).filter(Boolean) as Video[]
-    const filtrados = id ? todos : todos.filter(function(v) {
-      if (!v.largura || !v.altura) return true
+    const gratis = itens.filter(function(h) { return ehGratis(h) })
+    const todos: Video[] = gratis.map(formatar).filter(Boolean) as Video[]
+    // O editor corta o video para caber no formato escolhido, entao nada e escondido: so vem primeiro quem ja tem o formato.
+    const combina = function(v: Video) {
+      if (!v.largura || !v.altura) return false
       const prop = v.largura / v.altura
       return formato === 'vertical' ? prop < 0.9 : formato === 'quadrado' ? prop >= 0.9 && prop <= 1.15 : prop > 1.15
-    })
+    }
+    const filtrados = id ? todos : todos.filter(combina).concat(todos.filter(function(v) { return !combina(v) }))
     const videos = filtrados.slice(0, 24)
     await traduzirTitulos(videos)
     const dados = { videos, total: filtrados.length }
