@@ -16,11 +16,17 @@ export async function GET() {
 export async function POST() {
   const s = await saldoCriativo()
   if (!s) return NextResponse.json({ error: 'Entre na sua conta.' }, { status: 401 })
-  if (s.admin || s.ilimitado) return NextResponse.json({ ok: true, restante: s.restante })
+  // Registra o criativo pronto para os pontos do ranking (se falhar, nao atrapalha o aluno)
+  const registrar = async function() {
+    if (s.admin) return
+    try { await createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } }).from('criativo_eventos').insert({ user_id: s.id }) } catch (e) {}
+  }
+  if (s.admin || s.ilimitado) { await registrar(); return NextResponse.json({ ok: true, restante: s.restante }) }
   if (!LIBERADO_ALUNOS) return NextResponse.json({ error: 'Este recurso esta em atualizacao no momento.' }, { status: 403 })
   if (s.restante <= 0) return NextResponse.json({ error: 'Seus creditos de criativo acabaram.' }, { status: 403 })
   const db = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } })
   // Soma 1 so se o valor ainda for o que lemos (evita gastar em dobro com duas abas ao mesmo tempo)
+  await registrar()
   const up = await db.from('profiles').update({ credits_videos_used: s.usados + 1 }).eq('id', s.id).eq('credits_videos_used', s.usados).select('credits_videos_used')
   if (up.error) return NextResponse.json({ error: 'Nao foi possivel registrar o credito.' }, { status: 500 })
   if (!up.data || !up.data.length) {

@@ -1,4 +1,5 @@
 'use client'
+import RankingCard from '@/components/RankingCard'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import Link from 'next/link'
@@ -205,6 +206,10 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+
+
+        {/* RANKING DO MES — top 3 com premios no Pix */}
+        <RankingCard />
 
 
         {/* NOVIDADES DA SEMANA */}
