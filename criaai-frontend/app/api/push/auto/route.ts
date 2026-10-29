@@ -11,7 +11,7 @@ export const maxDuration = 60
 // Notificacoes automaticas no celular. A Vercel chama esta rota todo dia (vercel.json) com o CRON_SECRET.
 //  1) "Sentimos sua falta": quem esta ha 2 dias ou mais sem abrir a plataforma (no maximo 1 vez a cada 7 dias).
 //  2) "Oferta da Estrutura Express": quem ainda nao tem a Estrutura Express (no maximo 1 vez a cada 2 dias).
-// Cada pessoa recebe no maximo 1 aviso automatico por dia. O admin pode testar em /api/push/auto?teste=1 (so no aparelho dele).
+// Os horarios ficam no vercel.json: 'Sentimos sua falta' as 9h e 'Oferta Express' as 18h (Brasilia). O admin pode testar em /api/push/auto?teste=1 (so no aparelho dele).
 const PADRAO: Record<string, { title: string; body: string; url: string }> = {
   sentimos_falta: {
     title: 'Sentimos sua falta 🙏',
@@ -79,7 +79,7 @@ async function tratar(req: NextRequest) {
     const me = await admin.from('profiles').select('is_admin').eq('id', user.id).maybeSingle()
     if (!me.data?.is_admin) return NextResponse.json({ error: 'Somente o admin' }, { status: 403 })
     // Admin pode disparar agora o envio de verdade (mesma regra do envio das 18h)
-    if (req.nextUrl.searchParams.get('executar') === '1') return NextResponse.json(await rodarTodos(admin))
+    if (req.nextUrl.searchParams.get('executar') === '1') return NextResponse.json(await rodarTodos(admin, ''))
     const tipo = String(req.nextUrl.searchParams.get('tipo') || '')
     const subs = await admin.from('push_subscriptions').select('id, endpoint, p256dh, auth, user_id').eq('user_id', user.id)
     const meus = (subs.data || []).map(function(s: any) { return { sub_id: s.id, endpoint: s.endpoint, p256dh: s.p256dh, auth: s.auth, user_id: s.user_id } })
@@ -91,14 +91,16 @@ async function tratar(req: NextRequest) {
     return NextResponse.json({ teste: true, ...out })
   }
 
-  return NextResponse.json(await rodarTodos(admin))
+  const so = String(req.nextUrl.searchParams.get('tipo') || '')
+  return NextResponse.json(await rodarTodos(admin, PADRAO[so] ? so : ''))
 }
 
 // Envio de verdade: so quem esta na regra de cada aviso e ainda nao recebeu dentro do prazo
-async function rodarTodos(admin: any) {
+async function rodarTodos(admin: any, so: string) {
   const cfg = await carregarConfig(admin)
   const resultado: any = {}
   for (const tipo of ['sentimos_falta', 'oferta_express']) {
+    if (so && tipo !== so) continue
     if (!cfg[tipo].ativo) { resultado[tipo] = { desligado: true, pessoas: 0, enviados: 0 }; continue }
     const q = await admin.rpc('push_auto_alvos', { p_tipo: tipo })
     if (q.error) { resultado[tipo] = { erro: q.error.message }; continue }

@@ -85,7 +85,7 @@ export default function PushAutoCard() {
   return (
     <div style={{ marginBottom: 20 }}>
       <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 14, marginBottom: 2 }}>🤖 Notificações automáticas</div>
-      <div style={{ fontSize: 11.5, color: 'var(--muted2)', marginBottom: 8 }}>Enviadas todo dia às 18h (Brasília), no máximo 1 por pessoa por dia.</div>
+      <div style={{ fontSize: 11.5, color: 'var(--muted2)', marginBottom: 8 }}>Enviadas sozinhas todo dia: “Sentimos falta” às 9h e “Oferta Express” às 18h (Brasília).</div>
       {msg.geral && <div style={{ marginBottom: 8, fontSize: 12.5, fontWeight: 700, color: msg.geral.ok ? 'var(--green)' : 'var(--red)' }}>{msg.geral.t}</div>}
       {erro && <div style={{ marginBottom: 8, fontSize: 12.5, fontWeight: 700, color: 'var(--red)' }}>⚠ {erro}</div>}
       {!itens && !erro && <div style={{ color: 'var(--muted2)', fontSize: 12.5 }}>Carregando…</div>}
@@ -118,7 +118,7 @@ export default function PushAutoCard() {
           <div style={card}>
             <div style={barra('#c4b5fd')}><span>Enviar agora</span></div>
             <div style={corpo}>
-              <div style={{ fontSize: 12, color: 'var(--muted2)', lineHeight: 1.4 }}>Dispara já os dois avisos para quem está na regra, sem esperar as 18h.</div>
+              <div style={{ fontSize: 12, color: 'var(--muted2)', lineHeight: 1.4 }}>Dispara já os dois avisos para quem está na regra, sem esperar o horário.</div>
               <button onClick={executarAgora} disabled={rodando} style={{ marginTop: 'auto', cursor: 'pointer', border: 0, borderRadius: 8, padding: '7px 10px', fontWeight: 800, fontSize: 12.5, color: '#fff', background: 'linear-gradient(135deg,#5b4ef8,#ec4899)', opacity: rodando ? 0.7 : 1 }}>{rodando ? 'Enviando…' : 'Enviar agora'}</button>
             </div>
           </div>

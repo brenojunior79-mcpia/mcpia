@@ -1,6 +1,7 @@
 {
   "regions": ["pdx1"],
   "crons": [
-    { "path": "/api/push/auto", "schedule": "0 21 * * *" }
+    { "path": "/api/push/auto?tipo=sentimos_falta", "schedule": "0 12 * * *" },
+    { "path": "/api/push/auto?tipo=oferta_express", "schedule": "0 21 * * *" }
   ]
 }
