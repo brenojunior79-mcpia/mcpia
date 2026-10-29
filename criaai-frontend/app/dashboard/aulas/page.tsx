@@ -1,9 +1,17 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { rastrearAula } from '@/lib/vimeoAssistida'
 
 function VideoLesson({ videoId, title, color }: { videoId: string; title: string; color: string }) {
   const [playing, setPlaying] = useState(false)
   const [thumb, setThumb] = useState<string | null>(null)
+  const frameRef = useRef<HTMLIFrameElement>(null)
+
+  // Conta a aula para o ranking quando o aluno assiste de verdade
+  useEffect(function() {
+    if (!playing || !frameRef.current) return
+    return rastrearAula(frameRef.current, videoId)
+  }, [playing, videoId])
 
   useEffect(function() {
     let active = true
@@ -18,6 +26,7 @@ function VideoLesson({ videoId, title, color }: { videoId: string; title: string
     return (
       <div style={{ position: 'relative', width: '100%', paddingBottom: '56.25%', height: 0, borderRadius: 12, overflow: 'hidden', background: '#000' }}>
         <iframe
+          ref={frameRef}
           src={'https://player.vimeo.com/video/' + videoId + '?title=0&byline=0&portrait=0&dnt=1&autoplay=1'}
           style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
           allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media"

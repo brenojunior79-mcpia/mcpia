@@ -78,7 +78,9 @@ export default function RankingCard() {
             <div>🎬 <b>30 pontos</b> por criativo gerado</div>
             <div>📲 <b>10 pontos</b> por instalar o aplicativo</div>
             <div>🔔 <b>10 pontos</b> por ativar as notificações</div>
-            <div style={{ color: 'var(--muted2)', fontSize: 12, marginTop: 6 }}>Ebook, site e criativo contam até 3 por dia. Instalar o app e ativar as notificações valem uma vez só. O ranking zera no começo de cada mês. Os prêmios são pagos por Pix para os 3 primeiros colocados.</div>
+            <div>🎓 <b>10 pontos</b> por aula assistida</div>
+            <div style={{ marginLeft: 26, fontSize: 12.5, color: 'var(--muted2)' }}>Bônus: 3 aulas +10 · 5 aulas +20 · 7 aulas +30</div>
+            <div style={{ color: 'var(--muted2)', fontSize: 12, marginTop: 6 }}>Ebook, site e criativo contam até 3 por dia. Instalar o app e ativar as notificações valem uma vez só. A aula só conta se você assistir de verdade (pular para o final não vale). O ranking zera no começo de cada mês. Os prêmios são pagos por Pix para os 3 primeiros colocados.</div>
           </div>
         )}
       </div>
