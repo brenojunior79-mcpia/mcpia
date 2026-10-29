@@ -105,11 +105,19 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
       const upd = await supabase.from('profiles').update({ avatar_url: pub }).eq('id', user.id)
       if (upd.error) throw upd.error
       setFotoUrl(pub)
+      try { window.dispatchEvent(new CustomEvent('mcpia-foto-atualizada', { detail: pub })) } catch (e) {}
     } catch (err) {
       setFotoErro('Não consegui salvar a foto. Tente outra imagem.')
     }
     setFotoBusy(false)
   }
+
+  // O botao da foto na barra de cima abre o mesmo seletor
+  useEffect(function() {
+    function abrir() { if (fotoInput.current) fotoInput.current.click() }
+    window.addEventListener('mcpia-trocar-foto', abrir)
+    return function() { window.removeEventListener('mcpia-trocar-foto', abrir) }
+  }, [])
 
   async function logout() {
     await supabase.auth.signOut()
