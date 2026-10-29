@@ -57,7 +57,7 @@ export default function AdminRankingPage() {
       <div className={styles.topbar}>
         <div>
           <div className={styles.title}>Conferência do ranking</div>
-          <div style={{ fontSize: 13, color: 'var(--muted2)' }}>{dados ? 'Ranking de ' + MESES[dados.mes] + ' · ' + dados.total + ' alunos com pontos' : 'Carregando...'}</div>
+          <div style={{ fontSize: 13, color: 'var(--muted2)' }}>{dados ? 'Ranking de ' + dados.mes + ' (até ' + dados.fimEm + ') · ' + dados.total + ' alunos com pontos' : 'Carregando...'}</div>
         </div>
       </div>
       <div style={{ padding: '0 24px 40px' }}>

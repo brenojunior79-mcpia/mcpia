@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
+import { janelaRanking } from '@/lib/rankingJanela'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 // Premios do mes (Pix, pagos pelo admin)
 const PREMIOS = [200, 150, 100]
-const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
 
 function nomeCurto(n: string | null) {
   const p = String(n || '').trim().split(/\s+/).filter(Boolean)
@@ -22,14 +22,10 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Entre na sua conta.' }, { status: 401 })
 
-  const agora = new Date(Date.now() - 3 * 3600 * 1000) // "agora" em Brasilia (lido com getUTC*)
-  const ano = agora.getUTCFullYear()
-  const mes = agora.getUTCMonth()
-  const inicio = new Date(Date.UTC(ano, mes, 1, 3, 0, 0))
-  const fim = new Date(Date.UTC(ano, mes + 1, 1, 3, 0, 0))
-  const diasRestantes = Math.max(0, Math.ceil((fim.getTime() - Date.now()) / 86400000))
-
   const db = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } })
+  const j = await janelaRanking(db)
+  const inicio = j.inicio, fim = j.fim
+  const diasRestantes = Math.max(0, Math.ceil((fim.getTime() - Date.now()) / 86400000))
   const r = await db.rpc('ranking_pontos', { p_inicio: inicio.toISOString(), p_fim: fim.toISOString() })
   if (r.error) return NextResponse.json({ error: 'Nao foi possivel carregar o ranking.' }, { status: 500 })
 
@@ -46,5 +42,5 @@ export async function GET() {
     eu = { ...eu, nome: nomeCurto((pf.data as any)?.full_name || null), foto: (pf.data as any)?.avatar_url || null }
   }
   const faltam = idx > 0 && idx < 100 ? Math.max(1, lista[idx - 1].pontos - lista[idx].pontos + 1) : 0
-  return NextResponse.json({ mes: MESES[mes], ano, diasRestantes, top, eu, faltam, premios: PREMIOS })
+  return NextResponse.json({ mes: j.titulo, fimEm: j.fimEm, ano: j.ano, diasRestantes, top, eu, faltam, premios: PREMIOS })
 }

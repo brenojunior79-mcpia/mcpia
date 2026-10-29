@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase-server'
+import { janelaRanking } from '@/lib/rankingJanela'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -13,24 +14,18 @@ async function checarAdmin() {
   return me.data?.is_admin ? db : null
 }
 
-function janelaMes() {
-  const agora = new Date(Date.now() - 3 * 3600 * 1000)
-  const ano = agora.getUTCFullYear(), mes = agora.getUTCMonth()
-  return { inicio: new Date(Date.UTC(ano, mes, 1, 3)), fim: new Date(Date.UTC(ano, mes + 1, 1, 3)), mes, ano }
-}
-
 // Conferencia do ranking (so admin): top 20 do mes com os pontos de cada tipo
 export async function GET() {
   const db = await checarAdmin()
   if (!db) return NextResponse.json({ error: 'Somente o admin' }, { status: 403 })
-  const j = janelaMes()
+  const j = await janelaRanking(db)
   const r = await db.rpc('ranking_detalhe', { p_inicio: j.inicio.toISOString(), p_fim: j.fim.toISOString() })
   if (r.error) return NextResponse.json({ error: r.error.message }, { status: 500 })
   const lista = (r.data || []).slice().sort(function(a: any, b: any) { return b.pontos - a.pontos || String(a.user_id).localeCompare(String(b.user_id)) })
   // Posicao oficial = so entre quem nao foi excluido
   let pos = 0
   const linhas = lista.slice(0, 40).map(function(x: any) { return { ...x, posicao: x.excluido ? null : ++pos } })
-  return NextResponse.json({ mes: j.mes, ano: j.ano, total: lista.length, linhas })
+  return NextResponse.json({ mes: j.titulo, fimEm: j.fimEm, ano: j.ano, total: lista.length, linhas })
 }
 
 // Tira (ou devolve) um aluno da disputa do ranking

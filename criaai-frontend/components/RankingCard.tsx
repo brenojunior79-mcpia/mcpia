@@ -2,10 +2,21 @@
 import { useEffect, useState } from 'react'
 
 type Linha = { posicao: number; nome: string; foto: string | null; pontos: number; premio: number; voce: boolean }
-type Dados = { mes: string; ano: number; diasRestantes: number; top: Linha[]; eu: { posicao: number | null; pontos: number; nome: string; foto: string | null }; faltam: number; premios: number[] }
+type Dados = { mes: string; fimEm: string; ano: number; diasRestantes: number; top: Linha[]; eu: { posicao: number | null; pontos: number; nome: string; foto: string | null }; faltam: number; premios: number[] }
 
 const MEDALHA = ['🥇', '🥈', '🥉']
 const COR = ['#f5b301', '#9aa5b1', '#cd7f32']
+
+const CSS = `
+@keyframes rkTrofeu { 0%,100% { transform: translateY(0) rotate(-6deg) scale(1) } 50% { transform: translateY(-5px) rotate(6deg) scale(1.12) } }
+@keyframes rkEntra { from { opacity: 0; transform: translateY(18px) scale(0.97) } to { opacity: 1; transform: translateY(0) scale(1) } }
+@keyframes rkMedalha { 0%,100% { transform: scale(1) rotate(0) } 50% { transform: scale(1.18) rotate(-8deg) } }
+@keyframes rkBrilho { 0% { left: -60% } 55%,100% { left: 130% } }
+@keyframes rkOuro { 0%,100% { box-shadow: 0 0 0 0 rgba(245,179,1,0.0) } 50% { box-shadow: 0 0 18px 2px rgba(245,179,1,0.45) } }
+@keyframes rkPremio { 0%,100% { transform: scale(1) } 50% { transform: scale(1.08) } }
+@keyframes rkFaisca { 0% { opacity: 0; transform: translateY(8px) scale(0.6) } 30% { opacity: 1 } 100% { opacity: 0; transform: translateY(-26px) scale(1.1) } }
+@media (prefers-reduced-motion: reduce) { .rk-anim, .rk-anim * { animation: none !important } }
+`
 const brl = function(v: number) { return 'R$ ' + v.toLocaleString('pt-BR') }
 
 export default function RankingCard() {
@@ -19,19 +30,23 @@ export default function RankingCard() {
   if (!d) return null
 
   return (
-    <div className="anim-fadeUp" style={{ marginBottom: 28 }}>
+    <div className="anim-fadeUp rk-anim" style={{ marginBottom: 28 }}>
+      <style>{CSS}</style>
       <div style={{ position: 'relative', overflow: 'hidden', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20, padding: '22px 22px 20px', boxShadow: 'var(--shadow-sm)' }}>
         <div style={{ position: 'absolute', top: -70, right: -50, width: 240, height: 240, background: 'radial-gradient(circle, rgba(245,179,1,0.16) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
         <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
-          <span style={{ fontSize: 24 }}>🏆</span>
+          <span style={{ position: 'relative', fontSize: 26, display: 'inline-block', animation: 'rkTrofeu 2.4s ease-in-out infinite' }}>
+            🏆
+            {[0, 1, 2].map(function(k) { return <span key={k} style={{ position: 'absolute', top: -2, left: 4 + k * 9, fontSize: 11, opacity: 0, animation: 'rkFaisca 2.4s ease-out ' + (k * 0.5) + 's infinite' }}>✨</span> })}
+          </span>
           <div style={{ fontSize: 18, fontWeight: 800, fontFamily: 'Syne, sans-serif', color: 'var(--text)', flex: 1, minWidth: 160 }}>Ranking de {d.mes}</div>
           <span style={{ fontSize: 11, fontWeight: 800, color: '#15803d', background: 'rgba(34,197,94,0.14)', border: '1px solid rgba(34,197,94,0.35)', padding: '4px 10px', borderRadius: 99 }}>
             {d.diasRestantes <= 1 ? 'Último dia!' : 'Faltam ' + d.diasRestantes + ' dias'}
           </span>
         </div>
         <div style={{ position: 'relative', fontSize: 13, color: 'var(--muted2)', marginBottom: 16 }}>
-          Os 3 primeiros do mês ganham prêmio em dinheiro no Pix.
+          Os 3 primeiros ganham prêmio em dinheiro no Pix. Este ranking vai até {d.fimEm}.
         </div>
 
         <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -39,8 +54,9 @@ export default function RankingCard() {
             const l = d.top[i]
             const premio = d.premios[i]
             return (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 16, background: l && l.voce ? 'rgba(124,92,252,0.10)' : 'var(--surface2)', border: '1.5px solid ' + (l && l.voce ? '#7c5cfc' : COR[i] + '66') }}>
-                <span style={{ fontSize: 28, lineHeight: 1, width: 34, textAlign: 'center' }}>{MEDALHA[i]}</span>
+              <div key={i} style={{ position: 'relative', overflow: 'hidden', animation: 'rkEntra 0.6s ease both ' + (0.1 + i * 0.18) + 's' + (i === 0 ? ', rkOuro 2.8s ease-in-out 1s infinite' : ''), display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 16, background: l && l.voce ? 'rgba(124,92,252,0.10)' : 'var(--surface2)', border: '1.5px solid ' + (l && l.voce ? '#7c5cfc' : COR[i] + '66') }}>
+                {i === 0 && <div style={{ position: 'absolute', top: 0, bottom: 0, width: 50, left: '-60%', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent)', transform: 'skewX(-18deg)', animation: 'rkBrilho 3.6s ease-in-out 1.2s infinite', pointerEvents: 'none' }} />}
+                <span style={{ fontSize: 28, lineHeight: 1, width: 34, textAlign: 'center', display: 'inline-block', animation: 'rkMedalha 2.2s ease-in-out ' + (i * 0.35) + 's infinite' }}>{MEDALHA[i]}</span>
                 <div style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, overflow: 'hidden', border: '2px solid ' + COR[i], background: l ? 'linear-gradient(135deg,#f97316,#fb923c)' : 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 17 }}>
                   {l ? (l.foto ? <img src={l.foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : l.nome.charAt(0).toUpperCase()) : <span style={{ color: 'var(--muted2)' }}>?</span>}
                 </div>
@@ -51,7 +67,7 @@ export default function RankingCard() {
                   <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 1 }}>{l ? l.pontos + ' pontos' : 'Ninguém aqui ainda'}</div>
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <div style={{ fontSize: 16, fontWeight: 800, fontFamily: 'Syne, sans-serif', color: '#15803d' }}>{brl(premio)}</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, fontFamily: 'Syne, sans-serif', color: '#15803d', animation: 'rkPremio 2s ease-in-out ' + (i * 0.3) + 's infinite' }}>{brl(premio)}</div>
                   <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>no Pix</div>
                 </div>
               </div>
@@ -96,7 +112,7 @@ export default function RankingCard() {
             <div>🔔 <b>10 pontos</b> por ativar as notificações</div>
             <div>🎓 <b>10 pontos</b> por aula assistida</div>
             <div style={{ marginLeft: 26, fontSize: 12.5, color: 'var(--muted2)' }}>Bônus: 3 aulas +10 · 5 aulas +20 · 7 aulas +30</div>
-            <div style={{ color: 'var(--muted2)', fontSize: 12, marginTop: 6 }}>Ebook e site contam 1 por dia e criativo até 3 por dia. Instalar o app e ativar as notificações valem uma vez só. A aula só conta se você assistir de verdade, com a aba aberta e o som ligado (pular para o final não vale). O ranking zera no começo de cada mês. Os prêmios são pagos por Pix para os 3 primeiros colocados.</div>
+            <div style={{ color: 'var(--muted2)', fontSize: 12, marginTop: 6 }}>Ebook e site contam 1 por dia e criativo até 3 por dia. Instalar o app e ativar as notificações valem uma vez só. A aula só conta se você assistir de verdade, com a aba aberta e o som ligado (pular para o final não vale). Depois de {d.fimEm}, o ranking zera e recomeça no começo de cada mês. Os prêmios são pagos por Pix para os 3 primeiros colocados.</div>
           </div>
         )}
       </div>
