@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { botaoClaro } from '@/components/criativo/ui'
 import styles from '../dashboard.module.css'
 import CardRoteiro, { Roteiro, ROTEIRO_VAZIO, roteiroEmTexto } from '@/components/criativo/CardRoteiro'
@@ -17,6 +17,13 @@ export default function CriativoPage() {
   const [narracao, setNarracao] = useState<Narracao | null>(null)
   const [clipes, setClipes] = useState<Clipe[]>([])
   const [gerados, setGerados] = useState<Gerado[]>([])
+  const [saldo, setSaldo] = useState<any>(null)
+  useEffect(function() {
+    function ler() { fetch('/api/criativo/saldo', { cache: 'no-store' }).then(function(r) { return r.json() }).then(function(j) { if (j && typeof j.restante === 'number') setSaldo(j) }).catch(function() {}) }
+    ler()
+    window.addEventListener('criativo-saldo', ler)
+    return function() { window.removeEventListener('criativo-saldo', ler) }
+  }, [])
   function remover(g: Gerado) { URL.revokeObjectURL(g.url); setGerados(function(l) { return l.filter(function(x) { return x.id !== g.id }) }) }
   const mmss = function(t: number) { const m = Math.floor(t / 60); const r = Math.round(t % 60); return m + ':' + String(r).padStart(2, '0') }
   const hora = function(ms: number) { try { return new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }) } catch (e) { return '' } }
@@ -38,6 +45,15 @@ export default function CriativoPage() {
       </div>
 
       <div className={styles.content}>
+        {saldo && !saldo.ilimitado && (
+          <div style={{ maxWidth: 860, marginBottom: 14, padding: '12px 16px', borderRadius: 14, background: saldo.restante > 0 ? 'rgba(34,197,94,0.10)' : 'rgba(239,68,68,0.10)', border: '1px solid ' + (saldo.restante > 0 ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'), display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 20 }}>{saldo.restante > 0 ? '🎟️' : '🔒'}</span>
+            <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
+              {saldo.restante > 0 ? 'Você ainda pode gerar ' + saldo.restante + ' criativo' + (saldo.restante === 1 ? '' : 's') + '. Cada criativo pronto usa 1 crédito.' : (saldo.temPlano || saldo.limite > 0 ? 'Seus créditos de criativo acabaram.' : 'Assine um plano para gerar criativos.')}
+            </span>
+            {saldo.restante <= 0 && <a href="/dashboard/planos" style={{ background: '#7c5cfc', color: '#fff', borderRadius: 10, padding: '8px 14px', fontWeight: 800, fontSize: 13, textDecoration: 'none' }}>Ver planos</a>}
+          </div>
+        )}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: 18 }}>
           {cards.map(function(c) {
             const on = aba === c.id

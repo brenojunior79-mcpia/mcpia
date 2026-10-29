@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
-import { usuarioCriativo } from '@/lib/criativoAuth'
+import { usuarioCriativo, msgBloqueioCriativo } from '@/lib/criativoAuth'
 import { createClient } from '@/lib/supabase-server'
 
 export const runtime = 'nodejs'
@@ -22,7 +22,7 @@ const clean = (v: any, n = 400) => String(v || '').replace(/\s+/g, ' ').trim().s
 
 export async function POST(req: NextRequest) {
   const u = await usuarioCriativo()
-  if (!u) return NextResponse.json({ error: 'Este recurso esta em atualizacao no momento.' }, { status: 403 })
+  if (!u) return NextResponse.json({ error: await msgBloqueioCriativo() }, { status: 403 })
   if (!process.env.OPENAI_API_KEY) return NextResponse.json({ error: 'OpenAI nao configurada.' }, { status: 500 })
 
   let b: any = {}

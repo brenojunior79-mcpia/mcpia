@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI, { toFile } from 'openai'
-import { usuarioCriativo } from '@/lib/criativoAuth'
+import { usuarioCriativo, msgBloqueioCriativo } from '@/lib/criativoAuth'
 import { alinharPalavras } from '@/lib/criativoAlinhar'
 
 export const runtime = 'nodejs'
@@ -10,7 +10,7 @@ export const maxDuration = 60
 // Recebe o audio da narracao e devolve cada palavra com o tempo em que e falada (para as legendas)
 export async function POST(req: NextRequest) {
   const u = await usuarioCriativo()
-  if (!u) return NextResponse.json({ error: 'Este recurso esta em atualizacao no momento.' }, { status: 403 })
+  if (!u) return NextResponse.json({ error: await msgBloqueioCriativo() }, { status: 403 })
   if (!process.env.OPENAI_API_KEY) return NextResponse.json({ error: 'OpenAI nao configurada.' }, { status: 500 })
 
   let fd: FormData

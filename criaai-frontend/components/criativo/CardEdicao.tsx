@@ -134,6 +134,10 @@ export default function CardEdicao({ clipes, narracao, onIrVideos, onIrNarracao,
     if (faixa === 'minha' && !minhaMusica) { setMsg('Envie o arquivo da música ou escolha outra opção.'); return }
     setOcupado(true); setFracao(0)
     try {
+      setEtapa('Conferindo seus créditos...')
+      const sr = await fetch('/api/criativo/saldo', { cache: 'no-store' }).catch(function() { return null })
+      const sj: any = sr && sr.ok ? await sr.json().catch(function() { return null }) : null
+      if (sj && !sj.admin && sj.restante <= 0) throw new Error(sj.temPlano || sj.limite > 0 ? 'Seus créditos de criativo acabaram. Veja em Planos como conseguir mais.' : 'Assine um plano para gerar criativos.')
       setEtapa('Lendo o áudio...')
       const duracao = await duracaoDoAudio(audioFonte.blob)
       if (duracao > 120) throw new Error('A narração passa de 2 minutos. Use um áudio mais curto.')
@@ -180,6 +184,7 @@ export default function CardEdicao({ clipes, narracao, onIrVideos, onIrNarracao,
         onProgresso: function(p, e) { setFracao(p); setEtapa(e) },
       })
       const url = URL.createObjectURL(blob)
+      fetch('/api/criativo/saldo', { method: 'POST' }).then(function() { window.dispatchEvent(new Event('criativo-saldo')) }).catch(function() {})
       setResultado({ url, mb: blob.size / 1048576 })
       onGerado({ id: 'g-' + Date.now(), url, mb: blob.size / 1048576, duracao: Math.max(3, duracao + 0.5), nVideos: clipes.length, criadoEm: Date.now() })
     } catch (e: any) {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { usuarioCriativo } from '@/lib/criativoAuth'
+import { usuarioCriativo, msgBloqueioCriativo } from '@/lib/criativoAuth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -17,7 +17,7 @@ const BUSCA: Record<string, string> = {
 
 export async function GET(req: NextRequest) {
   const u = await usuarioCriativo()
-  if (!u) return NextResponse.json({ error: 'Este recurso esta em atualizacao no momento.' }, { status: 403 })
+  if (!u) return NextResponse.json({ error: await msgBloqueioCriativo() }, { status: 403 })
   const chave = process.env.PIXABAY_API_KEY
   if (!chave) return NextResponse.json({ error: 'Chave do Pixabay nao configurada.' }, { status: 500 })
   const sexo = req.nextUrl.searchParams.get('sexo') === 'm' ? 'm' : 'h'

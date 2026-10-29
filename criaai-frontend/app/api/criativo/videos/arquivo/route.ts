@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { usuarioCriativo } from '@/lib/criativoAuth'
+import { usuarioCriativo, msgBloqueioCriativo } from '@/lib/criativoAuth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -11,7 +11,7 @@ const BASE = (process.env.VECTEEZY_API_BASE || 'https://api.vecteezy.com').repla
 
 export async function GET(req: NextRequest) {
   const u = await usuarioCriativo()
-  if (!u) return NextResponse.json({ error: 'Este recurso esta em atualizacao no momento.' }, { status: 403 })
+  if (!u) return NextResponse.json({ error: await msgBloqueioCriativo() }, { status: 403 })
   const chave = process.env.VECTEEZY_API_KEY
   const conta = process.env.VECTEEZY_ACCOUNT_ID
   if (!chave || !conta) return NextResponse.json({ error: 'A chave do Vecteezy ainda nao foi configurada.' }, { status: 503 })

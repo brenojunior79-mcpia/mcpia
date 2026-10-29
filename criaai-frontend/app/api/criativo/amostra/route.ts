@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 import OpenAI from 'openai'
-import { usuarioCriativo } from '@/lib/criativoAuth'
+import { usuarioCriativo, msgBloqueioCriativo } from '@/lib/criativoAuth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -15,7 +15,7 @@ const CABECALHOS = { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'private, ma
 // Amostra curta de cada voz. A primeira vez gera e guarda no banco; depois e instantaneo e sem custo.
 export async function GET(req: NextRequest) {
   const u = await usuarioCriativo()
-  if (!u) return NextResponse.json({ error: 'Este recurso esta em atualizacao no momento.' }, { status: 403 })
+  if (!u) return NextResponse.json({ error: await msgBloqueioCriativo() }, { status: 403 })
   const voz = String(req.nextUrl.searchParams.get('voz') || '')
   if (VOZES.indexOf(voz) === -1) return NextResponse.json({ error: 'Voz invalida.' }, { status: 400 })
 

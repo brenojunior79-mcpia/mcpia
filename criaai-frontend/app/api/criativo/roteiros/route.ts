@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
-import { usuarioCriativo } from '@/lib/criativoAuth'
+import { usuarioCriativo, msgBloqueioCriativo } from '@/lib/criativoAuth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -10,7 +10,7 @@ const txt = (v: any, n: number) => String(v || '').slice(0, n)
 
 export async function GET() {
   const u = await usuarioCriativo()
-  if (!u) return NextResponse.json({ error: 'Este recurso esta em atualizacao no momento.' }, { status: 403 })
+  if (!u) return NextResponse.json({ error: await msgBloqueioCriativo() }, { status: 403 })
   const supabase = createClient()
   const r = await supabase.from('criativo_roteiros').select('id, produto, o_que_faz, publico, dor, gancho, corpo, mecanismo, cta, created_at, updated_at').order('created_at', { ascending: false }).limit(100)
   if (r.error) { console.error('[criativo/roteiros] lista:', r.error.message); return NextResponse.json({ error: 'Nao foi possivel carregar seus roteiros.' }, { status: 500 }) }
@@ -19,7 +19,7 @@ export async function GET() {
 
 export async function PUT(req: NextRequest) {
   const u = await usuarioCriativo()
-  if (!u) return NextResponse.json({ error: 'Este recurso esta em atualizacao no momento.' }, { status: 403 })
+  if (!u) return NextResponse.json({ error: await msgBloqueioCriativo() }, { status: 403 })
   let b: any = {}
   try { b = await req.json() } catch (e) {}
   const id = String(b.id || '')
@@ -34,7 +34,7 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const u = await usuarioCriativo()
-  if (!u) return NextResponse.json({ error: 'Este recurso esta em atualizacao no momento.' }, { status: 403 })
+  if (!u) return NextResponse.json({ error: await msgBloqueioCriativo() }, { status: 403 })
   const id = String(req.nextUrl.searchParams.get('id') || '')
   if (!id) return NextResponse.json({ error: 'Roteiro invalido.' }, { status: 400 })
   const supabase = createClient()
