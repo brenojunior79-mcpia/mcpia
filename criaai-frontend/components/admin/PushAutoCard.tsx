@@ -17,6 +17,7 @@ export default function PushAutoCard() {
   const [msg, setMsg] = useState<Record<string, { ok: boolean; t: string }>>({})
   const [busy, setBusy] = useState('')
   const [rodando, setRodando] = useState(false)
+  const [aberto, setAberto] = useState('')
 
   async function carregar() {
     try {
@@ -72,61 +73,65 @@ export default function PushAutoCard() {
     setRodando(false)
   }
 
-  const input: React.CSSProperties = { width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' }
-  const rot: React.CSSProperties = { display: 'block', fontSize: 11.5, fontWeight: 700, color: 'var(--muted2)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.05em' }
-  const btn: React.CSSProperties = { cursor: 'pointer', borderRadius: 10, padding: '10px 14px', fontWeight: 800, fontSize: 13.5, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)' }
+  const input: React.CSSProperties = { width: '100%', padding: '7px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', fontSize: 13, fontFamily: 'inherit', boxSizing: 'border-box' }
+  const rot: React.CSSProperties = { display: 'block', fontSize: 10.5, fontWeight: 700, color: 'var(--muted2)', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '.04em' }
+  const btn: React.CSSProperties = { cursor: 'pointer', borderRadius: 8, padding: '6px 11px', fontWeight: 700, fontSize: 12.5, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)' }
 
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: 20, marginBottom: 28 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 4 }}>
-        <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 17 }}>🤖 Notificações automáticas</div>
-        <button onClick={executarAgora} disabled={rodando || !itens} style={{ ...btn, background: 'linear-gradient(135deg,#5b4ef8,#ec4899)', color: '#fff', border: 0, opacity: rodando ? 0.7 : 1 }}>{rodando ? 'Enviando…' : 'Enviar agora para todos da regra'}</button>
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '12px 14px', marginBottom: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 15 }}>🤖 Notificações automáticas</div>
+          <div style={{ fontSize: 11.5, color: 'var(--muted2)' }}>Enviadas todo dia às 18h (Brasília), no máximo 1 por pessoa por dia.</div>
+        </div>
+        <button onClick={executarAgora} disabled={rodando || !itens} style={{ ...btn, background: 'linear-gradient(135deg,#5b4ef8,#ec4899)', color: '#fff', border: 0, opacity: rodando ? 0.7 : 1 }}>{rodando ? 'Enviando…' : 'Enviar agora'}</button>
       </div>
-      <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginBottom: 14, lineHeight: 1.5 }}>Enviadas sozinhas todos os dias às 18h (horário de Brasília), só para quem ativou as notificações. Cada pessoa recebe no máximo 1 aviso automático por dia.</div>
-      {msg.geral && <div style={{ marginBottom: 12, fontSize: 13, fontWeight: 700, color: msg.geral.ok ? 'var(--green)' : 'var(--red)' }}>{msg.geral.t}</div>}
-      {erro && <div style={{ marginBottom: 12, fontSize: 13, fontWeight: 700, color: 'var(--red)' }}>⚠ {erro}</div>}
-      {!itens && !erro && <div style={{ color: 'var(--muted2)', fontSize: 13 }}>Carregando…</div>}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
+      {msg.geral && <div style={{ marginTop: 8, fontSize: 12.5, fontWeight: 700, color: msg.geral.ok ? 'var(--green)' : 'var(--red)' }}>{msg.geral.t}</div>}
+      {erro && <div style={{ marginTop: 8, fontSize: 12.5, fontWeight: 700, color: 'var(--red)' }}>⚠ {erro}</div>}
+      {!itens && !erro && <div style={{ color: 'var(--muted2)', fontSize: 12.5, marginTop: 8 }}>Carregando…</div>}
+      <div style={{ marginTop: 10 }}>
         {(itens || []).map(function(i: any) {
           const f = i.form || {}
           const info = NOMES[i.tipo]
           const m = msg[i.tipo]
+          const edit = aberto === i.tipo
           return (
-            <div key={i.tipo} style={{ border: '1px solid var(--border)', borderRadius: 14, padding: 16, background: 'var(--bg)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                <div style={{ fontWeight: 800, fontSize: 15 }}>{info.nome}</div>
-                <button onClick={function() { salvar(i, !f.ativo) }} disabled={busy !== ''} style={{ ...btn, padding: '6px 12px', background: f.ativo ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.12)', color: f.ativo ? 'var(--green)' : 'var(--red)' }}>{f.ativo ? '● Ligada' : '○ Desligada'}</button>
-              </div>
-              <div style={{ fontSize: 12.5, color: 'var(--muted2)', margin: '4px 0 10px' }}>{info.quem}</div>
-              <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12.5, marginBottom: 12 }}>
-                <span>👥 <b>{i.entrariamAgora}</b> receberiam agora</span>
-                <span>📤 <b>{i.enviados24h}</b> nas últimas 24h</span>
-                <span>📅 <b>{i.enviados7d}</b> em 7 dias</span>
-                <span>🕒 último: <b>{quando(i.ultimoEnvio)}</b></span>
-              </div>
-              <label style={rot}>Título ({(f.titulo || '').length}/65)</label>
-              <input style={input} maxLength={65} value={f.titulo || ''} onChange={function(e) { mudar(i.tipo, 'titulo', e.target.value) }} />
-              <label style={{ ...rot, marginTop: 10 }}>Mensagem ({(f.mensagem || '').length}/240)</label>
-              <textarea style={{ ...input, minHeight: 74, resize: 'vertical' }} maxLength={240} value={f.mensagem || ''} onChange={function(e) { mudar(i.tipo, 'mensagem', e.target.value) }} />
-              <label style={{ ...rot, marginTop: 10 }}>Ao tocar, abrir (link da plataforma)</label>
-              <input style={input} value={f.url || ''} onChange={function(e) { mudar(i.tipo, 'url', e.target.value) }} />
-              <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
-                {i.tipo === 'sentimos_falta' && (
-                  <div style={{ flex: 1 }}>
-                    <label style={rot}>Dias sem entrar</label>
-                    <input style={input} type="number" min={1} max={60} value={f.dias_sem_entrar || 2} onChange={function(e) { mudar(i.tipo, 'dias_sem_entrar', e.target.value) }} />
-                  </div>
-                )}
-                <div style={{ flex: 1 }}>
-                  <label style={rot}>Repetir a cada (dias)</label>
-                  <input style={input} type="number" min={1} max={60} value={f.repetir_dias || 1} onChange={function(e) { mudar(i.tipo, 'repetir_dias', e.target.value) }} />
+            <div key={i.tipo} style={{ borderTop: '1px solid var(--border)', padding: '9px 0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13.5 }}>{info.nome}</div>
+                  <div style={{ fontSize: 11.5, color: 'var(--muted2)' }}>👥 {i.entrariamAgora} agora · 📤 {i.enviados24h} em 24h · {i.enviados7d} em 7 dias · último: {quando(i.ultimoEnvio)}</div>
                 </div>
+                <button onClick={function() { salvar(i, !f.ativo) }} disabled={busy !== ''} style={{ ...btn, background: f.ativo ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.12)', color: f.ativo ? 'var(--green)' : 'var(--red)' }}>{f.ativo ? '● Ligada' : '○ Desligada'}</button>
+                <button onClick={function() { testar(i) }} disabled={busy !== ''} style={btn}>{busy === i.tipo + 't' ? 'Enviando…' : 'Testar'}</button>
+                <button onClick={function() { setAberto(edit ? '' : i.tipo) }} style={btn}>{edit ? 'Fechar' : 'Editar'}</button>
               </div>
-              <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
-                <button onClick={function() { salvar(i) }} disabled={busy !== ''} style={{ ...btn, background: '#16a34a', color: '#fff', border: 0, opacity: busy === i.tipo + 's' ? 0.7 : 1 }}>{busy === i.tipo + 's' ? 'Salvando…' : 'Salvar'}</button>
-                <button onClick={function() { testar(i) }} disabled={busy !== ''} style={btn}>{busy === i.tipo + 't' ? 'Enviando…' : 'Testar no meu celular'}</button>
-              </div>
-              {m && <div style={{ marginTop: 10, fontSize: 12.5, fontWeight: 700, color: m.ok ? 'var(--green)' : 'var(--red)' }}>{m.t}</div>}
+              {edit && (
+                <div style={{ marginTop: 10 }}>
+                  <label style={rot}>Título ({(f.titulo || '').length}/65)</label>
+                  <input style={input} maxLength={65} value={f.titulo || ''} onChange={function(e) { mudar(i.tipo, 'titulo', e.target.value) }} />
+                  <label style={{ ...rot, marginTop: 8 }}>Mensagem ({(f.mensagem || '').length}/240)</label>
+                  <textarea style={{ ...input, minHeight: 52, resize: 'vertical' }} maxLength={240} value={f.mensagem || ''} onChange={function(e) { mudar(i.tipo, 'mensagem', e.target.value) }} />
+                  <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                    <div style={{ flex: '2 1 200px' }}>
+                      <label style={rot}>Ao tocar, abrir</label>
+                      <input style={input} value={f.url || ''} onChange={function(e) { mudar(i.tipo, 'url', e.target.value) }} />
+                    </div>
+                    {i.tipo === 'sentimos_falta' && (
+                      <div style={{ flex: '1 1 90px' }}>
+                        <label style={rot}>Dias sem entrar</label>
+                        <input style={input} type="number" min={1} max={60} value={f.dias_sem_entrar || 2} onChange={function(e) { mudar(i.tipo, 'dias_sem_entrar', e.target.value) }} />
+                      </div>
+                    )}
+                    <div style={{ flex: '1 1 90px' }}>
+                      <label style={rot}>Repetir a cada (dias)</label>
+                      <input style={input} type="number" min={1} max={60} value={f.repetir_dias || 1} onChange={function(e) { mudar(i.tipo, 'repetir_dias', e.target.value) }} />
+                    </div>
+                  </div>
+                  <button onClick={function() { salvar(i) }} disabled={busy !== ''} style={{ ...btn, marginTop: 10, background: '#16a34a', color: '#fff', border: 0 }}>{busy === i.tipo + 's' ? 'Salvando…' : 'Salvar'}</button>
+                </div>
+              )}
+              {m && <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, color: m.ok ? 'var(--green)' : 'var(--red)' }}>{m.t}</div>}
             </div>
           )
         })}

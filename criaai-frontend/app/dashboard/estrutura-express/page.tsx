@@ -191,7 +191,6 @@ export default function EstruturaExpressPage() {
             <p style={{ position: 'relative', maxWidth: 640, margin: '0 auto 26px', fontSize: 'clamp(15px, 2.2vw, 18px)', lineHeight: 1.55, opacity: 0.95 }}>
               O seu <b>produto pronto</b>, o <b>site pronto</b> e os <b>criativos já prontos</b> pra você subir e começar a fazer <b style={{ color: '#fdba74' }}>R$ 200 por dia</b>.
             </p>
-            <div style={{ position: 'relative', display: 'inline-block', background: 'rgba(34,197,94,0.20)', border: '1px solid rgba(74,222,128,0.55)', borderRadius: 14, padding: '8px 16px', fontSize: 14, fontWeight: 800, marginBottom: 20 }}>✅ Quem tem a Estrutura Express não precisa ter plano</div>
             <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap', margin: '0 auto 24px', maxWidth: 640 }}>
               <div style={{ flex: '1 1 220px', background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.22)', borderRadius: 16, padding: '12px 16px' }}>
                 <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.5, opacity: 0.85 }}>🔥 ALUNOS COM A ESTRUTURA EXPRESS</div>
@@ -264,7 +263,6 @@ export default function EstruturaExpressPage() {
               <div style={{ display: 'inline-block', background: 'rgba(255,255,255,0.16)', border: '1px solid rgba(255,255,255,0.28)', borderRadius: 999, padding: '3px 12px', fontSize: 11.5, fontWeight: 800, letterSpacing: 0.6, marginBottom: 8 }}>✓ ACESSO LIBERADO</div>
               <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: 'clamp(26px, 4.4vw, 36px)', fontWeight: 800, margin: 0, color: '#fff', lineHeight: 1.1 }}>Estrutura Express</h1>
               <div style={{ fontSize: 14.5, color: 'rgba(255,255,255,0.88)', marginTop: 6, lineHeight: 1.5 }}>Produto pronto, site pronto e criativos prontos. Siga as aulas na ordem e coloque tudo no ar.</div>
-              <div style={{ fontSize: 13.5, fontWeight: 800, color: '#bbf7d0', marginTop: 8 }}>✅ Com a Estrutura Express você não precisa ter plano.</div>
             </div>
             <div style={{ minWidth: 200, flex: '0 1 260px', background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.22)', borderRadius: 18, padding: '14px 16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
