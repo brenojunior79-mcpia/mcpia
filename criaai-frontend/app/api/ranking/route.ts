@@ -40,7 +40,11 @@ export async function GET() {
     return { posicao: i + 1, nome: nomeCurto(x.nome), foto: x.avatar_url || null, pontos: x.pontos, premio: PREMIOS[i], voce: x.user_id === user.id }
   })
   const idx = lista.findIndex(function(x) { return x.user_id === user.id })
-  const eu = idx >= 0 ? { posicao: idx + 1, pontos: lista[idx].pontos } : { posicao: null, pontos: 0 }
+  let eu: any = idx >= 0 ? { posicao: idx + 1, pontos: lista[idx].pontos, nome: nomeCurto(lista[idx].nome), foto: lista[idx].avatar_url || null } : { posicao: null, pontos: 0, nome: 'Aluno', foto: null }
+  if (idx < 0) {
+    const pf = await db.from('profiles').select('full_name, avatar_url').eq('id', user.id).maybeSingle()
+    eu = { ...eu, nome: nomeCurto((pf.data as any)?.full_name || null), foto: (pf.data as any)?.avatar_url || null }
+  }
   const faltam = idx > 0 && idx < 100 ? Math.max(1, lista[idx - 1].pontos - lista[idx].pontos + 1) : 0
   return NextResponse.json({ mes: MESES[mes], ano, diasRestantes, top, eu, faltam, premios: PREMIOS })
 }

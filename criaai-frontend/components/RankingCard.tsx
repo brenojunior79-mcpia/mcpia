@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 
 type Linha = { posicao: number; nome: string; foto: string | null; pontos: number; premio: number; voce: boolean }
-type Dados = { mes: string; ano: number; diasRestantes: number; top: Linha[]; eu: { posicao: number | null; pontos: number }; faltam: number; premios: number[] }
+type Dados = { mes: string; ano: number; diasRestantes: number; top: Linha[]; eu: { posicao: number | null; pontos: number; nome: string; foto: string | null }; faltam: number; premios: number[] }
 
 const MEDALHA = ['🥇', '🥈', '🥉']
 const COR = ['#f5b301', '#9aa5b1', '#cd7f32']
@@ -59,12 +59,28 @@ export default function RankingCard() {
           })}
         </div>
 
-        <div style={{ position: 'relative', marginTop: 14, padding: '11px 14px', borderRadius: 12, background: 'rgba(124,92,252,0.08)', border: '1px solid rgba(124,92,252,0.25)', fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>
-          {d.eu.posicao === null
-            ? 'Você ainda não pontuou neste mês. Use a plataforma para entrar na disputa!'
-            : d.eu.posicao <= 3
-              ? 'Você está em ' + d.eu.posicao + 'º lugar com ' + d.eu.pontos + ' pontos. Continue assim!'
-              : 'Você está em ' + d.eu.posicao + 'º lugar com ' + d.eu.pontos + ' pontos' + (d.faltam > 0 ? '. Faltam ' + d.faltam + ' pontos para subir uma posição.' : '.')}
+        {/* Posicao de cada aluno, logo abaixo do 3o colocado */}
+        <div style={{ position: 'relative', marginTop: 14, paddingTop: 14, borderTop: '1px dashed var(--border2)' }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Sua posição</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 16, background: 'rgba(124,92,252,0.10)', border: '1.5px solid #7c5cfc' }}>
+            <div style={{ minWidth: 34, textAlign: 'center', fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: d.eu.posicao === null ? 20 : 20, color: '#7c5cfc' }}>
+              {d.eu.posicao === null ? '–' : d.eu.posicao + 'º'}
+            </div>
+            <div style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, overflow: 'hidden', border: '2px solid #7c5cfc', background: 'linear-gradient(135deg,#f97316,#fb923c)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 17 }}>
+              {d.eu.foto ? <img src={d.eu.foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : d.eu.nome.charAt(0).toUpperCase()}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14.5, fontWeight: 800, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.eu.nome} (você)</div>
+              <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 1 }}>{d.eu.pontos} pontos</div>
+            </div>
+          </div>
+          <div style={{ marginTop: 8, fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
+            {d.eu.posicao === null
+              ? 'Você ainda não pontuou neste mês. Use a plataforma para entrar na disputa!'
+              : d.eu.posicao <= 3
+                ? 'Você está no top 3! Continue assim!'
+                : (d.faltam > 0 ? 'Faltam ' + d.faltam + ' pontos para subir uma posição.' : '')}
+          </div>
         </div>
 
         <button onClick={function() { setRegras(!regras) }} style={{ position: 'relative', marginTop: 12, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 13, fontWeight: 700, color: '#7c5cfc' }}>
