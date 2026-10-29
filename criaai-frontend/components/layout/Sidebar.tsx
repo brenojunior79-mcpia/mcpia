@@ -159,6 +159,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
     ...((isAdmin || profile?.is_support) ? [{ href: '/dashboard/atendimento', icon: 'ti-brand-whatsapp', label: 'Atendimento WhatsApp', locked: false, badge: 'NOVO', tone: 'green' }] : []),
     ...(isAdmin ? [{ href: '/dashboard/admin', icon: 'ti-shield', label: 'Admin', locked: false }] : []),
     ...(isAdmin ? [{ href: '/dashboard/admin/conversas', icon: 'ti-message-2', label: 'Conversas (Junior)', locked: false }] : []),
+    ...(isAdmin ? [{ href: '/dashboard/admin/ranking', icon: 'ti-trophy', label: 'Ranking (conferência)', locked: false }] : []),
   ]
 
   return (

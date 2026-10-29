@@ -89,14 +89,14 @@ export default function RankingCard() {
         {regras && (
           <div style={{ position: 'relative', marginTop: 10, fontSize: 13, color: 'var(--text)', lineHeight: 1.7 }}>
             <div>📅 <b>5 pontos</b> por dia que você entra na plataforma</div>
-            <div>📘 <b>20 pontos</b> por ebook criado</div>
-            <div>🌐 <b>20 pontos</b> por site criado</div>
+            <div>📘 <b>20 pontos</b> por ebook criado (1 por dia)</div>
+            <div>🌐 <b>20 pontos</b> por site criado (1 por dia)</div>
             <div>🎬 <b>30 pontos</b> por criativo gerado</div>
             <div>📲 <b>10 pontos</b> por instalar o aplicativo</div>
             <div>🔔 <b>10 pontos</b> por ativar as notificações</div>
             <div>🎓 <b>10 pontos</b> por aula assistida</div>
             <div style={{ marginLeft: 26, fontSize: 12.5, color: 'var(--muted2)' }}>Bônus: 3 aulas +10 · 5 aulas +20 · 7 aulas +30</div>
-            <div style={{ color: 'var(--muted2)', fontSize: 12, marginTop: 6 }}>Ebook, site e criativo contam até 3 por dia. Instalar o app e ativar as notificações valem uma vez só. A aula só conta se você assistir de verdade (pular para o final não vale). O ranking zera no começo de cada mês. Os prêmios são pagos por Pix para os 3 primeiros colocados.</div>
+            <div style={{ color: 'var(--muted2)', fontSize: 12, marginTop: 6 }}>Ebook e site contam 1 por dia e criativo até 3 por dia. Instalar o app e ativar as notificações valem uma vez só. A aula só conta se você assistir de verdade, com a aba aberta e o som ligado (pular para o final não vale). O ranking zera no começo de cada mês. Os prêmios são pagos por Pix para os 3 primeiros colocados.</div>
           </div>
         )}
       </div>

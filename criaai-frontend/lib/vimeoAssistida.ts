@@ -1,4 +1,4 @@
-// Acompanha o video do Vimeo e avisa o servidor quando o aluno realmente assistiu (pelo menos 70% do tempo, sem pular).
+// Acompanha o video do Vimeo e avisa o servidor quando o aluno realmente assistiu (pelo menos 70% do tempo, sem pular, com a aba aberta e o som ligado).
 // Usa o player oficial do Vimeo (player.js). Se algo falhar, so nao conta o ponto; o video continua normal.
 declare global { interface Window { Vimeo?: any } }
 
@@ -24,13 +24,18 @@ export function rastrearAula(iframe: HTMLIFrameElement, videoId: string): () => 
   let assistido = 0
   let enviado = false
   let vivo = true
+  let volume = 1
   carregarPlayerJs().then(function(Vimeo) {
     if (!vivo) return
     player = new Vimeo.Player(iframe)
+    // Para contar, a aba precisa estar aberta na tela e o video com som
+    try { player.getVolume().then(function(v: number) { volume = v }).catch(function() {}) } catch (e) {}
+    player.on('volumechange', function(d: any) { if (d && typeof d.volume === 'number') volume = d.volume })
     player.on('timeupdate', function(d: any) {
       if (enviado || !d || !d.duration) return
       // So soma o tempo que passou de verdade (se a pessoa pular para o fim, nao conta)
-      if (ultimo >= 0 && d.seconds > ultimo && d.seconds - ultimo < 2.5) assistido += d.seconds - ultimo
+      const aberta = typeof document === 'undefined' || document.visibilityState === 'visible'
+      if (aberta && volume > 0 && ultimo >= 0 && d.seconds > ultimo && d.seconds - ultimo < 2.5) assistido += d.seconds - ultimo
       ultimo = d.seconds
       if (assistido >= d.duration * 0.7) {
         enviado = true
@@ -40,6 +45,6 @@ export function rastrearAula(iframe: HTMLIFrameElement, videoId: string): () => 
   }).catch(function() {})
   return function() {
     vivo = false
-    try { if (player) player.off('timeupdate') } catch (e) {}
+    try { if (player) { player.off('timeupdate'); player.off('volumechange') } } catch (e) {}
   }
 }
