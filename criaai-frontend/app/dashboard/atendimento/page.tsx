@@ -66,6 +66,8 @@ const EMOJIS: { nome: string; icone: string; lista: string[] }[] = [
   { nome: 'Carinhas', icone: '😀', lista: ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '🙂', '😉', '😍', '🥰', '😘', '😋', '😎', '🤗', '🤔', '😮', '😢', '😭', '😇', '🥳', '😴'] },
   { nome: 'Mãos', icone: '🙏', lista: ['🙏', '👍', '👏', '🙌', '🤝', '💪', '👌', '✌️', '🤞', '👋', '🤙', '👇', '👉', '👆', '☝️', '🫶', '🤲'] },
   { nome: 'Fé e corações', icone: '❤️', lista: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🤍', '💖', '💕', '✝️', '🕊️', '🙏', '✨', '🌟', '🌈', '🔥', '🌹', '📖', '😇', '🎉'] },
+  { nome: 'Natureza e comida', icone: '🌿', lista: ['🌿', '🌱', '🌳', '🌴', '🌸', '🌻', '🌼', '🍀', '☀️', '🌙', '⭐', '☁️', '🌧️', '🐶', '🐱', '🐑', '🦋', '🐦', '🍎', '🍌', '🍇', '🍓', '🍞', '🥖', '🍰', '🍫', '☕', '🍕', '🍔', '🥗', '🍽️', '🥤'] },
+  { nome: 'Pessoas e lugares', icone: '👨‍👩‍👧', lista: ['👨‍👩‍👧', '👪', '👶', '🧒', '👧', '👦', '👩', '👨', '👵', '👴', '🤰', '🙋‍♀️', '🙋‍♂️', '💁‍♀️', '🤷‍♀️', '🏠', '⛪', '🏫', '🏥', '🏢', '🚗', '✈️', '🚌', '🗺️', '🎉', '🎂', '🎈', '🎶', '📖', '📚', '✏️', '🏆'] },
   { nome: 'Outros', icone: '✅', lista: ['✅', '❌', '⚠️', '❗', '❓', '⏰', '📅', '📱', '💻', '🔗', '🔒', '🔑', '💰', '💵', '🎁', '🚀', '📌', '📞', '💬', '🎓', '📚', '🛒', '👉', '⭐'] },
 ]
 
@@ -349,6 +351,14 @@ export default function AtendimentoPage() {
       setConvs(function(l) { return l.map(function(x) { return x.id === c.id ? { ...x, unread: 0 } : x }) })
       fetch('/api/whatsapp/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId: c.id }) }).catch(function() {})
     }
+  }
+
+  // Deixa a conversa como "nao lida" de novo (fica em destaque na lista ate alguem abrir)
+  async function marcarNaoLida(id: string) {
+    const r = await supabase.rpc('wa_mark_unread', { p_conv: id })
+    if (r.error) { setErro('Não foi possível marcar como não lida.'); return }
+    setConvs(function(l) { return l.map(function(x) { return x.id === id ? { ...x, unread: Math.max(1, x.unread || 0) } : x }) })
+    if (selRef.current === id) { setSel(null); selRef.current = null }
   }
 
   // Vem da aba Eventos: abre o chat de recuperacao da pessoa
@@ -910,7 +920,10 @@ export default function AtendimentoPage() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
                       <div style={{ fontWeight: c.unread > 0 ? 800 : 600, fontSize: 14, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomeDe(c)}</div>
-                      <div style={{ fontSize: 11.5, color: c.unread > 0 ? '#16a34a' : 'var(--muted2)', flexShrink: 0 }}>{hora(c.last_message_at)}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                        {!(c.unread > 0) && !modoSel && <button title="Marcar como não lida" onClick={function(e) { e.stopPropagation(); marcarNaoLida(c.id) }} style={{ cursor: 'pointer', border: 0, background: 'transparent', color: 'var(--muted2)', fontSize: 13, padding: 0, lineHeight: 1 }}>✉</button>}
+                        <div style={{ fontSize: 11.5, color: c.unread > 0 ? '#16a34a' : 'var(--muted2)' }}>{hora(c.last_message_at)}</div>
+                      </div>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
                       <div style={{ fontSize: 12.5, color: 'var(--muted2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.last_text}</div>
@@ -956,6 +969,7 @@ export default function AtendimentoPage() {
                     {pessoas.filter(function(x) { return x.id === atual.assigned_to || atendeCanal(x, !!atual.connection_id) }).map(function(p) { return <option key={p.id} value={p.id}>{p.id === meuId ? 'Eu (' + (p.nome.split(' ')[0] || 'admin') + ')' : (p.nome.split(' ')[0] || p.email)}</option> })}
                   </select>
                 )}
+                <button onClick={function() { marcarNaoLida(atual.id) }} title="Marcar como não lida (volta para a lista em destaque)" style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 10px', fontWeight: 700, fontSize: 12.5, whiteSpace: 'nowrap' }}>✉ Não lida</button>
                 {atual.status === 'resolvida'
                   ? <button onClick={function() { mudarStatus('aberta') }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 10px', fontWeight: 700, fontSize: 12.5 }}>Reabrir</button>
                   : <button onClick={function() { mudarStatus('resolvida') }} style={{ cursor: 'pointer', border: 0, background: '#16a34a', color: '#fff', borderRadius: 8, padding: '7px 10px', fontWeight: 800, fontSize: 12.5 }}>✓ Finalizar</button>}
@@ -1046,14 +1060,15 @@ export default function AtendimentoPage() {
                           </div>
                         )}
                         {mostrarEmoji && <EmojiPicker onPick={inserirEmoji} />}
+                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+                          <button title="Emojis" aria-label="Abrir emojis" onClick={function() { setMostrarEmoji(!mostrarEmoji) }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: mostrarEmoji ? 'var(--accent-light)' : 'var(--surface2)', borderRadius: 10, width: 42, height: 42, fontSize: 22, lineHeight: 1, flexShrink: 0 }}>😊</button>
                         <textarea className="at-input" data-msg="1" rows={2} placeholder={anexo ? 'Legenda (opcional)…' : 'Digite a resposta…'} value={texto} onChange={function(e) { setTexto(e.target.value) }}
-                          onKeyDown={function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (anexo) enviarArquivo(anexo, anexo.name, mimeDe(anexo), texto); else enviar() } }} style={{ resize: 'none' }} />
+                          onKeyDown={function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (anexo) enviarArquivo(anexo, anexo.name, mimeDe(anexo), texto); else enviar() } }} style={{ resize: 'none', flex: 1, minWidth: 0 }} />
+                        </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
                           <input ref={fileRef} type="file" accept="image/jpeg,image/png,video/mp4,video/3gpp,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv" style={{ display: 'none' }} onChange={function(e) { escolherArquivo(e.target.files && e.target.files[0]); e.target.value = '' }} />
                           <button title="Enviar arquivo, foto ou vídeo" onClick={function() { if (fileRef.current) fileRef.current.click() }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 10px', fontSize: 14, fontWeight: 700 }}>📎 Arquivo</button>
-                          <button title="Colar um print que você copiou (ou use Ctrl+V)" onClick={colarDaAreaDeTransferencia} disabled={enviando} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 10px', fontSize: 14, fontWeight: 700 }}>📋 Colar print</button>
                           <button title="Gravar áudio" onClick={iniciarGravacao} disabled={enviando} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 10px', fontSize: 14, fontWeight: 700 }}>🎤 Áudio</button>
-                          <button title="Colocar emoji na mensagem" onClick={function() { setMostrarEmoji(!mostrarEmoji) }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: mostrarEmoji ? 'var(--accent-light)' : 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 10px', fontSize: 14, fontWeight: 700 }}>😊 Emoji</button>
                           <button title="Enviar modelo aprovado" onClick={function() { setMostrarTpl(!mostrarTpl) }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: mostrarTpl ? 'var(--accent-light)' : 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 10px', fontSize: 14, fontWeight: 700 }}>📄 Modelo</button>
                           <div style={{ flex: 1 }} />
                           <button disabled={enviando || (!texto.trim() && !anexo)} onClick={function() { if (anexo) enviarArquivo(anexo, anexo.name, mimeDe(anexo), texto); else enviar() }} style={{ cursor: 'pointer', border: 0, background: '#16a34a', color: '#fff', borderRadius: 10, padding: '10px 18px', fontWeight: 800, fontSize: 14, opacity: enviando || (!texto.trim() && !anexo) ? 0.55 : 1 }}>{enviando ? '…' : 'Enviar'}</button>

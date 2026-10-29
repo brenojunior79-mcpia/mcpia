@@ -67,6 +67,9 @@ export default function EstruturaExpressPage() {
   const [novaNota, setNovaNota] = useState('')
   const [adminMsg, setAdminMsg] = useState('')
   const playerRef = useRef<HTMLDivElement>(null)
+  const [totalAlunos, setTotalAlunos] = useState(0)
+  const [exibido, setExibido] = useState(0)
+  const [restante, setRestante] = useState('')
 
   useEffect(function() {
     try { const s = localStorage.getItem(KEY_FEITAS); if (s) setFeitas(JSON.parse(s)) } catch (e) {}
@@ -84,6 +87,35 @@ export default function EstruturaExpressPage() {
       })
       .catch(function() { setEstado('erro') })
   }, [])
+
+  // Tela de venda: numero real de alunos (atualiza sozinho a cada minuto) e contagem ate a meia-noite
+  useEffect(function() {
+    if (estado !== 'bloqueado') return
+    let vivo = true
+    const buscar = function() {
+      fetch('/api/estrutura/total', { cache: 'no-store' }).then(function(r) { return r.json() }).then(function(j) { if (vivo && j && typeof j.total === 'number') setTotalAlunos(j.total) }).catch(function() {})
+    }
+    buscar()
+    const iv = setInterval(buscar, 60000)
+    const tick = function() {
+      // meia-noite de Sao Paulo (UTC-3, sem horario de verao)
+      const local = Date.now() - 3 * 3600 * 1000
+      const falta = 86400000 - (local % 86400000)
+      const h = Math.floor(falta / 3600000), m = Math.floor((falta % 3600000) / 60000), sg = Math.floor((falta % 60000) / 1000)
+      setRestante(String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(sg).padStart(2, '0'))
+    }
+    tick()
+    const tk = setInterval(tick, 1000)
+    return function() { vivo = false; clearInterval(iv); clearInterval(tk) }
+  }, [estado])
+
+  // O numero sobe contando ate o valor real
+  useEffect(function() {
+    if (exibido === totalAlunos) return
+    const passo = Math.max(1, Math.ceil(Math.abs(totalAlunos - exibido) / 25))
+    const t = setTimeout(function() { setExibido(function(v) { return v < totalAlunos ? Math.min(totalAlunos, v + passo) : Math.max(totalAlunos, v - passo) }) }, 30)
+    return function() { clearTimeout(t) }
+  }, [exibido, totalAlunos])
 
   // Capas e duracao dos videos (Vimeo)
   useEffect(function() {
@@ -155,10 +187,20 @@ export default function EstruturaExpressPage() {
             <div className="ee-orb" style={{ width: 240, height: 240, background: '#7c3aed', bottom: -90, right: -40, animationDelay: '1.5s' }} />
             <div className="ee-float" style={{ position: 'relative', fontSize: 58, marginBottom: 6 }}>⚡</div>
             <div style={{ position: 'relative', display: 'inline-block', background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 999, padding: '5px 14px', fontSize: 12.5, fontWeight: 800, letterSpacing: 0.4, marginBottom: 14 }}>🔒 MENU EXCLUSIVO</div>
-            <h1 style={{ position: 'relative', fontFamily: 'Syne, sans-serif', fontSize: 'clamp(28px, 5vw, 44px)', fontWeight: 800, margin: '0 0 12px', lineHeight: 1.1 }}>Tenha tudo pronto</h1>
+            <h1 style={{ position: 'relative', fontFamily: 'Syne, sans-serif', fontSize: 'clamp(28px, 5vw, 44px)', fontWeight: 800, margin: '0 0 12px', lineHeight: 1.1, color: '#fff' }}>Tenha tudo pronto</h1>
             <p style={{ position: 'relative', maxWidth: 640, margin: '0 auto 26px', fontSize: 'clamp(15px, 2.2vw, 18px)', lineHeight: 1.55, opacity: 0.95 }}>
               O seu <b>produto pronto</b>, o <b>site pronto</b> e os <b>criativos já prontos</b> pra você subir e começar a fazer <b style={{ color: '#fdba74' }}>R$ 200 por dia</b>.
             </p>
+            <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap', margin: '0 auto 24px', maxWidth: 640 }}>
+              <div style={{ flex: '1 1 220px', background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.22)', borderRadius: 16, padding: '12px 16px' }}>
+                <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.5, opacity: 0.85 }}>🔥 ALUNOS COM A ESTRUTURA EXPRESS</div>
+                <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 34, fontWeight: 800, lineHeight: 1.1, color: '#fdba74' }}>{exibido > 0 ? exibido.toLocaleString('pt-BR') : '...'}</div>
+              </div>
+              <div style={{ flex: '1 1 220px', background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.22)', borderRadius: 16, padding: '12px 16px' }}>
+                <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.5, opacity: 0.85 }}>⏳ OFERTA VÁLIDA ATÉ A MEIA-NOITE</div>
+                <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 34, fontWeight: 800, lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' }}>{restante || '--:--:--'}</div>
+              </div>
+            </div>
             <a href={LINK_COMPRA} target="_blank" rel="noopener noreferrer" onClick={function() { registrar('clique') }} className="ee-cta" style={{ position: 'relative', display: 'inline-block', background: 'linear-gradient(135deg,#f59e0b,#f97316)', color: '#fff', textDecoration: 'none', fontWeight: 800, fontSize: 18, padding: '16px 34px', borderRadius: 14 }}>
               🚀 Quero a Estrutura Express
             </a>
@@ -210,21 +252,23 @@ export default function EstruturaExpressPage() {
     <div style={wrap}><style>{CSS}</style>
       <div style={{ maxWidth: 1180, margin: '0 auto' }}>
 
-        <div className="ee-hero ee-up" style={{ position: 'relative', overflow: 'hidden', borderRadius: 22, padding: '26px 26px', color: '#fff', marginBottom: 20 }}>
-          <div className="ee-orb" style={{ width: 200, height: 200, background: '#f97316', top: -80, right: 40 }} />
-          <div className="ee-orb" style={{ width: 180, height: 180, background: '#7c3aed', bottom: -90, left: 30, animationDelay: '1.2s' }} />
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-            <div className="ee-float" style={{ fontSize: 44 }}>⚡</div>
+        <div className="ee-hero ee-up" style={{ position: 'relative', overflow: 'hidden', borderRadius: 24, padding: '28px 28px', color: '#fff', marginBottom: 20, border: '1px solid rgba(255,255,255,0.14)', boxShadow: '0 18px 50px rgba(124,45,18,0.30)' }}>
+          <div className="ee-orb" style={{ width: 220, height: 220, background: '#f97316', top: -90, right: 30 }} />
+          <div className="ee-orb" style={{ width: 200, height: 200, background: '#7c3aed', bottom: -100, left: 20, animationDelay: '1.2s' }} />
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
+            <div className="ee-float" style={{ width: 68, height: 68, borderRadius: 20, background: 'linear-gradient(135deg,#fbbf24,#f97316)', boxShadow: '0 10px 26px rgba(249,115,22,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, flexShrink: 0 }}>⚡</div>
             <div style={{ flex: 1, minWidth: 220 }}>
-              <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: 'clamp(24px, 4vw, 32px)', fontWeight: 800, margin: 0 }}>Estrutura Express</h1>
-              <div style={{ fontSize: 14, opacity: 0.9, marginTop: 4 }}>Produto pronto, site pronto e criativos prontos. Siga as aulas na ordem e coloque tudo no ar.</div>
+              <div style={{ display: 'inline-block', background: 'rgba(255,255,255,0.16)', border: '1px solid rgba(255,255,255,0.28)', borderRadius: 999, padding: '3px 12px', fontSize: 11.5, fontWeight: 800, letterSpacing: 0.6, marginBottom: 8 }}>✓ ACESSO LIBERADO</div>
+              <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: 'clamp(26px, 4.4vw, 36px)', fontWeight: 800, margin: 0, color: '#fff', lineHeight: 1.1 }}>Estrutura Express</h1>
+              <div style={{ fontSize: 14.5, color: 'rgba(255,255,255,0.88)', marginTop: 6, lineHeight: 1.5 }}>Produto pronto, site pronto e criativos prontos. Siga as aulas na ordem e coloque tudo no ar.</div>
             </div>
-            <div style={{ minWidth: 190, flex: '0 1 240px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, fontWeight: 800, marginBottom: 6 }}>
-                <span>{concluidas} de {total} aulas</span><span>{pct}%</span>
+            <div style={{ minWidth: 200, flex: '0 1 260px', background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.22)', borderRadius: 18, padding: '14px 16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 800, color: 'rgba(255,255,255,0.9)' }}>Seu progresso · {concluidas} de {total} aulas</span>
+                <span style={{ fontFamily: 'Syne, sans-serif', fontSize: 22, fontWeight: 800, color: '#fdba74' }}>{pct}%</span>
               </div>
-              <div style={{ height: 10, borderRadius: 999, background: 'rgba(255,255,255,0.18)', overflow: 'hidden' }}>
-                <div style={{ width: pct + '%', height: '100%', borderRadius: 999, background: 'linear-gradient(90deg,#fbbf24,#f97316)', transition: 'width .6s cubic-bezier(.2,.8,.2,1)', animation: 'eeGrow 1s ease-out' }} />
+              <div style={{ height: 10, borderRadius: 999, background: 'rgba(255,255,255,0.20)', overflow: 'hidden' }}>
+                <div style={{ width: pct + '%', height: '100%', borderRadius: 999, background: 'linear-gradient(90deg,#fde68a,#f97316)', transition: 'width .6s cubic-bezier(.2,.8,.2,1)', animation: 'eeGrow 1s ease-out' }} />
               </div>
               {pct === 100 && total > 0 && <div className="ee-pop" style={{ marginTop: 8, fontSize: 13, fontWeight: 800 }}>🎉 Parabéns! Você terminou todas as aulas.</div>}
             </div>

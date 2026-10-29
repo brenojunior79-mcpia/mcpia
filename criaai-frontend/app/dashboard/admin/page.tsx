@@ -248,6 +248,24 @@ export default function AdminPage() {
       </div>
       <div className={styles.content}>
 
+        {/* Instalacoes do app */}
+        <div className={styles.stat} style={{ marginBottom: 28, display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
+          <div style={{ minWidth: 150 }}>
+            <div className={styles.statLabel}><i className="ti ti-device-mobile" /> Instalaram o app</div>
+            <div className={styles.statValue} style={{ color: 'var(--accent)' }}>{installs ? installs.total : 0}</div>
+            <div className={styles.statUp} style={{ color: 'var(--muted2)' }}>
+              {installs ? installs.hoje : 0} hoje · {installs ? installs.ultimos7 : 0} nos ultimos 7 dias
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 22, flexWrap: 'wrap', fontSize: 13, color: 'var(--muted2)' }}>
+            <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{installs ? installs.android : 0}</b><br />Android</div>
+            <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{installs ? installs.ios : 0}</b><br />iPhone</div>
+            <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{installs ? installs.computador : 0}</b><br />Computador</div>
+            <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{installs ? installs.ativos7 : 0}</b><br />Abriram o app (7 dias)</div>
+            <div><b style={{ color: 'var(--accent)', fontSize: 18 }}>{pushPeople}</b><br />Ativaram notificações</div>
+          </div>
+        </div>
+
         {/* Resumo simples */}
         <div className={styles.stats}>
           <div
@@ -505,24 +523,6 @@ export default function AdminPage() {
               A contagem começa a partir do momento em que esta atualização entrou no ar. Os pop-ups que já apareceram antes não foram registrados.
             </div>
           )}
-        </div>
-
-        {/* Instalacoes do app */}
-        <div className={styles.stat} style={{ marginBottom: 28, display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
-          <div style={{ minWidth: 150 }}>
-            <div className={styles.statLabel}><i className="ti ti-device-mobile" /> Instalaram o app</div>
-            <div className={styles.statValue} style={{ color: 'var(--accent)' }}>{installs ? installs.total : 0}</div>
-            <div className={styles.statUp} style={{ color: 'var(--muted2)' }}>
-              {installs ? installs.hoje : 0} hoje · {installs ? installs.ultimos7 : 0} nos ultimos 7 dias
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 22, flexWrap: 'wrap', fontSize: 13, color: 'var(--muted2)' }}>
-            <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{installs ? installs.android : 0}</b><br />Android</div>
-            <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{installs ? installs.ios : 0}</b><br />iPhone</div>
-            <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{installs ? installs.computador : 0}</b><br />Computador</div>
-            <div><b style={{ color: 'var(--text)', fontSize: 18 }}>{installs ? installs.ativos7 : 0}</b><br />Abriram o app (7 dias)</div>
-            <div><b style={{ color: 'var(--accent)', fontSize: 18 }}>{pushPeople}</b><br />Ativaram notificações</div>
-          </div>
         </div>
 
         {/* E-mails abertos */}

@@ -282,18 +282,6 @@ export default function CardEdicao({ clipes, narracao, onIrVideos, onIrNarracao,
         )}
       </div>
 
-      <div style={bloco}>
-        <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 8 }}>Tamanho do criativo</div>
-        <div style={{ fontSize: 13.5, lineHeight: 1.6 }}>
-          📐 Vídeo em pé (Reels), <b>720 × 1280</b>, MP4.<br />
-          {duracaoCriativo > 0
-            ? <>⏱ Duração: <b>{seg(duracaoCriativo)}</b> (narração {seg(duracaoAudio)} + 0,5 s de respiro no final).{clipes.length > 0 ? <> Cada um dos {clipes.length} vídeo(s) fica cerca de {seg(duracaoCriativo / clipes.length)} na tela.</> : null}</>
-            : <>⏱ Duração: igual à da narração + 0,5 s. Gere a narração para ver o tempo.</>}
-          <br />
-          🎵 A música tem sempre o mesmo tamanho do vídeo: se a faixa for curta ela repete, se for longa ela é cortada no fim do vídeo, baixando aos poucos nos últimos 1,5 s.
-        </div>
-      </div>
-
       <button onClick={montar} disabled={ocupado} style={{ ...botao, opacity: ocupado ? 0.6 : 1, padding: '13px 22px', fontSize: 15 }}>{ocupado ? 'Montando...' : '🎬 Montar meu criativo'}</button>
 
       {ocupado && (
