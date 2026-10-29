@@ -1,9 +1,9 @@
 'use client'
 import { useEffect, useState } from 'react'
 
-const NOMES: Record<string, { nome: string; quem: string }> = {
-  sentimos_falta: { nome: '💛 Sentimos sua falta', quem: 'Alunos que não abrem a plataforma há alguns dias' },
-  oferta_express: { nome: '🚀 Oferta da Estrutura Express', quem: 'Alunos que ainda não têm a Estrutura Express' },
+const NOMES: Record<string, { nome: string; curto: string; quem: string }> = {
+  sentimos_falta: { nome: '💛 Sentimos sua falta', curto: '💛 Sentimos falta', quem: 'Alunos que não abrem a plataforma há alguns dias' },
+  oferta_express: { nome: '🚀 Oferta da Estrutura Express', curto: '🚀 Oferta Express', quem: 'Alunos que ainda não têm a Estrutura Express' },
 }
 
 function quando(iso: string | null) {
@@ -75,67 +75,88 @@ export default function PushAutoCard() {
 
   const input: React.CSSProperties = { width: '100%', padding: '7px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', fontSize: 13, fontFamily: 'inherit', boxSizing: 'border-box' }
   const rot: React.CSSProperties = { display: 'block', fontSize: 10.5, fontWeight: 700, color: 'var(--muted2)', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '.04em' }
-  const btn: React.CSSProperties = { cursor: 'pointer', borderRadius: 8, padding: '6px 11px', fontWeight: 700, fontSize: 12.5, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)' }
+  const mini: React.CSSProperties = { cursor: 'pointer', border: 0, background: 'transparent', color: 'inherit', fontSize: 15, fontWeight: 800, lineHeight: 1, padding: '2px 6px', borderRadius: 6 }
+  const card: React.CSSProperties = { borderRadius: 12, overflow: 'hidden', background: 'var(--surface2)', border: '1px solid var(--border)', boxShadow: '0 4px 14px rgba(0,0,0,0.10)', display: 'flex', flexDirection: 'column' }
+  const barra = function(cor: string): React.CSSProperties { return { background: cor, color: '#0b2a0b', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4, padding: '5px 8px', fontSize: 12.5, fontWeight: 800 } }
+  const corpo: React.CSSProperties = { padding: '10px 12px 12px', flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }
+  const link: React.CSSProperties = { cursor: 'pointer', border: 0, background: 'transparent', color: 'var(--accent)', fontSize: 12, fontWeight: 800, padding: 0, textAlign: 'left' }
+  const editando = (itens || []).filter(function(x: any) { return x.tipo === aberto })[0]
 
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '12px 14px', marginBottom: 20 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <div>
-          <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 15 }}>🤖 Notificações automáticas</div>
-          <div style={{ fontSize: 11.5, color: 'var(--muted2)' }}>Enviadas todo dia às 18h (Brasília), no máximo 1 por pessoa por dia.</div>
-        </div>
-        <button onClick={executarAgora} disabled={rodando || !itens} style={{ ...btn, background: 'linear-gradient(135deg,#5b4ef8,#ec4899)', color: '#fff', border: 0, opacity: rodando ? 0.7 : 1 }}>{rodando ? 'Enviando…' : 'Enviar agora'}</button>
-      </div>
-      {msg.geral && <div style={{ marginTop: 8, fontSize: 12.5, fontWeight: 700, color: msg.geral.ok ? 'var(--green)' : 'var(--red)' }}>{msg.geral.t}</div>}
-      {erro && <div style={{ marginTop: 8, fontSize: 12.5, fontWeight: 700, color: 'var(--red)' }}>⚠ {erro}</div>}
-      {!itens && !erro && <div style={{ color: 'var(--muted2)', fontSize: 12.5, marginTop: 8 }}>Carregando…</div>}
-      <div style={{ marginTop: 10 }}>
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 14, marginBottom: 2 }}>🤖 Notificações automáticas</div>
+      <div style={{ fontSize: 11.5, color: 'var(--muted2)', marginBottom: 8 }}>Enviadas todo dia às 18h (Brasília), no máximo 1 por pessoa por dia.</div>
+      {msg.geral && <div style={{ marginBottom: 8, fontSize: 12.5, fontWeight: 700, color: msg.geral.ok ? 'var(--green)' : 'var(--red)' }}>{msg.geral.t}</div>}
+      {erro && <div style={{ marginBottom: 8, fontSize: 12.5, fontWeight: 700, color: 'var(--red)' }}>⚠ {erro}</div>}
+      {!itens && !erro && <div style={{ color: 'var(--muted2)', fontSize: 12.5 }}>Carregando…</div>}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 215px))', gap: 12 }}>
         {(itens || []).map(function(i: any) {
           const f = i.form || {}
           const info = NOMES[i.tipo]
           const m = msg[i.tipo]
-          const edit = aberto === i.tipo
           return (
-            <div key={i.tipo} style={{ borderTop: '1px solid var(--border)', padding: '9px 0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <div style={{ flex: '1 1 220px', minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: 13.5 }}>{info.nome}</div>
-                  <div style={{ fontSize: 11.5, color: 'var(--muted2)' }}>👥 {i.entrariamAgora} agora · 📤 {i.enviados24h} em 24h · {i.enviados7d} em 7 dias · último: {quando(i.ultimoEnvio)}</div>
-                </div>
-                <button onClick={function() { salvar(i, !f.ativo) }} disabled={busy !== ''} style={{ ...btn, background: f.ativo ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.12)', color: f.ativo ? 'var(--green)' : 'var(--red)' }}>{f.ativo ? '● Ligada' : '○ Desligada'}</button>
-                <button onClick={function() { testar(i) }} disabled={busy !== ''} style={btn}>{busy === i.tipo + 't' ? 'Enviando…' : 'Testar'}</button>
-                <button onClick={function() { setAberto(edit ? '' : i.tipo) }} style={btn}>{edit ? 'Fechar' : 'Editar'}</button>
+            <div key={i.tipo} style={card}>
+              <div style={barra(f.ativo ? '#6bcf63' : '#b6bcc6')}>
+                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{info.curto}</span>
+                <span style={{ display: 'flex', flexShrink: 0 }}>
+                  <button title={f.ativo ? 'Desligar' : 'Ligar'} onClick={function() { salvar(i, !f.ativo) }} disabled={busy !== ''} style={mini}>{f.ativo ? '●' : '○'}</button>
+                  <button title="Editar" onClick={function() { setAberto(aberto === i.tipo ? '' : i.tipo) }} style={mini}>···</button>
+                </span>
               </div>
-              {edit && (
-                <div style={{ marginTop: 10 }}>
-                  <label style={rot}>Título ({(f.titulo || '').length}/65)</label>
-                  <input style={input} maxLength={65} value={f.titulo || ''} onChange={function(e) { mudar(i.tipo, 'titulo', e.target.value) }} />
-                  <label style={{ ...rot, marginTop: 8 }}>Mensagem ({(f.mensagem || '').length}/240)</label>
-                  <textarea style={{ ...input, minHeight: 52, resize: 'vertical' }} maxLength={240} value={f.mensagem || ''} onChange={function(e) { mudar(i.tipo, 'mensagem', e.target.value) }} />
-                  <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                    <div style={{ flex: '2 1 200px' }}>
-                      <label style={rot}>Ao tocar, abrir</label>
-                      <input style={input} value={f.url || ''} onChange={function(e) { mudar(i.tipo, 'url', e.target.value) }} />
-                    </div>
-                    {i.tipo === 'sentimos_falta' && (
-                      <div style={{ flex: '1 1 90px' }}>
-                        <label style={rot}>Dias sem entrar</label>
-                        <input style={input} type="number" min={1} max={60} value={f.dias_sem_entrar || 2} onChange={function(e) { mudar(i.tipo, 'dias_sem_entrar', e.target.value) }} />
-                      </div>
-                    )}
-                    <div style={{ flex: '1 1 90px' }}>
-                      <label style={rot}>Repetir a cada (dias)</label>
-                      <input style={input} type="number" min={1} max={60} value={f.repetir_dias || 1} onChange={function(e) { mudar(i.tipo, 'repetir_dias', e.target.value) }} />
-                    </div>
-                  </div>
-                  <button onClick={function() { salvar(i) }} disabled={busy !== ''} style={{ ...btn, marginTop: 10, background: '#16a34a', color: '#fff', border: 0 }}>{busy === i.tipo + 's' ? 'Salvando…' : 'Salvar'}</button>
-                </div>
-              )}
-              {m && <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, color: m.ok ? 'var(--green)' : 'var(--red)' }}>{m.t}</div>}
+              <div style={corpo}>
+                <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 26, lineHeight: 1.1 }}>{i.entrariamAgora}</div>
+                <div style={{ fontSize: 11.5, color: 'var(--muted2)' }}>recebem agora</div>
+                <div style={{ fontSize: 11.5, marginTop: 6 }}>24h: <b>{i.enviados24h}</b> · 7 dias: <b>{i.enviados7d}</b></div>
+                <div style={{ fontSize: 11.5, color: 'var(--muted2)' }}>último: {quando(i.ultimoEnvio)}</div>
+                <button onClick={function() { testar(i) }} disabled={busy !== ''} style={{ ...link, marginTop: 6 }}>{busy === i.tipo + 't' ? 'Enviando…' : 'Testar no meu celular'}</button>
+                {m && <div style={{ marginTop: 4, fontSize: 11.5, fontWeight: 700, color: m.ok ? 'var(--green)' : 'var(--red)' }}>{m.t}</div>}
+              </div>
             </div>
           )
         })}
+        {itens && (
+          <div style={card}>
+            <div style={barra('#c4b5fd')}><span>Enviar agora</span></div>
+            <div style={corpo}>
+              <div style={{ fontSize: 12, color: 'var(--muted2)', lineHeight: 1.4 }}>Dispara já os dois avisos para quem está na regra, sem esperar as 18h.</div>
+              <button onClick={executarAgora} disabled={rodando} style={{ marginTop: 'auto', cursor: 'pointer', border: 0, borderRadius: 8, padding: '7px 10px', fontWeight: 800, fontSize: 12.5, color: '#fff', background: 'linear-gradient(135deg,#5b4ef8,#ec4899)', opacity: rodando ? 0.7 : 1 }}>{rodando ? 'Enviando…' : 'Enviar agora'}</button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {editando && (function() {
+        const f = editando.form || {}
+        return (
+          <div style={{ marginTop: 12, maxWidth: 640, borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface2)', padding: 12 }}>
+            <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 8 }}>Editando: {NOMES[editando.tipo].nome}</div>
+            <label style={rot}>Título ({(f.titulo || '').length}/65)</label>
+            <input style={input} maxLength={65} value={f.titulo || ''} onChange={function(e) { mudar(editando.tipo, 'titulo', e.target.value) }} />
+            <label style={{ ...rot, marginTop: 8 }}>Mensagem ({(f.mensagem || '').length}/240)</label>
+            <textarea style={{ ...input, minHeight: 52, resize: 'vertical' }} maxLength={240} value={f.mensagem || ''} onChange={function(e) { mudar(editando.tipo, 'mensagem', e.target.value) }} />
+            <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+              <div style={{ flex: '2 1 200px' }}>
+                <label style={rot}>Ao tocar, abrir</label>
+                <input style={input} value={f.url || ''} onChange={function(e) { mudar(editando.tipo, 'url', e.target.value) }} />
+              </div>
+              {editando.tipo === 'sentimos_falta' && (
+                <div style={{ flex: '1 1 90px' }}>
+                  <label style={rot}>Dias sem entrar</label>
+                  <input style={input} type="number" min={1} max={60} value={f.dias_sem_entrar || 2} onChange={function(e) { mudar(editando.tipo, 'dias_sem_entrar', e.target.value) }} />
+                </div>
+              )}
+              <div style={{ flex: '1 1 90px' }}>
+                <label style={rot}>Repetir a cada (dias)</label>
+                <input style={input} type="number" min={1} max={60} value={f.repetir_dias || 1} onChange={function(e) { mudar(editando.tipo, 'repetir_dias', e.target.value) }} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+              <button onClick={function() { salvar(editando) }} disabled={busy !== ''} style={{ cursor: 'pointer', border: 0, borderRadius: 8, padding: '7px 14px', fontWeight: 800, fontSize: 12.5, background: '#16a34a', color: '#fff' }}>{busy === editando.tipo + 's' ? 'Salvando…' : 'Salvar'}</button>
+              <button onClick={function() { setAberto('') }} style={{ cursor: 'pointer', borderRadius: 8, padding: '7px 14px', fontWeight: 700, fontSize: 12.5, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}>Fechar</button>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
