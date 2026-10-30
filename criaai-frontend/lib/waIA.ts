@@ -5,6 +5,8 @@ import { phoneIdDaConversa, postMessage } from '@/lib/whatsapp'
 import { REGRA_EXPRESS_WHATSAPP, pediuLiberarExpress, removerMarcaExpress, liberarExpressPeloJunior } from '@/lib/juniorExpress'
 
 const MARCA_HUMANO = '[[HUMANO]]'
+const MARCA_FIM = '[[FIM]]'
+const PERGUNTA_APP = 'Você já baixou o app e ativou as notificações do app para não perder as novidades?'
 
 const REGRAS_WHATSAPP = `# REGRAS DESTE ATENDIMENTO NO WHATSAPP (PRIORIDADE MAXIMA)
 - Voce esta conversando com uma pessoa pelo WhatsApp. Se perguntarem, diga que e o Junior, assistente virtual da equipe. Nunca diga que e uma pessoa.
@@ -15,6 +17,7 @@ const REGRAS_WHATSAPP = `# REGRAS DESTE ATENDIMENTO NO WHATSAPP (PRIORIDADE MAXI
 - Pagamento, cobranca, reembolso, negociacao, desconto, acesso que depende de acao administrativa, reclamacao seria ou pedido para falar com uma pessoa: avise que um atendente da equipe vai continuar a conversa em breve e termine a resposta com a marca ${MARCA_HUMANO} (a marca e removida antes do envio).
 - Se nao souber responder com a base, faca o mesmo: avise que um atendente vai ajudar e termine com ${MARCA_HUMANO}.
 - Se a pessoa mandar print, foto ou PDF, voce consegue ver o conteudo: leia com atencao, diga em uma frase o que entendeu e ajude com base nisso. Se a imagem estiver ilegivel ou nao der para entender, peca outro print mais nitido. Comprovante de pagamento ou documento pessoal: NAO confirme pagamento nem libere nada; agradeca e avise que um atendente vai conferir, terminando com ${MARCA_HUMANO}.
+- Quando a conversa estiver terminando (a pessoa agradeceu, disse que resolveu, se despediu ou nao precisa de mais nada), escreva so uma despedida curta e acolhedora e termine com a marca ${MARCA_FIM}. NAO escreva voce mesmo a pergunta sobre o app: o sistema acrescenta sozinho. Se a pessoa ainda tem duvida ou esta no meio do assunto, nao use a marca.
 - Nao peca para a pessoa chamar o WhatsApp de Suporte: ela ja esta falando com o suporte.`
 
 const REGRAS_CANAL: Record<string, string> = {
@@ -182,6 +185,13 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
 
     let passaParaHumano = texto.indexOf(MARCA_HUMANO) >= 0
     texto = texto.split(MARCA_HUMANO).join('').trim()
+    // Fim da conversa: pergunta (uma vez so por conversa) se a pessoa ja baixou o app e ativou as notificacoes
+    const acabou = texto.indexOf(MARCA_FIM) >= 0
+    texto = texto.split(MARCA_FIM).join('').trim()
+    if (acabou && !passaParaHumano) {
+      const jaPerguntou = linhas.some(function(m) { return m.direction === 'out' && /baixou o app/i.test(String(m.body || '')) })
+      if (!jaPerguntou && texto.indexOf(PERGUNTA_APP) < 0) texto = (texto ? texto + '\n\n' : '') + PERGUNTA_APP
+    }
     if (!texto) return true
 
     // Depois de pensar: conferir de novo se continua ligado e se nao chegou mensagem mais nova
