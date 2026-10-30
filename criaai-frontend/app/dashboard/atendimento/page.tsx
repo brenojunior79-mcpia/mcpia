@@ -104,8 +104,8 @@ function papelDeParede(traco: string, opac: string): string {
     + '</svg>'
   return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '")'
 }
-const PAPEL_CLARO = papelDeParede('#8a7b5f', '0.30')
-const PAPEL_ESCURO = papelDeParede('#ffffff', '0.07')
+const PAPEL_CLARO = papelDeParede('#8a7b5f', '0.10')
+const PAPEL_ESCURO = papelDeParede('#ffffff', '0.03')
 
 function Avatar({ c, size }: { c: Conv; size: number }) {
   return <div style={{ width: size, height: size, borderRadius: '50%', background: corAvatar(c), color: '#fff', fontWeight: 800, fontSize: Math.round(size * 0.42), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 3px rgba(0,0,0,0.18)' }}>{inicial(c)}</div>
