@@ -104,14 +104,9 @@ export default function RankingCard() {
             🏆
             {[0, 1, 2].map(function(k) { return <span key={k} style={{ position: 'absolute', top: -2, left: 4 + k * 9, fontSize: 11, opacity: 0, animation: 'rkFaisca 2.4s ease-out ' + (k * 0.5) + 's infinite' }}>✨</span> })}
           </span>
-          <div style={{ fontSize: 18, fontWeight: 800, fontFamily: 'Syne, sans-serif', color: 'var(--text)', flex: 1, minWidth: 160 }}>Ranking de {d.mes}</div>
-          <span style={{ fontSize: 11, fontWeight: 800, color: '#15803d', background: 'rgba(34,197,94,0.14)', border: '1px solid rgba(34,197,94,0.35)', padding: '4px 10px', borderRadius: 99 }}>
-            {d.diasRestantes <= 1 ? 'Último dia!' : 'Faltam ' + d.diasRestantes + ' dias'}
-          </span>
+          <div style={{ fontSize: 18, fontWeight: 800, fontFamily: 'Syne, sans-serif', color: 'var(--text)', flex: 1, minWidth: 160 }}>Ranking de premiação</div>
         </div>
-        <div style={{ position: 'relative', fontSize: 13, color: 'var(--muted2)', marginBottom: 16 }}>
-          Os 3 primeiros ganham prêmio em dinheiro no Pix. Este ranking vai até {d.fimEm}.
-        </div>
+        <div style={{ height: 6 }} />
 
         <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {[0, 1, 2].map(function(i) {
