@@ -94,7 +94,18 @@ async function executar(admin: any, it: any, inicio: number, escala: number): Pr
       enviadas++
     }
     // Pediu ajuda humana: o assistente se desliga sozinho nessa conversa para a equipe assumir
-    if (it.passa_humano) await admin.from('wa_conversations').update({ ia_ativa: false, ia_humano: true }).eq('id', it.conversation_id)
+    // e a conversa vai para o dono (admin), se ainda nao tiver atendente
+    if (it.passa_humano) {
+      const upd: any = { ia_ativa: false, ia_humano: true }
+      try {
+        const cv = await admin.from('wa_conversations').select('assigned_to').eq('id', it.conversation_id).maybeSingle()
+        if (cv.data && !(cv.data as any).assigned_to) {
+          const dono = await admin.from('profiles').select('id').eq('is_admin', true).order('created_at', { ascending: true }).limit(1).maybeSingle()
+          if (dono.data?.id) upd.assigned_to = (dono.data as any).id
+        }
+      } catch (e) { /* sem dono: segue so desligando o assistente */ }
+      await admin.from('wa_conversations').update(upd).eq('id', it.conversation_id)
+    }
     return await fim('enviado')
   } catch (e: any) {
     console.error('[wa-ia-fila] erro:', e)

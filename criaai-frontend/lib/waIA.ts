@@ -151,7 +151,16 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     const agora = new Date().toISOString()
     await admin.from('wa_messages').insert({ conversation_id: convId, wa_message_id: r.data?.messages?.[0]?.id || null, direction: 'out', type: 'text', body: texto, status: 'sent', sent_by: null, created_at: agora })
     const upd: any = { last_message_at: agora, last_text: '🤖 ' + texto.slice(0, 120) }
-    if (passaParaHumano) { upd.ia_ativa = false; upd.ia_humano = true }
+    if (passaParaHumano) {
+      upd.ia_ativa = false; upd.ia_humano = true
+      try {
+        const atual = await admin.from('wa_conversations').select('assigned_to').eq('id', convId).maybeSingle()
+        if (atual.data && !(atual.data as any).assigned_to) {
+          const dono = await admin.from('profiles').select('id').eq('is_admin', true).order('created_at', { ascending: true }).limit(1).maybeSingle()
+          if (dono.data?.id) upd.assigned_to = (dono.data as any).id
+        }
+      } catch (e) {}
+    }
     await admin.from('wa_conversations').update(upd).eq('id', convId)
     return true
   } catch (e) {
