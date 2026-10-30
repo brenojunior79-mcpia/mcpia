@@ -2,6 +2,7 @@
 // So responde nas conversas em que o ADMIN ligou o assistente (wa_conversations.ia_ativa) ou quando ele ligou para todas (wa_ia_config.geral).
 import { JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE } from '@/lib/junior'
 import { phoneIdDaConversa, postMessage } from '@/lib/whatsapp'
+import { REGRA_EXPRESS_WHATSAPP, extrairPedidoExpress, removerMarcaExpress, liberarExpressPeloJunior } from '@/lib/juniorExpress'
 
 const MARCA_HUMANO = '[[HUMANO]]'
 
@@ -85,7 +86,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     const primeiro = nome.split(' ')[0] || 'voce'
     const canal = conv.connection_id ? 'recuperacao' : 'suporte'
 
-    let system = JUNIOR_PROMPT.split('{{firstName}}').join(primeiro) + '\n\n' + FINAL_REMINDER + '\n\n' + REGRAS_CANAL[canal] + '\n\n' + REGRAS_WHATSAPP + '\n\nNome da pessoa: ' + (nome || 'desconhecido')
+    let system = JUNIOR_PROMPT.split('{{firstName}}').join(primeiro) + '\n\n' + FINAL_REMINDER + '\n\n' + REGRAS_CANAL[canal] + '\n\n' + REGRAS_WHATSAPP + '\n\n' + REGRA_EXPRESS_WHATSAPP + '\n\nNome da pessoa: ' + (nome || 'desconhecido')
     if (esconderPlanos) system = NEW_STUDENT_RULE + '\n\n' + system + '\n\n' + NEW_STUDENT_RULE
 
     const resp = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -98,7 +99,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     let texto = String(j?.choices?.[0]?.message?.content || '').trim()
     if (!resp.ok || !texto) { console.error('[wa-ia] sem resposta da IA:', resp.status, JSON.stringify(j?.error || '')); return true }
 
-    const passaParaHumano = texto.indexOf(MARCA_HUMANO) >= 0
+    let passaParaHumano = texto.indexOf(MARCA_HUMANO) >= 0
     texto = texto.split(MARCA_HUMANO).join('').trim()
     if (!texto) return true
 
@@ -109,6 +110,17 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     ])
     if (!cv2.data || !(await modoIA(admin, cv2.data))) return true
     if (!ult.data || String((ult.data as any).id) !== String(msgId)) return true
+
+    // O assistente pediu para liberar a Estrutura Express: o sistema confere a compra e escreve a resposta
+    const pedido = extrairPedidoExpress(texto)
+    if (pedido) {
+      const res = await liberarExpressPeloJunior(admin, { compra: pedido.compra, conta: pedido.conta, waId, origem: 'whatsapp' })
+      texto = res.texto
+      if (res.humano) passaParaHumano = true
+    } else {
+      texto = removerMarcaExpress(texto)
+      if (!texto) return true
+    }
 
     const phoneId = await phoneIdDaConversa(admin, conv.connection_id || null)
     const r = await postMessage({ messaging_product: 'whatsapp', to: waId, type: 'text', text: { body: texto } }, phoneId || undefined)
