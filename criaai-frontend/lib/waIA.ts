@@ -25,6 +25,36 @@ function rotuloTipo(t: string): string {
   return t === 'image' ? '[imagem]' : t === 'audio' ? '[audio]' : t === 'video' ? '[video]' : t === 'document' ? '[documento]' : t === 'sticker' ? '[figurinha]' : ''
 }
 
+// Baixa o audio guardado e transcreve com o Whisper. O texto fica em wa_messages.body (a tela de atendimento nao mostra o body de audio).
+async function transcreverAudio(admin: any, msgId: string): Promise<string> {
+  try {
+    const r = await admin.from('wa_messages').select('body, media_path, mime').eq('id', msgId).maybeSingle()
+    const m: any = r.data
+    if (!m) return ''
+    if (String(m.body || '').trim()) return String(m.body).trim()
+    if (!m.media_path) return ''
+    const dl = await admin.storage.from('wa-media').download(m.media_path)
+    if (dl.error || !dl.data) return ''
+    const buf = await dl.data.arrayBuffer()
+    if (buf.byteLength < 200) return ''
+    const mime = String(m.mime || 'audio/ogg')
+    const ext = mime.indexOf('mpeg') >= 0 ? 'mp3' : mime.indexOf('mp4') >= 0 ? 'm4a' : mime.indexOf('aac') >= 0 ? 'aac' : mime.indexOf('amr') >= 0 ? 'amr' : 'ogg'
+    const fd = new FormData()
+    fd.append('file', new Blob([buf], { type: mime }), 'audio.' + ext)
+    fd.append('model', 'whisper-1')
+    fd.append('language', 'pt')
+    const resp = await fetch('https://api.openai.com/v1/audio/transcriptions', { method: 'POST', headers: { Authorization: 'Bearer ' + process.env.OPENAI_API_KEY }, body: fd, signal: AbortSignal.timeout(25000) })
+    const j: any = await resp.json().catch(function() { return null })
+    const texto = String(j?.text || '').trim()
+    if (!resp.ok || !texto) { console.error('[wa-ia] transcricao falhou:', resp.status, JSON.stringify(j?.error || '')); return '' }
+    await admin.from('wa_messages').update({ body: texto }).eq('id', msgId)
+    return texto
+  } catch (e) {
+    console.error('[wa-ia] transcricao:', e)
+    return ''
+  }
+}
+
 // Quando o assistente deve responder nesta conversa:
 //  - 'manual': o admin ligou nesta conversa (ia_ativa)
 //  - 'geral': o admin ligou o assistente para TODAS as conversas (wa_ia_config.geral), a conversa nao foi desligada
@@ -47,9 +77,14 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     const cv = await admin.from('wa_conversations').select('id, ia_ativa, ia_humano, connection_id, profile_id, name').eq('id', convId).maybeSingle()
     const conv: any = cv.data
     if (!conv || !(await modoIA(admin, conv))) return false
-    // So responde a mensagens de texto; foto, audio etc. ficam para a equipe ver
-    if (tipo !== 'text') return true
+    // Responde a texto e a audio (o audio e transcrito antes). Foto, video etc. ficam para a equipe ver
+    if (tipo !== 'text' && tipo !== 'audio') return true
     if (!process.env.OPENAI_API_KEY) { console.error('[wa-ia] OPENAI_API_KEY ausente'); return true }
+    if (tipo === 'audio') {
+      const fala = await transcreverAudio(admin, msgId)
+      // Nao deu para entender o audio: fica para a equipe ouvir
+      if (!fala) return true
+    }
 
     const hist = await admin.from('wa_messages').select('id, wa_message_id, direction, type, body, created_at').eq('conversation_id', convId).order('created_at', { ascending: false }).limit(300)
     const linhas: any[] = (hist.data || []).slice().reverse()
@@ -60,7 +95,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
 
     const msgs: { role: 'user' | 'assistant'; content: string }[] = []
     for (const m of linhas) {
-      const txt = String(m.body || '').trim() || rotuloTipo(String(m.type || ''))
+      const txt = m.type === 'audio' && String(m.body || '').trim() ? '[audio transcrito] ' + String(m.body).trim() : (String(m.body || '').trim() || rotuloTipo(String(m.type || '')))
       if (!txt) continue
       const role = m.direction === 'in' ? 'user' : 'assistant'
       const last = msgs[msgs.length - 1]
