@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 const INFO: Record<string, { nome: string; icone: string; hora: number; quem: string; cor: string; cor2: string }> = {
   sentimos_falta: { nome: 'Sentimos sua falta', icone: '💛', hora: 9, quem: 'Quem está sem abrir a plataforma', cor: '#f59e0b', cor2: '#f97316' },
   oferta_express: { nome: 'Oferta Estrutura Express', icone: '🚀', hora: 18, quem: 'Quem ainda não tem a Estrutura Express', cor: '#8b5cf6', cor2: '#ec4899' },
+  ranking_diario: { nome: 'Olha o ranking', icone: '🏆', hora: 19, quem: 'Todos que ativaram as notificações', cor: '#eab308', cor2: '#f97316' },
 }
 
 const CSS = `
@@ -177,7 +178,7 @@ export default function PushAutoCard() {
   const seg = segBrasilia(agora)
   const pctDia = (seg / 86400) * 100
   const horaTxt = String(Math.floor(seg / 3600)).padStart(2, '0') + ':' + String(Math.floor((seg % 3600) / 60)).padStart(2, '0')
-  const ordem = ['sentimos_falta', 'oferta_express']
+  const ordem = ['sentimos_falta', 'oferta_express', 'ranking_diario']
   // Proximo envio entre os avisos ligados
   const ligados = (itens || []).filter(function(x: any) { return x.form && x.form.ativo })
   let prox: any = null

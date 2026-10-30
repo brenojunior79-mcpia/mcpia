@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import webpush from 'web-push'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase-server'
+import { timingSafeEqual } from 'crypto'
 import { VAPID_PUBLIC_KEY } from '@/lib/push-config'
 import { testeVendaAdmin } from '@/lib/pushAdmin'
 
@@ -23,6 +24,12 @@ const PADRAO: Record<string, { title: string; body: string; url: string }> = {
     title: '🎉 R$ 100 de desconto na Estrutura Express',
     body: 'Produto, site e criativos prontos para você. A oferta termina hoje à meia-noite!',
     url: '/dashboard/estrutura-express',
+  },
+  // Todo dia as 19h (Brasilia): chamado pelo agendador do banco (pg_cron), nao pela Vercel
+  ranking_diario: {
+    title: '🏆 Veja como está o ranking!',
+    body: 'Os 3 primeiros ganham R$ 200, R$ 150 e R$ 100 no Pix. Entre agora, ganhe pontos e suba de posição!',
+    url: '/dashboard',
   },
 }
 
@@ -67,9 +74,17 @@ async function enviar(admin: any, alvos: any[], aviso: { title: string; body: st
 async function tratar(req: NextRequest) {
   const segredo = process.env.CRON_SECRET
   const cab = req.headers.get('authorization') || ''
-  const ehCron = !!segredo && cab === 'Bearer ' + segredo
+  let ehCron = !!segredo && cab === 'Bearer ' + segredo
 
   const admin: any = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } })
+  // Agendador do banco (pg_cron): manda o segredo no cabecalho x-auto-secret (o mesmo usado nos fluxos do WhatsApp)
+  const hdr = req.headers.get('x-auto-secret') || ''
+  if (!ehCron && hdr) {
+    const s = await admin.from('wa_auto_secret').select('secret').eq('id', 1).maybeSingle()
+    const seg = String((s.data as any)?.secret || '')
+    const a = Buffer.from(hdr), b = Buffer.from(seg)
+    ehCron = !!seg && a.length === b.length && timingSafeEqual(a, b)
+  }
   const privateKey = process.env.VAPID_PRIVATE_KEY
   if (!privateKey) return NextResponse.json({ error: 'VAPID_PRIVATE_KEY nao configurada.' }, { status: 500 })
   webpush.setVapidDetails('https://mcpia.site', VAPID_PUBLIC_KEY, privateKey)
@@ -106,8 +121,9 @@ async function tratar(req: NextRequest) {
 async function rodarTodos(admin: any, so: string) {
   const cfg = await carregarConfig(admin)
   const resultado: any = {}
-  for (const tipo of ['sentimos_falta', 'oferta_express']) {
-    if (so && tipo !== so) continue
+  // O ranking das 19h so roda quando pedido de proposito (tipo=ranking_diario); os envios da Vercel nao o incluem
+  for (const tipo of ['sentimos_falta', 'oferta_express', 'ranking_diario']) {
+    if (so ? tipo !== so : tipo === 'ranking_diario') continue
     if (!cfg[tipo].ativo) { resultado[tipo] = { desligado: true, pessoas: 0, enviados: 0 }; continue }
     const q = await admin.rpc('push_auto_alvos', { p_tipo: tipo })
     if (q.error) { resultado[tipo] = { erro: q.error.message }; continue }

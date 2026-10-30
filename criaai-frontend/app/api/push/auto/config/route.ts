@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase-server'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const TIPOS = ['sentimos_falta', 'oferta_express']
+const TIPOS = ['sentimos_falta', 'oferta_express', 'ranking_diario']
 
 async function exigirAdmin() {
   const { data: { user } } = await createClient().auth.getUser()

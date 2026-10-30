@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 // Relatorio das notificacoes: quantas foram enviadas, quantas chegaram, quantas pessoas clicaram (entraram pela
 // notificacao) e quantas ignoraram (sem clique depois de 24h). Os cliques so sao contados a partir do dia em que
 // este relatorio entrou no ar.
-const NOMES: Record<string, string> = { sentimos_falta: '💜 Sentimos sua falta (9h)', oferta_express: '⚡ Oferta da Estrutura Express (18h)' }
+const NOMES: Record<string, string> = { sentimos_falta: '💜 Sentimos sua falta (9h)', oferta_express: '⚡ Oferta da Estrutura Express (18h)', ranking_diario: '🏆 Olha o ranking (19h)' }
 
 function pct(a: number, b: number) { return b > 0 ? Math.round((a / b) * 100) : 0 }
 function dataBR(s: string) { try { return new Date(s).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }) } catch (e) { return '' } }
@@ -53,7 +53,7 @@ export default function PushRelatorioCard() {
       {dados && (
         <>
           <div style={{ fontWeight: 800, fontSize: 14.5, margin: '4px 0 8px' }}>Notificações automáticas</div>
-          {['sentimos_falta', 'oferta_express'].map(function(tipo) {
+          {['sentimos_falta', 'oferta_express', 'ranking_diario'].map(function(tipo) {
             const a = auto.filter(function(x) { return x.tipo === tipo })[0]
             return (
               <div key={tipo} style={{ border: '1px solid var(--border)', borderRadius: 14, padding: 14, marginBottom: 10 }}>

@@ -2,7 +2,7 @@
 // So responde nas conversas em que o ADMIN ligou o assistente (wa_conversations.ia_ativa) ou quando ele ligou para todas (wa_ia_config.geral).
 import { JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE } from '@/lib/junior'
 import { phoneIdDaConversa, postMessage } from '@/lib/whatsapp'
-import { REGRA_EXPRESS_WHATSAPP, extrairPedidoExpress, removerMarcaExpress, liberarExpressPeloJunior } from '@/lib/juniorExpress'
+import { REGRA_EXPRESS_WHATSAPP, pediuLiberarExpress, removerMarcaExpress, liberarExpressPeloJunior } from '@/lib/juniorExpress'
 
 const MARCA_HUMANO = '[[HUMANO]]'
 
@@ -112,9 +112,14 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     if (!ult.data || String((ult.data as any).id) !== String(msgId)) return true
 
     // O assistente pediu para liberar a Estrutura Express: o sistema confere a compra e escreve a resposta
-    const pedido = extrairPedidoExpress(texto)
-    if (pedido) {
-      const res = await liberarExpressPeloJunior(admin, { compra: pedido.compra, conta: pedido.conta, waId, origem: 'whatsapp' })
+    if (pediuLiberarExpress(texto)) {
+      // Conta ligada a conversa (se houver); senao o banco acha pelo numero do WhatsApp
+      let contaEmail = ''
+      if (conv.profile_id) {
+        const pe = await admin.from('profiles').select('email').eq('id', conv.profile_id).maybeSingle()
+        contaEmail = String((pe.data as any)?.email || '')
+      }
+      const res = await liberarExpressPeloJunior(admin, { conta: contaEmail, waId, origem: 'whatsapp' })
       texto = res.texto
       if (res.humano) passaParaHumano = true
     } else {

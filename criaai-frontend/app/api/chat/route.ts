@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
-import { regraExpressChat, extrairPedidoExpress, removerMarcaExpress, liberarExpressPeloJunior } from '@/lib/juniorExpress'
+import { regraExpressChat, pediuLiberarExpress, removerMarcaExpress, liberarExpressPeloJunior } from '@/lib/juniorExpress'
 
 import { JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE } from '@/lib/junior'
 
@@ -120,13 +120,12 @@ export async function POST(req: NextRequest) {
     }
 
     // O Junior pediu para liberar a Estrutura Express: o sistema confere a compra e escreve a resposta
-    const pedido = extrairPedidoExpress(reply)
-    if (pedido) {
+    if (pediuLiberarExpress(reply)) {
       if (jaTemExpress) {
         reply = 'O seu acesso à Estrutura Express já está liberado nesta conta. Atualize a página (ou saia e entre de novo) e abra o menu "Estrutura Express" na barra lateral.'
       } else {
         const db: any = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } })
-        const res = await liberarExpressPeloJunior(db, { compra: pedido.compra, conta: user.email || '', origem: 'chat' })
+        const res = await liberarExpressPeloJunior(db, { conta: user.email || '', origem: 'chat' })
         reply = res.texto
       }
     } else {
