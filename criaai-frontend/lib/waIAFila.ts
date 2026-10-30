@@ -105,6 +105,13 @@ async function executar(admin: any, it: any, inicio: number, escala: number): Pr
         }
       } catch (e) { /* sem dono: segue so desligando o assistente */ }
       await admin.from('wa_conversations').update(upd).eq('id', it.conversation_id)
+    } else {
+      // O assistente respondeu: marca a conversa como lida (se a pessoa nao escreveu de novo nesse meio tempo).
+      // Quando passa para a equipe, continua como nao lida para a equipe ver.
+      try {
+        const ult = await admin.from('wa_messages').select('id').eq('conversation_id', it.conversation_id).eq('direction', 'in').order('created_at', { ascending: false }).limit(1).maybeSingle()
+        if (ult.data && String((ult.data as any).id) === String(it.inbound_msg_id)) await admin.from('wa_conversations').update({ unread: 0 }).eq('id', it.conversation_id)
+      } catch (e) { /* marcar como lida e so conforto */ }
     }
     return await fim('enviado')
   } catch (e: any) {
