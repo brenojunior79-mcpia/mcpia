@@ -18,7 +18,7 @@ const PASSOS: Passo[] = [
   {
     num: 2, icon: '📦', titulo: 'Prepare o material', curto: 'Material', cor: '#c8891a', x: 480, y: 200, href: '/dashboard/criativos-manuais', cta: 'Ir para as aulas',
     desc: 'Assista às aulas de criativos manuais. O material do produto também pode estar na descrição dele, em Produtos em Alta.',
-    subs: [{ id: 'p2a', texto: 'Assista às aulas de criativos manuais' }, { id: 'p2b', texto: 'Pegue o material do produto (veja a descrição dele em Produtos em Alta)' }],
+    subs: [{ id: 'p2a', texto: 'Assista às aulas de criativos manuais' }, { id: 'p2b', texto: 'Pegue o material do produto (veja a descrição dele em Produtos em Alta)' }, { id: 'p2c', texto: 'Crie os seus criativos no Gerador de Criativos' }],
   },
   {
     num: 3, icon: '💰', titulo: 'Venda no automático', curto: 'Vender', cor: '#2f9e5c', x: 760, y: 150, href: '/dashboard/vendas', cta: 'Ir para Vendas',
