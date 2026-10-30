@@ -28,7 +28,7 @@ function rotuloTipo(t: string): string {
 //  - 'manual': o admin ligou nesta conversa (ia_ativa)
 //  - 'geral': o admin ligou o assistente para TODAS as conversas (wa_ia_config.geral), a conversa nao foi desligada
 //    de proposito (ia_humano) e a equipe nao respondeu nas ultimas 12 horas (nesse caso a equipe segue sozinha)
-async function modoIA(admin: any, conv: any): Promise<'manual' | 'geral' | null> {
+export async function modoIA(admin: any, conv: any): Promise<'manual' | 'geral' | null> {
   if (conv.ia_ativa === true) return 'manual'
   if (conv.ia_humano === true) return null
   const c = await admin.from('wa_ia_config').select('geral').eq('id', 1).maybeSingle()
@@ -50,7 +50,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     if (tipo !== 'text') return true
     if (!process.env.OPENAI_API_KEY) { console.error('[wa-ia] OPENAI_API_KEY ausente'); return true }
 
-    const hist = await admin.from('wa_messages').select('id, direction, type, body, created_at').eq('conversation_id', convId).order('created_at', { ascending: false }).limit(20)
+    const hist = await admin.from('wa_messages').select('id, wa_message_id, direction, type, body, created_at').eq('conversation_id', convId).order('created_at', { ascending: false }).limit(20)
     const linhas: any[] = (hist.data || []).slice().reverse()
     if (linhas.length === 0) return true
     // Se ja chegou mensagem mais nova, ela mesma sera respondida (com a conversa completa)
@@ -127,13 +127,21 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       if (!texto) return true
     }
 
+    // A resposta nao sai na hora: vai para a fila e o Junior "digita" como uma pessoa (lib/waIAFila.ts).
+    // Respostas antigas ainda nao enviadas desta conversa saem da fila (vale a mais nova).
+    const agoraIso = new Date().toISOString()
+    await admin.from('wa_ia_fila').update({ estado: 'cancelado', erro: 'substituida', finalizado_em: agoraIso }).eq('conversation_id', convId).eq('estado', 'pendente')
+    const ins = await admin.from('wa_ia_fila').insert({ conversation_id: convId, inbound_msg_id: String(msgId), inbound_wa_id: (ultimaIn as any).wa_message_id || null, wa_id: waId, connection_id: conv.connection_id || null, texto, passa_humano: passaParaHumano })
+    if (!ins.error) return true
+    console.error('[wa-ia] fila indisponivel, enviando na hora:', ins.error.message)
+
+    // Plano B (so se a fila falhar): envia na hora, como antes
     const phoneId = await phoneIdDaConversa(admin, conv.connection_id || null)
     const r = await postMessage({ messaging_product: 'whatsapp', to: waId, type: 'text', text: { body: texto } }, phoneId || undefined)
     if (!r.ok) { console.error('[wa-ia] envio:', JSON.stringify(r.data?.error || r.data)); return true }
     const agora = new Date().toISOString()
     await admin.from('wa_messages').insert({ conversation_id: convId, wa_message_id: r.data?.messages?.[0]?.id || null, direction: 'out', type: 'text', body: texto, status: 'sent', sent_by: null, created_at: agora })
     const upd: any = { last_message_at: agora, last_text: '🤖 ' + texto.slice(0, 120) }
-    // Pediu ajuda humana: o assistente se desliga sozinho nessa conversa para a equipe assumir
     if (passaParaHumano) { upd.ia_ativa = false; upd.ia_humano = true }
     await admin.from('wa_conversations').update(upd).eq('id', convId)
     return true

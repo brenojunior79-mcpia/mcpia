@@ -27,6 +27,7 @@ export default function ChatPage() {
   const [firstName, setFirstName] = useState('')
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [pausando, setPausando] = useState(false) // Junior parou de digitar por um instante (como uma pessoa)
   const [copied, setCopied] = useState<number | null>(null)
   const [hydrated, setHydrated] = useState(false)
   const [pendingImage, setPendingImage] = useState<string | null>(null)
@@ -120,6 +121,20 @@ export default function ChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  // O Junior responde como uma pessoa: digita, para um instante, volta a digitar e so entao a mensagem aparece
+  async function pausaHumana(resposta: string, jaPassouMs: number) {
+    const total = Math.min(14000, 3500 + resposta.length * 28) + Math.random() * 2500 - jaPassouMs
+    if (total <= 300) return
+    if (total < 6000 || resposta.length < 80) { await new Promise(function(r) { setTimeout(r, total) }); return }
+    const parte1 = total * 0.55
+    const pausa = 1500 + Math.random() * 1300
+    await new Promise(function(r) { setTimeout(r, parte1) })
+    setPausando(true)
+    await new Promise(function(r) { setTimeout(r, pausa) })
+    setPausando(false)
+    await new Promise(function(r) { setTimeout(r, Math.max(0, total - parte1 - pausa)) })
+  }
+
   async function send() {
     if ((!input.trim() && !pendingImage) || loading) return
     const userMsg: Message = { role: 'user', content: input.trim(), imageUrl: pendingImage || undefined }
@@ -129,6 +144,7 @@ export default function ChatPage() {
     const imageToSend = pendingImage
     setPendingImage(null)
     setLoading(true)
+    const inicioEnvio = Date.now()
 
     try {
       const sessionResult = await supabase.auth.getSession()
@@ -150,6 +166,7 @@ export default function ChatPage() {
       if (data.human) {
         setHumanActive(true)
       } else {
+        if (data.reply && res.ok) await pausaHumana(String(data.reply), Date.now() - inicioEnvio)
         setMessages(function(prev) {
           return [...prev, { role: 'assistant', content: data.reply || 'Erro ao gerar resposta.' }]
         })
@@ -159,6 +176,7 @@ export default function ChatPage() {
         return [...prev, { role: 'assistant', content: 'Erro ao conectar. Tente novamente.' }]
       })
     }
+    setPausando(false)
     setLoading(false)
   }
 
@@ -207,7 +225,7 @@ export default function ChatPage() {
           </div>
           <div>
             <div className={styles.title}>Junior</div>
-            <div className={styles.sub}>Sou o Junior e estou online para te ajudar</div>
+            <div className={styles.sub}>{loading && !pausando ? 'digitando…' : 'Sou o Junior e estou online para te ajudar'}</div>
           </div>
         </div>
         {messages.length > 1 && (
@@ -255,7 +273,7 @@ export default function ChatPage() {
               </div>
             )
           })}
-          {loading && (
+          {loading && !pausando && (
             <div className={styles.msg + ' ' + styles.msgBot}>
               <div className={styles.avatar}><img src="/avatar-junior/junior.svg" alt="Junior" style={{ width: '100%', height: '100%', borderRadius: '50%' }} /></div>
               <div className={styles.bubble}>
