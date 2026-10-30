@@ -14,18 +14,24 @@ async function checarAdmin() {
   return me.data?.is_admin ? db : null
 }
 
-// Conferencia do ranking (so admin): top 20 do mes com os pontos de cada tipo
-export async function GET() {
+// Conferencia do ranking (so admin). periodo=recente: de ontem ate agora; periodo=ciclo: ranking inteiro
+export async function GET(req: NextRequest) {
   const db = await checarAdmin()
   if (!db) return NextResponse.json({ error: 'Somente o admin' }, { status: 403 })
   const j = await janelaRanking(db)
-  const r = await db.rpc('ranking_detalhe', { p_inicio: j.inicio.toISOString(), p_fim: j.fim.toISOString() })
+  const recente = req.nextUrl.searchParams.get('periodo') !== 'ciclo'
+  // "Ontem" = meia-noite de ontem em Brasilia (a funcao do banco nunca conta antes do inicio do ranking)
+  const br = new Date(Date.now() - 3 * 3600 * 1000)
+  const ontem = new Date(Date.UTC(br.getUTCFullYear(), br.getUTCMonth(), br.getUTCDate() - 1, 3))
+  const ini = recente && ontem > j.inicio ? ontem : j.inicio
+  const r = await db.rpc('ranking_atividade', { p_inicio: ini.toISOString(), p_fim: j.fim.toISOString() })
   if (r.error) return NextResponse.json({ error: r.error.message }, { status: 500 })
   const lista = (r.data || []).slice().sort(function(a: any, b: any) { return b.pontos - a.pontos || String(a.user_id).localeCompare(String(b.user_id)) })
   // Posicao oficial = so entre quem nao foi excluido
   let pos = 0
-  const linhas = lista.slice(0, 40).map(function(x: any) { return { ...x, posicao: x.excluido ? null : ++pos } })
-  return NextResponse.json({ mes: j.titulo, fimEm: j.fimEm, ano: j.ano, total: lista.length, linhas })
+  const linhas = lista.slice(0, 300).map(function(x: any) { return { ...x, posicao: x.excluido ? null : ++pos } })
+  const desde = new Date(Math.max(ini.getTime(), j.inicio.getTime()))
+  return NextResponse.json({ mes: j.titulo, fimEm: j.fimEm, ano: j.ano, periodo: recente ? 'recente' : 'ciclo', desde: desde.toISOString(), total: lista.length, linhas })
 }
 
 // Tira (ou devolve) um aluno da disputa do ranking
