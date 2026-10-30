@@ -16,9 +16,31 @@ const CSS = `
 @keyframes rkOuro { 0%,100% { box-shadow: 0 0 0 0 rgba(245,179,1,0.0) } 50% { box-shadow: 0 0 18px 2px rgba(245,179,1,0.45) } }
 @keyframes rkPremio { 0%,100% { transform: scale(1) } 50% { transform: scale(1.08) } }
 @keyframes rkFaisca { 0% { opacity: 0; transform: translateY(8px) scale(0.6) } 30% { opacity: 1 } 100% { opacity: 0; transform: translateY(-26px) scale(1.1) } }
+@keyframes rkPulsa { 0%,100% { box-shadow: 0 0 0 0 rgba(124,92,252,0.55), 0 6px 18px rgba(124,92,252,0.35) } 50% { box-shadow: 0 0 0 9px rgba(124,92,252,0), 0 6px 22px rgba(236,72,153,0.4) } }
+@keyframes rkBalanca { 0%,86%,100% { transform: rotate(0) } 90% { transform: rotate(-14deg) } 94% { transform: rotate(12deg) } 97% { transform: rotate(-6deg) } }
+@keyframes rkGradiente { 0% { background-position: 0% 50% } 100% { background-position: 200% 50% } }
+@keyframes rkAbre { from { opacity: 0; transform: translateY(-8px) } to { opacity: 1; transform: translateY(0) } }
+@keyframes rkCheck { 0% { transform: scale(0.4) } 60% { transform: scale(1.3) } 100% { transform: scale(1) } }
 @media (prefers-reduced-motion: reduce) { .rk-anim, .rk-anim * { animation: none !important } }
 `
 const brl = function(v: number) { return 'R$ ' + v.toLocaleString('pt-BR') }
+
+// Formas de ganhar pontos (o aluno marca o que ja fez ou vai fazer)
+const ITENS: { id: string; emoji: string; pts: string; texto: string; extra?: string }[] = [
+  { id: 'acesso', emoji: '📅', pts: '5 pontos', texto: 'por dia que você entra na plataforma' },
+  { id: 'ebook', emoji: '📘', pts: '20 pontos', texto: 'por ebook criado (1 por dia)' },
+  { id: 'site', emoji: '🌐', pts: '20 pontos', texto: 'por site criado (1 por dia)' },
+  { id: 'criativo', emoji: '🎬', pts: '30 pontos', texto: 'por criativo gerado' },
+  { id: 'anuncio', emoji: '📣', pts: '50 pontos', texto: 'por anúncio publicado (até 2 por dia)' },
+  { id: 'venda', emoji: '💰', pts: '50 pontos', texto: 'por venda registrada' },
+  { id: 'app', emoji: '📲', pts: '10 pontos', texto: 'por instalar o aplicativo' },
+  { id: 'notif', emoji: '🔔', pts: '10 pontos', texto: 'por ativar as notificações' },
+  { id: 'aula', emoji: '🎓', pts: '10 pontos', texto: 'por aula assistida', extra: 'Bônus: 3 aulas +10 · 5 aulas +20 · 7 aulas +30' },
+]
+const CHAVE_MARCAS = 'rk_marcas_v1'
+function lerMarcas(): Record<string, boolean> {
+  try { const v = JSON.parse(localStorage.getItem(CHAVE_MARCAS) || '{}'); return v && typeof v === 'object' ? v : {} } catch (e) { return {} }
+}
 
 export default function RankingCard() {
   const [d, setD] = useState<Dados | null>(null)
@@ -27,6 +49,15 @@ export default function RankingCard() {
   const [tentativa, setTentativa] = useState(0)
   const [ativando, setAtivando] = useState(false)
   const [msgNotif, setMsgNotif] = useState('')
+  const [marcas, setMarcas] = useState<Record<string, boolean>>({})
+
+  useEffect(function() { setMarcas(lerMarcas()) }, [])
+
+  function alternar(id: string) {
+    const novo = { ...marcas, [id]: !marcas[id] }
+    setMarcas(novo)
+    try { localStorage.setItem(CHAVE_MARCAS, JSON.stringify(novo)) } catch (e) {}
+  }
 
   useEffect(function() {
     setFalha(null)
@@ -153,22 +184,45 @@ export default function RankingCard() {
           </div>
         )}
 
-        <button onClick={function() { setRegras(!regras) }} style={{ position: 'relative', marginTop: 12, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 13, fontWeight: 700, color: '#7c5cfc' }}>
-          {regras ? 'Esconder' : 'Como ganhar pontos?'} {regras ? '▲' : '▼'}
+        <button
+          onClick={function() { setRegras(!regras) }}
+          aria-expanded={regras}
+          style={{ position: 'relative', overflow: 'hidden', marginTop: 14, width: '100%', cursor: 'pointer', border: 'none', borderRadius: 14, padding: '13px 16px', fontSize: 15, fontWeight: 800, fontFamily: 'Syne, sans-serif', color: '#fff', backgroundImage: 'linear-gradient(90deg, #7c5cfc, #ec4899, #f5b301, #7c5cfc)', backgroundSize: '200% 100%', animation: 'rkGradiente 4s linear infinite, rkPulsa 2.2s ease-in-out infinite', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+        >
+          <span style={{ position: 'absolute', top: 0, bottom: 0, width: '40%', left: '-60%', background: 'linear-gradient(100deg, transparent, rgba(255,255,255,0.45), transparent)', animation: 'rkBrilho 2.6s ease-in-out infinite', pointerEvents: 'none' }} />
+          <span style={{ display: 'inline-block', animation: 'rkBalanca 3s ease-in-out infinite' }}>🎯</span>
+          <span style={{ position: 'relative' }}>{regras ? 'Esconder' : 'Como ganhar pontos?'}</span>
+          <span style={{ position: 'relative' }}>{regras ? '▲' : '▼'}</span>
         </button>
         {regras && (
-          <div style={{ position: 'relative', marginTop: 10, fontSize: 13, color: 'var(--text)', lineHeight: 1.7 }}>
-            <div>📅 <b>5 pontos</b> por dia que você entra na plataforma</div>
-            <div>📘 <b>20 pontos</b> por ebook criado (1 por dia)</div>
-            <div>🌐 <b>20 pontos</b> por site criado (1 por dia)</div>
-            <div>🎬 <b>30 pontos</b> por criativo gerado</div>
-            <div>📣 <b>50 pontos</b> por anúncio publicado (até 2 por dia)</div>
-            <div>💰 <b>50 pontos</b> por venda registrada</div>
-            <div>📲 <b>10 pontos</b> por instalar o aplicativo</div>
-            <div>🔔 <b>10 pontos</b> por ativar as notificações</div>
-            <div>🎓 <b>10 pontos</b> por aula assistida</div>
-            <div style={{ marginLeft: 26, fontSize: 12.5, color: 'var(--muted2)' }}>Bônus: 3 aulas +10 · 5 aulas +20 · 7 aulas +30</div>
-            <div style={{ color: 'var(--muted2)', fontSize: 12, marginTop: 6 }}>Ebook e site contam 1 por dia e criativo até 3 por dia. Instalar o app e ativar as notificações valem uma vez só. A aula só conta se você assistir de verdade, com a aba aberta e o som ligado (pular para o final não vale). Depois de {d.fimEm}, o ranking zera e recomeça no começo de cada mês. Os prêmios são pagos por Pix para os 3 primeiros colocados.</div>
+          <div style={{ position: 'relative', marginTop: 12, fontSize: 13, color: 'var(--text)', animation: 'rkAbre 0.3s ease-out' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 8, flexWrap: 'wrap' }}>
+              <div style={{ fontWeight: 800 }}>Marque o que você já fez ou vai fazer</div>
+              <div style={{ fontSize: 12, fontWeight: 800, color: '#16a34a' }}>{ITENS.filter(function(it) { return marcas[it.id] || (it.id === 'notif' && d.notif) }).length} de {ITENS.length} marcados</div>
+            </div>
+            {ITENS.map(function(it) {
+              const auto = it.id === 'notif' && d.notif === true
+              const on = !!marcas[it.id] || auto
+              return (
+                <button
+                  key={it.id}
+                  type="button"
+                  role="checkbox"
+                  aria-checked={on}
+                  onClick={function() { if (!auto) alternar(it.id) }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', cursor: auto ? 'default' : 'pointer', marginBottom: 6, padding: '10px 12px', borderRadius: 12, border: '1.5px solid ' + (on ? 'rgba(22,163,74,0.5)' : 'var(--border)'), background: on ? 'rgba(22,163,74,0.08)' : 'var(--surface2)', color: 'var(--text)', fontSize: 13, lineHeight: 1.45, transition: 'background 0.2s, border-color 0.2s' }}
+                >
+                  <span style={{ flexShrink: 0, width: 24, height: 24, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid ' + (on ? '#16a34a' : 'var(--muted2)'), background: on ? '#16a34a' : 'transparent', color: '#fff', fontSize: 15, fontWeight: 900, animation: on ? 'rkCheck 0.35s ease-out' : 'none' }}>{on ? '✓' : ''}</span>
+                  <span style={{ fontSize: 20, flexShrink: 0 }}>{it.emoji}</span>
+                  <span style={{ flex: 1, opacity: on ? 0.75 : 1 }}>
+                    <b>{it.pts}</b> {it.texto}
+                    {it.extra && <span style={{ display: 'block', fontSize: 12, color: 'var(--muted2)' }}>{it.extra}</span>}
+                    {auto && <span style={{ display: 'block', fontSize: 12, color: '#16a34a', fontWeight: 700 }}>Você já ativou</span>}
+                  </span>
+                </button>
+              )
+            })}
+            <div style={{ color: 'var(--muted2)', fontSize: 12, marginTop: 8, lineHeight: 1.6 }}>Ebook e site contam 1 por dia e criativo até 3 por dia. Instalar o app e ativar as notificações valem uma vez só. A aula só conta se você assistir de verdade, com a aba aberta e o som ligado (pular para o final não vale). Depois de {d.fimEm}, o ranking zera e recomeça no começo de cada mês. Os prêmios são pagos por Pix para os 3 primeiros colocados.</div>
           </div>
         )}
       </div>
