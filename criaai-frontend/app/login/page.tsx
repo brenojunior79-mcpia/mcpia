@@ -22,7 +22,11 @@ export default function LoginPage() {
   // Traduz erros do Supabase para português
   function traduzErro(msg: string): string {
     if (!msg) return 'Ocorreu um erro. Tente novamente.'
-    if (msg.includes('Invalid login credentials')) return 'E-mail ou senha incorretos.'
+    if (msg.includes('Invalid login credentials')) return 'E-mail ou senha incorretos. Confira se digitou o mesmo e-mail da compra. Se esqueceu a senha, toque em "Esqueci minha senha".'
+    if (/known to be weak|easy to guess|pwned|leaked/i.test(msg)) return 'Essa senha é muito comum e fácil de adivinhar. Escolha uma senha diferente, com letras e números (ex.: Prospero2026).'
+    if (/should contain at least one character|weak_password|weak password/i.test(msg)) return 'Senha fraca. Use pelo menos 6 caracteres, com letras e números.'
+    if (/failed to fetch|network|timeout/i.test(msg)) return 'Sem conexão com o servidor. Confira sua internet e tente novamente.'
+    if (/rate limit|too many requests|security purposes/i.test(msg)) return 'Muitas tentativas. Aguarde 1 minuto e tente novamente.'
     if (msg.includes('Email not confirmed')) return 'Confirme seu e-mail antes de fazer login. Verifique sua caixa de entrada.'
     if (msg.includes('User already registered')) return 'Este e-mail já está cadastrado. Faça login ou redefina sua senha.'
     if (msg.includes('Password should be at least')) return 'A senha deve ter no mínimo 6 caracteres.'

@@ -254,11 +254,30 @@ export async function POST(req: NextRequest) {
         const paidSub: string | null = payload.event?.invoice?.subscriptionId || payload.event?.subscription?.id || null
         const planName = resolvePlanName(payload)
         const cur = await admin.from('profiles').select('hubla_subscription_id, subscription_status').eq('id', userId).maybeSingle()
-        if (planName && paidSub && cur.data?.hubla_subscription_id === paidSub && cur.data?.subscription_status === 'active') {
+        if (planName && paidSub && cur.data?.hubla_subscription_id === paidSub && cur.data?.subscription_status === 'past_due') {
+          // Estava em atraso e pagou: o acesso volta na hora
+          await admin.from('profiles').update({ subscription_status: 'active', updated_at: new Date().toISOString() }).eq('id', userId)
+          await trackBilling(userId, payload, planName)
+          await logEvent(eventType, email, userId, 'liberado', 'pagamento em atraso regularizado: ' + planName)
+        } else if (planName && paidSub && cur.data?.hubla_subscription_id === paidSub && cur.data?.subscription_status === 'active') {
           await trackBilling(userId, payload, planName)
           await logEvent(eventType, email, userId, 'registrado', 'pagamento registrado: ' + planName)
         } else {
           await logEvent(eventType, email, userId, 'ignorado', 'pagamento de outro produto ou assinatura')
+        }
+        break
+      }
+
+      // Renovacao recusada: bloqueia ate o aluno pagar. So vale para a assinatura que o aluno ja tem ativa
+      // (primeira compra que falha nao tem plano ainda, entao nao muda nada)
+      case 'invoice.payment_failed': {
+        const failedSub: string | null = payload.event?.invoice?.subscriptionId || payload.event?.subscription?.id || null
+        const cur = await admin.from('profiles').select('hubla_subscription_id, subscription_status, is_admin').eq('id', userId).maybeSingle()
+        if (!cur.data?.is_admin && failedSub && cur.data?.hubla_subscription_id === failedSub && cur.data?.subscription_status === 'active') {
+          await admin.from('profiles').update({ subscription_status: 'past_due', updated_at: new Date().toISOString() }).eq('id', userId)
+          await logEvent(eventType, email, userId, 'bloqueado', 'renovação recusada: assinatura em atraso')
+        } else {
+          await logEvent(eventType, email, userId, 'ignorado', 'pagamento recusado sem plano ativo (nada alterado)')
         }
         break
       }

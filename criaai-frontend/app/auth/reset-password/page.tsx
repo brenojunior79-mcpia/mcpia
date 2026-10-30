@@ -50,7 +50,10 @@ export default function ResetPasswordPage() {
       const m = result.error.message || ''
       if (m.indexOf('session missing') !== -1) setNoSession(true)
       else if (m.indexOf('same as the old') !== -1) setError('A nova senha precisa ser diferente da antiga.')
-      else setError('Não foi possível salvar a senha. Tente novamente.')
+      else if (/known to be weak|easy to guess|pwned|leaked/i.test(m)) setError('Essa senha é muito comum e fácil de adivinhar. Escolha outra, com letras e números (ex.: Prospero2026).')
+      else if (/should contain at least one character|weak_password|weak password|at least/i.test(m)) setError('Senha fraca. Use pelo menos 6 caracteres, com letras e números.')
+      else if (/failed to fetch|network|timeout/i.test(m)) setError('Sem conexão com o servidor. Confira sua internet e tente novamente.')
+      else setError('Não foi possível salvar a senha. Tente uma senha diferente, com letras e números, ou peça um novo link.')
       setLoading(false)
       return
     }
@@ -99,7 +102,7 @@ export default function ResetPasswordPage() {
                   type="password"
                   value={password}
                   onChange={function(e) { setPassword(e.target.value) }}
-                  placeholder="Minimo 6 caracteres"
+                  placeholder="Mínimo 6 caracteres, com letras e números"
                   required
                   style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 16px', color: 'var(--text)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
                 />

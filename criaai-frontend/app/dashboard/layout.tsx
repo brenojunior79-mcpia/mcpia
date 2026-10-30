@@ -7,6 +7,7 @@ import PushSetup from '@/components/layout/PushSetup'
 import PresenceTracker from '@/components/layout/PresenceTracker'
 import JuniorFlutuante from '@/components/layout/JuniorFlutuante'
 import RefundBlocked from '@/components/layout/RefundBlocked'
+import PagamentoAtrasado from '@/components/layout/PagamentoAtrasado'
 import ReferralClaim from '@/components/referral/ReferralClaim'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -24,6 +25,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const hasPlan = profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing'
   if (profile?.refunded_at && !profile?.is_admin && !hasPlan) {
     return <RefundBlocked name={(profile?.full_name || '').split(' ')[0] || ''} />
+  }
+
+  // Pagamento em atraso: nenhum menu ate regularizar (admin e suporte nunca sao bloqueados)
+  if (profile?.subscription_status === 'past_due' && !profile?.is_admin && !profile?.is_support) {
+    return <PagamentoAtrasado name={(profile?.full_name || '').split(' ')[0] || ''} planName={String((profile as any)?.plans?.name || '')} />
   }
 
   return (
