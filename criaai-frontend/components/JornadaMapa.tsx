@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
@@ -54,6 +54,10 @@ const CSS = `
 .jm-card { transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s; }
 .jm-card:hover { transform: translateY(-3px); box-shadow: 0 14px 30px rgba(0,0,0,0.16); }
 .jm-sub { transition: background 0.2s, border-color 0.2s; }
+.jm-rolagem { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.jm-rolagem::-webkit-scrollbar { display: none; }
+.jm-dica { display: none; }
+@media (max-width: 640px) { .jm-svg { min-width: 600px; } .jm-dica { display: block; } }
 @media (prefers-reduced-motion: reduce) { .jm-anim, .jm-anim * { animation: none !important; transition: none !important } }
 `
 
@@ -63,6 +67,7 @@ export default function JornadaMapa() {
   const [pronto, setPronto] = useState(false)
   const [foto, setFoto] = useState('')
   const [fotoFalhou, setFotoFalhou] = useState(false)
+  const rolagem = useRef<HTMLDivElement>(null)
 
   useEffect(function() { setMarcas(ler()); setPronto(true) }, [])
 
@@ -100,6 +105,14 @@ export default function JornadaMapa() {
   const concluiu = primeiroPendente === -1
   const atual = concluiu ? PASSOS.length - 1 : primeiroPendente
   const viajante = PASSOS[atual]
+
+  // No celular o mapa e mais largo que a tela: ele abre ja centralizado em quem esta no passo atual
+  useEffect(function() {
+    const el = rolagem.current
+    if (!el || el.scrollWidth <= el.clientWidth + 4) return
+    const alvo = (viajante.x / 900) * el.scrollWidth - el.clientWidth / 2
+    el.scrollLeft = Math.max(0, alvo)
+  }, [atual, pronto])
 
   const trilhas = [
     'M 90 340 C 130 345, 180 300, 250 290',
@@ -145,7 +158,7 @@ export default function JornadaMapa() {
 
         {/* O MAPA */}
         <div style={{ position: 'relative', borderRadius: 18, overflow: 'hidden', border: '2px solid #6f5330', boxShadow: '0 6px 18px rgba(60,40,15,0.35)' }}>
-          <svg viewBox="0 0 900 420" role="img" aria-label="Mapa da sua jornada: plataformas, material e vendas" style={{ display: 'block', width: '100%', height: 'auto' }}>
+          <div ref={rolagem} className="jm-rolagem"><svg className="jm-svg" viewBox="0 0 900 420" role="img" aria-label="Mapa da sua jornada: plataformas, material e vendas" style={{ display: 'block', width: '100%', height: 'auto' }}>
             <defs>
               <linearGradient id="jmMar" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0" stopColor="#2a7fae" /><stop offset="1" stopColor="#17597f" />
@@ -346,8 +359,9 @@ export default function JornadaMapa() {
               {/* textura de papel envelhecido */}
               <rect width="900" height="420" filter="url(#jmPapel)" style={{ mixBlendMode: 'multiply', pointerEvents: 'none' }} />
             </g>
-          </svg>
+          </svg></div>
         </div>
+        <div className="jm-dica" style={{ textAlign: 'center', fontSize: 12, fontWeight: 700, color: '#6f5330', marginTop: 6 }}>↔ Deslize o mapa para os lados</div>
 
         {/* PASSO A PASSO */}
         <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 12, marginTop: 14 }}>
