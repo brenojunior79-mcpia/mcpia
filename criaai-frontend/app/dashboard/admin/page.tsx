@@ -257,6 +257,16 @@ export default function AdminPage() {
       </div>
       <div className={styles.content}>
 
+        {/* Atalho: ranking dos alunos */}
+        <a href="/dashboard/admin/ranking" style={{ display: 'flex', alignItems: 'center', gap: 14, textDecoration: 'none', marginBottom: 16, padding: '14px 18px', borderRadius: 16, background: 'linear-gradient(135deg, rgba(245,179,1,0.16), rgba(245,179,1,0.05))', border: '1px solid rgba(245,179,1,0.5)', color: 'var(--text)' }}>
+          <span style={{ fontSize: 28 }}>🏆</span>
+          <span style={{ flex: 1 }}>
+            <span style={{ display: 'block', fontWeight: 800, fontSize: 15, fontFamily: 'Syne, sans-serif' }}>Ranking dos alunos</span>
+            <span style={{ display: 'block', fontSize: 12.5, color: 'var(--muted2)' }}>Quem pontuou ontem e hoje, o que cada um fez e o top 3 do prêmio</span>
+          </span>
+          <span style={{ fontWeight: 800, color: '#b45309', fontSize: 13 }}>Abrir →</span>
+        </a>
+
         {/* Instalacoes do app */}
         <div className={styles.stat} style={{ marginBottom: 28, display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
           <div style={{ minWidth: 150 }}>

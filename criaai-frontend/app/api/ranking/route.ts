@@ -17,7 +17,7 @@ function nomeCurto(n: string | null) {
 }
 
 // Ranking do mes (horario de Brasilia, UTC-3). Mostra so top 3 e a posicao do proprio aluno.
-export async function GET() {
+async function montar() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Entre na sua conta.' }, { status: 401 })
@@ -27,7 +27,7 @@ export async function GET() {
   const inicio = j.inicio, fim = j.fim
   const diasRestantes = Math.max(0, Math.ceil((fim.getTime() - Date.now()) / 86400000))
   const r = await db.rpc('ranking_pontos', { p_inicio: inicio.toISOString(), p_fim: fim.toISOString() })
-  if (r.error) return NextResponse.json({ error: 'Nao foi possivel carregar o ranking.' }, { status: 500 })
+  if (r.error) { console.error('[ranking] rpc:', r.error); return NextResponse.json({ error: 'Nao foi possivel carregar o ranking.', detalhe: String(r.error.message || '').slice(0, 300) }, { status: 500 }) }
 
   const lista = ((r.data || []) as any[]).slice().sort(function(a, b) {
     return b.pontos - a.pontos || String(a.user_id).localeCompare(String(b.user_id))
@@ -43,4 +43,13 @@ export async function GET() {
   }
   const faltam = idx > 0 && idx < 100 ? Math.max(1, lista[idx - 1].pontos - lista[idx].pontos + 1) : 0
   return NextResponse.json({ mes: j.titulo, fimEm: j.fimEm, ano: j.ano, diasRestantes, top, eu, faltam, premios: PREMIOS })
+}
+
+export async function GET() {
+  try {
+    return await montar()
+  } catch (e: any) {
+    console.error('[ranking] erro:', e)
+    return NextResponse.json({ error: 'Nao foi possivel carregar o ranking.', detalhe: String(e?.message || e).slice(0, 300) }, { status: 500 })
+  }
 }

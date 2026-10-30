@@ -22,12 +22,33 @@ const brl = function(v: number) { return 'R$ ' + v.toLocaleString('pt-BR') }
 export default function RankingCard() {
   const [d, setD] = useState<Dados | null>(null)
   const [regras, setRegras] = useState(false)
+  const [falha, setFalha] = useState<string | null>(null)
+  const [tentativa, setTentativa] = useState(0)
 
   useEffect(function() {
-    fetch('/api/ranking', { cache: 'no-store' }).then(function(r) { return r.json() }).then(function(j) { if (j && j.top) setD(j) }).catch(function() {})
-  }, [])
+    setFalha(null)
+    fetch('/api/ranking', { cache: 'no-store' })
+      .then(function(r) { return r.json().catch(function() { return { error: 'Resposta inesperada (' + r.status + ')' } }) })
+      .then(function(j) { if (j && j.top) setD(j); else setFalha((j && (j.detalhe || j.error)) || 'Erro desconhecido') })
+      .catch(function(e) { setFalha(String(e && e.message || e)) })
+  }, [tentativa])
 
-  if (!d) return null
+  if (!d) {
+    // Carregando ou com problema: o ranking nunca some sem avisar
+    return (
+      <div className="anim-fadeUp" style={{ marginBottom: 28 }}>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20, padding: '18px 22px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 24 }}>🏆</span>
+          <div style={{ flex: 1, minWidth: 180 }}>
+            <div style={{ fontSize: 16, fontWeight: 800, fontFamily: 'Syne, sans-serif', color: 'var(--text)' }}>Ranking</div>
+            <div style={{ fontSize: 13, color: 'var(--muted2)' }}>{falha ? 'Não consegui carregar o ranking agora.' : 'Carregando o ranking...'}</div>
+            {falha && <div style={{ fontSize: 11, color: 'var(--muted2)', marginTop: 2, opacity: 0.8 }}>{falha}</div>}
+          </div>
+          {falha && <button onClick={function() { setTentativa(tentativa + 1) }} style={{ cursor: 'pointer', border: '1px solid #7c5cfc', color: '#7c5cfc', background: 'transparent', borderRadius: 10, padding: '8px 14px', fontWeight: 800, fontSize: 13 }}>Tentar de novo</button>}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="anim-fadeUp rk-anim" style={{ marginBottom: 28 }}>
