@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase-browser'
 
 // Mapa da jornada do aluno: mapa do tesouro ilustrado, com trilha animada, viajante que anda ate a etapa atual
 // e passo a passo para o aluno marcar o que ja fez (as marcas ficam so neste aparelho).
@@ -60,8 +61,30 @@ export default function JornadaMapa() {
   const router = useRouter()
   const [marcas, setMarcas] = useState<Record<string, boolean>>({})
   const [pronto, setPronto] = useState(false)
+  const [foto, setFoto] = useState('')
+  const [fotoFalhou, setFotoFalhou] = useState(false)
 
   useEffect(function() { setMarcas(ler()); setPronto(true) }, [])
+
+  // Foto de perfil do aluno: ela vira o "bonequinho" que anda no mapa
+  useEffect(function() {
+    let vivo = true
+    async function carregar() {
+      try {
+        const supabase = createClient()
+        const u = await supabase.auth.getUser()
+        if (!u.data.user) return
+        const r = await supabase.from('profiles').select('avatar_url').eq('id', u.data.user.id).maybeSingle()
+        const url = (r.data as any)?.avatar_url
+        if (vivo && url) { setFoto(String(url)); setFotoFalhou(false) }
+      } catch (e) { /* sem foto: fica o bonequinho */ }
+    }
+    carregar()
+    function nova(e: any) { if (e && e.detail) { setFoto(String(e.detail)); setFotoFalhou(false) } }
+    window.addEventListener('mcpia-foto-atualizada', nova)
+    return function() { vivo = false; window.removeEventListener('mcpia-foto-atualizada', nova) }
+  }, [])
+  const comFoto = !!foto && !fotoFalhou
 
   function alternar(id: string) {
     const novo = { ...marcas, [id]: !marcas[id] }
@@ -102,6 +125,12 @@ export default function JornadaMapa() {
             <div style={{ fontSize: 12.5, color: '#6b5433', marginTop: 2 }}>
               {concluiu ? 'Parabéns! Você completou o mapa. Agora é seguir vendendo.' : 'Siga a trilha até o tesouro. Toque nos pontos do mapa para abrir cada passo.'}
             </div>
+            {!comFoto && (
+              <button type="button" onClick={function() { try { window.dispatchEvent(new Event('mcpia-trocar-foto')) } catch (e) {} }}
+                style={{ marginTop: 6, cursor: 'pointer', border: '1.5px dashed #8b6b3d', background: 'rgba(255,255,255,0.45)', color: '#3d2b16', borderRadius: 99, padding: '4px 12px', fontSize: 12, fontWeight: 800 }}>
+                📷 Coloque a sua foto e veja você caminhando no mapa
+              </button>
+            )}
           </div>
           <div style={{ minWidth: 150 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, fontWeight: 800, color: '#3d2b16', marginBottom: 4 }}>
@@ -134,6 +163,7 @@ export default function JornadaMapa() {
                 <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="4" result="r" />
                 <feColorMatrix in="r" type="matrix" values="0 0 0 0 0.35  0 0 0 0 0.25  0 0 0 0 0.1  0 0 0 0.16 0" />
               </filter>
+              <clipPath id="jmFoto"><circle cx="0" cy="12" r="23" /></clipPath>
               <clipPath id="jmRecorte"><rect x="0" y="0" width="900" height="420" /></clipPath>
             </defs>
 
@@ -255,14 +285,28 @@ export default function JornadaMapa() {
                 )
               })}
 
-              {/* viajante: caminha ate a etapa atual */}
-              <g style={{ transform: 'translate(' + viajante.x + 'px,' + (viajante.y - 58) + 'px)', transition: 'transform 1.4s cubic-bezier(.5,.1,.25,1)' }}>
-                <ellipse cx="0" cy="40" rx="13" ry="4" fill="#000" opacity="0.25" />
-                <g style={{ animation: 'jmBalanca 1.4s ease-in-out infinite' }} className="jm-box">
-                  <text x="0" y="34" fontSize="34" textAnchor="middle">{concluiu ? '🥳' : '🚶'}</text>
-                </g>
+              {/* viajante: caminha ate a etapa atual (com a foto do aluno, se ele tiver) */}
+              <g style={{ transform: 'translate(' + viajante.x + 'px,' + (viajante.y - 80) + 'px)', transition: 'transform 1.4s cubic-bezier(.5,.1,.25,1)' }}>
+                <ellipse cx="0" cy="54" rx="14" ry="4.5" fill="#000" opacity="0.28" />
+                {comFoto ? (
+                  <g style={{ animation: 'jmBalanca 1.8s ease-in-out infinite' }} className="jm-box">
+                    <circle className="jm-box" cx="0" cy="12" r="27" fill="none" stroke={viajante.cor} strokeWidth="3" style={{ animation: 'jmPulsa 2s ease-out infinite' }} />
+                    <polygon points="-9,34 9,34 0,50" fill="#fff" stroke={viajante.cor} strokeWidth="3" strokeLinejoin="round" />
+                    <circle cx="0" cy="12" r="28" fill="#fff" stroke={viajante.cor} strokeWidth="4" />
+                    <image href={foto} x="-23" y="-11" width="46" height="46" clipPath="url(#jmFoto)" preserveAspectRatio="xMidYMid slice" onError={function() { setFotoFalhou(true) }} />
+                    <g transform="translate(21,33)">
+                      <circle r="11.5" fill="#fbf3dc" stroke={viajante.cor} strokeWidth="2.5" />
+                      <text y="5" fontSize="13" textAnchor="middle">{concluiu ? '🏆' : viajante.icon}</text>
+                    </g>
+                    {concluiu && <text x="0" y="-14" fontSize="24" textAnchor="middle">👑</text>}
+                  </g>
+                ) : (
+                  <g style={{ animation: 'jmBalanca 1.4s ease-in-out infinite' }} className="jm-box">
+                    <text x="0" y="46" fontSize="34" textAnchor="middle">{concluiu ? '🥳' : '🚶'}</text>
+                  </g>
+                )}
                 {!concluiu && (
-                  <g transform="translate(0,-10)">
+                  <g transform="translate(0,-28)">
                     <rect x="-44" y="-14" width="88" height="22" rx="11" fill="#ef4444" />
                     <polygon points="-6,8 6,8 0,15" fill="#ef4444" />
                     <text y="2" fontSize="12.5" fontWeight="800" textAnchor="middle" fill="#fff" fontFamily="Syne, sans-serif">Você está aqui</text>
