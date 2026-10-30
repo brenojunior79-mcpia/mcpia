@@ -18,6 +18,7 @@ type Pessoa = { id: string; nome: string; email: string; admin: boolean; escopo?
 function atendeCanal(p: Pessoa, rec: boolean): boolean { return p.admin || p.escopo === 'todos' || (p.escopo === 'recuperacao') === rec }
 type Conv = { profile_id?: string | null; connection_id: string | null; id: string; assigned_to: string | null; wa_id: string; name: string | null; profile_label: string | null; status: string; unread: number; last_text: string | null; last_message_at: string; last_inbound_at: string | null; ia_ativa?: boolean; ia_humano?: boolean }
 type Msg = { wa_message_id?: string | null; reply_to_wa_id?: string | null; id: string; conversation_id: string; direction: 'in' | 'out'; sent_by?: string | null; type: string; body: string | null; media_path: string | null; mime: string | null; status: string; error: string | null; created_at: string; template?: { name: string; language: string; params: string[] } | null }
+type Canal = 'suporte' | 'recuperacao' | 'assistente'
 type Status = { connected: boolean; missing?: string[]; webhookUrl?: string; number?: string; name?: string; quality?: string; error?: string }
 
 // Mensagens prontas do chat de recuperacao: um clique e ja envia
@@ -228,7 +229,9 @@ export default function AtendimentoPage() {
   const [pessoas, setPessoas] = useState<Pessoa[]>([])
   const [nomes, setNomes] = useState<Record<string, string>>({})
   const [meuId, setMeuId] = useState('')
-  const [canal, setCanal] = useState<'suporte' | 'recuperacao'>('suporte')
+  const [canal, setCanal] = useState<Canal>('suporte')
+  // Conversas em que a equipe respondeu nas ultimas 12h (nelas o assistente fica quieto quando esta ligado para todas)
+  const [equipeRecente, setEquipeRecente] = useState<Record<string, boolean>>({})
   const [escopo, setEscopo] = useState<string>('suporte')
   const [canais, setCanais] = useState<{ id: string; nome: string; numero: string | null }[]>([])
   const [tplsRec, setTplsRec] = useState<Tpl[] | null>(null)
@@ -248,10 +251,17 @@ export default function AtendimentoPage() {
 
   const carregarConvs = useCallback(async function() {
     // Suporte e recuperacao buscados separados, para um nao empurrar o outro para fora do limite
-    const [a, b] = await Promise.all([
+    const desde12h = new Date(Date.now() - 12 * 3600 * 1000).toISOString()
+    const [a, b, eq] = await Promise.all([
       supabase.from('wa_conversations').select('*').is('connection_id', null).order('last_message_at', { ascending: false }).limit(300),
       supabase.from('wa_conversations').select('*').not('connection_id', 'is', null).order('last_message_at', { ascending: false }).limit(300),
+      supabase.from('wa_messages').select('conversation_id').eq('direction', 'out').not('sent_by', 'is', null).gte('created_at', desde12h).limit(3000),
     ])
+    if (!eq.error && eq.data) {
+      const m: Record<string, boolean> = {}
+      for (const x of (eq.data as any[])) m[String(x.conversation_id)] = true
+      setEquipeRecente(m)
+    }
     if (!a.error && a.data) {
       const todas = (a.data as Conv[]).concat(!b.error && b.data ? (b.data as Conv[]) : [])
       // Chat aberto pela aba Eventos pode ser mais antigo que o limite da lista: nao deixa sumir
@@ -392,7 +402,7 @@ export default function AtendimentoPage() {
       const nova = c
       setConvs(function(l) { return l.some(function(x) { return x.id === id }) ? l : l.concat([nova]) })
     }
-    setCanal(c.connection_id ? 'recuperacao' : 'suporte')
+    setCanal(canalDaConv(c))
     setAba(c.status === 'resolvida' ? 'resolvidas' : 'abertas')
     setFiltro('todas'); setBusca('')
     setTab('conversas')
@@ -684,7 +694,10 @@ export default function AtendimentoPage() {
     await carregarConvs()
   }
   // O assistente responde nesta conversa se foi ligado nela, ou se esta ligado para todas e ela nao foi desligada
-  function iaOn(c: Conv | null | undefined): boolean { return !!c && (c.ia_ativa === true || (iaGeral && c.ia_humano !== true)) }
+  // Mesma regra do servidor: ligado nesta conversa, ou ligado para todas e a equipe nao respondeu nas ultimas 12h
+  function iaOn(c: Conv | null | undefined): boolean { return !!c && (c.ia_ativa === true || (iaGeral && c.ia_humano !== true && !equipeRecente[c.id])) }
+  // Em qual chat a conversa aparece: se o assistente esta atendendo ela vai para o chat do Assistente; quando ele passa para a equipe, volta para o chat de origem
+  function canalDaConv(c: Conv): Canal { return iaOn(c) ? 'assistente' : (c.connection_id ? 'recuperacao' : 'suporte') }
   useEffect(function() {
     fetch('/api/whatsapp/ia', { cache: 'no-store' }).then(function(r) { return r.ok ? r.json() : null }).then(function(j) { if (j && typeof j.geral === 'boolean') setIaGeral(j.geral) }).catch(function() {})
   }, [])
@@ -761,7 +774,7 @@ export default function AtendimentoPage() {
   }
 
   const lista = convs.filter(function(c) {
-    if ((canal === 'recuperacao') !== !!c.connection_id) return false
+    if (canalDaConv(c) !== canal) return false
     if (aba === 'naolidas') {
       // Nao lidas: todas as conversas abertas com mensagem nova, de qualquer atendente (que voce pode ver)
       if (c.status === 'resolvida' || !(c.unread > 0)) return false
@@ -774,8 +787,8 @@ export default function AtendimentoPage() {
     if (!q) return true
     return nomeDe(c).toLowerCase().indexOf(q) >= 0 || c.wa_id.indexOf(q.replace(/\D/g, '') || '§') >= 0 || (c.profile_label || '').toLowerCase().indexOf(q) >= 0
   })
-  const naoLidasCanal = function(rec: boolean) { return convs.reduce(function(n, c) { return n + ((!!c.connection_id) === rec && c.status !== 'resolvida' ? c.unread : 0) }, 0) }
-  const abertasCanal = function(rec: boolean) { return convs.filter(function(c) { return (!!c.connection_id) === rec && c.status !== 'resolvida' }).length }
+  const naoLidasCanal = function(k: Canal) { return convs.reduce(function(n, c) { return n + (canalDaConv(c) === k && c.status !== 'resolvida' ? c.unread : 0) }, 0) }
+  const abertasCanal = function(k: Canal) { return convs.filter(function(c) { return canalDaConv(c) === k && c.status !== 'resolvida' }).length }
   const totalNaoLidas = convs.reduce(function(n, c) { return n + (c.status !== 'resolvida' ? c.unread : 0) }, 0)
 
   if (staff === null) return <div style={{ padding: 24, color: 'var(--muted2)' }}>Carregando…</div>
@@ -896,20 +909,21 @@ export default function AtendimentoPage() {
         {/* Lista */}
         <div className="at-list">
           <div style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {canais.length > 0 && escopo === 'todos' && (
+            {escopo === 'todos' && (
               <div style={{ display: 'flex', gap: 6 }}>
-                {([['suporte', '🎧 Chat de suporte', false], ['recuperacao', '🛒 Chat de recuperação', true]] as const).map(function(t) {
+                {([['suporte', '🎧 Suporte', '#1f7a5a', 'rgba(31,122,90,0.12)'], ['recuperacao', '🛒 Recuperação', '#c2410c', 'rgba(234,88,12,0.12)'], ['assistente', '🤖 Assistente', '#7c3aed', 'rgba(124,58,237,0.12)']] as const).filter(function(t) { return t[0] !== 'recuperacao' || canais.length > 0 }).map(function(t) {
                   const on = canal === t[0]
-                  const nl = naoLidasCanal(t[2])
+                  const nl = naoLidasCanal(t[0])
                   return (
-                    <button key={t[0]} onClick={function() { if (canal !== t[0]) { setCanal(t[0]); setSel(null); setMsgs([]) } }} style={{ flex: 1, cursor: 'pointer', border: on ? '2px solid ' + (t[2] ? '#c2410c' : '#1f7a5a') : '2px solid transparent', borderRadius: 10, padding: '8px 6px', fontWeight: 800, fontSize: 12.5, lineHeight: 1.25, background: on ? (t[2] ? 'rgba(234,88,12,0.12)' : 'rgba(31,122,90,0.12)') : 'var(--surface2)', color: on ? 'var(--text)' : 'var(--muted2)' }}>
+                    <button key={t[0]} onClick={function() { if (canal !== t[0]) { setCanal(t[0]); setSel(null); setMsgs([]) } }} style={{ flex: 1, minWidth: 0, cursor: 'pointer', border: on ? '2px solid ' + t[2] : '2px solid transparent', borderRadius: 10, padding: '8px 4px', fontWeight: 800, fontSize: 12.5, lineHeight: 1.25, background: on ? t[3] : 'var(--surface2)', color: on ? 'var(--text)' : 'var(--muted2)' }}>
                       {t[1]}
-                      <div style={{ fontSize: 11.5, fontWeight: 700, opacity: 0.8, marginTop: 2 }}>{abertasCanal(t[2])} abertas{nl > 0 ? ' · ' : ''}{nl > 0 && <span style={{ background: '#ef4444', color: '#fff', borderRadius: 999, padding: '0 6px', fontSize: 11 }}>{nl}</span>}</div>
+                      <div style={{ fontSize: 11.5, fontWeight: 700, opacity: 0.8, marginTop: 2 }}>{abertasCanal(t[0])} abertas{nl > 0 ? ' · ' : ''}{nl > 0 && <span style={{ background: '#ef4444', color: '#fff', borderRadius: 999, padding: '0 6px', fontSize: 11 }}>{nl}</span>}</div>
                     </button>
                   )
                 })}
               </div>
             )}
+            {canal === 'assistente' && <div style={{ fontSize: 12, color: '#6d28d9', background: 'rgba(124,58,237,0.10)', borderRadius: 10, padding: '8px 10px', lineHeight: 1.5 }}>🤖 Conversas que o assistente está atendendo agora. Quando ele passa para a equipe, a conversa volta para o chat de Suporte ou Recuperação.</div>}
             {escopo === 'recuperacao' && <div style={{ fontWeight: 800, fontSize: 13.5, color: '#c2410c', background: 'rgba(234,88,12,0.12)', borderRadius: 10, padding: '8px 10px' }}>🛒 Chat de recuperação</div>}
             <input className="at-input" placeholder="Buscar nome ou número" value={busca} onChange={function(e) { setBusca(e.target.value) }} />
             {isAdmin && (
@@ -920,11 +934,11 @@ export default function AtendimentoPage() {
             )}
             {(function() {
               // Estilo Unnichat: dois botoes fixos (Em espera / Minhas) + menu com as demais visoes (so admin)
-              const cont = function(k: string) { return convs.filter(function(c) { return (!!c.connection_id) === (canal === 'recuperacao') && c.status !== 'resolvida' && (k === 'todas' ? true : k === 'sem' ? !c.assigned_to : c.assigned_to === k) }).length }
+              const cont = function(k: string) { return convs.filter(function(c) { return canalDaConv(c) === canal && c.status !== 'resolvida' && (k === 'todas' ? true : k === 'sem' ? !c.assigned_to : c.assigned_to === k) }).length }
               const nomeFiltro = function(k: string) { return k === 'todas' ? 'Todas' : k === meuId ? 'Minhas' : primeiroNome(k) }
               const emEspera = filtro === 'sem'
               const botao = function(on: boolean): React.CSSProperties { return { cursor: 'pointer', border: 0, borderRadius: 10, padding: '10px 6px', fontWeight: 700, fontSize: 13.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', background: on ? '#1f7a5a' : 'var(--surface2)', color: on ? '#fff' : 'var(--muted2)' } }
-              const pessoasMenu = pessoas.filter(function(x) { return atendeCanal(x, canal === 'recuperacao') }).sort(function(x, y) { return (x.id === meuId ? -1 : 0) - (y.id === meuId ? -1 : 0) })
+              const pessoasMenu = pessoas.filter(function(x) { return canal === 'assistente' || atendeCanal(x, canal === 'recuperacao') }).sort(function(x, y) { return (x.id === meuId ? -1 : 0) - (y.id === meuId ? -1 : 0) })
               return (
                 <div style={{ position: 'relative', display: 'flex', gap: 6 }}>
                   <button onClick={function() { setFiltro('sem'); setMenuAberto(false) }} style={{ ...botao(emEspera), flex: 1 }}>Em espera ({cont('sem')})</button>
@@ -953,7 +967,7 @@ export default function AtendimentoPage() {
             <div style={{ display: 'flex', gap: 6 }}>
               {(['abertas', 'naolidas', 'resolvidas'] as const).map(function(a) {
                 const on = aba === a
-                const qtdNaoLidas = convs.filter(function(c) { return (!!c.connection_id) === (canal === 'recuperacao') && c.status !== 'resolvida' && c.unread > 0 }).length
+                const qtdNaoLidas = convs.filter(function(c) { return canalDaConv(c) === canal && c.status !== 'resolvida' && c.unread > 0 }).length
                 return <button key={a} onClick={function() { setAba(a) }} style={{ flex: 1, cursor: 'pointer', border: 0, borderRadius: 8, padding: '7px 4px', fontWeight: 700, fontSize: 13, background: on ? 'var(--accent-light)' : 'var(--surface2)', color: on ? 'var(--accent)' : 'var(--muted2)' }}>
                   {a === 'abertas' ? 'Abertas' : a === 'resolvidas' ? 'Finalizadas' : 'Não lidas'}
                   {a === 'naolidas' && qtdNaoLidas > 0 && <span style={{ marginLeft: 5, background: '#ef4444', color: '#fff', borderRadius: 999, padding: '0 6px', fontSize: 11 }}>{qtdNaoLidas}</span>}
@@ -976,7 +990,7 @@ export default function AtendimentoPage() {
             {acaoMsg && !modoSel && <div style={{ fontSize: 12.5, color: acaoMsg.indexOf('⚠') === 0 ? '#b91c1c' : '#15803d', fontWeight: 700 }}>{acaoMsg}</div>}
             {modoSel && (function() {
               const n = lista.filter(function(c) { return marcadas[c.id] }).length
-              const pessoasDestino = pessoas.filter(function(x) { return atendeCanal(x, canal === 'recuperacao') })
+              const pessoasDestino = pessoas.filter(function(x) { return canal === 'assistente' || atendeCanal(x, canal === 'recuperacao') })
               const off = acaoRodando || n === 0
               const btn = function(cor: string, desl: boolean): React.CSSProperties { return { cursor: desl ? 'default' : 'pointer', border: 0, borderRadius: 8, padding: '7px 10px', fontWeight: 800, fontSize: 12.5, background: cor, color: '#fff', opacity: desl ? 0.5 : 1 } }
               return (
@@ -1054,7 +1068,7 @@ export default function AtendimentoPage() {
               <div style={{ background: 'var(--surface)', borderRadius: 20, padding: '28px 30px', maxWidth: 380, textAlign: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.12)', border: '1px solid var(--border)' }}>
                 <div style={{ width: 64, height: 64, margin: '0 auto 14px', borderRadius: 20, background: 'linear-gradient(135deg,#22c55e,#16a34a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, boxShadow: '0 8px 20px rgba(22,163,74,0.35)' }}>💬</div>
                 <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--text)', marginBottom: 6 }}>Atendimento Cristão Próspero</div>
-                <div style={{ fontSize: 13.5, color: 'var(--muted2)', lineHeight: 1.55 }}>{canal === 'recuperacao' ? 'Aqui ficam as mensagens enviadas pelos fluxos da Hubla e as respostas das pessoas.' : 'Escolha uma conversa à esquerda para responder.'}</div>
+                <div style={{ fontSize: 13.5, color: 'var(--muted2)', lineHeight: 1.55 }}>{canal === 'recuperacao' ? 'Aqui ficam as mensagens enviadas pelos fluxos da Hubla e as respostas das pessoas.' : canal === 'assistente' ? 'Aqui ficam as conversas que o assistente está atendendo. Escolha uma para acompanhar.' : 'Escolha uma conversa à esquerda para responder.'}</div>
               </div>
             </div>
           ) : (
