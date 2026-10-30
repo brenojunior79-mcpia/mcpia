@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
   const br = new Date(Date.now() - 3 * 3600 * 1000)
   const ontem = new Date(Date.UTC(br.getUTCFullYear(), br.getUTCMonth(), br.getUTCDate() - 1, 3))
   const ini = recente && ontem > j.inicio ? ontem : j.inicio
-  const r = await db.rpc('ranking_atividade', { p_inicio: ini.toISOString(), p_fim: j.fim.toISOString() })
+  const r = await db.rpc('ranking_atividade_v2', { p_inicio: ini.toISOString(), p_fim: j.fim.toISOString() })
   if (r.error) return NextResponse.json({ error: r.error.message }, { status: 500 })
   const lista = (r.data || []).slice().sort(function(a: any, b: any) { return b.pontos - a.pontos || String(a.user_id).localeCompare(String(b.user_id)) })
   // Posicao oficial = so entre quem nao foi excluido

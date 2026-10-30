@@ -108,6 +108,8 @@ export default function RankingCard() {
             <div>📘 <b>20 pontos</b> por ebook criado (1 por dia)</div>
             <div>🌐 <b>20 pontos</b> por site criado (1 por dia)</div>
             <div>🎬 <b>30 pontos</b> por criativo gerado</div>
+            <div>📣 <b>50 pontos</b> por anúncio publicado (até 2 por dia)</div>
+            <div>💰 <b>50 pontos</b> por venda registrada</div>
             <div>📲 <b>10 pontos</b> por instalar o aplicativo</div>
             <div>🔔 <b>10 pontos</b> por ativar as notificações</div>
             <div>🎓 <b>10 pontos</b> por aula assistida</div>

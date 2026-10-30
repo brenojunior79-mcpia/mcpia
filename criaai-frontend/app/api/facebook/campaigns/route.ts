@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { registrarEventosRanking, inicioRankingISO } from '@/lib/rankingFacebook'
 
 const GRAPH_VERSION = 'v26.0'
 
@@ -105,7 +106,7 @@ export async function GET(req: NextRequest) {
     // A conta pode ter centenas de campanhas antigas. Para ficar rapido, buscamos so as ATIVAS
     // e as que tiveram movimento no periodo (as outras nao aparecem nem pesam).
     const G = 'https://graph.facebook.com/' + GRAPH_VERSION + '/' + adAccountId
-    const CAMPOS_CAMP = 'id,name,status,effective_status,objective,daily_budget,lifetime_budget'
+    const CAMPOS_CAMP = 'id,name,status,effective_status,objective,daily_budget,lifetime_budget,created_time'
     const filtro = function(campo: string, valores: string[]) { return '&filtering=' + encodeURIComponent(JSON.stringify([{ field: campo, operator: 'IN', value: valores }])) }
     const [ativasResult, campaignInsightsResult, accountReachResult] = await Promise.all([
       fetchAll(G + '/campaigns?fields=' + CAMPOS_CAMP + '&limit=200' + filtro('effective_status', ['ACTIVE']) + '&access_token=' + accessToken),
@@ -168,6 +169,22 @@ export async function GET(req: NextRequest) {
     const accRow = accountReachResult.data[0]
     if (accRow) { accountTotals.reach = Number(accRow.reach || 0); accountTotals.frequency = Number(accRow.frequency || 0) }
     const accountInsights = finalizeTotals(accountTotals)
+
+    // Pontos do ranking (anuncio publicado / venda registrada). Se der qualquer erro, a tela segue normal.
+    try {
+      const desde = await inicioRankingISO()
+      if (desde) {
+        const hoje = new Date(Date.now() - 3 * 3600 * 1000).toISOString().slice(0, 10)
+        const tr = encodeURIComponent(JSON.stringify({ since: desde, until: hoje }))
+        const compras = await fetchAll(G + '/insights?level=campaign&fields=campaign_id,actions&time_range=' + tr + '&limit=200&access_token=' + accessToken)
+        const porCampanha: Record<string, number> = {}
+        for (const row of (compras.data || [])) {
+          const n = extractAction(row.actions, 'omni_purchase') || extractAction(row.actions, 'purchase')
+          if (n > 0) porCampanha[row.campaign_id] = n
+        }
+        await registrarEventosRanking(user.id, campaignsWithStructure, porCampanha)
+      }
+    } catch (e) { console.error('[facebook-campaigns] ranking:', e) }
 
     return NextResponse.json({
       adAccountId,
