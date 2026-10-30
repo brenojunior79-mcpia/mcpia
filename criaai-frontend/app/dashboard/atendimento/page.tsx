@@ -201,6 +201,8 @@ export default function AtendimentoPage() {
   const recCancel = useRef(false)
   const recTimer = useRef<any>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const [arrastando, setArrastando] = useState(false)
+  const arrasteN = useRef(0)
   const [rapidasDb, setRapidasDb] = useState<{ suporte: Rapida[] | null; recuperacao: Rapida[] | null }>({ suporte: null, recuperacao: null })
   const [gerRapidas, setGerRapidas] = useState(false)
   const [editorImg, setEditorImg] = useState<Blob | null>(null)
@@ -423,6 +425,16 @@ export default function AtendimentoPage() {
   }, [])
   useEffect(function() { if (atual) carregarRapidas(canalConv) }, [atual ? atual.id : '', canalConv])
 
+  // Soltar um arquivo fora da conversa nao pode abrir o arquivo no navegador (perderia a tela)
+  useEffect(function() {
+    const bloqueia = function(e: DragEvent) {
+      if (e.dataTransfer && Array.from(e.dataTransfer.types || []).indexOf('Files') >= 0) e.preventDefault()
+    }
+    window.addEventListener('dragover', bloqueia)
+    window.addEventListener('drop', bloqueia)
+    return function() { window.removeEventListener('dragover', bloqueia); window.removeEventListener('drop', bloqueia) }
+  }, [])
+
   // Ctrl+V com um print copiado: abre a tela de envio (so quando da para responder)
   useEffect(function() {
     const onPaste = function(e: ClipboardEvent) {
@@ -531,12 +543,31 @@ export default function AtendimentoPage() {
   }
 
   function mimeDe(f: File): string {
+    if (f.type === 'application/json' || /\.json$/i.test(f.name)) return 'text/plain'
     if (f.type) return f.type
     const ext = (f.name.split('.').pop() || '').toLowerCase()
     const m: Record<string, string> = { pdf: 'application/pdf', txt: 'text/plain', csv: 'text/csv', doc: 'application/msword', xls: 'application/vnd.ms-excel', ppt: 'application/vnd.ms-powerpoint',
       docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
       mp3: 'audio/mpeg', m4a: 'audio/mp4', aac: 'audio/aac', ogg: 'audio/ogg', amr: 'audio/amr', mp4: 'video/mp4', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png' }
     return m[ext] || ''
+  }
+
+  // Arrastar e soltar um arquivo na conversa (so quando da para responder)
+  function temArquivo(e: React.DragEvent): boolean {
+    return !!e.dataTransfer && Array.from(e.dataTransfer.types || []).indexOf('Files') >= 0
+  }
+  function soltarArquivo(e: React.DragEvent) {
+    if (!temArquivo(e)) return
+    e.preventDefault()
+    arrasteN.current = 0
+    setArrastando(false)
+    if (!atual) return
+    if (!janelaAberta) { setErro('Passaram 24 horas desde a última mensagem do aluno. Envie um modelo aprovado antes de mandar arquivo.'); return }
+    if (editorImg || enviando) return
+    const lista = e.dataTransfer.files
+    if (!lista || lista.length === 0) return
+    if (lista.length > 1) setErro('Solte um arquivo por vez. Peguei o primeiro.')
+    escolherArquivo(lista[0])
   }
 
   function escolherArquivo(f: File | null | undefined) {
@@ -967,7 +998,16 @@ export default function AtendimentoPage() {
         </div>
 
         {/* Conversa */}
-        <div className="at-chat">
+        <div className="at-chat" style={{ position: 'relative' }}
+          onDragEnter={function(e) { if (!temArquivo(e)) return; e.preventDefault(); arrasteN.current++; setArrastando(true) }}
+          onDragOver={function(e) { if (!temArquivo(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy' }}
+          onDragLeave={function(e) { if (!temArquivo(e)) return; arrasteN.current = Math.max(0, arrasteN.current - 1); if (arrasteN.current === 0) setArrastando(false) }}
+          onDrop={soltarArquivo}>
+          {arrastando && atual && (
+            <div style={{ position: 'absolute', inset: 0, zIndex: 50, background: 'rgba(22,163,74,0.14)', border: '3px dashed #16a34a', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+              <div style={{ background: 'var(--surface)', color: '#15803d', fontWeight: 800, fontSize: 16, padding: '14px 22px', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.18)' }}>{janelaAberta ? '📎 Solte o arquivo aqui para enviar' : '⏳ Passaram 24 horas: não dá para enviar arquivo agora'}</div>
+            </div>
+          )}
           {!atual ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted2)', fontSize: 14, textAlign: 'center', padding: 20 }}>{canal === 'recuperacao' ? 'Aqui ficam as mensagens enviadas pelos fluxos da Hubla e as respostas das pessoas.' : 'Escolha uma conversa à esquerda para responder.'}</div>
           ) : (
@@ -1093,7 +1133,7 @@ export default function AtendimentoPage() {
                           onKeyDown={function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (anexo) enviarArquivo(anexo, anexo.name, mimeDe(anexo), texto); else enviar() } }} style={{ resize: 'none', flex: 1, minWidth: 0 }} />
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
-                          <input ref={fileRef} type="file" accept="image/jpeg,image/png,video/mp4,video/3gpp,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv" style={{ display: 'none' }} onChange={function(e) { escolherArquivo(e.target.files && e.target.files[0]); e.target.value = '' }} />
+                          <input ref={fileRef} type="file" accept="image/jpeg,image/png,video/mp4,video/3gpp,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.json,application/json" style={{ display: 'none' }} onChange={function(e) { escolherArquivo(e.target.files && e.target.files[0]); e.target.value = '' }} />
                           <button title="Enviar arquivo, foto ou vídeo" onClick={function() { if (fileRef.current) fileRef.current.click() }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 10px', fontSize: 14, fontWeight: 700 }}>📎 Arquivo</button>
                           <button title="Gravar áudio" onClick={iniciarGravacao} disabled={enviando} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 10px', fontSize: 14, fontWeight: 700 }}>🎤 Áudio</button>
                           <button title="Enviar modelo aprovado" onClick={function() { setMostrarTpl(!mostrarTpl) }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: mostrarTpl ? 'var(--accent-light)' : 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 10px', fontSize: 14, fontWeight: 700 }}>📄 Modelo</button>

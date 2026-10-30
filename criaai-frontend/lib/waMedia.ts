@@ -17,6 +17,8 @@ export function classificar(mimeIn: string): { kind: Kind; mime: string; max: nu
   if (mime === 'image/jpeg' || mime === 'image/png') return { kind: 'image', mime, max: 5 * 1024 * 1024 }
   if (mime === 'video/mp4' || mime === 'video/3gpp') return { kind: 'video', mime, max: 16 * 1024 * 1024 }
   if (AUDIO_OK.indexOf(mime) >= 0) return { kind: 'audio', mime, max: 16 * 1024 * 1024 }
+  // JSON: o WhatsApp nao lista JSON, entao vai como documento de texto (o nome .json continua)
+  if (mime === 'application/json' || mime === 'text/json') return { kind: 'document', mime: 'text/plain', max: 20 * 1024 * 1024 }
   if (DOC_OK.indexOf(mime) >= 0) return { kind: 'document', mime, max: 20 * 1024 * 1024 }
   if (mime.indexOf('audio/') === 0) return { erro: 'Esse formato de áudio não é aceito pelo WhatsApp. Use mp3, m4a, aac, ogg ou amr.' }
   if (mime.indexOf('image/') === 0) return { erro: 'Imagem só pode ser JPG ou PNG.' }
