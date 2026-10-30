@@ -106,7 +106,9 @@ export default function RankingCard() {
           </span>
           <div style={{ fontSize: 18, fontWeight: 800, fontFamily: 'Syne, sans-serif', color: 'var(--text)', flex: 1, minWidth: 160 }}>Ranking de premiação</div>
         </div>
-        <div style={{ height: 6 }} />
+        <div style={{ position: 'relative', fontSize: 13, color: 'var(--muted2)', marginBottom: 16, lineHeight: 1.5 }}>
+          Cada atividade que você faz na plataforma vale pontos. Veja quem está no topo e suba no ranking.
+        </div>
 
         <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {[0, 1, 2].map(function(i) {
