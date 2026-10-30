@@ -89,6 +89,24 @@ function EmojiPicker({ onPick }: { onPick: (e: string) => void }) {
   )
 }
 
+// Papel de parede do conversa (desenhos em linha, no estilo do WhatsApp): versao clara e escura
+function papelDeParede(traco: string, opac: string): string {
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="260" height="260" viewBox="0 0 260 260" fill="none" stroke="' + traco + '" stroke-opacity="' + opac + '" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">'
+    + '<g transform="translate(18,20) scale(1.5)"><path d="M12 21s-7-4.4-9.3-9C1 8.5 3 5 6.3 5 8.4 5 10.5 6.2 12 8.3 13.5 6.2 15.6 5 17.7 5 21 5 23 8.5 21.3 12c-2.3 4.6-9.3 9-9.3 9z"/></g>'
+    + '<g transform="translate(112,14) scale(1.4)"><path d="M12 3v18M6 9h12"/></g>'
+    + '<g transform="translate(190,26) rotate(12) scale(1.4)"><polygon points="12,2 15,9 22,9.5 17,14.5 18.5,22 12,18 5.5,22 7,14.5 2,9.5 9,9"/></g>'
+    + '<g transform="translate(40,100) rotate(-8) scale(1.5)"><path d="M3 5h18v11H10l-5 4v-4H3z"/></g>'
+    + '<g transform="translate(130,92) scale(1.5)"><path d="M12 6c-2-1.5-5-2-8-2v14c3 0 6 .5 8 2 2-1.5 5-2 8-2V4c-3 0-6 .5-8 2zM12 6v14"/></g>'
+    + '<g transform="translate(205,110) rotate(10) scale(1.4)"><circle cx="12" cy="12" r="9"/><path d="M8 14c1.2 2 6.8 2 8 0M9 9.5v.5M15 9.5v.5"/></g>'
+    + '<g transform="translate(20,185) scale(1.5)"><path d="M5 19C5 9 11 4 20 4c0 9-5 15-15 15zM5 19L14 10"/></g>'
+    + '<g transform="translate(105,180) rotate(-10) scale(1.5)"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></g>'
+    + '<g transform="translate(190,190) scale(1.5)"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></g>'
+    + '</svg>'
+  return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '")'
+}
+const PAPEL_CLARO = papelDeParede('#8a7b5f', '0.30')
+const PAPEL_ESCURO = papelDeParede('#ffffff', '0.07')
+
 function Avatar({ c, size }: { c: Conv; size: number }) {
   return <div style={{ width: size, height: size, borderRadius: '50%', background: corAvatar(c), color: '#fff', fontWeight: 800, fontSize: Math.round(size * 0.42), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 3px rgba(0,0,0,0.18)' }}>{inicial(c)}</div>
 }
@@ -787,6 +805,29 @@ export default function AtendimentoPage() {
         .at-resp { opacity: 0; transition: opacity .12s; }
         .at-bolha:hover .at-resp, .at-resp:focus { opacity: 1; }
         @media (hover: none) { .at-resp { opacity: 0.55; } }
+        .at-msgs { background-color: #efeae2; background-image: ${PAPEL_CLARO}; background-size: 260px 260px; }
+        [data-theme='dark'] .at-msgs { background-color: #0b141a; background-image: ${PAPEL_ESCURO}; }
+        .at-head { box-shadow: 0 1px 4px rgba(0,0,0,0.08); position: relative; z-index: 2; background: var(--surface2); }
+        .at-b { cursor: pointer; border: 1px solid var(--border2); background: var(--surface); color: var(--text); border-radius: 999px; padding: 7px 14px; font-weight: 700; font-size: 12.5px; white-space: nowrap; transition: transform .12s, box-shadow .12s; }
+        .at-b:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.12); }
+        .at-b-ok { border: 0; background: linear-gradient(135deg,#22c55e,#16a34a); color: #fff; font-weight: 800; box-shadow: 0 3px 8px rgba(22,163,74,0.35); }
+        .at-m { position: relative; border-radius: 10px; box-shadow: 0 1px 1px rgba(11,20,26,0.16); }
+        .at-m-in { background: #ffffff; color: #111b21; }
+        .at-m-out { background: #d9fdd3; color: #111b21; }
+        [data-theme='dark'] .at-m-in { background: #202c33; color: #e9edef; }
+        [data-theme='dark'] .at-m-out { background: #005c4b; color: #e9edef; }
+        .at-m-in.at-tail { border-top-left-radius: 0; }
+        .at-m-out.at-tail { border-top-right-radius: 0; }
+        .at-m-in.at-tail::before { content: ''; position: absolute; top: 0; left: -7px; border-style: solid; border-width: 0 8px 9px 0; border-color: transparent #ffffff transparent transparent; }
+        .at-m-out.at-tail::before { content: ''; position: absolute; top: 0; right: -7px; border-style: solid; border-width: 0 0 9px 8px; border-color: transparent transparent transparent #d9fdd3; }
+        [data-theme='dark'] .at-m-in.at-tail::before { border-right-color: #202c33; }
+        [data-theme='dark'] .at-m-out.at-tail::before { border-left-color: #005c4b; }
+        .at-dia { background: rgba(255,255,255,0.92); color: #54656f; box-shadow: 0 1px 1px rgba(11,20,26,0.13); border-radius: 8px; font-size: 11.5px; font-weight: 700; padding: 4px 12px; }
+        [data-theme='dark'] .at-dia { background: #182229; color: #8696a0; }
+        .at-sys { background: #fff5c4; color: #54656f; border-radius: 8px; padding: 6px 12px; box-shadow: 0 1px 1px rgba(11,20,26,0.13); }
+        [data-theme='dark'] .at-sys { background: #1f2c34; color: #ffd279; }
+        .at-item { transition: background .15s; }
+        .at-item.at-on { background: var(--accent-light); box-shadow: inset 4px 0 0 #16a34a; }
         .at-input { width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border2); background: var(--surface2); color: var(--text); font-size: 14px; outline: none; font-family: inherit; }
         @media (max-width: 760px) {
           .at-list { width: 100%; border-right: 0; ${sel ? 'display: none;' : ''} }
@@ -797,7 +838,7 @@ export default function AtendimentoPage() {
 
       {/* Topo: estado da conexao */}
       <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)' }}>💬 Atendimento WhatsApp</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span style={{ width: 34, height: 34, borderRadius: 11, background: 'linear-gradient(135deg,#22c55e,#16a34a)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, boxShadow: '0 4px 10px rgba(22,163,74,0.35)' }}>💬</span><span style={{ fontWeight: 800, fontSize: 17, color: 'var(--text)', fontFamily: 'Syne, sans-serif' }}>Atendimento WhatsApp</span></div>
         {totalNaoLidas > 0 && <span style={{ background: '#ef4444', color: '#fff', fontSize: 11, fontWeight: 800, borderRadius: 999, padding: '2px 8px' }}>{totalNaoLidas} não lida{totalNaoLidas > 1 ? 's' : ''}</span>}
         <div style={{ flex: 1 }} />
         {isAdmin && ferramentas && <button title="Mostra as contas e os IDs dos números que o token enxerga" onClick={async function() {
@@ -831,7 +872,7 @@ export default function AtendimentoPage() {
       <div style={{ display: 'flex', gap: 6, padding: '8px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface)', overflowX: 'auto' }}>
         {([['conversas', '💬 Conversas'], ['atendentes', '👥 Atendentes'], ['modelos', '📄 Modelos'], ['disparo', '📣 Disparo'], ['fluxos', '⚡ Fluxos'], ['eventos', '🔔 Eventos'], ['conexoes', '🔌 Conexões']] as const).filter(function(t) { return (t[0] !== 'atendentes' && t[0] !== 'fluxos' && t[0] !== 'disparo' && t[0] !== 'eventos' && t[0] !== 'conexoes') || isAdmin }).map(function(t) {
           const on = tab === t[0]
-          return <button key={t[0]} onClick={function() { setTab(t[0]); if (t[0] === 'modelos') carregarTpls(); if (t[0] === 'disparo') setDisparoAberto(true) }} style={{ cursor: 'pointer', border: 0, borderRadius: 8, padding: '7px 14px', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', background: on ? 'var(--accent-light)' : 'var(--surface2)', color: on ? 'var(--accent)' : 'var(--muted2)' }}>{t[1]}</button>
+          return <button key={t[0]} onClick={function() { setTab(t[0]); if (t[0] === 'modelos') carregarTpls(); if (t[0] === 'disparo') setDisparoAberto(true) }} style={{ cursor: 'pointer', border: 0, borderRadius: 999, padding: '7px 16px', fontWeight: 800, fontSize: 13, whiteSpace: 'nowrap', transition: 'all .15s', background: on ? 'linear-gradient(135deg,#22c55e,#16a34a)' : 'var(--surface2)', color: on ? '#fff' : 'var(--muted2)', boxShadow: on ? '0 3px 8px rgba(22,163,74,0.35)' : 'none' }}>{t[1]}</button>
         })}
       </div>
 
@@ -972,7 +1013,7 @@ export default function AtendimentoPage() {
             {lista.map(function(c) {
               const on = c.id === sel
               return (
-                <div key={c.id} className="at-item" onClick={function() { if (modoSel) setMarcadas(function(m) { const n = { ...m }; if (n[c.id]) delete n[c.id]; else n[c.id] = true; return n }); else abrir(c) }} style={{ display: 'flex', gap: 10, padding: '11px 12px', cursor: 'pointer', borderBottom: '1px solid var(--border)', background: modoSel && marcadas[c.id] ? 'rgba(37,99,235,0.10)' : on ? 'var(--accent-light)' : undefined, alignItems: modoSel ? 'center' : undefined }}>
+                <div key={c.id} className={'at-item' + (on ? ' at-on' : '')} onClick={function() { if (modoSel) setMarcadas(function(m) { const n = { ...m }; if (n[c.id]) delete n[c.id]; else n[c.id] = true; return n }); else abrir(c) }} style={{ display: 'flex', gap: 10, padding: '11px 12px', cursor: 'pointer', borderBottom: '1px solid var(--border)', background: modoSel && marcadas[c.id] ? 'rgba(37,99,235,0.10)' : undefined, alignItems: modoSel ? 'center' : undefined }}>
                   {modoSel && <input type="checkbox" readOnly checked={!!marcadas[c.id]} style={{ width: 18, height: 18, flexShrink: 0, pointerEvents: 'none' }} />}
                   <Avatar c={c} size={44} />
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -1009,7 +1050,13 @@ export default function AtendimentoPage() {
             </div>
           )}
           {!atual ? (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted2)', fontSize: 14, textAlign: 'center', padding: 20 }}>{canal === 'recuperacao' ? 'Aqui ficam as mensagens enviadas pelos fluxos da Hubla e as respostas das pessoas.' : 'Escolha uma conversa à esquerda para responder.'}</div>
+            <div className="at-msgs" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+              <div style={{ background: 'var(--surface)', borderRadius: 20, padding: '28px 30px', maxWidth: 380, textAlign: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.12)', border: '1px solid var(--border)' }}>
+                <div style={{ width: 64, height: 64, margin: '0 auto 14px', borderRadius: 20, background: 'linear-gradient(135deg,#22c55e,#16a34a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, boxShadow: '0 8px 20px rgba(22,163,74,0.35)' }}>💬</div>
+                <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--text)', marginBottom: 6 }}>Atendimento Cristão Próspero</div>
+                <div style={{ fontSize: 13.5, color: 'var(--muted2)', lineHeight: 1.55 }}>{canal === 'recuperacao' ? 'Aqui ficam as mensagens enviadas pelos fluxos da Hubla e as respostas das pessoas.' : 'Escolha uma conversa à esquerda para responder.'}</div>
+              </div>
+            </div>
           ) : (
             <>
               <div className="at-head">
@@ -1028,31 +1075,32 @@ export default function AtendimentoPage() {
                 </div>
                 <div className="at-head-acoes">
                 {isAdmin
-                  ? <button onClick={function() { alternarIA([atual.id], !iaOn(atual)) }} title={iaOn(atual) ? 'O assistente está respondendo sozinho nesta conversa. Clique para desligar.' : 'Clique para o assistente de IA passar a responder sozinho nesta conversa.'} style={{ cursor: 'pointer', border: '1px solid ' + (iaOn(atual) ? '#7c3aed' : 'var(--border2)'), background: iaOn(atual) ? '#7c3aed' : 'var(--surface2)', color: iaOn(atual) ? '#fff' : 'var(--text)', borderRadius: 8, padding: '7px 10px', fontWeight: 800, fontSize: 12.5, whiteSpace: 'nowrap' }}>🤖 {iaOn(atual) ? 'Assistente ligado' : 'Ligar assistente'}</button>
+                  ? <button onClick={function() { alternarIA([atual.id], !iaOn(atual)) }} title={iaOn(atual) ? 'O assistente está respondendo sozinho nesta conversa. Clique para desligar.' : 'Clique para o assistente de IA passar a responder sozinho nesta conversa.'} style={{ cursor: 'pointer', border: '1px solid ' + (iaOn(atual) ? '#7c3aed' : 'var(--border2)'), background: iaOn(atual) ? '#7c3aed' : 'var(--surface2)', color: iaOn(atual) ? '#fff' : 'var(--text)', borderRadius: 999, padding: '7px 14px', fontWeight: 800, fontSize: 12.5, whiteSpace: 'nowrap' }}>🤖 {iaOn(atual) ? 'Assistente ligado' : 'Ligar assistente'}</button>
                   : iaOn(atual) ? <span title="O assistente de IA está respondendo esta conversa" style={{ border: '1px solid #7c3aed', color: '#7c3aed', borderRadius: 8, padding: '6px 9px', fontWeight: 800, fontSize: 12, whiteSpace: 'nowrap' }}>🤖 Assistente ativo</span> : null}
                 {isAdmin && (
-                  <select value={atual.assigned_to || ''} onChange={function(e) { atribuir(e.target.value) }} title="Atendente desta conversa" style={{ border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '6px 8px', fontSize: 12.5, fontWeight: 700, maxWidth: 150 }}>
+                  <select value={atual.assigned_to || ''} onChange={function(e) { atribuir(e.target.value) }} title="Atendente desta conversa" style={{ border: '1px solid var(--border2)', background: 'var(--surface)', color: 'var(--text)', borderRadius: 999, padding: '7px 12px', fontSize: 12.5, fontWeight: 700, maxWidth: 160 }}>
                     <option value="">Em espera</option>
                     {pessoas.filter(function(x) { return x.id === atual.assigned_to || atendeCanal(x, !!atual.connection_id) }).map(function(p) { return <option key={p.id} value={p.id}>{p.id === meuId ? 'Eu (' + (p.nome.split(' ')[0] || 'admin') + ')' : (p.nome.split(' ')[0] || p.email)}</option> })}
                   </select>
                 )}
-                <button onClick={function() { marcarNaoLida(atual.id) }} title="Marcar como não lida (volta para a lista em destaque)" style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 10px', fontWeight: 700, fontSize: 12.5, whiteSpace: 'nowrap' }}>✉ Não lida</button>
+                <button onClick={function() { marcarNaoLida(atual.id) }} title="Marcar como não lida (volta para a lista em destaque)" className="at-b">✉ Não lida</button>
                 {atual.status === 'resolvida'
-                  ? <button onClick={function() { mudarStatus('aberta') }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 10px', fontWeight: 700, fontSize: 12.5 }}>Reabrir</button>
-                  : <button onClick={function() { mudarStatus('resolvida') }} style={{ cursor: 'pointer', border: 0, background: '#16a34a', color: '#fff', borderRadius: 8, padding: '7px 10px', fontWeight: 800, fontSize: 12.5 }}>✓ Finalizar</button>}
+                  ? <button onClick={function() { mudarStatus('aberta') }} className="at-b">Reabrir</button>
+                  : <button onClick={function() { mudarStatus('resolvida') }} className="at-b at-b-ok">✓ Finalizar</button>}
                 </div>
               </div>
 
-              <div style={{ flex: 1, overflowY: 'auto', padding: '14px 14px 6px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div className="at-msgs" style={{ flex: 1, overflowY: 'auto', padding: '14px 4% 8px 4%', display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {msgs.map(function(m, i) {
                   const novoDia = i === 0 || new Date(msgs[i - 1].created_at).toDateString() !== new Date(m.created_at).toDateString()
                   const meu = m.direction === 'out'
-                  if (m.type === 'system') return <div key={m.id} style={{ alignSelf: 'center', textAlign: 'center', fontSize: 12.5, color: 'var(--muted2)', margin: '8px 0', maxWidth: '85%' }}>{m.body}</div>
+                  const primeiroGrupo = novoDia || i === 0 || msgs[i - 1].direction !== m.direction || msgs[i - 1].type === 'system'
+                  if (m.type === 'system') return <div key={m.id} className="at-sys" style={{ alignSelf: 'center', textAlign: 'center', fontSize: 12.5, margin: '8px 0', maxWidth: '85%' }}>{m.body}</div>
                   return (
-                    <div key={m.id} style={{ display: 'flex', flexDirection: 'column' }}>
-                      {novoDia && <div style={{ alignSelf: 'center', fontSize: 11.5, color: 'var(--muted2)', background: 'var(--surface2)', borderRadius: 999, padding: '3px 10px', margin: '8px 0' }}>{diaMsg(m.created_at)}</div>}
+                    <div key={m.id} style={{ display: 'flex', flexDirection: 'column', marginTop: primeiroGrupo && !novoDia ? 6 : 0 }}>
+                      {novoDia && <div className="at-dia" style={{ alignSelf: 'center', margin: '10px 0' }}>{diaMsg(m.created_at)}</div>}
                       <div className="at-bolha" style={{ alignSelf: meu ? 'flex-end' : 'flex-start', display: 'flex', flexDirection: meu ? 'row-reverse' : 'row', alignItems: 'center', gap: 4, maxWidth: '100%' }}>
-                      <div id={m.wa_message_id ? 'msg-' + m.wa_message_id : undefined} style={{ maxWidth: 'min(78%, 520px)', background: meu ? '#d9fdd3' : 'var(--surface)', color: meu ? '#111b21' : 'var(--text)', border: meu ? 'none' : '1px solid var(--border)', borderRadius: 12, padding: '7px 10px 5px', fontSize: 14, lineHeight: 1.4, wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
+                      <div id={m.wa_message_id ? 'msg-' + m.wa_message_id : undefined} className={'at-m ' + (meu ? 'at-m-out' : 'at-m-in') + (primeiroGrupo ? ' at-tail' : '')} style={{ maxWidth: 'min(78%, 520px)', padding: '7px 10px 5px', fontSize: 14, lineHeight: 1.4, wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
                         {meu && !m.sent_by && m.type === 'text' && <div style={{ fontSize: 10.5, fontWeight: 800, opacity: 0.7, marginBottom: 2 }}>🤖 Resposta automática</div>}
                         {meu && m.sent_by && <div style={{ fontSize: 12, fontWeight: 800, opacity: 0.75, marginBottom: 3 }}>👤 {nomes[m.sent_by] || 'Atendente'}</div>}
                         {m.reply_to_wa_id && (function() {
@@ -1081,7 +1129,7 @@ export default function AtendimentoPage() {
                 <div ref={fim} />
               </div>
 
-              <div style={{ padding: 10, background: 'var(--surface)', borderTop: '1px solid var(--border)' }}>
+              <div style={{ padding: '10px 12px', background: 'var(--surface2)', borderTop: '1px solid var(--border)' }}>
                 {erro && <div style={{ marginBottom: 8, fontSize: 13, color: '#b91c1c', fontWeight: 600 }}>{erro}</div>}
                 {!atual.assigned_to && <div style={{ marginBottom: 8, fontSize: 12.5, color: '#b45309', fontWeight: 700 }}>⏳ Esta conversa está em espera. Ao responder, ela fica com você.</div>}
                 {janelaAberta ? (
@@ -1128,17 +1176,17 @@ export default function AtendimentoPage() {
                         )}
                         {mostrarEmoji && <EmojiPicker onPick={inserirEmoji} />}
                         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
-                          <button title="Emojis" aria-label="Abrir emojis" onClick={function() { setMostrarEmoji(!mostrarEmoji) }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: mostrarEmoji ? 'var(--accent-light)' : 'var(--surface2)', borderRadius: 10, width: 42, height: 42, fontSize: 22, lineHeight: 1, flexShrink: 0 }}>😊</button>
+                          <button title="Emojis" aria-label="Abrir emojis" onClick={function() { setMostrarEmoji(!mostrarEmoji) }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: mostrarEmoji ? 'var(--accent-light)' : 'var(--surface2)', borderRadius: '50%', width: 42, height: 42, fontSize: 22, lineHeight: 1, flexShrink: 0 }}>😊</button>
                         <textarea className="at-input" data-msg="1" rows={2} placeholder={anexo ? 'Legenda (opcional)…' : 'Digite a resposta…'} value={texto} onChange={function(e) { setTexto(e.target.value) }}
-                          onKeyDown={function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (anexo) enviarArquivo(anexo, anexo.name, mimeDe(anexo), texto); else enviar() } }} style={{ resize: 'none', flex: 1, minWidth: 0 }} />
+                          onKeyDown={function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (anexo) enviarArquivo(anexo, anexo.name, mimeDe(anexo), texto); else enviar() } }} style={{ resize: 'none', flex: 1, minWidth: 0, borderRadius: 22, padding: '10px 16px', background: 'var(--surface)' }} />
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
                           <input ref={fileRef} type="file" accept="image/jpeg,image/png,video/mp4,video/3gpp,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.json,application/json" style={{ display: 'none' }} onChange={function(e) { escolherArquivo(e.target.files && e.target.files[0]); e.target.value = '' }} />
-                          <button title="Enviar arquivo, foto ou vídeo" onClick={function() { if (fileRef.current) fileRef.current.click() }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 10px', fontSize: 14, fontWeight: 700 }}>📎 Arquivo</button>
-                          <button title="Gravar áudio" onClick={iniciarGravacao} disabled={enviando} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 10px', fontSize: 14, fontWeight: 700 }}>🎤 Áudio</button>
-                          <button title="Enviar modelo aprovado" onClick={function() { setMostrarTpl(!mostrarTpl) }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: mostrarTpl ? 'var(--accent-light)' : 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 10px', fontSize: 14, fontWeight: 700 }}>📄 Modelo</button>
+                          <button title="Enviar arquivo, foto ou vídeo" onClick={function() { if (fileRef.current) fileRef.current.click() }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 999, whiteSpace: 'nowrap', padding: '7px 13px', fontSize: 14, fontWeight: 700 }}>📎 Arquivo</button>
+                          <button title="Gravar áudio" onClick={iniciarGravacao} disabled={enviando} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 999, whiteSpace: 'nowrap', padding: '7px 13px', fontSize: 14, fontWeight: 700 }}>🎤 Áudio</button>
+                          <button title="Enviar modelo aprovado" onClick={function() { setMostrarTpl(!mostrarTpl) }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: mostrarTpl ? 'var(--accent-light)' : 'var(--surface2)', color: 'var(--text)', borderRadius: 999, whiteSpace: 'nowrap', padding: '7px 13px', fontSize: 14, fontWeight: 700 }}>📄 Modelo</button>
                           <div style={{ flex: 1 }} />
-                          <button disabled={enviando || (!texto.trim() && !anexo)} onClick={function() { if (anexo) enviarArquivo(anexo, anexo.name, mimeDe(anexo), texto); else enviar() }} style={{ cursor: 'pointer', border: 0, background: '#16a34a', color: '#fff', borderRadius: 10, padding: '10px 18px', fontWeight: 800, fontSize: 14, opacity: enviando || (!texto.trim() && !anexo) ? 0.55 : 1 }}>{enviando ? '…' : 'Enviar'}</button>
+                          <button disabled={enviando || (!texto.trim() && !anexo)} onClick={function() { if (anexo) enviarArquivo(anexo, anexo.name, mimeDe(anexo), texto); else enviar() }} style={{ cursor: 'pointer', border: 0, background: 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff', borderRadius: 999, whiteSpace: 'nowrap', padding: '10px 18px', fontWeight: 800, fontSize: 14, boxShadow: '0 4px 12px rgba(22,163,74,0.35)', opacity: enviando || (!texto.trim() && !anexo) ? 0.55 : 1 }}>{enviando ? '…' : 'Enviar ➤'}</button>
                         </div>
                       </>
                     )}
