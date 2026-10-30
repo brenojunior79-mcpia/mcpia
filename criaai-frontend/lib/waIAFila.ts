@@ -1,7 +1,7 @@
 // Fila de respostas do assistente (Junior) no WhatsApp: ele responde "como uma pessoa".
 // A resposta ja vem pronta da IA (lib/waIA.ts), mas so e enviada aqui: a mensagem aparece como lida, o WhatsApp mostra
 // "digitando...", para um instante, volta a digitar e so entao a resposta chega (respostas longas saem em 2 ou 3 mensagens).
-// O agendador do banco chama /api/whatsapp/ia/fila a cada minuto.
+// O agendador do banco chama /api/whatsapp/ia/fila a cada 15 segundos; cada resposta espera a hora de leitura (ler_em).
 import { graphFetch, phoneIdDaConversa, postMessage, waConfig } from '@/lib/whatsapp'
 import { modoIA } from '@/lib/waIA'
 
@@ -102,13 +102,14 @@ async function executar(admin: any, it: any, inicio: number, escala: number): Pr
   }
 }
 
-// Chamado a cada minuto. escala so serve para testar (1 = tempos reais)
+// Chamado a cada 15 segundos. escala so serve para testar (1 = tempos reais)
 export async function processarFilaIA(admin: any, escala = 1): Promise<{ itens: number; resultado: Record<string, number> }> {
   const inicio = Date.now()
   const agora = new Date()
   await admin.from('wa_ia_fila').update({ estado: 'falhou', erro: 'travou', finalizado_em: agora.toISOString() }).eq('estado', 'enviando').lt('iniciado_em', new Date(agora.getTime() - 5 * 60000).toISOString())
   await admin.from('wa_ia_fila').update({ estado: 'cancelado', erro: 'vencida', finalizado_em: agora.toISOString() }).eq('estado', 'pendente').lt('criado_em', new Date(agora.getTime() - 15 * 60000).toISOString())
-  const q = await admin.from('wa_ia_fila').select('*').eq('estado', 'pendente').order('criado_em', { ascending: true }).limit(8)
+  // So pega o que ja esta na hora de ser lido (ler_em); o agendador passa a cada 15s
+  const q = await admin.from('wa_ia_fila').select('*').eq('estado', 'pendente').or('ler_em.is.null,ler_em.lte.' + agora.toISOString()).order('criado_em', { ascending: true }).limit(8)
   const itens: any[] = q.data || []
   const resultado: Record<string, number> = {}
   const fim = await Promise.all(itens.map(function(it) { return executar(admin, it, inicio, escala) }))

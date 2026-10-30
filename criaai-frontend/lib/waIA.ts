@@ -10,6 +10,7 @@ const REGRAS_WHATSAPP = `# REGRAS DESTE ATENDIMENTO NO WHATSAPP (PRIORIDADE MAXI
 - Voce esta conversando com uma pessoa pelo WhatsApp. Se perguntarem, diga que e o Junior, assistente virtual da equipe. Nunca diga que e uma pessoa.
 - Escreva mensagens curtas (ate umas 4 linhas), simples e acolhedoras, em portugues do Brasil. Sem markdown (nada de **, #, tabelas). No maximo 1 ou 2 emojis.
 - Va com calma: um passo por vez, e espere a pessoa responder.
+- Antes de responder, leia TODA a conversa anterior (mensagens da pessoa, da equipe e dos avisos automaticos). Continue de onde parou: nao repita o que ja foi dito ou perguntado e nao se apresente de novo se ja houve conversa.
 - Use SOMENTE o que esta na base de conhecimento. Nunca invente preco, desconto, prazo, promessa de ganho ou funcionalidade.
 - Pagamento, cobranca, reembolso, negociacao, desconto, acesso que depende de acao administrativa, reclamacao seria ou pedido para falar com uma pessoa: avise que um atendente da equipe vai continuar a conversa em breve e termine a resposta com a marca ${MARCA_HUMANO} (a marca e removida antes do envio).
 - Se nao souber responder com a base, faca o mesmo: avise que um atendente vai ajudar e termine com ${MARCA_HUMANO}.
@@ -50,7 +51,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     if (tipo !== 'text') return true
     if (!process.env.OPENAI_API_KEY) { console.error('[wa-ia] OPENAI_API_KEY ausente'); return true }
 
-    const hist = await admin.from('wa_messages').select('id, wa_message_id, direction, type, body, created_at').eq('conversation_id', convId).order('created_at', { ascending: false }).limit(20)
+    const hist = await admin.from('wa_messages').select('id, wa_message_id, direction, type, body, created_at').eq('conversation_id', convId).order('created_at', { ascending: false }).limit(300)
     const linhas: any[] = (hist.data || []).slice().reverse()
     if (linhas.length === 0) return true
     // Se ja chegou mensagem mais nova, ela mesma sera respondida (com a conversa completa)
@@ -67,7 +68,10 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       else msgs.push({ role, content: txt })
     }
     if (msgs.length === 0 || msgs[msgs.length - 1].role !== 'user') return true
-    while (msgs.length > 0 && msgs[0].role !== 'user') msgs.shift()
+    // O assistente le a conversa toda (inclusive o que a equipe e os fluxos automaticos ja mandaram) para saber o contexto.
+    // Se for muito longa, descarta so as mensagens mais antigas.
+    let total = msgs.reduce(function(n, m) { return n + m.content.length + 8 }, 0)
+    while (msgs.length > 1 && total > 40000) { total -= msgs[0].content.length + 8; msgs.shift() }
 
     // Quem e a pessoa: aluno da plataforma (nos 7 primeiros dias sem plano nao se fala de planos) ou contato sem cadastro
     let nome = String(nomeContato || conv.name || '').trim()
@@ -131,7 +135,12 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     // Respostas antigas ainda nao enviadas desta conversa saem da fila (vale a mais nova).
     const agoraIso = new Date().toISOString()
     await admin.from('wa_ia_fila').update({ estado: 'cancelado', erro: 'substituida', finalizado_em: agoraIso }).eq('conversation_id', convId).eq('estado', 'pendente')
-    const ins = await admin.from('wa_ia_fila').insert({ conversation_id: convId, inbound_msg_id: String(msgId), inbound_wa_id: (ultimaIn as any).wa_message_id || null, wa_id: waId, connection_id: conv.connection_id || null, texto, passa_humano: passaParaHumano })
+    // Primeira mensagem (conversa parada ha mais de 3h): leva cerca de 1 minuto para ser lida e respondida.
+    // No meio de uma conversa em andamento a leitura e mais rapida.
+    const jaConversavam = linhas.some(function(m) { return String(m.id) !== String(msgId) && Date.now() - new Date(m.created_at).getTime() < 3 * 3600 * 1000 })
+    const esperaLeituraS = jaConversavam ? 8 + Math.random() * 10 : 46 + Math.random() * 10
+    const lerEm = new Date(Date.now() + esperaLeituraS * 1000).toISOString()
+    const ins = await admin.from('wa_ia_fila').insert({ ler_em: lerEm, conversation_id: convId, inbound_msg_id: String(msgId), inbound_wa_id: (ultimaIn as any).wa_message_id || null, wa_id: waId, connection_id: conv.connection_id || null, texto, passa_humano: passaParaHumano })
     if (!ins.error) return true
     console.error('[wa-ia] fila indisponivel, enviando na hora:', ins.error.message)
 
