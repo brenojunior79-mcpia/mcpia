@@ -14,6 +14,7 @@ const REGRAS_WHATSAPP = `# REGRAS DESTE ATENDIMENTO NO WHATSAPP (PRIORIDADE MAXI
 - Use SOMENTE o que esta na base de conhecimento. Nunca invente preco, desconto, prazo, promessa de ganho ou funcionalidade.
 - Pagamento, cobranca, reembolso, negociacao, desconto, acesso que depende de acao administrativa, reclamacao seria ou pedido para falar com uma pessoa: avise que um atendente da equipe vai continuar a conversa em breve e termine a resposta com a marca ${MARCA_HUMANO} (a marca e removida antes do envio).
 - Se nao souber responder com a base, faca o mesmo: avise que um atendente vai ajudar e termine com ${MARCA_HUMANO}.
+- Se a pessoa mandar print, foto ou PDF, voce consegue ver o conteudo: leia com atencao, diga em uma frase o que entendeu e ajude com base nisso. Se a imagem estiver ilegivel ou nao der para entender, peca outro print mais nitido. Comprovante de pagamento ou documento pessoal: NAO confirme pagamento nem libere nada; agradeca e avise que um atendente vai conferir, terminando com ${MARCA_HUMANO}.
 - Nao peca para a pessoa chamar o WhatsApp de Suporte: ela ja esta falando com o suporte.`
 
 const REGRAS_CANAL: Record<string, string> = {
@@ -55,6 +56,27 @@ async function transcreverAudio(admin: any, msgId: string): Promise<string> {
   }
 }
 
+// Le uma foto/print ou PDF guardado e devolve o pedaco que a IA entende (ou null se nao for imagem/PDF ou for grande demais)
+async function parteDaMidia(admin: any, m: any): Promise<any | null> {
+  try {
+    if (!m || !m.media_path) return null
+    const mime = String(m.mime || '').toLowerCase().split(';')[0]
+    const imagem = mime === 'image/jpeg' || mime === 'image/png' || mime === 'image/webp'
+    const pdf = mime === 'application/pdf'
+    if (!imagem && !pdf) return null
+    const dl = await admin.storage.from('wa-media').download(m.media_path)
+    if (dl.error || !dl.data) return null
+    const buf = Buffer.from(await dl.data.arrayBuffer())
+    if (buf.length < 100 || buf.length > (pdf ? 10 : 8) * 1024 * 1024) return null
+    const b64 = buf.toString('base64')
+    if (imagem) return { type: 'image_url', image_url: { url: 'data:' + mime + ';base64,' + b64, detail: 'auto' } }
+    return { type: 'file', file: { filename: 'arquivo.pdf', file_data: 'data:application/pdf;base64,' + b64 } }
+  } catch (e) {
+    console.error('[wa-ia] midia:', e)
+    return null
+  }
+}
+
 // Quando o assistente deve responder nesta conversa:
 //  - 'manual': o admin ligou nesta conversa (ia_ativa)
 //  - 'geral': o admin ligou o assistente para TODAS as conversas (wa_ia_config.geral), a conversa nao foi desligada
@@ -77,23 +99,28 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     const cv = await admin.from('wa_conversations').select('id, ia_ativa, ia_humano, connection_id, profile_id, name').eq('id', convId).maybeSingle()
     const conv: any = cv.data
     if (!conv || !(await modoIA(admin, conv))) return false
-    // Responde a texto e a audio (o audio e transcrito antes). Foto, video etc. ficam para a equipe ver
-    if (tipo !== 'text' && tipo !== 'audio') return true
+    // Responde a texto, audio (transcrito antes), imagem/print e PDF (a IA olha o arquivo). Video, figurinha etc. ficam para a equipe ver
+    if (tipo !== 'text' && tipo !== 'audio' && tipo !== 'image' && tipo !== 'document') return true
     if (!process.env.OPENAI_API_KEY) { console.error('[wa-ia] OPENAI_API_KEY ausente'); return true }
+    if (tipo === 'image' || tipo === 'document') {
+      // Outros tipos de arquivo (Word, planilha...) ou arquivo que nao deu para abrir: fica para a equipe
+      const mr = await admin.from('wa_messages').select('media_path, mime').eq('id', msgId).maybeSingle()
+      if (!(await parteDaMidia(admin, mr.data))) return true
+    }
     if (tipo === 'audio') {
       const fala = await transcreverAudio(admin, msgId)
       // Nao deu para entender o audio: fica para a equipe ouvir
       if (!fala) return true
     }
 
-    const hist = await admin.from('wa_messages').select('id, wa_message_id, direction, type, body, created_at').eq('conversation_id', convId).order('created_at', { ascending: false }).limit(300)
+    const hist = await admin.from('wa_messages').select('id, wa_message_id, direction, type, body, created_at, media_path, mime').eq('conversation_id', convId).order('created_at', { ascending: false }).limit(300)
     const linhas: any[] = (hist.data || []).slice().reverse()
     if (linhas.length === 0) return true
     // Se ja chegou mensagem mais nova, ela mesma sera respondida (com a conversa completa)
     const ultimaIn = [...linhas].reverse().find(function(m) { return m.direction === 'in' })
     if (!ultimaIn || String(ultimaIn.id) !== String(msgId)) return true
 
-    const msgs: { role: 'user' | 'assistant'; content: string }[] = []
+    const msgs: { role: 'user' | 'assistant'; content: any }[] = []
     for (const m of linhas) {
       const txt = m.type === 'audio' && String(m.body || '').trim() ? '[audio transcrito] ' + String(m.body).trim() : (String(m.body || '').trim() || rotuloTipo(String(m.type || '')))
       if (!txt) continue
@@ -107,6 +134,21 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     // Se for muito longa, descarta so as mensagens mais antigas.
     let total = msgs.reduce(function(n, m) { return n + m.content.length + 8 }, 0)
     while (msgs.length > 1 && total > 40000) { total -= msgs[0].content.length + 8; msgs.shift() }
+
+    // Fotos/prints e PDFs que a pessoa mandou desde a ultima resposta (ate 3): a IA olha junto com o texto
+    const partes: any[] = []
+    for (let i = linhas.length - 1; i >= 0 && partes.length < 3; i--) {
+      const m = linhas[i]
+      if (m.direction === 'out' && m.type !== 'system') break
+      if (m.direction === 'in' && (m.type === 'image' || m.type === 'document')) {
+        const pt = await parteDaMidia(admin, m)
+        if (pt) partes.unshift(pt)
+      }
+    }
+    if (partes.length > 0) {
+      const ult = msgs[msgs.length - 1]
+      ult.content = [{ type: 'text', text: String(ult.content) }, ...partes]
+    }
 
     // Quem e a pessoa: aluno da plataforma (nos 7 primeiros dias sem plano nao se fala de planos) ou contato sem cadastro
     let nome = String(nomeContato || conv.name || '').trim()
