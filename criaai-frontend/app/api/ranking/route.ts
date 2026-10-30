@@ -41,8 +41,10 @@ async function montar() {
     const pf = await db.from('profiles').select('full_name, avatar_url').eq('id', user.id).maybeSingle()
     eu = { ...eu, nome: nomeCurto((pf.data as any)?.full_name || null), foto: (pf.data as any)?.avatar_url || null }
   }
+  const sub = await db.from('push_subscriptions').select('id', { count: 'exact', head: true }).eq('user_id', user.id)
+  const notif = (sub.count || 0) > 0
   const faltam = idx > 0 && idx < 100 ? Math.max(1, lista[idx - 1].pontos - lista[idx].pontos + 1) : 0
-  return NextResponse.json({ mes: j.titulo, fimEm: j.fimEm, ano: j.ano, diasRestantes, top, eu, faltam, premios: PREMIOS })
+  return NextResponse.json({ mes: j.titulo, fimEm: j.fimEm, ano: j.ano, diasRestantes, top, eu, faltam, notif, premios: PREMIOS })
 }
 
 export async function GET() {

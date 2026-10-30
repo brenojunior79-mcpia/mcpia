@@ -1,8 +1,9 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { ativarNotificacoes, situacaoNotificacao } from '@/lib/pushAtivar'
 
 type Linha = { posicao: number; nome: string; foto: string | null; pontos: number; premio: number; voce: boolean }
-type Dados = { mes: string; fimEm: string; ano: number; diasRestantes: number; top: Linha[]; eu: { posicao: number | null; pontos: number; nome: string; foto: string | null }; faltam: number; premios: number[] }
+type Dados = { mes: string; fimEm: string; ano: number; diasRestantes: number; top: Linha[]; eu: { posicao: number | null; pontos: number; nome: string; foto: string | null }; faltam: number; notif?: boolean; premios: number[] }
 
 const MEDALHA = ['🥇', '🥈', '🥉']
 const COR = ['#f5b301', '#9aa5b1', '#cd7f32']
@@ -24,6 +25,8 @@ export default function RankingCard() {
   const [regras, setRegras] = useState(false)
   const [falha, setFalha] = useState<string | null>(null)
   const [tentativa, setTentativa] = useState(0)
+  const [ativando, setAtivando] = useState(false)
+  const [msgNotif, setMsgNotif] = useState('')
 
   useEffect(function() {
     setFalha(null)
@@ -32,6 +35,15 @@ export default function RankingCard() {
       .then(function(j) { if (j && j.top) setD(j); else setFalha((j && (j.detalhe || j.error)) || 'Erro desconhecido') })
       .catch(function(e) { setFalha(String(e && e.message || e)) })
   }, [tentativa])
+
+  async function ativar() {
+    setAtivando(true); setMsgNotif('')
+    const r = await ativarNotificacoes()
+    setAtivando(false)
+    if (r === 'ok') { setMsgNotif('Pronto! Notificações ativadas. Seus 10 pontos já valem.'); setTentativa(tentativa + 1) }
+    else if (r === 'negado') setMsgNotif('Você não permitiu. Para ativar, toque no cadeado ao lado do endereço do site, escolha Notificações e mude para Permitir.')
+    else setMsgNotif('Não deu certo neste aparelho. Tente de novo ou veja como instalar o app.')
+  }
 
   if (!d) {
     // Carregando ou com problema: o ranking nunca some sem avisar
@@ -119,6 +131,27 @@ export default function RankingCard() {
                 : (d.faltam > 0 ? 'Faltam ' + d.faltam + ' pontos para subir uma posição.' : '')}
           </div>
         </div>
+
+
+        {/* Convite para ativar as notificacoes (10 pontos) */}
+        {d.notif === false && (
+          <div style={{ position: 'relative', marginTop: 14, padding: '12px 14px', borderRadius: 14, background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.35)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 22 }}>🔔</span>
+              <div style={{ flex: 1, minWidth: 180 }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>Ative as notificações e ganhe 10 pontos</div>
+                <div style={{ fontSize: 12.5, color: 'var(--muted2)' }}>
+                  {situacaoNotificacao() === 'ios_instalar' ? 'No iPhone, primeiro adicione o app à tela inicial e depois abra por ele.' : 'Avisamos você das novidades, aulas e do ranking.'}
+                </div>
+              </div>
+              {situacaoNotificacao() === 'ios_instalar' || situacaoNotificacao() === 'sem_suporte'
+                ? <button onClick={function() { window.dispatchEvent(new Event('mcpia-como-instalar')) }} style={{ cursor: 'pointer', border: 'none', background: '#16a34a', color: '#fff', borderRadius: 10, padding: '9px 14px', fontWeight: 800, fontSize: 13 }}>Ver como instalar</button>
+                : <button onClick={ativar} disabled={ativando} style={{ cursor: 'pointer', border: 'none', background: '#16a34a', color: '#fff', borderRadius: 10, padding: '9px 14px', fontWeight: 800, fontSize: 13, opacity: ativando ? 0.7 : 1 }}>{ativando ? 'Ativando...' : 'Ativar agora'}</button>}
+            </div>
+            {situacaoNotificacao() === 'bloqueado' && !msgNotif && <div style={{ marginTop: 8, fontSize: 12.5, color: 'var(--text)' }}>As notificações estão bloqueadas neste aparelho. Toque no <b>cadeado</b> ao lado do endereço do site, escolha <b>Notificações</b> e mude para <b>Permitir</b>. Depois atualize a página.</div>}
+            {msgNotif && <div style={{ marginTop: 8, fontSize: 12.5, fontWeight: 700, color: 'var(--text)' }}>{msgNotif}</div>}
+          </div>
+        )}
 
         <button onClick={function() { setRegras(!regras) }} style={{ position: 'relative', marginTop: 12, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 13, fontWeight: 700, color: '#7c5cfc' }}>
           {regras ? 'Esconder' : 'Como ganhar pontos?'} {regras ? '▲' : '▼'}

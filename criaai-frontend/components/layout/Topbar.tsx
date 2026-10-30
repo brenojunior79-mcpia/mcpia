@@ -16,6 +16,11 @@ export default function Topbar({ profile, user }: { profile: any, user: any }) {
   const [showNotif, setShowNotif] = useState(false)
   const [date, setDate] = useState('')
   const [instalarAberto, setInstalarAberto] = useState(false)
+  useEffect(function() {
+    function abrir() { setInstalarAberto(true) }
+    window.addEventListener('mcpia-como-instalar', abrir)
+    return function() { window.removeEventListener('mcpia-como-instalar', abrir) }
+  }, [])
   const [jaInstalado, setJaInstalado] = useState(false)
   useEffect(function() {
     try { setJaInstalado(window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true) } catch (e) {}

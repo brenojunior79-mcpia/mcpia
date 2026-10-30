@@ -137,8 +137,9 @@ export default function PushSetup({ user }: { user: any }) {
             <>
               <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>Receba as novidades no iPhone</div>
               <div style={{ fontSize: 12.5, color: 'var(--muted2)', lineHeight: 1.5, marginBottom: 10 }}>
-                Toque em <b>Compartilhar</b> (o quadradinho com a seta) e depois em <b>Adicionar à Tela de Início</b>. Depois abra a plataforma pelo ícone e ative as notificações.
+                Toque em <b>Compartilhar</b> (o quadradinho com a seta) e depois em <b>Adicionar à Tela de Início</b>. Depois abra a plataforma pelo ícone e ative as notificações e <b>ganhe 10 pontos no ranking</b>.
               </div>
+              <button onClick={function() { dismiss(); try { window.dispatchEvent(new Event('mcpia-como-instalar')) } catch (e) {} }} style={{ padding: '8px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #5b4ef8, #ec4899)', color: '#fff', fontWeight: 700, fontSize: 13, marginRight: 8 }}>Ver como instalar</button>
               <button onClick={dismiss} style={{ padding: '8px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', background: 'var(--surface2)', color: 'var(--text)', fontWeight: 700, fontSize: 13 }}>Entendi</button>
             </>
           ) : mode === 'blocked' ? (
@@ -153,11 +154,11 @@ export default function PushSetup({ user }: { user: any }) {
             <>
               <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>Quer receber as novidades?</div>
               <div style={{ fontSize: 12.5, color: 'var(--muted2)', lineHeight: 1.5, marginBottom: 10 }}>
-                Avisamos aqui no seu aparelho quando liberarmos novas plataformas, produtos e aulas.
+                Avisamos aqui no seu aparelho quando liberarmos novas plataformas, produtos e aulas. <b>Ative e ganhe 10 pontos no ranking!</b>
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <button onClick={enable} disabled={busy} style={{ padding: '8px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #5b4ef8, #ec4899)', color: '#fff', fontWeight: 700, fontSize: 13, opacity: busy ? 0.7 : 1 }}>
-                  {busy ? 'Ativando...' : 'Ativar notificações'}
+                  {busy ? 'Ativando...' : 'Ativar e ganhar 10 pontos'}
                 </button>
                 <button onClick={dismiss} style={{ padding: '8px 12px', borderRadius: 10, border: 'none', cursor: 'pointer', background: 'none', color: 'var(--muted2)', fontSize: 13 }}>Agora não</button>
               </div>
