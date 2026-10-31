@@ -214,43 +214,32 @@ export default function LoginPage() {
 
   return (
     <div className={s.page}>
-      {/* Fundo: noite em indigo, amanhecer dourado e raios de luz (so decoracao) */}
+      {/* Fundo: degrade em roxo da marca que se move devagar (so decoracao) */}
       <div className={s.bg} aria-hidden="true">
-        <div className={s.blobViolet + ' ' + s.blob} />
-        <div className={s.blobRose + ' ' + s.blob} />
-        <div className={s.blobGold + ' ' + s.blob} />
+        <div className={s.blobA + ' ' + s.blob} />
+        <div className={s.blobB + ' ' + s.blob} />
+        <div className={s.blobC + ' ' + s.blob} />
         <div className={s.rays} />
-        <div className={s.vignette} />
       </div>
 
       <div className={s.shell}>
         {/* Marca */}
         <section className={s.hero}>
-          <div className={s.brand + ' ' + s.rise} style={{ ['--d' as any]: '0.05s' }}>
-            <div className={s.mark} aria-hidden="true">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                <path d="M12 3.5v17M6.5 9h11" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" />
-              </svg>
-            </div>
-            <div className={s.brandName}>
-              <span>Plataforma do</span>
-              Cristão Próspero
-            </div>
+          <div className={s.logoWrap + ' ' + s.rise} style={{ ['--d' as any]: '0.05s' }}>
+            <img src="/logo.png" alt="MCP" className={s.logo} />
+            <span className={s.shine} aria-hidden="true" style={{ WebkitMaskImage: 'url(/logo.png)', maskImage: 'url(/logo.png)' }} />
           </div>
 
-          <h1 className={s.headline + ' ' + s.rise} style={{ ['--d' as any]: '0.18s' }}>
-            Prospere no digital, de um jeito simples e rápido.
+          <h1 className={s.headline}>
+            <span>#Bora</span>
+            <span>Prosperar</span>
           </h1>
-
-          <p className={s.lead + ' ' + s.rise} style={{ ['--d' as any]: '0.3s' }}>
-            A plataforma completa para criar, anunciar e vender, tudo em um só lugar.
-          </p>
 
           <ul className={s.perks + ' ' + s.rise} style={{ ['--d' as any]: '0.42s' }}>
             {BENEFICIOS.map(function(b) {
               return (
-                <li key={b.label} className={s.perk}>
-                  <span className={s.perkIcon}><b.Icon /></span>
+                <li key={b.label} className={s.chip}>
+                  <b.Icon size={18} />
                   {b.label}
                 </li>
               )
@@ -279,8 +268,8 @@ export default function LoginPage() {
                       <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <path d="M21 12.5V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3h6.5" />
                         <path d="M3.8 7.6l8.2 5.6 8.2-5.6" />
-                        <circle cx="18" cy="18" r="4.4" fill="#120f33" />
-                        <path className={s.draw} d="M15.9 18.1l1.6 1.6 2.8-3.2" />
+                        <circle cx="18" cy="18" r="4.6" fill="currentColor" stroke="none" />
+                        <path className={s.draw} stroke="#fff" d="M15.9 18.1l1.6 1.6 2.8-3.2" />
                       </svg>
                     </div>
                     <h2 className={s.cardTitle}>Link enviado!</h2>
