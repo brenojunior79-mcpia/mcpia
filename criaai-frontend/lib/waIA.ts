@@ -18,6 +18,7 @@ const REGRAS_WHATSAPP = `# REGRAS DESTE ATENDIMENTO NO WHATSAPP (PRIORIDADE MAXI
 - Se nao souber responder com a base, faca o mesmo: avise que um atendente vai ajudar e termine com ${MARCA_HUMANO}.
 - Se a pessoa mandar print, foto ou PDF, voce consegue ver o conteudo: leia com atencao, diga em uma frase o que entendeu e ajude com base nisso. Se a imagem estiver ilegivel ou nao der para entender, peca outro print mais nitido. Comprovante de pagamento ou documento pessoal: NAO confirme pagamento nem libere nada; agradeca e avise que um atendente vai conferir, terminando com ${MARCA_HUMANO}.
 - Quando a conversa estiver terminando (a pessoa agradeceu, disse que resolveu, se despediu ou nao precisa de mais nada), escreva so uma despedida curta e acolhedora e termine com a marca ${MARCA_FIM}. NAO escreva voce mesmo a pergunta sobre o app: o sistema acrescenta sozinho. Se a pessoa ainda tem duvida ou esta no meio do assunto, nao use a marca.
+- IMPORTANTE: a pessoa JA esta falando com o Suporte pelo WhatsApp. NUNCA diga para ela chamar, procurar, falar com ou abrir o "WhatsApp de Suporte" ou o suporte pelo menu. Quando nao souber ou precisar da equipe, avise que um atendente vai ajudar e termine com ${MARCA_HUMANO}.
 - Nao peca para a pessoa chamar o WhatsApp de Suporte: ela ja esta falando com o suporte.`
 
 const REGRAS_CANAL: Record<string, string> = {
@@ -182,6 +183,17 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
 
     let passaParaHumano = texto.indexOf(MARCA_HUMANO) >= 0
     texto = texto.split(MARCA_HUMANO).join('').trim()
+    // Trava: se mesmo assim mandar a pessoa "chamar o suporte", tira a frase e passa para a equipe
+    {
+      const frases = texto.split(/(?<=[.!?])\s+|\n+/)
+      const ruim = /(whatsapp\s+de\s+suporte|chama(r)?\s+(o\s+)?suporte|fale\s+com\s+o\s+suporte|entre\s+em\s+contato\s+com\s+o\s+suporte|suporte\s+pelo\s+menu)/i
+      const boas = frases.filter(function(f) { return f.trim() && !ruim.test(f) })
+      if (boas.length < frases.filter(function(f) { return f.trim() }).length) {
+        texto = boas.join('\n\n').trim()
+        if (!/atendente|equipe/i.test(texto)) texto = (texto ? texto + '\n\n' : '') + 'Vou pedir para um atendente da equipe te ajudar com isso.'
+        passaParaHumano = true
+      }
+    }
     // Fim da conversa: pergunta (uma vez so por conversa) se a pessoa ja baixou o app e ativou as notificacoes
     const acabou = texto.indexOf(MARCA_FIM) >= 0
     texto = texto.split(MARCA_FIM).join('').trim()
