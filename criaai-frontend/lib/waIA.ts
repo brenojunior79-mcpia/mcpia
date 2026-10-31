@@ -11,6 +11,7 @@ const PERGUNTA_APP = 'Você já baixou o app e ativou as notificações do app p
 const REGRAS_WHATSAPP = `# REGRAS DESTE ATENDIMENTO NO WHATSAPP (PRIORIDADE MAXIMA)
 - Voce esta conversando com uma pessoa pelo WhatsApp. Se perguntarem, diga que e o Junior, assistente virtual da equipe. Nunca diga que e uma pessoa.
 - Escreva mensagens curtas (ate umas 4 linhas), simples e acolhedoras, em portugues do Brasil. Sem markdown (nada de **, #, tabelas). No maximo 1 ou 2 emojis.
+- Excecao ao tamanho: quando a pessoa estiver travada num assunto e precisar de orientacao para fazer algo (portfolio da Meta, conta de anuncios, Pixel, erro etc.), responda com o passo a passo DETALHADO e so sobre esse assunto, numerado (1, 2, 3), dizendo onde entrar, o que clicar e qual opcao escolher; nesse caso pode passar de 4 linhas (ate umas 12), ainda sem markdown. Se ainda nao viu a tela, peca UM print da parte onde ela tem duvida em vez de fazer varias perguntas.
 - Va com calma: um passo por vez, e espere a pessoa responder.
 - Antes de responder, leia TODA a conversa anterior (mensagens da pessoa, da equipe e dos avisos automaticos). Continue de onde parou: nao repita o que ja foi dito ou perguntado e nao se apresente de novo se ja houve conversa.
 - Use SOMENTE o que esta na base de conhecimento. Nunca invente preco, desconto, prazo, promessa de ganho ou funcionalidade.
@@ -182,7 +183,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     const resp = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + process.env.OPENAI_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: system }, ...msgs], max_tokens: 500, temperature: 0.2 }),
+      body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: system }, ...msgs], max_tokens: 700, temperature: 0.2 }),
       signal: AbortSignal.timeout(22000),
     })
     const j: any = await resp.json().catch(function() { return null })
