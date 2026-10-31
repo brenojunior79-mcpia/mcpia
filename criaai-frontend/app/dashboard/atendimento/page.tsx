@@ -230,8 +230,6 @@ export default function AtendimentoPage() {
   const [nomes, setNomes] = useState<Record<string, string>>({})
   const [meuId, setMeuId] = useState('')
   const [canal, setCanal] = useState<Canal>('suporte')
-  // Conversas em que a equipe respondeu nas ultimas 12h (nelas o assistente fica quieto quando esta ligado para todas)
-  const [equipeRecente, setEquipeRecente] = useState<Record<string, boolean>>({})
   const [escopo, setEscopo] = useState<string>('suporte')
   const [canais, setCanais] = useState<{ id: string; nome: string; numero: string | null }[]>([])
   const [tplsRec, setTplsRec] = useState<Tpl[] | null>(null)
@@ -251,17 +249,10 @@ export default function AtendimentoPage() {
 
   const carregarConvs = useCallback(async function() {
     // Suporte e recuperacao buscados separados, para um nao empurrar o outro para fora do limite
-    const desde12h = new Date(Date.now() - 12 * 3600 * 1000).toISOString()
-    const [a, b, eq] = await Promise.all([
+    const [a, b] = await Promise.all([
       supabase.from('wa_conversations').select('*').is('connection_id', null).order('last_message_at', { ascending: false }).limit(300),
       supabase.from('wa_conversations').select('*').not('connection_id', 'is', null).order('last_message_at', { ascending: false }).limit(300),
-      supabase.from('wa_messages').select('conversation_id').eq('direction', 'out').not('sent_by', 'is', null).gte('created_at', desde12h).limit(3000),
     ])
-    if (!eq.error && eq.data) {
-      const m: Record<string, boolean> = {}
-      for (const x of (eq.data as any[])) m[String(x.conversation_id)] = true
-      setEquipeRecente(m)
-    }
     if (!a.error && a.data) {
       const todas = (a.data as Conv[]).concat(!b.error && b.data ? (b.data as Conv[]) : [])
       // Chat aberto pela aba Eventos pode ser mais antigo que o limite da lista: nao deixa sumir
@@ -694,8 +685,8 @@ export default function AtendimentoPage() {
     await carregarConvs()
   }
   // O assistente responde nesta conversa se foi ligado nela, ou se esta ligado para todas e ela nao foi desligada
-  // Mesma regra do servidor: ligado nesta conversa, ou ligado para todas e a equipe nao respondeu nas ultimas 12h
-  function iaOn(c: Conv | null | undefined): boolean { return !!c && (c.ia_ativa === true || (iaGeral && c.ia_humano !== true && !equipeRecente[c.id])) }
+  // Mesma regra do servidor: ligado nesta conversa, ou ligado para todas e ela nao foi desligada de proposito
+  function iaOn(c: Conv | null | undefined): boolean { return !!c && (c.ia_ativa === true || (iaGeral && c.ia_humano !== true)) }
   // Em qual chat a conversa aparece: se o assistente esta atendendo ela vai para o chat do Assistente; quando ele passa para a equipe, volta para o chat de origem
   function canalDaConv(c: Conv): Canal { return iaOn(c) ? 'assistente' : (c.connection_id ? 'recuperacao' : 'suporte') }
   useEffect(function() {
@@ -705,7 +696,7 @@ export default function AtendimentoPage() {
     if (!isAdmin) return
     const novo = !iaGeral
     const aviso = novo
-      ? 'Ligar o assistente de IA em TODAS as conversas (suporte e recuperação, inclusive as novas)? Ele passa a responder sozinho. Se alguém da equipe responder uma conversa, ele deixa a equipe seguir por 12 horas. Você pode desligar em uma conversa específica quando quiser.'
+      ? 'Ligar o assistente de IA em TODAS as conversas (suporte e recuperação, inclusive as novas)? Ele passa a responder sozinho. Você pode desligar em uma conversa específica quando quiser.'
       : 'Desligar o assistente de IA geral? As conversas em que você ligou o assistente manualmente continuam com ele.'
     if (!window.confirm(aviso)) return
     setErro('')

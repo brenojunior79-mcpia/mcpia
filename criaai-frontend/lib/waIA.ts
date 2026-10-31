@@ -83,15 +83,12 @@ async function parteDaMidia(admin: any, m: any): Promise<any | null> {
 // Quando o assistente deve responder nesta conversa:
 //  - 'manual': o admin ligou nesta conversa (ia_ativa)
 //  - 'geral': o admin ligou o assistente para TODAS as conversas (wa_ia_config.geral), a conversa nao foi desligada
-//    de proposito (ia_humano) e a equipe nao respondeu nas ultimas 12 horas (nesse caso a equipe segue sozinha)
+//    de proposito (ia_humano). Ligado = responde sempre, mesmo que a equipe tenha respondido antes
 export async function modoIA(admin: any, conv: any): Promise<'manual' | 'geral' | null> {
   if (conv.ia_ativa === true) return 'manual'
   if (conv.ia_humano === true) return null
   const c = await admin.from('wa_ia_config').select('geral').eq('id', 1).maybeSingle()
   if ((c.data as any)?.geral !== true) return null
-  const desde = new Date(Date.now() - 12 * 3600 * 1000).toISOString()
-  const h = await admin.from('wa_messages').select('id').eq('conversation_id', conv.id).eq('direction', 'out').not('sent_by', 'is', null).gte('created_at', desde).limit(1)
-  if ((h.data || []).length > 0) return null
   return 'geral'
 }
 
