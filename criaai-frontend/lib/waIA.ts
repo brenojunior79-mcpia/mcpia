@@ -81,6 +81,14 @@ async function parteDaMidia(admin: any, m: any): Promise<any | null> {
   }
 }
 
+// Quando o assistente deveria responder e nao conseguiu: deixa um aviso na conversa para a equipe ver e atender (nunca fica em silencio)
+async function avisarFalha(admin: any, convId: string, motivo: string): Promise<void> {
+  try {
+    console.error('[wa-ia] sem resposta:', motivo)
+    await admin.from('wa_messages').insert({ conversation_id: convId, direction: 'out', type: 'system', body: '⚠️ O assistente não conseguiu responder esta mensagem. Atenda manualmente.', status: 'sent', sent_by: null, created_at: new Date().toISOString() })
+  } catch (e) { /* aviso e so conforto */ }
+}
+
 // Quando o assistente deve responder nesta conversa:
 //  - 'manual': o admin ligou nesta conversa (ia_ativa)
 //  - 'geral': o admin ligou o assistente para TODAS as conversas (wa_ia_config.geral), a conversa nao foi desligada
@@ -106,12 +114,12 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     if (tipo === 'image' || tipo === 'document') {
       // Outros tipos de arquivo (Word, planilha...) ou arquivo que nao deu para abrir: fica para a equipe
       const mr = await admin.from('wa_messages').select('media_path, mime').eq('id', msgId).maybeSingle()
-      if (!(await parteDaMidia(admin, mr.data))) return true
+      if (!(await parteDaMidia(admin, mr.data))) { await avisarFalha(admin, convId, 'arquivo nao pode ser lido pelo assistente'); return true }
     }
     if (tipo === 'audio') {
       const fala = await transcreverAudio(admin, msgId)
       // Nao deu para entender o audio: fica para a equipe ouvir
-      if (!fala) return true
+      if (!fala) { await avisarFalha(admin, convId, 'audio nao transcrito'); return true }
     }
 
     const hist = await admin.from('wa_messages').select('id, wa_message_id, direction, type, body, created_at, media_path, mime').eq('conversation_id', convId).order('created_at', { ascending: false }).limit(300)
@@ -179,10 +187,11 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     })
     const j: any = await resp.json().catch(function() { return null })
     let texto = String(j?.choices?.[0]?.message?.content || '').trim()
-    if (!resp.ok || !texto) { console.error('[wa-ia] sem resposta da IA:', resp.status, JSON.stringify(j?.error || '')); return true }
+    if (!resp.ok || !texto) { await avisarFalha(admin, convId, 'IA sem resposta ' + resp.status + ' ' + JSON.stringify(j?.error || '')); return true }
 
     let passaParaHumano = texto.indexOf(MARCA_HUMANO) >= 0
     texto = texto.split(MARCA_HUMANO).join('').trim()
+    if (!texto && passaParaHumano) texto = 'Vou pedir para um atendente da equipe te ajudar com isso.'
     // Trava: se mesmo assim mandar a pessoa "chamar o suporte", tira a frase e passa para a equipe
     {
       const frases = texto.split(/(?<=[.!?])\s+|\n+/)
@@ -201,7 +210,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       const jaPerguntou = linhas.some(function(m) { return m.direction === 'out' && /baixou o app/i.test(String(m.body || '')) })
       if (!jaPerguntou && texto.indexOf(PERGUNTA_APP) < 0) texto = (texto ? texto + '\n\n' : '') + PERGUNTA_APP
     }
-    if (!texto) return true
+    if (!texto) { await avisarFalha(admin, convId, 'texto vazio'); return true }
 
     // Depois de pensar: conferir de novo se continua ligado e se nao chegou mensagem mais nova
     const [cv2, ult] = await Promise.all([
@@ -224,7 +233,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       if (res.humano) passaParaHumano = true
     } else {
       texto = removerMarcaExpress(texto)
-      if (!texto) return true
+      if (!texto) { await avisarFalha(admin, convId, 'texto vazio apos marca express'); return true }
     }
 
     // A resposta nao sai na hora: vai para a fila e o Junior "digita" como uma pessoa (lib/waIAFila.ts).
@@ -261,6 +270,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     return true
   } catch (e) {
     console.error('[wa-ia] erro:', e)
+    await avisarFalha(admin, convId, 'erro: ' + String((e as any)?.message || e).slice(0, 150))
     return true
   }
 }
