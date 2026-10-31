@@ -19,10 +19,11 @@
   --c-accent2: var(--accent2, #7c6ffc);
   --c-red: var(--red, #dc2626);
   --glow: rgba(91, 78, 248, 0.5);
-  --blob1: rgba(91, 78, 248, 0.34);
-  --blob2: rgba(155, 143, 252, 0.42);
-  --blob3: rgba(124, 111, 252, 0.3);
-  --rays: rgba(91, 78, 248, 0.055);
+  --blob1: rgba(91, 78, 248, 0.17);
+  --blob2: rgba(167, 150, 255, 0.22);
+  --blob3: rgba(124, 111, 252, 0.14);
+  --blob4: rgba(196, 181, 253, 0.26);
+  --spot: rgba(91, 78, 248, 0.07);
   --card-bg: rgba(255, 255, 255, 0.74);
   --card-shadow: 0 30px 80px rgba(91, 78, 248, 0.2), 0 6px 18px rgba(30, 20, 90, 0.06);
   --input-bg: rgba(255, 255, 255, 0.9);
@@ -40,10 +41,11 @@
 
 :global([data-theme='dark']) .page {
   --glow: rgba(124, 111, 252, 0.55);
-  --blob1: rgba(124, 111, 252, 0.3);
-  --blob2: rgba(91, 78, 248, 0.34);
-  --blob3: rgba(155, 143, 252, 0.2);
-  --rays: rgba(155, 143, 252, 0.07);
+  --blob1: rgba(124, 111, 252, 0.15);
+  --blob2: rgba(91, 78, 248, 0.18);
+  --blob3: rgba(155, 143, 252, 0.1);
+  --blob4: rgba(124, 111, 252, 0.12);
+  --spot: rgba(155, 143, 252, 0.07);
   --card-bg: rgba(23, 23, 31, 0.68);
   --card-shadow: 0 30px 80px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(124, 111, 252, 0.08);
   --input-bg: rgba(14, 14, 20, 0.6);
@@ -91,19 +93,26 @@
   animation: driftC 20s ease-in-out infinite alternate;
 }
 
-.rays {
+.blobD {
+  width: 52vmax;
+  height: 52vmax;
+  left: 18vmax;
+  bottom: -26vmax;
+  background: radial-gradient(circle at center, var(--blob4) 0%, rgba(0, 0, 0, 0) 66%);
+  animation: driftD 27s ease-in-out infinite alternate;
+}
+
+/* luz suave que acompanha o mouse (no celular fica parada no centro) */
+.spot {
   position: absolute;
-  left: 50%;
-  top: -80vmax;
-  width: 160vmax;
-  height: 160vmax;
-  margin-left: -80vmax;
-  border-radius: 50%;
-  background: repeating-conic-gradient(from 0deg, var(--rays) 0deg 3deg, rgba(0, 0, 0, 0) 3deg 13deg);
-  -webkit-mask-image: radial-gradient(circle at center, #000 0%, rgba(0, 0, 0, 0) 56%);
-  mask-image: radial-gradient(circle at center, #000 0%, rgba(0, 0, 0, 0) 56%);
-  animation: spin 180s linear infinite;
-  will-change: transform;
+  inset: 0;
+  background: radial-gradient(520px circle at var(--mx, 50%) var(--my, 38%), var(--spot), rgba(0, 0, 0, 0) 70%);
+  transition: background-position 0.2s;
+}
+
+@keyframes driftD {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(10vmax, -7vmax, 0) scale(1.15); }
 }
 
 @keyframes driftA {
@@ -157,14 +166,23 @@
   text-align: center;
 }
 
-.logoWrap {
-  position: relative;
-  display: inline-block;
+.lockup {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
 }
 
+.logoWrap {
+  position: relative;
+  display: block;
+}
+
+/* a imagem nao define a largura do bloco: ela acompanha a largura da legenda (e vai um pouco alem para compensar a margem do arquivo) */
 .logo {
   display: block;
-  width: 112px;
+  width: 0;
+  min-width: 105.6%;
+  margin-left: -2.8%;
   height: auto;
   filter: drop-shadow(0 10px 24px var(--glow));
 }
@@ -172,7 +190,10 @@
 /* brilho que passa pela logo uma vez, no carregamento (a mascara com a logo vem inline na pagina) */
 .shine {
   position: absolute;
-  inset: 0;
+  top: 0;
+  bottom: 0;
+  left: -2.8%;
+  right: -2.8%;
   pointer-events: none;
   background: linear-gradient(105deg, rgba(255, 255, 255, 0) 35%, rgba(255, 255, 255, 0.9) 50%, rgba(255, 255, 255, 0) 65%);
   background-size: 250% 100%;
@@ -191,13 +212,38 @@
   to { background-position: -60% 0; }
 }
 
+/* Mentoria Cristao Prospero Oficial, logo abaixo da logo */
+.tagline {
+  margin: 10px 0 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  letter-spacing: 0;
+  color: var(--c-text2);
+}
+
+/* o titulo da zoom e pisca de leve, sem parar */
+.sway {
+  margin-top: 26px;
+  transform-origin: center center;
+  animation: blink-zoom 2.8s ease-in-out 1.4s infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes blink-zoom {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.72; }
+}
+
 .headline {
-  margin: 22px 0 0;
-  font-family: 'Syne', sans-serif;
-  font-weight: 400;
-  font-size: clamp(42px, 13vw, 58px);
-  line-height: 1;
-  letter-spacing: -0.03em;
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  font-weight: 800;
+  font-size: clamp(32px, 11vw, 60px);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  white-space: nowrap;
   color: var(--c-accent);
   background: linear-gradient(100deg, #4538e0 0%, #5b4ef8 30%, #8f7bff 55%, #5b4ef8 80%, #4538e0 100%);
   background-size: 220% 100%;
@@ -211,59 +257,10 @@
   background-image: linear-gradient(100deg, #7c6ffc 0%, #a99eff 30%, #d2cbff 55%, #a99eff 80%, #7c6ffc 100%);
 }
 
-.headline span { display: block; }
-
 @keyframes sheen {
   from { background-position: 0% 0; }
   to { background-position: 100% 0; }
 }
-
-.perks {
-  display: none;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: 30px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 14px 9px 11px;
-  border-radius: 999px;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--c-text2);
-  background: var(--card-bg);
-  border: 1px solid var(--c-line);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-}
-
-.chip svg { color: var(--c-accent); flex-shrink: 0; }
-
-.perksMobile {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px 20px;
-  margin: 22px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.perkSmall {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--c-muted2);
-}
-
-.perkSmall svg { color: var(--c-accent); flex-shrink: 0; }
 
 /* ---------- cartao do formulario ---------- */
 .panel {
@@ -705,18 +702,18 @@
     padding: 48px 40px;
   }
   .hero { align-items: flex-start; text-align: left; }
-  .logo { width: 150px; }
-  .headline { margin-top: 40px; font-size: clamp(64px, 7.2vw, 104px); }
-  .perks { display: flex; }
-  .perksMobile { display: none; }
+  .tagline { font-size: 16px; margin-top: 12px; }
+  .sway { margin-top: 34px; transform-origin: left center; }
+  .headline { font-size: clamp(46px, 5vw, 78px); }
   .panel { margin: 0 0 0 auto; }
 }
 
 /* ---------- menos movimento ---------- */
 @media (prefers-reduced-motion: reduce) {
-  .blob, .rays, .card::before, .sentIcon::after, .shine { animation: none; }
+  .blob, .card::before, .sentIcon::after, .shine { animation: none; }
   .rise, .form, .sent, .error { animation: none; }
   .headline { animation: none; }
+  .sway { animation: none; }
   .draw { animation: none; stroke-dashoffset: 0; }
   .submit, .submit::after, .tabPill { transition: none; }
   .card::before { --ang: 200deg; }

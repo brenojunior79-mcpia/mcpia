@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 import s from './login.module.css'
@@ -63,37 +63,6 @@ function IconArrowLeft() {
     </svg>
   )
 }
-function IconSpark({ size = 22 }: IconProps) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" />
-      <path d="M19 16.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8z" />
-    </svg>
-  )
-}
-function IconBook({ size = 22 }: IconProps) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M4 5.5A2.5 2.5 0 016.5 3H20v15H6.5A2.5 2.5 0 004 20.5v-15z" />
-      <path d="M4 20.5A2.5 2.5 0 006.5 23H20v-5" transform="translate(0 -2)" />
-      <path d="M9 8h7" />
-    </svg>
-  )
-}
-function IconCoin({ size = 22 }: IconProps) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M14.8 9.2c-.5-.8-1.5-1.2-2.8-1.2-1.6 0-2.7.8-2.7 1.9 0 2.8 5.6 1.3 5.6 4.1 0 1.2-1.2 2-2.9 2-1.4 0-2.5-.5-3-1.4M12 6.5V8m0 8v1.5" />
-    </svg>
-  )
-}
-
-const BENEFICIOS = [
-  { label: 'Criativos com IA', Icon: IconSpark },
-  { label: 'Ebooks em minutos', Icon: IconBook },
-  { label: 'Venda no automático', Icon: IconCoin },
-]
 
 export default function LoginPage() {
   const [tab, setTab] = useState('login')
@@ -111,6 +80,14 @@ export default function LoginPage() {
   const [verSenha, setVerSenha] = useState(false)
   const supabase = createClient()
   const router = useRouter()
+  const paginaRef = useRef<HTMLDivElement>(null)
+
+  // A luz de fundo acompanha o mouse (so decoracao)
+  function seguirMouse(e: React.PointerEvent<HTMLDivElement>) {
+    if (e.pointerType !== 'mouse' || !paginaRef.current) return
+    paginaRef.current.style.setProperty('--mx', e.clientX + 'px')
+    paginaRef.current.style.setProperty('--my', e.clientY + 'px')
+  }
 
   // Traduz erros do Supabase para português
   function traduzErro(msg: string): string {
@@ -213,38 +190,31 @@ export default function LoginPage() {
   const tipoSenha = verSenha ? 'text' : 'password'
 
   return (
-    <div className={s.page}>
-      {/* Fundo: degrade em roxo da marca que se move devagar (so decoracao) */}
+    <div className={s.page} ref={paginaRef} onPointerMove={seguirMouse}>
+      {/* Fundo: degrade macio em roxo da marca, sem linhas (so decoracao) */}
       <div className={s.bg} aria-hidden="true">
         <div className={s.blobA + ' ' + s.blob} />
         <div className={s.blobB + ' ' + s.blob} />
         <div className={s.blobC + ' ' + s.blob} />
-        <div className={s.rays} />
+        <div className={s.blobD + ' ' + s.blob} />
+        <div className={s.spot} />
       </div>
 
       <div className={s.shell}>
         {/* Marca */}
         <section className={s.hero}>
-          <div className={s.logoWrap + ' ' + s.rise} style={{ ['--d' as any]: '0.05s' }}>
-            <img src="/logo.png" alt="MCP" className={s.logo} />
-            <span className={s.shine} aria-hidden="true" style={{ WebkitMaskImage: 'url(/logo.png)', maskImage: 'url(/logo.png)' }} />
+          <div className={s.lockup + ' ' + s.rise} style={{ ['--d' as any]: '0.05s' }}>
+            <div className={s.logoWrap}>
+              <img src="/logo.png" alt="MCP" className={s.logo} />
+              <span className={s.shine} aria-hidden="true" style={{ WebkitMaskImage: 'url(/logo.png)', maskImage: 'url(/logo.png)' }} />
+            </div>
+            <p className={s.tagline}>Mentoria Cristão Próspero Oficial</p>
           </div>
 
-          <h1 className={s.headline}>
-            <span>#Bora</span>
-            <span>Prosperar</span>
-          </h1>
+          <div className={s.sway}>
+            <h1 className={s.headline}>#BoraProsperar</h1>
+          </div>
 
-          <ul className={s.perks + ' ' + s.rise} style={{ ['--d' as any]: '0.42s' }}>
-            {BENEFICIOS.map(function(b) {
-              return (
-                <li key={b.label} className={s.chip}>
-                  <b.Icon size={18} />
-                  {b.label}
-                </li>
-              )
-            })}
-          </ul>
         </section>
 
         {/* Formulario */}
@@ -429,19 +399,6 @@ export default function LoginPage() {
             )}
           </div>
 
-          {/* Beneficios no celular (no computador ficam ao lado) */}
-          {!showReset && (
-            <ul className={s.perksMobile + ' ' + s.rise} style={{ ['--d' as any]: '0.6s' }}>
-              {BENEFICIOS.map(function(b) {
-                return (
-                  <li key={b.label} className={s.perkSmall}>
-                    <b.Icon size={16} />
-                    {b.label}
-                  </li>
-                )
-              })}
-            </ul>
-          )}
         </main>
       </div>
     </div>
