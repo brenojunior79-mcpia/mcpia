@@ -38,7 +38,9 @@ export default function Topbar({ profile, user }: { profile: any, user: any }) {
       { id: '1', title: 'Bem-vindo!', message: 'Sua conta foi criada com sucesso. Explore os recursos da plataforma!', read: false, created_at: new Date().toISOString() },
       { id: '2', title: 'Novo produto disponivel', message: 'O produto Pack AEG foi adicionado em Produtos em Alta. Confira!', read: false, created_at: new Date().toISOString() },
     ]
-    const readIds = loadReadIds()
+    // "Lido" vale no navegador e tambem na conta (assim nao volta ao trocar de aparelho, de app ou de navegador)
+    const daConta: string[] = Array.isArray(user?.user_metadata?.notif_lidas) ? user.user_metadata.notif_lidas : []
+    const readIds = loadReadIds().concat(daConta)
     setNotifications(base.map(function(n) { return readIds.indexOf(n.id) !== -1 ? { ...n, read: true } : n }))
   }, [])
 
@@ -58,8 +60,18 @@ export default function Topbar({ profile, user }: { profile: any, user: any }) {
 
   function markRead(ids: string[]) {
     const merged = loadReadIds()
+    const daConta: string[] = Array.isArray(user?.user_metadata?.notif_lidas) ? user.user_metadata.notif_lidas : []
+    daConta.forEach(function(id) { if (merged.indexOf(id) === -1) merged.push(id) })
     ids.forEach(function(id) { if (merged.indexOf(id) === -1) merged.push(id) })
     saveReadIds(merged)
+    // Guarda tambem na conta do aluno (nao mexe nos outros dados do cadastro)
+    try {
+      if (user?.id) {
+        supabase.auth.updateUser({ data: { notif_lidas: merged } }).then(function(r: any) {
+          if (!r?.error && user.user_metadata) user.user_metadata.notif_lidas = merged
+        })
+      }
+    } catch (e) {}
   }
 
   const unread = notifications.filter(function(n) { return !n.read }).length
