@@ -197,18 +197,29 @@ export default function AnunciosPage() {
 
   if (permitido === null) return <div style={{ padding: 32, color: 'var(--muted2)' }}>Carregando...</div>
   if (semPlano) {
-    const itens = ['Veja suas métricas: gasto, cliques, CTR, CPC, CPM, ROAS e vendas', 'Pause e ative campanhas sem sair da plataforma', 'Edite o nome e o orçamento das campanhas', 'Crie Pixel e conta de anúncios', 'Use a análise automática por IA']
+    const itens = [
+      { i: 'ti-sparkles', t: 'A IA analisa os seus criativos por você' },
+      { i: 'ti-chart-line', t: 'A IA analisa as suas métricas e mostra onde o funil está perdendo' },
+      { i: 'ti-pointer', t: 'Você só dá um clique para pausar, ativar ou ajustar as campanhas' },
+      { i: 'ti-layout-dashboard', t: 'Tudo em um só lugar, sem se perder nas telas complicadas' },
+    ]
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', padding: '40px 20px 60px' }}>
-        <div style={{ maxWidth: 560, margin: '0 auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20, padding: '32px 26px', textAlign: 'center', boxShadow: 'var(--shadow-sm)' }}>
-          <div style={{ width: 64, height: 64, borderRadius: 18, margin: '0 auto 14px', background: 'rgba(124,92,252,0.12)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}><i className="ti ti-brand-meta" /></div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(124,92,252,0.10)', border: '1px solid rgba(124,92,252,0.3)', color: 'var(--accent)', fontSize: 11.5, fontWeight: 800, borderRadius: 999, padding: '4px 12px', marginBottom: 12 }}><i className="ti ti-lock" /> EXIGE UM PLANO</div>
-          <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: 24, fontWeight: 800, margin: '0 0 8px' }}>Gerenciador de Anúncios</h1>
-          <p style={{ fontSize: 14.5, color: 'var(--muted2)', lineHeight: 1.6, margin: '0 0 18px' }}>Para usar o Gerenciador de Anúncios da plataforma, você precisa <b style={{ color: 'var(--text)' }}>assinar um plano</b>. Qualquer plano libera o acesso.</p>
-          <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 8, margin: '0 auto 22px', maxWidth: 420 }}>
-            {itens.map(function(t) { return <div key={t} style={{ display: 'flex', gap: 8, fontSize: 13.5 }}><i className="ti ti-check" style={{ color: 'var(--green)', marginTop: 2 }} /><span>{t}</span></div> })}
+        <div style={{ maxWidth: 580, margin: '0 auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 22, padding: '34px 26px', textAlign: 'center', boxShadow: 'var(--shadow-sm)' }}>
+          <div style={{ width: 68, height: 68, borderRadius: 20, margin: '0 auto 14px', background: 'linear-gradient(135deg,#4b3fe8,#5b4ef8,#8b6dfa)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 34, boxShadow: '0 10px 26px rgba(91,78,248,0.35)' }}><i className="ti ti-robot" /></div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(124,92,252,0.10)', border: '1px solid rgba(124,92,252,0.3)', color: 'var(--accent)', fontSize: 11.5, fontWeight: 800, borderRadius: 999, padding: '4px 12px', marginBottom: 12 }}><i className="ti ti-lock" /> EXCLUSIVO PARA ASSINANTES</div>
+          <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: 'clamp(22px, 5vw, 28px)', fontWeight: 800, margin: '0 0 10px', lineHeight: 1.2 }}>Automatize as suas campanhas</h1>
+          <p style={{ fontSize: 15, color: 'var(--muted2)', lineHeight: 1.6, margin: '0 0 20px' }}>Não fique perdido no Gerenciador de Anúncios. <b style={{ color: 'var(--text)' }}>Aqui, a IA faz tudo por você.</b></p>
+          <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 10, margin: '0 auto 24px', maxWidth: 450 }}>
+            {itens.map(function(it) { return (
+              <div key={it.t} style={{ display: 'flex', gap: 12, alignItems: 'center', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 12, padding: '10px 12px' }}>
+                <span style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(124,92,252,0.12)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}><i className={'ti ' + it.i} /></span>
+                <span style={{ fontSize: 13.5, fontWeight: 600, lineHeight: 1.4 }}>{it.t}</span>
+              </div>
+            ) })}
           </div>
-          <a href="/dashboard/planos" style={{ display: 'inline-block', background: 'linear-gradient(135deg,#4b3fe8,#5b4ef8,#8b6dfa)', color: '#fff', textDecoration: 'none', fontWeight: 800, fontSize: 15, padding: '13px 30px', borderRadius: 12 }}>Ver planos</a>
+          <a href="/dashboard/planos" style={{ display: 'inline-block', background: 'linear-gradient(135deg,#4b3fe8,#5b4ef8,#8b6dfa)', color: '#fff', textDecoration: 'none', fontWeight: 800, fontSize: 15.5, padding: '14px 32px', borderRadius: 14, boxShadow: '0 8px 22px rgba(91,78,248,0.35)' }}>Quero automatizar minhas campanhas</a>
+          <div style={{ marginTop: 12, fontSize: 12.5, color: 'var(--muted2)' }}>Qualquer plano libera o acesso.</div>
         </div>
       </div>
     )
