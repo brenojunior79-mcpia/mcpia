@@ -8,7 +8,7 @@ import PushRelatorioCard from '@/components/admin/PushRelatorioCard'
 
 const LINKS = [
   { value: '/dashboard', label: 'Painel do Aluno' },
-  { value: '/dashboard/produtos', label: 'Produtos em Alta' },
+  { value: '/dashboard/produtos', label: 'Produtos Digitais e Físicos' },
   { value: '/dashboard/plataformas', label: 'Plataformas' },
   { value: '/dashboard/vendas', label: 'Vendendo no Automático' },
   { value: '/dashboard/aulas', label: 'Aulas ao Vivo' },

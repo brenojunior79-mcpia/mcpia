@@ -12,13 +12,13 @@ const HUBLA_LINKS: Record<string, string> = {
 const plans = [
   {
     name: 'Starter',
-    price: 29.90,
+    price: 39.90,
     features: ['10 criativos/mes', '2 ebooks/mes', '2 sites/mes'],
     missing: [],
   },
   {
     name: 'Pro',
-    price: 39.90,
+    price: 49.90,
     featured: true,
     features: ['18 criativos/mes', '3 ebooks/mes', '3 sites/mes'],
     missing: [],

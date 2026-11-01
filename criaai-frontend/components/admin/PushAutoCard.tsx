@@ -323,7 +323,7 @@ export default function PushAutoCard() {
             <div style={{ width: 38, height: 38, borderRadius: 12, background: 'linear-gradient(135deg,#16a34a,#22c55e)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>💰</div>
             <div style={{ flex: '1 1 240px', minWidth: 0 }}>
               <div style={{ fontWeight: 800, fontSize: 14.5 }}>Aviso de venda <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted2)' }}>· só para você</span></div>
-              <div style={{ fontSize: 11.5, color: 'var(--muted2)' }}>Na hora que cair uma venda ou renovação (Hubla e Cakto), chega no seu celular: “💰 Venda aprovada! Plano Pro · R$ 39,90 · nome”.</div>
+              <div style={{ fontSize: 11.5, color: 'var(--muted2)' }}>Na hora que cair uma venda ou renovação (Hubla e Cakto), chega no seu celular: “💰 Venda aprovada! Plano Pro · R$ 49,90 · nome”.</div>
               {msg.venda && <div style={{ marginTop: 4, fontSize: 12, fontWeight: 700, color: msg.venda.ok ? 'var(--green)' : 'var(--red)' }}>{msg.venda.t}</div>}
             </div>
             <button className="pa-btn" onClick={testarVenda} disabled={busy !== ''} style={botao}>{busy === 'vt' ? 'Enviando…' : '📲 Ver exemplo'}</button>

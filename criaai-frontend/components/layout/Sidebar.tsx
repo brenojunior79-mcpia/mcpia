@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { podeUsarAnuncios } from '@/lib/acessoAnuncios'
+import { podeVerSazonais } from '@/lib/acessoSazonais'
 import FotoPerfilModal from './FotoPerfilModal'
 import styles from './Sidebar.module.css'
 
@@ -137,6 +138,11 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
   const hasActivePlan = profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing'
   const hidePlans = isNewUser && !hasActivePlan
 
+  // Gerenciador de Anuncios: oculto para todos; so o admin e a conta de teste do revisor da Meta enxergam o menu
+  const verAnuncios = podeUsarAnuncios(isAdmin, profile?.email || user?.email)
+  // Produtos Sazonais: oculto para todos por enquanto (so o admin). Regras de liberacao em lib/acessoSazonais.ts
+  const verSazonais = podeVerSazonais(!!isAdmin, profile?.created_at, profile?.subscription_status, plan?.name)
+
   const firstName = (profile?.full_name || '').split(' ')[0] || 'Usuario'
   const videosRestantes = Math.max(0, videosLimit - videosUsed)
 
@@ -144,7 +150,8 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
     { href: '/dashboard', icon: 'ti-home', label: 'Painel do Aluno', locked: false },
     { href: '/dashboard/chat', icon: 'ti-message-circle', label: 'Assistente IA', locked: false },
     { href: '/dashboard/plataformas', icon: 'ti-building-store', label: 'Plataformas', locked: false },
-    { href: '/dashboard/produtos', icon: 'ti-flame', label: 'Produtos em Alta', locked: false },
+    { href: '/dashboard/produtos', icon: 'ti-flame', label: 'Produtos Digitais e Físicos', locked: false },
+    { href: '/dashboard/sazonais', icon: 'ti-calendar-event', label: 'Produtos Sazonais', locked: false },
     { href: '/dashboard/ebook', icon: 'ti-book-2', label: 'Gerador de Ebook', locked: false },
     { href: '/dashboard/paginas', icon: 'ti-layout', label: 'Gerador de Site', locked: hidePlans, lockStatus: 'Em atualizacao' },
     { href: '/dashboard/criativo', icon: 'ti-sparkles', label: 'Gerador de Criativos', locked: hidePlans && videosUsed >= 2 + videosExtra, lockStatus: 'Em atualizacao' },
@@ -152,7 +159,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
     { href: '/dashboard/indique', icon: 'ti-gift', label: 'Indique e ganhe', locked: false, highlight: true },
     { href: '/dashboard/vendas', icon: 'ti-rocket', label: 'Vendendo no Automatico', locked: false },
     { href: '/dashboard/estrutura-express', icon: 'ti-bolt', label: 'Estrutura Express', locked: false, badge: 'NOVO' },
-    { href: '/dashboard/anuncios', icon: 'ti-brand-meta', label: 'Gerenciador de Anuncios', locked: !podeUsarAnuncios(isAdmin, profile?.email || user?.email), lockStatus: 'Em atualizacao' },
+    { href: '/dashboard/anuncios', icon: 'ti-brand-meta', label: 'Gerenciador de Anuncios', locked: false },
     { href: '/dashboard/suporte', icon: 'ti-brand-whatsapp', label: 'WhatsApp de Suporte', locked: false },
     { href: '/dashboard/aulas', icon: 'ti-device-tv', label: 'Aulas ao Vivo', locked: false },
     { href: '/dashboard/planos', icon: 'ti-credit-card', label: 'Planos', locked: false },
@@ -216,7 +223,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
 
         {/* Nav */}
         <nav className={styles.nav}>
-          {navItems.filter(function(item) { return HIDDEN_FOR_ALL.indexOf(item.href) === -1 && !(!isAdmin && HIDDEN_NON_ADMIN.indexOf(item.href) !== -1) && !(hidePlans && HIDDEN_NEW_USER.indexOf(item.href) !== -1) }).map(function(item) {
+          {navItems.filter(function(item) { return HIDDEN_FOR_ALL.indexOf(item.href) === -1 && !(item.href === '/dashboard/anuncios' && !verAnuncios) && !(item.href === '/dashboard/sazonais' && !verSazonais) &&!(!isAdmin && HIDDEN_NON_ADMIN.indexOf(item.href) !== -1) && !(hidePlans && HIDDEN_NEW_USER.indexOf(item.href) !== -1) }).map(function(item) {
             if (item.locked) {
               const status = (item as any).lockStatus || 'Em breve'
               return (
