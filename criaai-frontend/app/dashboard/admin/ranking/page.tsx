@@ -8,7 +8,7 @@ const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julh
 const PREMIOS = [200, 150, 100]
 const COLUNAS: { k: string; t: string }[] = [
   { k: 'p_acesso', t: 'Acesso' }, { k: 'p_aulas', t: 'Aulas' }, { k: 'p_ebooks', t: 'Ebooks' }, { k: 'p_sites', t: 'Sites' },
-  { k: 'p_criativos', t: 'Criativos' }, { k: 'p_anuncios', t: 'Anúncios' }, { k: 'p_vendas', t: 'Vendas' }, { k: 'p_app', t: 'App' }, { k: 'p_notif', t: 'Notif.' },
+  { k: 'p_criativos', t: 'Criativos' }, { k: 'p_anuncios', t: 'Anúncios' }, { k: 'p_vendas', t: 'Vendas' }, { k: 'p_app', t: 'App' }, { k: 'p_notif', t: 'Notif.' }, { k: 'p_plano', t: 'Plano' },
 ]
 
 function plural(n: number, um: string, varios: string) { return n + ' ' + (n === 1 ? um : varios) }
@@ -24,6 +24,7 @@ function oQueFez(l: any) {
   if (l.n_vendas > 0) p.push('Registrou ' + plural(l.n_vendas, 'venda', 'vendas'))
   if (l.p_app > 0) p.push('Instalou o app')
   if (l.p_notif > 0) p.push('Ativou as notificações')
+  if (l.p_plano > 0) p.push('Tem plano (+100)')
   if (l.n_dias > 0) p.push('Entrou ' + plural(l.n_dias, 'dia', 'dias'))
   return p.join(' · ')
 }

@@ -43,8 +43,12 @@ async function montar() {
   }
   const sub = await db.from('push_subscriptions').select('id', { count: 'exact', head: true }).eq('user_id', user.id)
   const notif = (sub.count || 0) > 0
+  // A linha "ter um plano = 100 pontos" so aparece para quem tem 7+ dias de cadastro
+  const pfd = await db.from('profiles').select('created_at').eq('id', user.id).maybeSingle()
+  const criado = (pfd.data as any)?.created_at ? new Date((pfd.data as any).created_at).getTime() : 0
+  const mostrarPlano = !!criado && (Date.now() - criado) >= 7 * 24 * 60 * 60 * 1000
   const faltam = idx > 0 && idx < 100 ? Math.max(1, lista[idx - 1].pontos - lista[idx].pontos + 1) : 0
-  return NextResponse.json({ mes: j.titulo, fimEm: j.fimEm, ano: j.ano, diasRestantes, top, eu, faltam, notif, premios: PREMIOS })
+  return NextResponse.json({ mes: j.titulo, fimEm: j.fimEm, ano: j.ano, diasRestantes, top, eu, faltam, notif, mostrarPlano, premios: PREMIOS })
 }
 
 export async function GET() {

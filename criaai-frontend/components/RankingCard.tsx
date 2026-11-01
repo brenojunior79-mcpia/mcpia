@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { ativarNotificacoes, situacaoNotificacao } from '@/lib/pushAtivar'
 
 type Linha = { posicao: number; nome: string; foto: string | null; pontos: number; premio: number; voce: boolean }
-type Dados = { mes: string; fimEm: string; ano: number; diasRestantes: number; top: Linha[]; eu: { posicao: number | null; pontos: number; nome: string; foto: string | null }; faltam: number; notif?: boolean; premios: number[] }
+type Dados = { mes: string; fimEm: string; ano: number; diasRestantes: number; top: Linha[]; eu: { posicao: number | null; pontos: number; nome: string; foto: string | null }; faltam: number; notif?: boolean; mostrarPlano?: boolean; premios: number[] }
 
 const MEDALHA = ['🥇', '🥈', '🥉']
 const COR = ['#f5b301', '#9aa5b1', '#cd7f32']
@@ -35,6 +35,7 @@ const ITENS: { id: string; emoji: string; pts: string; texto: string; extra?: st
   { id: 'venda', emoji: '💰', pts: '50 pontos', texto: 'por venda registrada' },
   { id: 'app', emoji: '📲', pts: '10 pontos', texto: 'por instalar o aplicativo' },
   { id: 'notif', emoji: '🔔', pts: '10 pontos', texto: 'por ativar as notificações' },
+  { id: 'plano', emoji: '⭐', pts: '100 pontos', texto: 'por ter um plano ativo (qualquer plano)', extra: 'Vale uma vez em cada ranking mensal' },
   { id: 'aula', emoji: '🎓', pts: '10 pontos', texto: 'por aula assistida', extra: 'Bônus: 3 aulas +10 · 5 aulas +20 · 7 aulas +30' },
 ]
 const CHAVE_MARCAS = 'rk_marcas_v1'
@@ -92,6 +93,9 @@ export default function RankingCard() {
       </div>
     )
   }
+
+  // "Ter um plano" so aparece para quem tem 7+ dias de cadastro
+  const itens = ITENS.filter(function(it) { return it.id !== 'plano' || d.mostrarPlano === true })
 
   return (
     <div className="anim-fadeUp rk-anim" style={{ marginBottom: 28 }}>
@@ -195,9 +199,9 @@ export default function RankingCard() {
           <div style={{ position: 'relative', marginTop: 12, fontSize: 13, color: 'var(--text)', animation: 'rkAbre 0.3s ease-out' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 8, flexWrap: 'wrap' }}>
               <div style={{ fontWeight: 800 }}>Marque o que você já fez ou vai fazer</div>
-              <div style={{ fontSize: 12, fontWeight: 800, color: '#16a34a' }}>{ITENS.filter(function(it) { return marcas[it.id] || (it.id === 'notif' && d.notif) }).length} de {ITENS.length} marcados</div>
+              <div style={{ fontSize: 12, fontWeight: 800, color: '#16a34a' }}>{itens.filter(function(it) { return marcas[it.id] || (it.id === 'notif' && d.notif) }).length} de {itens.length} marcados</div>
             </div>
-            {ITENS.map(function(it) {
+            {itens.map(function(it) {
               const auto = it.id === 'notif' && d.notif === true
               const on = !!marcas[it.id] || auto
               return (
