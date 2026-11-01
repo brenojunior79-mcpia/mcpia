@@ -139,7 +139,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
   const hidePlans = isNewUser && !hasActivePlan
 
   // Gerenciador de Anuncios: liberado para quem tem plano; sem plano so aparece depois de 7 dias (e pede para assinar); admin e conta do revisor da Meta sempre abrem
-  const statusAnu = statusAnuncios(!!isAdmin, profile?.email || user?.email, profile?.created_at, profile?.subscription_status)
+  const statusAnu = statusAnuncios(!!isAdmin, profile?.email || user?.email, profile?.created_at, profile?.subscription_status, plan?.name)
   const verAnuncios = statusAnu !== 'oculto'
   // Produtos Sazonais: oculto para todos por enquanto (so o admin). Regras de liberacao em lib/acessoSazonais.ts
   const verSazonais = podeVerSazonais(!!isAdmin, profile?.created_at, profile?.subscription_status, plan?.name)
@@ -160,7 +160,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
     { href: '/dashboard/indique', icon: 'ti-gift', label: 'Indique e ganhe', locked: false, highlight: true },
     { href: '/dashboard/vendas', icon: 'ti-rocket', label: 'Vendendo no Automatico', locked: false },
     { href: '/dashboard/estrutura-express', icon: 'ti-bolt', label: 'Estrutura Express', locked: false, badge: 'NOVO' },
-    { href: '/dashboard/anuncios', icon: 'ti-brand-meta', label: 'Gerenciador de Anuncios', locked: false, lockHint: statusAnu === 'plano' },
+    { href: '/dashboard/anuncios', icon: 'ti-brand-meta', label: 'Gerenciador de Anuncios', locked: false, lockHint: statusAnu === 'plano' || statusAnu === 'upgrade' },
     { href: '/dashboard/suporte', icon: 'ti-brand-whatsapp', label: 'WhatsApp de Suporte', locked: false },
     { href: '/dashboard/aulas', icon: 'ti-device-tv', label: 'Aulas ao Vivo', locked: false },
     { href: '/dashboard/planos', icon: 'ti-credit-card', label: 'Planos', locked: false },

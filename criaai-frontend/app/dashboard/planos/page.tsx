@@ -2,35 +2,10 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import styles from './planos.module.css'
+import { PLANOS, HUBLA_LINKS, NIVEL_PLANO } from '@/lib/planos'
+import { ANUNCIOS_MENU_PARA_ALUNOS } from '@/lib/acessoAnuncios'
 
-const HUBLA_LINKS: Record<string, string> = {
-  Starter: 'https://pay.hub.la/0AueQQcwJxUeV9BE1ax7',
-  Pro: 'https://pay.hub.la/16HkQulcBTksGN8AEnow',
-  Premium: 'https://pay.hub.la/TwrkZegsChmWcaJ9LO4z',
-}
-
-const plans = [
-  {
-    name: 'Starter',
-    price: 39.90,
-    features: ['10 criativos/mes', '2 ebooks/mes', '2 sites/mes'],
-    missing: [],
-  },
-  {
-    name: 'Pro',
-    price: 49.90,
-    featured: true,
-    features: ['18 criativos/mes', '3 ebooks/mes', '3 sites/mes'],
-    missing: [],
-  },
-  {
-    name: 'Premium',
-    price: 79.90,
-    features: ['30 criativos/mes', '10 ebooks/mes', '10 sites/mes'],
-    missing: [],
-    extra: { title: 'Grupo VIP no WhatsApp com o Breno', desc: 'Um grupo fechado no WhatsApp, só para quem é Premium, para conversar com o Breno de perto.' },
-  },
-]
+const plans = PLANOS
 
 function useCountdown(createdAt: string | null) {
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
@@ -73,6 +48,7 @@ export default function PlanosPage() {
   const [userEmail, setUserEmail] = useState('')
   const [createdAt, setCreatedAt] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [planoAtual, setPlanoAtual] = useState<string | null>(null)
   const [libEmail, setLibEmail] = useState('')
   const [libPlano, setLibPlano] = useState('Starter')
   const [libMsg, setLibMsg] = useState('')
@@ -90,12 +66,13 @@ export default function PlanosPage() {
 
       const profileResult = await supabase
         .from('profiles')
-        .select('created_at, subscription_status, is_admin')
+        .select('created_at, subscription_status, is_admin, plans(name)')
         .eq('id', user.id)
         .single()
 
       const data = profileResult.data
       if (data && (data as any).is_admin) setIsAdmin(true)
+      if (data && ((data as any).subscription_status === 'active' || (data as any).subscription_status === 'trialing') && (data as any).plans) setPlanoAtual((data as any).plans.name)
       if (data && data.subscription_status !== 'active') {
         setCreatedAt(data.created_at)
       }
@@ -220,11 +197,24 @@ export default function PlanosPage() {
           </div>
         )}
 
+        {planoAtual && (
+          <div style={{ background: 'linear-gradient(135deg, rgba(124,92,252,0.14), rgba(124,92,252,0.05))', border: '1px solid rgba(124,92,252,0.35)', borderRadius: 16, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+            <div style={{ width: 42, height: 42, borderRadius: 12, background: 'rgba(124,92,252,0.15)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}><i className="ti ti-crown" /></div>
+            <div style={{ flex: '1 1 220px' }}>
+              <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--accent)' }}>Seu plano atual</div>
+              <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 20, fontWeight: 800 }}>{planoAtual}</div>
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--muted2)', flex: '1 1 240px' }}>
+              {planoAtual === 'Premium' ? 'Você já está no plano mais completo. Obrigado por fazer parte!' : 'Quer mais criativos, e-books e sites? Faça o upgrade para um plano maior abaixo.'}
+            </div>
+          </div>
+        )}
+
         <div className={styles.plans}>
           {plans.map(function(p: any) {
             return (
-              <div key={p.name} className={styles.plan + (p.featured ? ' ' + styles.featured : '')}>
-                {p.featured && <div className={styles.popularBadge}>Mais popular</div>}
+              <div key={p.name} className={styles.plan + ((planoAtual ? planoAtual === p.name : p.featured) ? ' ' + styles.featured : '')}>
+                {planoAtual === p.name ? <div className={styles.popularBadge}>Seu plano atual</div> : (p.featured && !planoAtual && <div className={styles.popularBadge}>Mais popular</div>)}
                 <div className={styles.planName}>{p.name}</div>
                 <div className={styles.planPrice}>
                   <sup>R$</sup>
@@ -254,13 +244,16 @@ export default function PlanosPage() {
                       </li>
                     )
                   })}
-                  {p.missing.map(function(f: string) {
-                    return (
-                      <li key={f} className={styles.missing}>
-                        <i className="ti ti-x" style={{ color: 'var(--muted)' }} />{f}
-                      </li>
-                    )
-                  })}
+                  {p.gerenciador ? (
+                    <li>
+                      <i className="ti ti-check" style={{ color: 'var(--green)' }} />Gerenciador de Anúncios com IA
+                      {!ANUNCIOS_MENU_PARA_ALUNOS && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 800, color: 'var(--accent)', background: 'rgba(124,92,252,0.12)', borderRadius: 999, padding: '2px 7px', whiteSpace: 'nowrap', display: 'inline-block' }}>EM BREVE</span>}
+                    </li>
+                  ) : (
+                    <li className={styles.missing}>
+                      <i className="ti ti-x" style={{ color: 'var(--muted)' }} />Gerenciador de Anúncios
+                    </li>
+                  )}
                 </ul>
                 {p.extra && (
                   <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: 'rgba(124,92,252,0.10)', border: '1px solid rgba(124,92,252,0.32)', borderRadius: 12, padding: '11px 12px', marginBottom: 14, textAlign: 'left' }}>
@@ -271,13 +264,19 @@ export default function PlanosPage() {
                     </div>
                   </div>
                 )}
-                <button
-                  className={styles.btn + ' ' + (p.featured ? styles.btnFilled : styles.btnOutline)}
-                  onClick={function() { checkout(p.name) }}
-                  disabled={loading === p.name}
-                >
-                  {loading === p.name ? 'Redirecionando...' : showTimer ? 'Assinar e ganhar +5 creditos' : 'Assinar agora'}
-                </button>
+                {planoAtual === p.name ? (
+                  <button className={styles.btn + ' ' + styles.btnOutline} disabled style={{ opacity: 0.7, cursor: 'default' }}>Plano atual</button>
+                ) : planoAtual && (NIVEL_PLANO[p.name] || 0) < (NIVEL_PLANO[planoAtual] || 0) ? (
+                  <button className={styles.btn + ' ' + styles.btnOutline} disabled style={{ opacity: 0.5, cursor: 'default' }}>Incluído no seu plano</button>
+                ) : (
+                  <button
+                    className={styles.btn + ' ' + (p.featured || planoAtual ? styles.btnFilled : styles.btnOutline)}
+                    onClick={function() { checkout(p.name) }}
+                    disabled={loading === p.name}
+                  >
+                    {loading === p.name ? 'Redirecionando...' : planoAtual ? 'Fazer upgrade para o ' + p.name : showTimer ? 'Assinar e ganhar +5 creditos' : 'Assinar agora'}
+                  </button>
+                )}
               </div>
             )
           })}

@@ -773,7 +773,7 @@ https://www.facebook.com/ads/library/ — para estudar referencias e formatos. N
 
 # GERENCIADOR DE ANUNCIOS DA PLATAFORMA (INTERNO)
 
-(AINDA OCULTO PARA OS ALUNOS, porque o Facebook ainda nao liberou: nao cite esse menu nem mande o aluno para ele. O texto abaixo e so contexto interno. No futuro ele exigira qualquer plano e so aparecera depois de 7 dias do cadastro.) Dentro do menu "Gerenciador de Anuncios" da propria plataforma, o aluno conecta a conta de anuncios do Facebook dele (login com Facebook) e consegue: ver metricas (gasto, cliques, CTR, CPC, CPM, ROAS, vendas), pausar/ativar campanhas, editar nome e orcamento, criar Pixel e criar conta de anuncios nova — tudo sem sair da plataforma. Se o aluno tiver duvida sobre essa tela, peca a descricao do que aparece.
+(AINDA OCULTO PARA OS ALUNOS, porque o Facebook ainda nao liberou: nao cite esse menu nem mande o aluno para ele. O texto abaixo e so contexto interno. No futuro ele sera liberado so para os planos Pro e Premium (o Starter nao inclui) e so aparecera depois de 7 dias do cadastro.) Dentro do menu "Gerenciador de Anuncios" da propria plataforma, o aluno conecta a conta de anuncios do Facebook dele (login com Facebook) e consegue: ver metricas (gasto, cliques, CTR, CPC, CPM, ROAS, vendas), pausar/ativar campanhas, editar nome e orcamento, criar Pixel e criar conta de anuncios nova — tudo sem sair da plataforma. Se o aluno tiver duvida sobre essa tela, peca a descricao do que aparece.
 
 # CONFIGURACAO NO GERENCIADOR DE NEGOCIOS DA META (CRIAR CONTA, PIXEL, PAGINA, DADOS DA EMPRESA)
 
@@ -1145,6 +1145,7 @@ WhatsApp do suporte: https://wa.me/553791348869
 Gravacoes das aulas ao vivo com a comunidade. No momento tem: "Aula 18/09/2026 - Breno Junio" (Conhecendo a plataforma Cristao Prospero). Embaixo tem o botao "Avisar quando lancar", que abre o Grupo de Avisos do WhatsApp para o aluno ser avisado das proximas aulas.
 
 ## 13) PLANOS (planos mensais da MCP IA para os geradores de IA)
+(Nota interna: no futuro, quando o Facebook liberar, o Gerenciador de Anuncios da plataforma fara parte dos planos Pro e Premium, e nao do Starter. Por enquanto NAO cite o Gerenciador ao falar dos planos.)
 Os planos servem para gerar ebooks, sites e criativos com IA. Nunca sao obrigatorios: as aulas e os Criativos Manuais sao gratis. Os planos sao cobrados por mes.
 - Starter: R$ 39,90 por mes. Inclui 10 criativos, 2 ebooks e 2 sites por mes. Checkout: https://pay.hub.la/0AueQQcwJxUeV9BE1ax7
 - Pro (marcado como "Mais popular"): R$ 49,90 por mes. Inclui 18 criativos, 3 ebooks e 3 sites por mes. Checkout: https://pay.hub.la/16HkQulcBTksGN8AEnow

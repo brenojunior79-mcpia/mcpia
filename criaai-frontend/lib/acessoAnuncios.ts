@@ -1,6 +1,6 @@
 // Gerenciador de Anuncios (menu da plataforma). HOJE ESTA OCULTO PARA OS ALUNOS (ver ANUNCIOS_MENU_PARA_ALUNOS).
 //  - Admin e as contas abaixo (ex.: conta de teste do revisor do Meta) sempre abrem.
-//  - Quem tem plano ativo (qualquer plano) abre.
+//  - Quem tem plano ativo Pro ou Premium abre (o Starter NAO inclui o Gerenciador: ve o aviso de upgrade).
 //  - Aluno sem plano com 7 dias ou mais de cadastro ve o menu, mas ao clicar aparece o aviso para assinar um plano.
 //  - Aluno sem plano nos primeiros 7 dias NAO ve o menu (nao pode saber que existem planos).
 export const ANUNCIOS_LIBERADO_PARA_TODOS = false
@@ -10,18 +10,20 @@ export const ANUNCIOS_DIAS_APOS_CADASTRO = 7
 // Quando o Meta aprovar, mude para true: ai vale a regra de 7 dias + plano descrita acima.
 export const ANUNCIOS_MENU_PARA_ALUNOS = false
 
-export type StatusAnuncios = 'liberado' | 'plano' | 'oculto'
+export const ANUNCIOS_PLANOS: string[] = ['Pro', 'Premium']
 
-export function statusAnuncios(isAdmin: boolean, email?: string | null, createdAt?: string | null, subscriptionStatus?: string | null): StatusAnuncios {
+export type StatusAnuncios = 'liberado' | 'plano' | 'upgrade' | 'oculto'
+
+export function statusAnuncios(isAdmin: boolean, email?: string | null, createdAt?: string | null, subscriptionStatus?: string | null, planName?: string | null): StatusAnuncios {
   if (ANUNCIOS_LIBERADO_PARA_TODOS || isAdmin) return 'liberado'
   if (email && ANUNCIOS_EMAILS_LIBERADOS.indexOf(email.toLowerCase()) !== -1) return 'liberado'
   if (!ANUNCIOS_MENU_PARA_ALUNOS) return 'oculto'
-  if (subscriptionStatus === 'active' || subscriptionStatus === 'trialing') return 'liberado'
+  if (subscriptionStatus === 'active' || subscriptionStatus === 'trialing') return (planName && ANUNCIOS_PLANOS.indexOf(planName) !== -1) ? 'liberado' : 'upgrade'
   const criado = createdAt ? new Date(createdAt).getTime() : 0
   if (criado && (Date.now() - criado) >= ANUNCIOS_DIAS_APOS_CADASTRO * 24 * 60 * 60 * 1000) return 'plano'
   return 'oculto'
 }
 
-export function podeUsarAnuncios(isAdmin: boolean, email?: string | null, createdAt?: string | null, subscriptionStatus?: string | null): boolean {
-  return statusAnuncios(isAdmin, email, createdAt, subscriptionStatus) === 'liberado'
+export function podeUsarAnuncios(isAdmin: boolean, email?: string | null, createdAt?: string | null, subscriptionStatus?: string | null, planName?: string | null): boolean {
+  return statusAnuncios(isAdmin, email, createdAt, subscriptionStatus, planName) === 'liberado'
 }
