@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { ativarNotificacoes, situacaoNotificacao } from '@/lib/pushAtivar'
 
 type Linha = { posicao: number; nome: string; foto: string | null; pontos: number; premio: number; voce: boolean }
@@ -26,17 +27,17 @@ const CSS = `
 const brl = function(v: number) { return 'R$ ' + v.toLocaleString('pt-BR') }
 
 // Formas de ganhar pontos (o aluno marca o que ja fez ou vai fazer)
-const ITENS: { id: string; emoji: string; pts: string; texto: string; extra?: string }[] = [
+const ITENS: { id: string; emoji: string; pts: string; texto: string; extra?: string; href?: string; menu?: string }[] = [
   { id: 'acesso', emoji: '📅', pts: '5 pontos', texto: 'por dia que você entra na plataforma' },
-  { id: 'ebook', emoji: '📘', pts: '20 pontos', texto: 'por ebook criado (1 por dia)' },
-  { id: 'site', emoji: '🌐', pts: '20 pontos', texto: 'por site criado (1 por dia)' },
-  { id: 'criativo', emoji: '🎬', pts: '30 pontos', texto: 'por criativo gerado' },
-  { id: 'anuncio', emoji: '📣', pts: '50 pontos', texto: 'por anúncio publicado (até 2 por dia)' },
-  { id: 'venda', emoji: '💰', pts: '50 pontos', texto: 'por venda registrada' },
+  { id: 'ebook', emoji: '📘', pts: '20 pontos', texto: 'por ebook criado (1 por dia)', href: '/dashboard/ebook', menu: 'Gerador de Ebook' },
+  { id: 'site', emoji: '🌐', pts: '20 pontos', texto: 'por site criado (1 por dia)', href: '/dashboard/paginas', menu: 'Gerador de Site' },
+  { id: 'criativo', emoji: '🎬', pts: '30 pontos', texto: 'por criativo gerado', href: '/dashboard/criativo', menu: 'Gerador de Criativos' },
+  { id: 'anuncio', emoji: '📣', pts: '50 pontos', texto: 'por anúncio publicado (até 2 por dia)', href: '/dashboard/vendas', menu: 'Vendendo no Automático' },
+  { id: 'venda', emoji: '💰', pts: '50 pontos', texto: 'por venda registrada', href: '/dashboard/vendas', menu: 'Vendendo no Automático' },
   { id: 'app', emoji: '📲', pts: '10 pontos', texto: 'por instalar o aplicativo' },
   { id: 'notif', emoji: '🔔', pts: '10 pontos', texto: 'por ativar as notificações' },
-  { id: 'plano', emoji: '⭐', pts: '100 pontos', texto: 'por ter um plano ativo (qualquer plano)', extra: 'Vale uma vez em cada ranking mensal' },
-  { id: 'aula', emoji: '🎓', pts: '10 pontos', texto: 'por aula assistida', extra: 'Bônus: 3 aulas +10 · 5 aulas +20 · 7 aulas +30' },
+  { id: 'plano', emoji: '⭐', pts: '100 pontos', texto: 'por ter um plano ativo (qualquer plano)', extra: 'Vale uma vez em cada ranking mensal', href: '/dashboard/planos', menu: 'Planos' },
+  { id: 'aula', emoji: '🎓', pts: '10 pontos', texto: 'por aula assistida', extra: 'Bônus: 3 aulas +10 · 5 aulas +20 · 7 aulas +30', href: '/dashboard/aulas', menu: 'Aulas ao Vivo' },
 ]
 const CHAVE_MARCAS = 'rk_marcas_v1'
 function lerMarcas(): Record<string, boolean> {
@@ -204,23 +205,34 @@ export default function RankingCard() {
             {itens.map(function(it) {
               const auto = it.id === 'notif' && d.notif === true
               const on = !!marcas[it.id] || auto
+              // Atalho na frente de cada item: leva direto para a pagina onde o aluno ganha os pontos
+              const pillStyle: any = { flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap', lineHeight: 1.2, cursor: 'pointer', textDecoration: 'none', border: '1.5px solid #7c5cfc', background: 'rgba(124,92,252,0.10)', color: '#7c5cfc', borderRadius: 10, padding: '7px 10px', margin: '6px 10px 8px auto', fontSize: 11.5, fontWeight: 800 }
+              let atalho: any = null
+              if (it.href) atalho = <Link href={it.href} style={pillStyle}><span>{it.menu}</span><span aria-hidden>›</span></Link>
+              else if (it.id === 'app') atalho = <button type="button" onClick={function() { window.dispatchEvent(new Event('mcpia-como-instalar')) }} style={pillStyle}><span>Como instalar</span><span aria-hidden>›</span></button>
+              else if (it.id === 'notif' && !auto) atalho = <button type="button" onClick={ativar} disabled={ativando} style={{ ...pillStyle, opacity: ativando ? 0.7 : 1 }}><span>{ativando ? 'Ativando...' : 'Ativar agora'}</span><span aria-hidden>›</span></button>
               return (
-                <button
+                <div
                   key={it.id}
-                  type="button"
-                  role="checkbox"
-                  aria-checked={on}
-                  onClick={function() { if (!auto) alternar(it.id) }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', cursor: auto ? 'default' : 'pointer', marginBottom: 6, padding: '10px 12px', borderRadius: 12, border: '1.5px solid ' + (on ? 'rgba(22,163,74,0.5)' : 'var(--border)'), background: on ? 'rgba(22,163,74,0.08)' : 'var(--surface2)', color: 'var(--text)', fontSize: 13, lineHeight: 1.45, transition: 'background 0.2s, border-color 0.2s' }}
+                  style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0 8px', marginBottom: 6, borderRadius: 12, border: '1.5px solid ' + (on ? 'rgba(22,163,74,0.5)' : 'var(--border)'), background: on ? 'rgba(22,163,74,0.08)' : 'var(--surface2)', transition: 'background 0.2s, border-color 0.2s' }}
                 >
-                  <span style={{ flexShrink: 0, width: 24, height: 24, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid ' + (on ? '#16a34a' : 'var(--muted2)'), background: on ? '#16a34a' : 'transparent', color: '#fff', fontSize: 15, fontWeight: 900, animation: on ? 'rkCheck 0.35s ease-out' : 'none' }}>{on ? '✓' : ''}</span>
-                  <span style={{ fontSize: 20, flexShrink: 0 }}>{it.emoji}</span>
-                  <span style={{ flex: 1, opacity: on ? 0.75 : 1 }}>
-                    <b>{it.pts}</b> {it.texto}
-                    {it.extra && <span style={{ display: 'block', fontSize: 12, color: 'var(--muted2)' }}>{it.extra}</span>}
-                    {auto && <span style={{ display: 'block', fontSize: 12, color: '#16a34a', fontWeight: 700 }}>Você já ativou</span>}
-                  </span>
-                </button>
+                  <button
+                    type="button"
+                    role="checkbox"
+                    aria-checked={on}
+                    onClick={function() { if (!auto) alternar(it.id) }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, flex: '1 1 230px', minWidth: 0, textAlign: 'left', cursor: auto ? 'default' : 'pointer', padding: '10px 12px', border: 'none', background: 'transparent', color: 'var(--text)', fontSize: 13, lineHeight: 1.45 }}
+                  >
+                    <span style={{ flexShrink: 0, width: 24, height: 24, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid ' + (on ? '#16a34a' : 'var(--muted2)'), background: on ? '#16a34a' : 'transparent', color: '#fff', fontSize: 15, fontWeight: 900, animation: on ? 'rkCheck 0.35s ease-out' : 'none' }}>{on ? '✓' : ''}</span>
+                    <span style={{ fontSize: 20, flexShrink: 0 }}>{it.emoji}</span>
+                    <span style={{ flex: 1, opacity: on ? 0.75 : 1 }}>
+                      <b>{it.pts}</b> {it.texto}
+                      {it.extra && <span style={{ display: 'block', fontSize: 12, color: 'var(--muted2)' }}>{it.extra}</span>}
+                      {auto && <span style={{ display: 'block', fontSize: 12, color: '#16a34a', fontWeight: 700 }}>Você já ativou</span>}
+                    </span>
+                  </button>
+                  {atalho}
+                </div>
               )
             })}
             <div style={{ color: 'var(--muted2)', fontSize: 12, marginTop: 8, lineHeight: 1.6 }}>Ebook e site contam 1 por dia e criativo até 3 por dia. Instalar o app e ativar as notificações valem uma vez só. A aula só conta se você assistir de verdade, com a aba aberta e o som ligado (pular para o final não vale). Depois de {d.fimEm}, o ranking zera e recomeça no começo de cada mês. Os prêmios são pagos por Pix para os 3 primeiros colocados.</div>
