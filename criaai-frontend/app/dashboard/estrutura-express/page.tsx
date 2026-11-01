@@ -52,6 +52,62 @@ const CSS = `
 @media (max-width: 900px) { .ee-grid { grid-template-columns: 1fr } }
 `
 
+// Videos de depoimento (Vimeo) mostrados na tela de venda, como prova social
+const DEPOIMENTOS_IDS = ['1242033663', '1242033932', '1242033599']
+
+type Capa = { img: string; dur: number; ratio: number }
+
+function Depoimentos() {
+  const [capas, setCapas] = useState<Record<string, Capa>>({})
+  const [tocando, setTocando] = useState<string | null>(null)
+
+  useEffect(function() {
+    DEPOIMENTOS_IDS.forEach(function(id) {
+      fetch('https://vimeo.com/api/oembed.json?width=640&url=' + encodeURIComponent('https://vimeo.com/' + id))
+        .then(function(r) { return r.json() })
+        .then(function(j) {
+          if (j && j.thumbnail_url) {
+            const w = Number(j.width) || 16, h = Number(j.height) || 9
+            setCapas(function(c) { return { ...c, [id]: { img: String(j.thumbnail_url), dur: Number(j.duration) || 0, ratio: w / h } } })
+          }
+        })
+        .catch(function() {})
+    })
+  }, [])
+
+  return (
+    <div className="ee-up" style={{ animationDelay: '0.2s', marginTop: 22, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 18, padding: '22px 20px' }}>
+      <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 18, marginBottom: 4 }}>Veja o que os alunos estão dizendo</div>
+      <div style={{ fontSize: 13.5, color: 'var(--muted2)', marginBottom: 16 }}>Depoimentos de quem já usa a Estrutura Express. Toque no vídeo para assistir.</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16, alignItems: 'start' }}>
+        {DEPOIMENTOS_IDS.map(function(id) {
+          const capa = capas[id]
+          const ratio = capa ? capa.ratio : 16 / 9
+          const ativo = tocando === id
+          return (
+            <div key={id} style={{ position: 'relative', width: '100%', aspectRatio: String(ratio), maxHeight: 520, borderRadius: 14, overflow: 'hidden', background: '#0f172a', border: '1px solid var(--border)' }}>
+              {ativo ? (
+                <iframe src={'https://player.vimeo.com/video/' + id + '?title=0&byline=0&portrait=0&dnt=1&autoplay=1'} title={'Depoimento ' + id} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 }} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />
+              ) : (
+                <button type="button" className="ee-poster" onClick={function() { setTocando(id) }} aria-label="Assistir depoimento" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0, padding: 0, cursor: 'pointer', background: capa ? 'url(' + capa.img + ') center/cover no-repeat' : 'linear-gradient(135deg,#1e1b4b,#7c2d12)' }}>
+                  <span className="ee-play" style={{ position: 'absolute', top: '50%', left: '50%', width: 62, height: 62, marginLeft: -31, marginTop: -31, borderRadius: '50%', background: 'rgba(249,115,22,0.95)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, boxShadow: '0 6px 22px rgba(0,0,0,0.4)' }}>▶</span>
+                  {capa && capa.dur > 0 && <span style={{ position: 'absolute', right: 10, bottom: 10, background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: 12, fontWeight: 700, borderRadius: 8, padding: '2px 8px' }}>{fmtDur(capa.dur)}</span>}
+                </button>
+              )}
+            </div>
+          )
+        })}
+      </div>
+      <div style={{ marginTop: 14, fontSize: 12, color: 'var(--muted2)', textAlign: 'center' }}>Os resultados variam de pessoa para pessoa e dependem da sua dedicação.</div>
+      <div style={{ textAlign: 'center', marginTop: 16 }}>
+        <a href={LINK_COMPRA} target="_blank" rel="noopener noreferrer" onClick={function() { registrar('clique') }} className="ee-btn" style={{ display: 'inline-block', background: 'linear-gradient(135deg,#f59e0b,#f97316)', color: '#fff', textDecoration: 'none', fontWeight: 800, fontSize: 15, padding: '13px 28px', borderRadius: 12 }}>
+          🚀 Quero a Estrutura Express
+        </a>
+      </div>
+    </div>
+  )
+}
+
 export default function EstruturaExpressPage() {
   const [estado, setEstado] = useState<'carregando' | 'bloqueado' | 'liberado' | 'erro'>('carregando')
   const [aulas, setAulas] = useState<Aula[]>([])
@@ -208,6 +264,8 @@ export default function EstruturaExpressPage() {
             </a>
             <div style={{ position: 'relative', marginTop: 12, fontSize: 12, opacity: 0.7 }}>Os resultados variam de pessoa para pessoa e dependem da sua dedicação.</div>
           </div>
+
+          <Depoimentos />
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginTop: 22 }}>
             {recursos.map(function(r, i) {
