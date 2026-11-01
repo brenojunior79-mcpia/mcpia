@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase-browser'
-import { podeUsarAnuncios } from '@/lib/acessoAnuncios'
+import { statusAnuncios } from '@/lib/acessoAnuncios'
 import { podeVerSazonais } from '@/lib/acessoSazonais'
 import FotoPerfilModal from './FotoPerfilModal'
 import styles from './Sidebar.module.css'
@@ -138,8 +138,9 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
   const hasActivePlan = profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing'
   const hidePlans = isNewUser && !hasActivePlan
 
-  // Gerenciador de Anuncios: oculto para todos; so o admin e a conta de teste do revisor da Meta enxergam o menu
-  const verAnuncios = podeUsarAnuncios(isAdmin, profile?.email || user?.email)
+  // Gerenciador de Anuncios: liberado para quem tem plano; sem plano so aparece depois de 7 dias (e pede para assinar); admin e conta do revisor da Meta sempre abrem
+  const statusAnu = statusAnuncios(!!isAdmin, profile?.email || user?.email, profile?.created_at, profile?.subscription_status)
+  const verAnuncios = statusAnu !== 'oculto'
   // Produtos Sazonais: oculto para todos por enquanto (so o admin). Regras de liberacao em lib/acessoSazonais.ts
   const verSazonais = podeVerSazonais(!!isAdmin, profile?.created_at, profile?.subscription_status, plan?.name)
 
@@ -159,7 +160,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
     { href: '/dashboard/indique', icon: 'ti-gift', label: 'Indique e ganhe', locked: false, highlight: true },
     { href: '/dashboard/vendas', icon: 'ti-rocket', label: 'Vendendo no Automatico', locked: false },
     { href: '/dashboard/estrutura-express', icon: 'ti-bolt', label: 'Estrutura Express', locked: false, badge: 'NOVO' },
-    { href: '/dashboard/anuncios', icon: 'ti-brand-meta', label: 'Gerenciador de Anuncios', locked: false },
+    { href: '/dashboard/anuncios', icon: 'ti-brand-meta', label: 'Gerenciador de Anuncios', locked: false, lockHint: statusAnu === 'plano' },
     { href: '/dashboard/suporte', icon: 'ti-brand-whatsapp', label: 'WhatsApp de Suporte', locked: false },
     { href: '/dashboard/aulas', icon: 'ti-device-tv', label: 'Aulas ao Vivo', locked: false },
     { href: '/dashboard/planos', icon: 'ti-credit-card', label: 'Planos', locked: false },
@@ -264,6 +265,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
               >
                 <i className={'ti ' + item.icon} />
                 {item.label}
+                {(item as any).lockHint && <i className="ti ti-lock" title="Exige plano" style={{ marginLeft: 'auto', width: 'auto', fontSize: 14, opacity: 0.6 }} />}
                 {(item as any).badge && <span style={{ marginLeft: 'auto', background: '#fff', color: (item as any).tone === 'green' ? '#15803d' : '#ea580c', fontSize: 9.5, fontWeight: 800, letterSpacing: 0.4, borderRadius: 999, padding: '2px 7px' }}>{(item as any).badge}</span>}
               </Link>
             )

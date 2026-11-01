@@ -28,6 +28,7 @@ const plans = [
     price: 79.90,
     features: ['30 criativos/mes', '10 ebooks/mes', '10 sites/mes'],
     missing: [],
+    extra: { title: 'Grupo VIP no WhatsApp com o Breno', desc: 'Um grupo fechado no WhatsApp, só para quem é Premium, para conversar com o Breno de perto.' },
   },
 ]
 
@@ -261,6 +262,15 @@ export default function PlanosPage() {
                     )
                   })}
                 </ul>
+                {p.extra && (
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: 'rgba(124,92,252,0.10)', border: '1px solid rgba(124,92,252,0.32)', borderRadius: 12, padding: '11px 12px', marginBottom: 14, textAlign: 'left' }}>
+                    <i className="ti ti-brand-whatsapp" style={{ color: 'var(--accent)', fontSize: 20, flexShrink: 0, marginTop: 1 }} />
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', lineHeight: 1.3 }}>{p.extra.title}</div>
+                      <div style={{ fontSize: 11.5, color: 'var(--muted2)', lineHeight: 1.45, marginTop: 2 }}>{p.extra.desc}</div>
+                    </div>
+                  </div>
+                )}
                 <button
                   className={styles.btn + ' ' + (p.featured ? styles.btnFilled : styles.btnOutline)}
                   onClick={function() { checkout(p.name) }}

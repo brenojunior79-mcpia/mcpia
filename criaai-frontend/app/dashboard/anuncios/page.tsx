@@ -9,12 +9,13 @@ import CampanhasTabela from '@/components/anuncios/CampanhasTabela'
 import CriativosAnuncios from '@/components/anuncios/CriativosAnuncios'
 import { orcamentoDiario } from '@/components/anuncios/CampanhaCard'
 import { cartao, titulo, moeda } from '@/components/anuncios/estilo'
-import { podeUsarAnuncios } from '@/lib/acessoAnuncios'
+import { statusAnuncios } from '@/lib/acessoAnuncios'
 
 const PERIODOS: [string, string][] = [['today', 'Hoje'], ['yesterday', 'Ontem'], ['last_7d', 'Últimos 7 dias'], ['last_14d', 'Últimos 14 dias'], ['last_30d', 'Últimos 30 dias'], ['this_month', 'Este mês']]
 
 export default function AnunciosPage() {
   const [permitido, setPermitido] = useState<boolean | null>(null)
+  const [semPlano, setSemPlano] = useState(false)
   const [ehAdmin, setEhAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
   const [connection, setConnection] = useState<any>(null)
@@ -49,11 +50,14 @@ export default function AnunciosPage() {
     supabase.auth.getUser().then(async function(r) {
       const uid = r.data.user ? r.data.user.id : null
       if (!uid) { setPermitido(false); return }
-      const p = await supabase.from('profiles').select('is_admin, email').eq('id', uid).maybeSingle()
+      const p = await supabase.from('profiles').select('is_admin, email, created_at, subscription_status').eq('id', uid).maybeSingle()
       const admin = !!(p.data && (p.data as any).is_admin)
       setEhAdmin(admin)
       const email = (p.data && (p.data as any).email) || (r.data.user ? r.data.user.email : null)
-      if (!podeUsarAnuncios(admin, email)) { setPermitido(false); return }
+      const st = statusAnuncios(admin, email, p.data ? (p.data as any).created_at : null, p.data ? (p.data as any).subscription_status : null)
+      // Nos primeiros 7 dias sem plano o menu nem aparece: se abrir o endereco direto, volta para o painel
+      if (st === 'oculto') { window.location.replace('/dashboard'); return }
+      if (st === 'plano') { setSemPlano(true); setPermitido(false); return }
       setPermitido(true)
       loadConnection()
     })
@@ -192,7 +196,24 @@ export default function AnunciosPage() {
   const sel: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border2)', borderRadius: 10, padding: '9px 12px', color: 'var(--text)', fontSize: 13, fontWeight: 600, maxWidth: '100%' }
 
   if (permitido === null) return <div style={{ padding: 32, color: 'var(--muted2)' }}>Carregando...</div>
-  if (!permitido) return <div style={{ padding: 32, color: 'var(--muted2)' }}>Este recurso está em atualização no momento.</div>
+  if (semPlano) {
+    const itens = ['Veja suas métricas: gasto, cliques, CTR, CPC, CPM, ROAS e vendas', 'Pause e ative campanhas sem sair da plataforma', 'Edite o nome e o orçamento das campanhas', 'Crie Pixel e conta de anúncios', 'Use a análise automática por IA']
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', padding: '40px 20px 60px' }}>
+        <div style={{ maxWidth: 560, margin: '0 auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20, padding: '32px 26px', textAlign: 'center', boxShadow: 'var(--shadow-sm)' }}>
+          <div style={{ width: 64, height: 64, borderRadius: 18, margin: '0 auto 14px', background: 'rgba(124,92,252,0.12)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}><i className="ti ti-brand-meta" /></div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(124,92,252,0.10)', border: '1px solid rgba(124,92,252,0.3)', color: 'var(--accent)', fontSize: 11.5, fontWeight: 800, borderRadius: 999, padding: '4px 12px', marginBottom: 12 }}><i className="ti ti-lock" /> EXIGE UM PLANO</div>
+          <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: 24, fontWeight: 800, margin: '0 0 8px' }}>Gerenciador de Anúncios</h1>
+          <p style={{ fontSize: 14.5, color: 'var(--muted2)', lineHeight: 1.6, margin: '0 0 18px' }}>Para usar o Gerenciador de Anúncios da plataforma, você precisa <b style={{ color: 'var(--text)' }}>assinar um plano</b>. Qualquer plano libera o acesso.</p>
+          <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 8, margin: '0 auto 22px', maxWidth: 420 }}>
+            {itens.map(function(t) { return <div key={t} style={{ display: 'flex', gap: 8, fontSize: 13.5 }}><i className="ti ti-check" style={{ color: 'var(--green)', marginTop: 2 }} /><span>{t}</span></div> })}
+          </div>
+          <a href="/dashboard/planos" style={{ display: 'inline-block', background: 'linear-gradient(135deg,#4b3fe8,#5b4ef8,#8b6dfa)', color: '#fff', textDecoration: 'none', fontWeight: 800, fontSize: 15, padding: '13px 30px', borderRadius: 12 }}>Ver planos</a>
+        </div>
+      </div>
+    )
+  }
+  if (!permitido) return <div style={{ padding: 32, color: 'var(--muted2)' }}>Redirecionando...</div>
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', padding: '28px 20px 60px' }}>
