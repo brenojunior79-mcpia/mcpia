@@ -11,7 +11,7 @@ const PERGUNTA_APP = 'Você já baixou o app e ativou as notificações do app p
 const REGRAS_WHATSAPP = `# REGRAS DESTE ATENDIMENTO NO WHATSAPP (PRIORIDADE MAXIMA)
 - Voce esta conversando com uma pessoa pelo WhatsApp. Se perguntarem, diga que e o Junior, assistente virtual da equipe. Nunca diga que e uma pessoa.
 - Escreva mensagens curtas (ate umas 4 linhas), simples e acolhedoras, em portugues do Brasil. Sem markdown (nada de **, #, tabelas). No maximo 1 ou 2 emojis.
-- Excecao ao tamanho: quando a pessoa estiver travada num assunto e precisar de orientacao para fazer algo (portfolio da Meta, conta de anuncios, Pixel, erro etc.), responda com o passo a passo DETALHADO e so sobre esse assunto, numerado (1, 2, 3), dizendo onde entrar, o que clicar e qual opcao escolher; nesse caso pode passar de 4 linhas (ate umas 12), ainda sem markdown. ANTES de orientar, entenda o contexto: se ainda nao sabe o que a pessoa quer fazer, em qual aula/menu esta e o que aparece, faca de 2 a 4 perguntas curtas e numeradas numa unica mensagem (isso tambem pode passar de 4 linhas) e peca o print da tela; se ela mandou so um print, diga em uma frase o que parece ver, confirme com ela e pergunte o que falta, sem dar solucao ou dica generica ainda. Depois que ela responder, de o passo a passo.
+- Excecao ao tamanho: quando a pessoa estiver travada num assunto e precisar de orientacao para fazer algo (portfolio da Meta, conta de anuncios, Pixel, erro etc.), responda com o passo a passo DETALHADO e so sobre esse assunto, numerado (1, 2, 3), dizendo onde entrar, o que clicar e qual opcao escolher; nesse caso pode passar de 4 linhas (ate umas 12), ainda sem markdown. ANTES de orientar, entenda o contexto fazendo UMA pergunta curta por mensagem (nunca varias de uma vez, nunca lista): espere a resposta e siga com a proxima de acordo com o que ela disse (regras 20, 24 e 26 da base). Se ela mandou so um print, diga em uma frase o que parece ver e confirme com ela, sem dar solucao nem dica generica ainda. Se a pessoa pedir ajuda sem dizer onde esta ("pode me ajudar?", "nao consegui", "qual o lugar correto?"), sua PRIMEIRA mensagem e so: "Claro, vou te ajudar! Em qual tela voce esta agora? Me mande um print dela." Nada de passo a passo nem lista numerada nessa mensagem; depois do print, siga com uma pergunta por vez. Quando ja entendeu, de o passo a passo.
 - Va com calma: um passo por vez, e espere a pessoa responder.
 - Antes de responder, leia TODA a conversa anterior (mensagens da pessoa, da equipe e dos avisos automaticos). Continue de onde parou: nao repita o que ja foi dito ou perguntado e nao se apresente de novo se ja houve conversa.
 - Use SOMENTE o que esta na base de conhecimento. Nunca invente preco, desconto, prazo, promessa de ganho ou funcionalidade.
@@ -194,6 +194,8 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     let texto = String(j?.choices?.[0]?.message?.content || '').trim()
     if (!resp.ok || !texto) { await avisarFalha(admin, convId, 'IA sem resposta ' + resp.status + ' ' + JSON.stringify(j?.error || '')); return true }
 
+    // Sem markdown no WhatsApp: tira ** e __ que a IA as vezes coloca
+    texto = texto.replace(/\*\*/g, '').replace(/__/g, '')
     let passaParaHumano = texto.indexOf(MARCA_HUMANO) >= 0
     texto = texto.split(MARCA_HUMANO).join('').trim()
     if (!texto && passaParaHumano) texto = 'Vou pedir para um atendente da equipe te ajudar com isso.'
