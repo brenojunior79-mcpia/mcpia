@@ -2,7 +2,7 @@
 // So responde nas conversas em que o ADMIN ligou o assistente (wa_conversations.ia_ativa) ou quando ele ligou para todas (wa_ia_config.geral).
 import { JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno, soUmPasso } from '@/lib/junior'
 import { phoneIdDaConversa, postMessage } from '@/lib/whatsapp'
-import { REGRA_EXPRESS_WHATSAPP, pediuLiberarExpress, removerMarcaExpress, liberarExpressPeloJunior } from '@/lib/juniorExpress'
+import { REGRA_EXPRESS_WHATSAPP, pediuLiberarExpress, removerMarcaExpress, liberarExpressPeloJunior, emailDaMarca } from '@/lib/juniorExpress'
 
 const MARCA_HUMANO = '[[HUMANO]]'
 const MARCA_FIM = '[[FIM]]'
@@ -184,6 +184,8 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     if (esconderPlanos) system = NEW_STUDENT_RULE + '\n\n' + system + '\n\n' + NEW_STUDENT_RULE
     const sitPlano = situacaoPlanoAluno(temPlano, esconderPlanos)
     if (sitPlano) system = system + '\n\n' + sitPlano
+    // Para a liberacao da Estrutura Express: o Junior so pede o e-mail se o sistema nao conhece a conta desta conversa
+    system = system + '\n\nConta identificada: ' + (conv.profile_id ? 'SIM (o sistema ja sabe quem e a pessoa; nao peca e-mail).' : 'NAO (peca o e-mail da plataforma antes de liberar).')
 
     const resp = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -238,7 +240,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
         const pe = await admin.from('profiles').select('email').eq('id', conv.profile_id).maybeSingle()
         contaEmail = String((pe.data as any)?.email || '')
       }
-      const res = await liberarExpressPeloJunior(admin, { conta: contaEmail, waId, origem: 'whatsapp' })
+      const res = await liberarExpressPeloJunior(admin, { conta: contaEmail, waId, origem: 'whatsapp', emailInformado: emailDaMarca(texto) })
       texto = res.texto
       if (res.humano) passaParaHumano = true
     } else {
