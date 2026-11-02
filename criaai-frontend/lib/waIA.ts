@@ -1,12 +1,13 @@
 // Assistente de IA (Junior) dentro das conversas do WhatsApp (suporte e recuperacao).
 // So responde nas conversas em que o ADMIN ligou o assistente (wa_conversations.ia_ativa) ou quando ele ligou para todas (wa_ia_config.geral).
-import { JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno, soUmPasso } from '@/lib/junior'
+import { JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno, soUmPasso, tipoFinalConversa, situacaoFinalConversa } from '@/lib/junior'
 import { phoneIdDaConversa, postMessage } from '@/lib/whatsapp'
 import { REGRA_EXPRESS_WHATSAPP, pediuLiberarExpress, removerMarcaExpress, liberarExpressPeloJunior, emailDaMarca } from '@/lib/juniorExpress'
 
 const MARCA_HUMANO = '[[HUMANO]]'
 const MARCA_FIM = '[[FIM]]'
 const PERGUNTA_RANKING = 'Você gostaria de ganhar R$200 no Pix como premiação? 💰'
+const PERGUNTA_EXPRESS = 'Por acaso, você já viu os novos produtos que o Breno lançou lá na Estrutura Express? Eles estão dando uma estimativa de R$ 200 de lucro por dia (é só uma estimativa, não uma garantia).'
 
 const REGRAS_WHATSAPP = `# REGRAS DESTE ATENDIMENTO NO WHATSAPP (PRIORIDADE MAXIMA)
 - Voce esta conversando com uma pessoa pelo WhatsApp. Se perguntarem, diga que e o Junior, assistente virtual da equipe. Nunca diga que e uma pessoa.
@@ -20,7 +21,7 @@ const REGRAS_WHATSAPP = `# REGRAS DESTE ATENDIMENTO NO WHATSAPP (PRIORIDADE MAXI
 - Pagamento, cobranca, reembolso, negociacao, desconto, acesso que depende de acao administrativa, reclamacao seria ou pedido para falar com uma pessoa: avise que um atendente da equipe vai continuar a conversa em breve e termine a resposta com a marca ${MARCA_HUMANO} (a marca e removida antes do envio).
 - Se nao souber responder com a base, faca o mesmo: avise que um atendente vai ajudar e termine com ${MARCA_HUMANO}.
 - Se a pessoa mandar print, foto ou PDF, voce consegue ver o conteudo: leia com atencao, diga em uma frase o que entendeu e ajude com base nisso. Se a imagem estiver ilegivel ou nao der para entender, peca outro print mais nitido. Comprovante de pagamento ou documento pessoal: NAO confirme pagamento nem libere nada; agradeca e avise que um atendente vai conferir, terminando com ${MARCA_HUMANO}.
-- Quando a conversa estiver terminando (a pessoa agradeceu, disse que resolveu, se despediu ou nao precisa de mais nada): escreva so uma despedida curta e acolhedora (uma vez so) e termine com a marca ${MARCA_FIM}. NAO escreva voce mesmo a pergunta dos R$200 no Pix: o sistema acrescenta sozinho no fim da despedida (regra 35 da base). Se a pessoa responder SIM a essa pergunta, ensine o ranking aos poucos, um passo por mensagem; so depois de terminar o ranking, e se a SITUACAO DO ALUNO permitir a oferta do plano e ela ainda NAO foi feita nesta conversa, faca a oferta curta com as vantagens (regra 25), sem a marca ${MARCA_FIM}. Se ela responder NAO, aceite em uma frase e nao insista. Se a pessoa ainda tem duvida ou esta no meio do assunto, nao use a marca.
+- Quando a conversa estiver terminando (a pessoa agradeceu, disse que resolveu, se despediu ou nao precisa de mais nada): escreva so uma despedida curta e acolhedora (uma vez so) e termine com a marca ${MARCA_FIM}. NAO escreva voce mesmo a pergunta final (R$200 no Pix ou Estrutura Express): o sistema acrescenta sozinho no fim da despedida (regras 35 e 36 da base). Se a pessoa responder SIM a pergunta dos R$200, ensine o ranking aos poucos, um passo por mensagem; se responder a pergunta da Estrutura Express, siga a regra 36 (um passo por vez, sem inventar prazo); so depois de terminar o ranking, e se a SITUACAO DO ALUNO permitir a oferta do plano e ela ainda NAO foi feita nesta conversa, faca a oferta curta com as vantagens (regra 25), sem a marca ${MARCA_FIM}. Se ela responder NAO, aceite em uma frase e nao insista. Se a pessoa ainda tem duvida ou esta no meio do assunto, nao use a marca.
 - IMPORTANTE: a pessoa JA esta falando com o Suporte pelo WhatsApp. NUNCA diga para ela chamar, procurar, falar com ou abrir o "WhatsApp de Suporte" ou o suporte pelo menu. Quando nao souber ou precisar da equipe, avise que um atendente vai ajudar e termine com ${MARCA_HUMANO}.
 - Nao peca para a pessoa chamar o WhatsApp de Suporte: ela ja esta falando com o suporte.`
 
@@ -122,6 +123,21 @@ function soAgradecimento(txt: string): boolean {
   return achou
 }
 
+// Sabe se o aluno ja tem a Estrutura Express (compra da Express sem reembolso, ou liberado pela equipe). Em caso de duvida devolve null.
+async function descobrirTemExpress(admin: any, email: string, admin_: boolean): Promise<boolean | null> {
+  try {
+    if (admin_) return true
+    const e = String(email || '').trim().toLowerCase()
+    if (!e) return null
+    const [c, l] = await Promise.all([
+      admin.from('hubla_compras').select('id', { head: true, count: 'exact' }).eq('cat', 'e').eq('reembolsado', false).ilike('email', e),
+      admin.from('estrutura_liberados').select('email', { head: true, count: 'exact' }).ilike('email', e),
+    ])
+    if (c.error || l.error) return null
+    return ((c.count || 0) + (l.count || 0)) > 0
+  } catch (er) { return null }
+}
+
 // Devolve true quando o assistente esta LIGADO nessa conversa (o webhook entao nao manda o aviso de horario nem os fluxos).
 export async function tratarIA(admin: any, convId: string, waId: string, msgId: string, tipo: string, nomeContato: string | null): Promise<boolean> {
   try {
@@ -188,11 +204,13 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     let nome = String(nomeContato || conv.name || '').trim()
     let esconderPlanos = true
     let temPlano = false
+    let temExpress: boolean | null = null
     if (conv.profile_id) {
-      const pr = await admin.from('profiles').select('full_name, created_at, subscription_status, is_admin').eq('id', conv.profile_id).maybeSingle()
+      const pr = await admin.from('profiles').select('full_name, created_at, subscription_status, is_admin, email').eq('id', conv.profile_id).maybeSingle()
       const p: any = pr.data
       if (p) {
         if (p.full_name) nome = String(p.full_name)
+        temExpress = await descobrirTemExpress(admin, String(p.email || ''), p.is_admin === true)
         const ativo = p.subscription_status === 'active' || p.subscription_status === 'trialing'
         temPlano = ativo
         const idadeMs = p.created_at ? Date.now() - new Date(p.created_at).getTime() : Infinity
@@ -208,6 +226,8 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     const sitPlano = situacaoPlanoAluno(temPlano, esconderPlanos)
     if (sitPlano) system = system + '\n\n' + sitPlano
     // Para a liberacao da Estrutura Express: o Junior so pede o e-mail se o sistema nao conhece a conta desta conversa
+    const tipoFinal = tipoFinalConversa(temExpress, convId)
+    system = system + '\n\n' + situacaoFinalConversa(tipoFinal)
     system = system + '\n\nConta identificada: ' + (conv.profile_id ? 'SIM (o sistema ja sabe quem e a pessoa; nao peca e-mail).' : 'NAO (peca o e-mail da plataforma antes de liberar).')
 
     const resp = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -242,8 +262,14 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     const acabou = texto.indexOf(MARCA_FIM) >= 0
     texto = texto.split(MARCA_FIM).join('').trim()
     if (acabou && !passaParaHumano) {
-      const jaPerguntou = linhas.some(function(m) { return m.direction === 'out' && /ganhar R\$\s?200 no Pix/i.test(String(m.body || '')) })
-      if (!jaPerguntou && texto.indexOf('ganhar R$200 no Pix') < 0) texto = (texto ? texto + '\n\n' : '') + PERGUNTA_RANKING
+      const jaRank = linhas.some(function(m) { return m.direction === 'out' && /ganhar R\$\s?200 no Pix/i.test(String(m.body || '')) })
+      const jaExp = linhas.some(function(m) { return m.direction === 'out' && /novos produtos que o Breno/i.test(String(m.body || '')) })
+      // alterna: usa o tipo definido; se esse ja foi perguntado antes, tenta o outro (a Express so para quem nao tem); se os dois ja foram, nao pergunta mais
+      let escolha: 'ranking' | 'express' | null = tipoFinal
+      if (escolha === 'ranking' && jaRank) escolha = (temExpress === false && !jaExp) ? 'express' : null
+      else if (escolha === 'express' && jaExp) escolha = !jaRank ? 'ranking' : null
+      if (escolha === 'ranking' && texto.indexOf('ganhar R$200 no Pix') < 0) texto = (texto ? texto + '\n\n' : '') + PERGUNTA_RANKING
+      if (escolha === 'express' && texto.indexOf('novos produtos que o Breno') < 0) texto = (texto ? texto + '\n\n' : '') + PERGUNTA_EXPRESS
     }
     if (!texto) { await avisarFalha(admin, convId, 'texto vazio'); return true }
 
