@@ -10,23 +10,10 @@ const LIMITE_MS = 56000 // a funcao da Vercel vive no maximo 60s
 function esperar(ms: number): Promise<void> { return new Promise(function(r) { setTimeout(r, Math.max(0, ms)) }) }
 function entre(a: number, b: number): number { return a + Math.random() * (b - a) }
 
-// Quebra a resposta em mensagens curtas, como uma pessoa escreve (no maximo 3)
+// Uma resposta = uma mensagem (antes quebrava em ate 3 e o aluno recebia muitas mensagens do assistente).
 export function dividirEmPartes(texto: string): string[] {
   const limpo = String(texto || '').trim()
-  let partes = limpo.split(/\n{2,}/).map(function(s) { return s.trim() }).filter(Boolean)
-  if (partes.length === 1 && limpo.length > 150 && limpo.indexOf('\n') < 0) {
-    const meio = limpo.length / 2
-    const re = /[.!?]["')\]]?\s+/g
-    let melhor = -1
-    let m: RegExpExecArray | null
-    while ((m = re.exec(limpo)) !== null) {
-      const fim = m.index + m[0].length
-      if (melhor < 0 || Math.abs(fim - meio) < Math.abs(melhor - meio)) melhor = fim
-    }
-    if (melhor > 40 && melhor < limpo.length - 40) partes = [limpo.slice(0, melhor).trim(), limpo.slice(melhor).trim()]
-  }
-  if (partes.length > 3) partes = [partes[0], partes[1], partes.slice(2).join('\n\n')]
-  return partes.length ? partes : [limpo]
+  return [limpo]
 }
 
 // Marca a mensagem da pessoa como lida e mostra "digitando..." (some sozinho em ate 25s ou quando a resposta chega)
