@@ -9,6 +9,8 @@ export const dynamic = 'force-dynamic'
 // Premios do mes (Pix, pagos pelo admin)
 const PREMIOS = [200, 150, 100]
 
+let cacheRanking: { chave: string; t: number; lista: any[] } | null = null
+
 function nomeCurto(n: string | null) {
   const p = String(n || '').trim().split(/\s+/).filter(Boolean)
   if (!p.length) return 'Aluno'
@@ -26,12 +28,20 @@ async function montar() {
   const j = await janelaRanking(db)
   const inicio = j.inicio, fim = j.fim
   const diasRestantes = Math.max(0, Math.ceil((fim.getTime() - Date.now()) / 86400000))
-  const r = await db.rpc('ranking_pontos', { p_inicio: inicio.toISOString(), p_fim: fim.toISOString() })
-  if (r.error) { console.error('[ranking] rpc:', r.error); return NextResponse.json({ error: 'Nao foi possivel carregar o ranking.', detalhe: String(r.error.message || '').slice(0, 300) }, { status: 500 }) }
-
-  const lista = ((r.data || []) as any[]).slice().sort(function(a, b) {
-    return b.pontos - a.pontos || String(a.user_id).localeCompare(String(b.user_id))
-  })
+  // A lista do ranking e a mesma para todos os alunos: calcula no maximo 1 vez por minuto por servidor
+  // (antes cada aluno que abria o Painel refazia a conta inteira no banco).
+  let lista: any[]
+  const chave = inicio.toISOString() + '|' + fim.toISOString()
+  if (cacheRanking && cacheRanking.chave === chave && Date.now() - cacheRanking.t < 60000) {
+    lista = cacheRanking.lista
+  } else {
+    const r = await db.rpc('ranking_pontos', { p_inicio: inicio.toISOString(), p_fim: fim.toISOString() })
+    if (r.error) { console.error('[ranking] rpc:', r.error); return NextResponse.json({ error: 'Nao foi possivel carregar o ranking.', detalhe: String(r.error.message || '').slice(0, 300) }, { status: 500 }) }
+    lista = ((r.data || []) as any[]).slice().sort(function(a, b) {
+      return b.pontos - a.pontos || String(a.user_id).localeCompare(String(b.user_id))
+    })
+    cacheRanking = { chave, t: Date.now(), lista }
+  }
   const top = lista.slice(0, 3).map(function(x, i) {
     return { posicao: i + 1, nome: nomeCurto(x.nome), foto: x.avatar_url || null, pontos: x.pontos, premio: PREMIOS[i], voce: x.user_id === user.id }
   })
@@ -41,10 +51,12 @@ async function montar() {
     const pf = await db.from('profiles').select('full_name, avatar_url').eq('id', user.id).maybeSingle()
     eu = { ...eu, nome: nomeCurto((pf.data as any)?.full_name || null), foto: (pf.data as any)?.avatar_url || null }
   }
-  const sub = await db.from('push_subscriptions').select('id', { count: 'exact', head: true }).eq('user_id', user.id)
+  const [sub, pfd] = await Promise.all([
+    db.from('push_subscriptions').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+    db.from('profiles').select('created_at').eq('id', user.id).maybeSingle(),
+  ])
   const notif = (sub.count || 0) > 0
   // A linha "ter um plano = 100 pontos" so aparece para quem tem 7+ dias de cadastro
-  const pfd = await db.from('profiles').select('created_at').eq('id', user.id).maybeSingle()
   const criado = (pfd.data as any)?.created_at ? new Date((pfd.data as any).created_at).getTime() : 0
   const mostrarPlano = !!criado && (Date.now() - criado) >= 7 * 24 * 60 * 60 * 1000
   const faltam = idx > 0 && idx < 100 ? Math.max(1, lista[idx - 1].pontos - lista[idx].pontos + 1) : 0

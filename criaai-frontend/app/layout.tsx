@@ -17,8 +17,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="pt-BR">
       <head>
         <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
-        <link rel="preload" href="/fonts/tabler/tabler-icons.woff2?v3.49.0" as="font" type="font/woff2" crossOrigin="anonymous" />
-        <link rel="stylesheet" href="/fonts/tabler/tabler-icons.css" />
+        <link rel="preload" href="/fonts/tabler/tabler-subset.woff2?v=1" as="font" type="font/woff2" crossOrigin="anonymous" />
+        {/* So os icones usados (uns 12 KB em vez de 700 KB). O conjunto completo continua em tabler-icons.css; se um icone novo nao aparecer, gere de novo o tabler-subset (ver public/fonts/tabler/LEIA-ME.txt). */}
+        <link rel="stylesheet" href="/fonts/tabler/tabler-subset.css?v=1" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#5b4ef8" />
         <meta name="apple-mobile-web-app-capable" content="yes" />

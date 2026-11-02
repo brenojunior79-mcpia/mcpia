@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 
     const { data: page, error } = await supabase
       .from('sales_pages')
-      .select('*')
+      .select('id, user_id, slug, product_name, theme, form_data, sections, active, views, created_at, updated_at')
       .eq('id', id)
       .eq('user_id', user.id)
       .single()

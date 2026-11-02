@@ -13,6 +13,15 @@ const nextConfig = {
         source: '/fonts/:path*',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
       },
+      // Imagens, avatar, icones e musicas fixos: o navegador guarda por 1 dia (antes pedia de novo a cada abertura)
+      { source: '/resultados/:path*', headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' }] },
+      { source: '/avatar-junior/:path*', headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' }] },
+      { source: '/criativo/musicas/:path*', headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' }] },
+      { source: '/logo.png', headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' }] },
+      { source: '/icon-192.png', headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' }] },
+      { source: '/icon-512.png', headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' }] },
+      { source: '/apple-touch-icon.png', headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' }] },
+      { source: '/favicon-32.png', headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' }] },
       {
         // Aplicativo Android: baixa o arquivo em vez de tentar abrir
         source: '/cristao-prospero.apk',

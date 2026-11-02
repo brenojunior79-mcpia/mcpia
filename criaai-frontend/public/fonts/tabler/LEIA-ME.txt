@@ -1,0 +1,5 @@
+tabler-subset.css / tabler-subset.woff2 = so os icones que a plataforma usa (leve, carrega rapido).
+tabler-icons.css / tabler-icons.woff2   = conjunto completo (guardado de reserva, nao e mais carregado).
+Se um dia usar um icone novo (classe ti-algumacoisa) que nao aparece, e preciso gerar o subset de novo
+(peca ao Claude: "atualize o subset de icones"). Para voltar ao conjunto completo, troque em app/layout.tsx
+os dois links de tabler-subset para tabler-icons.
