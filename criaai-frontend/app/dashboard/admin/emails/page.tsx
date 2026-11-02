@@ -9,7 +9,7 @@ const LINKS = [
   { value: '', label: 'Sem botão' },
   { value: '/dashboard', label: 'Painel do Aluno' },
   { value: '/dashboard/aulas', label: 'Aulas ao Vivo' },
-  { value: '/dashboard/produtos', label: 'Produtos Digitais e Físicos' },
+  { value: '/dashboard/produtos', label: 'Produtos em Alta' },
   { value: '/dashboard/vendas', label: 'Vendendo no Automático' },
   { value: '/dashboard/planos', label: 'Planos' },
   { value: 'outro', label: 'Outro link (digitar)' },
@@ -30,7 +30,7 @@ const TEMPLATES = [
   {
     nome: 'Saudades (quem sumiu)',
     subject: 'Estou com saudades de você! Bora prosperar?',
-    message: 'Oi, {{nome}}!\n\nFaz um tempinho que você não aparece por aqui e eu fiquei com saudades. 🙏\n\nA sua plataforma continua te esperando, com tudo organizado para você dar o próximo passo: as **aulas**, os **produtos digitais e físicos** e o **Júnior**, nosso assistente, para tirar as suas dúvidas.\n\nQue tal entrar hoje e avançar só um pouquinho? Um passo por dia já coloca você em movimento.\n\nDeus abençoe, e bora prosperar!\n\nEquipe Cristão Próspero',
+    message: 'Oi, {{nome}}!\n\nFaz um tempinho que você não aparece por aqui e eu fiquei com saudades. 🙏\n\nA sua plataforma continua te esperando, com tudo organizado para você dar o próximo passo: as **aulas**, os **produtos em alta** e o **Júnior**, nosso assistente, para tirar as suas dúvidas.\n\nQue tal entrar hoje e avançar só um pouquinho? Um passo por dia já coloca você em movimento.\n\nDeus abençoe, e bora prosperar!\n\nEquipe Cristão Próspero',
     buttonText: 'Voltar para a plataforma',
   },
   {

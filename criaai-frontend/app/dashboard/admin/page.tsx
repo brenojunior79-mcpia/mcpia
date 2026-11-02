@@ -206,7 +206,7 @@ export default function AdminPage() {
   function pageLabel(path: string) {
     if (!path) return 'Painel'
     const map: Record<string, string> = {
-      '/dashboard': 'Painel', '/dashboard/chat': 'Assistente IA', '/dashboard/plataformas': 'Plataformas', '/dashboard/produtos': 'Produtos Digitais e Físicos', '/dashboard/sazonais': 'Produtos Sazonais',
+      '/dashboard': 'Painel', '/dashboard/chat': 'Assistente IA', '/dashboard/plataformas': 'Plataformas', '/dashboard/produtos': 'Produtos em Alta', '/dashboard/sazonais': 'Produtos Sazonais',
       '/dashboard/ebook': 'Gerador de Ebook', '/dashboard/paginas': 'Gerador de Site', '/dashboard/criativo': 'Gerador de Criativos',
       '/dashboard/criativos-manuais': 'Criativos Manuais', '/dashboard/vendas': 'Vendendo no Automático', '/dashboard/anuncios': 'Gerenciador de Anúncios',
       '/dashboard/suporte': 'WhatsApp de Suporte', '/dashboard/aulas': 'Aulas ao Vivo', '/dashboard/planos': 'Planos', '/dashboard/creditos': 'Créditos',

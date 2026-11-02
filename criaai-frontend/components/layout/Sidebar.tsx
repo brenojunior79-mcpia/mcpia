@@ -151,7 +151,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
     { href: '/dashboard', icon: 'ti-home', label: 'Painel do Aluno', locked: false },
     { href: '/dashboard/chat', icon: 'ti-message-circle', label: 'Assistente IA', locked: false },
     { href: '/dashboard/plataformas', icon: 'ti-building-store', label: 'Plataformas', locked: false },
-    { href: '/dashboard/produtos', icon: 'ti-flame', label: 'Produtos Digitais e Físicos', locked: false },
+    { href: '/dashboard/produtos', icon: 'ti-flame', label: 'Produtos em Alta', locked: false },
     { href: '/dashboard/sazonais', icon: 'ti-calendar-event', label: 'Produtos Sazonais', locked: false },
     { href: '/dashboard/ebook', icon: 'ti-book-2', label: 'Gerador de Ebook', locked: false },
     { href: '/dashboard/paginas', icon: 'ti-layout', label: 'Gerador de Site', locked: hidePlans, lockStatus: 'Em atualizacao' },

@@ -373,7 +373,7 @@ export default function ProdutosAltaPage() {
         <div style={{ marginBottom: 32 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
             <div style={{ fontSize: 28 }}>🔥</div>
-            <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: 24, fontWeight: 800, margin: 0 }}>Produtos Digitais e Físicos</h1>
+            <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: 24, fontWeight: 800, margin: 0 }}>Produtos em Alta</h1>
           </div>
           <p style={{ fontSize: 14, color: 'var(--muted2)', margin: 0 }}>
             Arraste para o lado para ver mais opcoes. Escolha um produto, se afilie e comece a vender hoje mesmo

@@ -1,6 +1,6 @@
 // Assistente de IA (Junior) dentro das conversas do WhatsApp (suporte e recuperacao).
 // So responde nas conversas em que o ADMIN ligou o assistente (wa_conversations.ia_ativa) ou quando ele ligou para todas (wa_ia_config.geral).
-import { JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE } from '@/lib/junior'
+import { JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno } from '@/lib/junior'
 import { phoneIdDaConversa, postMessage } from '@/lib/whatsapp'
 import { REGRA_EXPRESS_WHATSAPP, pediuLiberarExpress, removerMarcaExpress, liberarExpressPeloJunior } from '@/lib/juniorExpress'
 
@@ -18,7 +18,7 @@ const REGRAS_WHATSAPP = `# REGRAS DESTE ATENDIMENTO NO WHATSAPP (PRIORIDADE MAXI
 - Pagamento, cobranca, reembolso, negociacao, desconto, acesso que depende de acao administrativa, reclamacao seria ou pedido para falar com uma pessoa: avise que um atendente da equipe vai continuar a conversa em breve e termine a resposta com a marca ${MARCA_HUMANO} (a marca e removida antes do envio).
 - Se nao souber responder com a base, faca o mesmo: avise que um atendente vai ajudar e termine com ${MARCA_HUMANO}.
 - Se a pessoa mandar print, foto ou PDF, voce consegue ver o conteudo: leia com atencao, diga em uma frase o que entendeu e ajude com base nisso. Se a imagem estiver ilegivel ou nao der para entender, peca outro print mais nitido. Comprovante de pagamento ou documento pessoal: NAO confirme pagamento nem libere nada; agradeca e avise que um atendente vai conferir, terminando com ${MARCA_HUMANO}.
-- Quando a conversa estiver terminando (a pessoa agradeceu, disse que resolveu, se despediu ou nao precisa de mais nada), escreva so uma despedida curta e acolhedora e termine com a marca ${MARCA_FIM}. NAO escreva voce mesmo a pergunta sobre o app: o sistema acrescenta sozinho. Se a pessoa ainda tem duvida ou esta no meio do assunto, nao use a marca.
+- Quando a conversa estiver terminando (a pessoa agradeceu, disse que resolveu, se despediu ou nao precisa de mais nada): se a SITUACAO DO ALUNO (no fim das instrucoes) permitir a oferta do plano e ela ainda NAO foi feita nesta conversa, faca a oferta curta com as vantagens (regra 25) SEM usar a marca ${MARCA_FIM}, para a conversa continuar e a pessoa poder responder. Caso contrario (ja ofereceu, ela recusou, ja tem plano ou nao pode receber oferta), escreva so uma despedida curta e acolhedora e termine com a marca ${MARCA_FIM}. NAO escreva voce mesmo a pergunta sobre o app: o sistema acrescenta sozinho. Se a pessoa ainda tem duvida ou esta no meio do assunto, nao use a marca.
 - IMPORTANTE: a pessoa JA esta falando com o Suporte pelo WhatsApp. NUNCA diga para ela chamar, procurar, falar com ou abrir o "WhatsApp de Suporte" ou o suporte pelo menu. Quando nao souber ou precisar da equipe, avise que um atendente vai ajudar e termine com ${MARCA_HUMANO}.
 - Nao peca para a pessoa chamar o WhatsApp de Suporte: ela ja esta falando com o suporte.`
 
@@ -163,12 +163,14 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     // Quem e a pessoa: aluno da plataforma (nos 7 primeiros dias sem plano nao se fala de planos) ou contato sem cadastro
     let nome = String(nomeContato || conv.name || '').trim()
     let esconderPlanos = true
+    let temPlano = false
     if (conv.profile_id) {
       const pr = await admin.from('profiles').select('full_name, created_at, subscription_status, is_admin').eq('id', conv.profile_id).maybeSingle()
       const p: any = pr.data
       if (p) {
         if (p.full_name) nome = String(p.full_name)
         const ativo = p.subscription_status === 'active' || p.subscription_status === 'trialing'
+        temPlano = ativo
         const idadeMs = p.created_at ? Date.now() - new Date(p.created_at).getTime() : Infinity
         esconderPlanos = !ativo && p.is_admin !== true && idadeMs < 7 * 24 * 60 * 60 * 1000
         // Sem cadastro conhecido ou aluno novo: esconde planos. Aluno antigo: segue o comportamento normal do Junior.
@@ -179,6 +181,8 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
 
     let system = JUNIOR_PROMPT.split('{{firstName}}').join(primeiro) + '\n\n' + FINAL_REMINDER + '\n\n' + REGRAS_CANAL[canal] + '\n\n' + REGRAS_WHATSAPP + '\n\n' + REGRA_EXPRESS_WHATSAPP + '\n\nNome da pessoa: ' + (nome || 'desconhecido')
     if (esconderPlanos) system = NEW_STUDENT_RULE + '\n\n' + system + '\n\n' + NEW_STUDENT_RULE
+    const sitPlano = situacaoPlanoAluno(temPlano, esconderPlanos)
+    if (sitPlano) system = system + '\n\n' + sitPlano
 
     const resp = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',

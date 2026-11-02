@@ -36,7 +36,7 @@ export default function Topbar({ profile, user }: { profile: any, user: any }) {
     // O "lido" fica salvo no navegador, para nao voltar como nao lido ao atualizar a pagina
     const base: Notification[] = [
       { id: '1', title: 'Bem-vindo!', message: 'Sua conta foi criada com sucesso. Explore os recursos da plataforma!', read: false, created_at: new Date().toISOString() },
-      { id: '2', title: 'Novo produto disponivel', message: 'O produto Pack AEG foi adicionado em Produtos Digitais e Físicos. Confira!', read: false, created_at: new Date().toISOString() },
+      { id: '2', title: 'Novo produto disponivel', message: 'O produto Pack AEG foi adicionado em Produtos em Alta. Confira!', read: false, created_at: new Date().toISOString() },
     ]
     // "Lido" vale no navegador e tambem na conta (assim nao volta ao trocar de aparelho, de app ou de navegador)
     const daConta: string[] = Array.isArray(user?.user_metadata?.notif_lidas) ? user.user_metadata.notif_lidas : []

@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase-server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 import { regraExpressChat, pediuLiberarExpress, removerMarcaExpress, liberarExpressPeloJunior } from '@/lib/juniorExpress'
 
-import { JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE } from '@/lib/junior'
+import { JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno } from '@/lib/junior'
 
 export async function POST(req: NextRequest) {
   try {
@@ -31,6 +31,8 @@ export async function POST(req: NextRequest) {
     if (hidePlans) {
       systemContent = NEW_STUDENT_RULE + '\n\n' + systemContent + '\n\n' + NEW_STUDENT_RULE
     }
+    const sit = situacaoPlanoAluno(hasActivePlan, hidePlans)
+    if (sit) systemContent = systemContent + '\n\n' + sit
 
     // Salva a mensagem do aluno (e a resposta do Junior, se houver) para o monitoramento
     const saveConversation = async function(replyText: string | null) {
