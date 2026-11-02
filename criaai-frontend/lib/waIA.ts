@@ -1,25 +1,8 @@
 // Assistente de IA (Junior) dentro das conversas do WhatsApp (suporte e recuperacao).
 // So responde nas conversas em que o ADMIN ligou o assistente (wa_conversations.ia_ativa) ou quando ele ligou para todas (wa_ia_config.geral).
-import { JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno } from '@/lib/junior'
+import { JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno, soUmPasso } from '@/lib/junior'
 import { phoneIdDaConversa, postMessage } from '@/lib/whatsapp'
 import { REGRA_EXPRESS_WHATSAPP, pediuLiberarExpress, removerMarcaExpress, liberarExpressPeloJunior } from '@/lib/juniorExpress'
-
-// Se a resposta tem uma lista numerada com 2 ou mais passos, deixa so o primeiro e pergunta se pode mandar o segundo.
-// Nao mexe em respostas de oferta de plano (Starter/Pro/Premium) nem em textos sem lista numerada.
-function soUmPasso(texto: string): string {
-  try {
-    if (/starter|premium/i.test(texto)) return texto
-    const linhas = texto.split('\n')
-    const idxNum: number[] = []
-    for (let i = 0; i < linhas.length; i++) { if (/^\s*\d{1,2}\s*[.)\-]\s+\S/.test(linhas[i])) idxNum.push(i) }
-    if (idxNum.length < 2) return texto
-    const fim = idxNum[1]
-    let mantido = linhas.slice(0, fim).join('\n').trim()
-    // o texto antes do passo 2 pode ja trazer a pergunta; evita repetir
-    mantido = mantido.replace(/\s*(conseguiu entender|posso (te )?mandar)[^\n]*$/i, '').trim()
-    return mantido + '\n\nConseguiu entender esse primeiro passo? Posso te mandar o segundo?'
-  } catch (e) { return texto }
-}
 
 const MARCA_HUMANO = '[[HUMANO]]'
 const MARCA_FIM = '[[FIM]]'

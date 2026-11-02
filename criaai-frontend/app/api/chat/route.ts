@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase-server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 import { regraExpressChat, pediuLiberarExpress, removerMarcaExpress, liberarExpressPeloJunior } from '@/lib/juniorExpress'
 
-import { JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno } from '@/lib/junior'
+import { JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno, REGRAS_ESTILO_CHAT, limparRespostaChat } from '@/lib/junior'
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     const profileResult = await supabase.from('profiles').select('full_name, created_at, subscription_status, is_admin').eq('id', user.id).single()
     const firstName = ((profileResult.data?.full_name || '').split(' ')[0]) || ''
     let systemContent = JUNIOR_PROMPT.split('{{firstName}}').join(firstName || 'você')
-    systemContent = systemContent + '\n\n' + FINAL_REMINDER
+    systemContent = systemContent + '\n\n' + FINAL_REMINDER + '\n\n' + REGRAS_ESTILO_CHAT
 
     // Estrutura Express: o Junior pode conferir a compra e liberar o menu (quem confere e o sistema, nao a IA)
     let jaTemExpress = false
@@ -132,6 +132,8 @@ export async function POST(req: NextRequest) {
       }
     } else {
       reply = removerMarcaExpress(reply) || reply
+      // Mesma conduta do WhatsApp: sem ** e so um passo por mensagem
+      reply = limparRespostaChat(reply) || reply
     }
 
     await saveConversation(reply)

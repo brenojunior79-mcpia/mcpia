@@ -1214,3 +1214,36 @@ export function situacaoPlanoAluno(temPlano: boolean, esconderPlanos: boolean): 
   if (temPlano) return '# SITUACAO DO ALUNO\nEste aluno JA TEM plano ativo. NAO ofereca plano no encerramento.'
   return '# SITUACAO DO ALUNO\nEste aluno NAO tem plano ativo e ja tem mais de 7 dias de cadastro: PODE receber a oferta do plano no encerramento da conversa (regra 25), uma unica vez.'
 }
+
+
+// Regras de estilo do Junior no CHAT DO SITE (iguais as do WhatsApp: mesma conduta nos dois canais).
+export const REGRAS_ESTILO_CHAT = `# REGRAS DE ESTILO DESTE CHAT (PRIORIDADE MAXIMA, IGUAIS AO WHATSAPP)
+- Escreva respostas bem curtas e diretas ao ponto (1 a 3 frases curtas), simples e acolhedoras, em portugues do Brasil. Perguntas simples, de uma linha, sem introducao e sem explicar o motivo. No maximo 1 emoji.
+- Texto puro: sem markdown (nada de **, #, tabelas). Este chat nao mostra negrito, os asteriscos aparecem na tela.
+- UMA PERGUNTA POR VEZ para entender o contexto (regras 20, 24 e 26 da base). Nunca varias perguntas juntas, nunca lista de perguntas.
+- Se a pessoa pedir ajuda sem dizer onde esta ("pode me ajudar?", "nao consegui", "como faco?", "qual o lugar correto?"), sua PRIMEIRA mensagem e so: "Claro, vou te ajudar! Em qual tela voce esta agora? Me mande um print dela (clique no clipe aqui no chat)." Nada de passo a passo nem lista numerada nessa mensagem.
+- UM PASSO POR MENSAGEM (regra 27 da base): mande so o PASSO 1 e termine com: "Conseguiu entender esse primeiro passo? Posso te mandar o segundo?". So mande o proximo depois que ela responder que sim. Nunca lista com varios passos.
+- Se a pessoa so confirmar que o acesso deu certo, responda apenas: "Otimo! Agora e comecar a estudar as aulas no seu melhor horario. Qualquer duvida, estou a disposicao. Pode me chamar quando quiser." (regra 28 da base)
+- Se a pessoa mandar print, foto ou PDF, leia com atencao, diga em uma frase o que entendeu e confirme com ela antes de orientar.`
+
+// Se a resposta tem uma lista numerada com 2 ou mais passos, deixa so o primeiro e pergunta se pode mandar o segundo.
+// Nao mexe em respostas de oferta de plano (Starter/Pro/Premium) nem em textos sem lista numerada.
+export function soUmPasso(texto: string): string {
+  try {
+    if (/starter|premium/i.test(texto)) return texto
+    const linhas = texto.split('\n')
+    const idxNum: number[] = []
+    for (let i = 0; i < linhas.length; i++) { if (/^\s*\d{1,2}\s*[.)\-]\s+\S/.test(linhas[i])) idxNum.push(i) }
+    if (idxNum.length < 2) return texto
+    const fim = idxNum[1]
+    let mantido = linhas.slice(0, fim).join('\n').trim()
+    mantido = mantido.replace(/\s*(conseguiu entender|posso (te )?mandar)[^\n]*$/i, '').trim()
+    return mantido + '\n\nConseguiu entender esse primeiro passo? Posso te mandar o segundo?'
+  } catch (e) { return texto }
+}
+
+// Limpeza final da resposta do chat do site: tira ** e __ e deixa so um passo por mensagem.
+export function limparRespostaChat(texto: string): string {
+  const t = String(texto || '').replace(/\*\*/g, '').replace(/__/g, '').trim()
+  return soUmPasso(t)
+}
