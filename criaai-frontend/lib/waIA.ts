@@ -105,6 +105,23 @@ export async function modoIA(admin: any, conv: any): Promise<'manual' | 'geral' 
 }
 
 // Chamado pelo webhook a cada mensagem recebida.
+// Mensagem so de agradecimento/despedida ("valeu", "blz", "obrigado", "amem", "🙏"). Depois que o assistente ja se despediu,
+// responder de novo so repete a despedida: nao responde nada.
+function soAgradecimento(txt: string): boolean {
+  const t = String(txt || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  const palavras = t.replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(Boolean)
+  if (palavras.length === 0) return t.trim().length > 0 && t.trim().length <= 12 // so emoji/pontuacao (ex.: 🙏 👍)
+  if (palavras.length > 6) return false
+  const agradece = ['obrigado', 'obrigada', 'obg', 'brigado', 'brigada', 'valeu', 'vlw', 'blz', 'beleza', 'show', 'top', 'joia', 'amem', 'gratidao', 'grato', 'grata', 'tmj', 'tchau', 'abraco', 'abracos', 'fui']
+  const neutras = ['muito', 'ok', 'certo', 'ta', 'tudo', 'bem', 'entendi', 'perfeito', 'combinado', 'deus', 'abencoe', 'aben', 'fica', 'com', 'voce', 'vc', 'ate', 'mais', 'paz', 'senhor', 'de', 'nada', 'a', 'o', 'e', 'tá']
+  let achou = false
+  for (const p of palavras) {
+    if (agradece.indexOf(p) >= 0) achou = true
+    else if (neutras.indexOf(p) < 0) return false
+  }
+  return achou
+}
+
 // Devolve true quando o assistente esta LIGADO nessa conversa (o webhook entao nao manda o aviso de horario nem os fluxos).
 export async function tratarIA(admin: any, convId: string, waId: string, msgId: string, tipo: string, nomeContato: string | null): Promise<boolean> {
   try {
@@ -142,6 +159,11 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       else msgs.push({ role, content: txt })
     }
     if (msgs.length === 0 || msgs[msgs.length - 1].role !== 'user') return true
+    // So agradeceu/se despediu e o assistente ja tinha encerrado (a ultima mensagem dele nao era uma pergunta): nao responde de novo
+    if (tipo === 'text' && soAgradecimento(String((ultimaIn as any).body || ''))) {
+      const ultimaOut = [...linhas].reverse().find(function(m) { return m.direction === 'out' && String(m.body || '').trim() })
+      if (ultimaOut && !/\?\s*$/.test(String(ultimaOut.body || '').trim())) return true
+    }
     // O assistente le a conversa toda (inclusive o que a equipe e os fluxos automaticos ja mandaram) para saber o contexto.
     // Se for muito longa, descarta so as mensagens mais antigas.
     let total = msgs.reduce(function(n, m) { return n + m.content.length + 8 }, 0)
