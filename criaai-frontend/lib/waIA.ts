@@ -6,7 +6,7 @@ import { REGRA_EXPRESS_WHATSAPP, pediuLiberarExpress, removerMarcaExpress, liber
 
 const MARCA_HUMANO = '[[HUMANO]]'
 const MARCA_FIM = '[[FIM]]'
-const PERGUNTA_APP = 'Você já baixou o app e ativou as notificações do app para não perder as novidades?'
+const PERGUNTA_RANKING = 'Você gostaria de ganhar R$200 no Pix como premiação? 💰'
 
 const REGRAS_WHATSAPP = `# REGRAS DESTE ATENDIMENTO NO WHATSAPP (PRIORIDADE MAXIMA)
 - Voce esta conversando com uma pessoa pelo WhatsApp. Se perguntarem, diga que e o Junior, assistente virtual da equipe. Nunca diga que e uma pessoa.
@@ -20,7 +20,7 @@ const REGRAS_WHATSAPP = `# REGRAS DESTE ATENDIMENTO NO WHATSAPP (PRIORIDADE MAXI
 - Pagamento, cobranca, reembolso, negociacao, desconto, acesso que depende de acao administrativa, reclamacao seria ou pedido para falar com uma pessoa: avise que um atendente da equipe vai continuar a conversa em breve e termine a resposta com a marca ${MARCA_HUMANO} (a marca e removida antes do envio).
 - Se nao souber responder com a base, faca o mesmo: avise que um atendente vai ajudar e termine com ${MARCA_HUMANO}.
 - Se a pessoa mandar print, foto ou PDF, voce consegue ver o conteudo: leia com atencao, diga em uma frase o que entendeu e ajude com base nisso. Se a imagem estiver ilegivel ou nao der para entender, peca outro print mais nitido. Comprovante de pagamento ou documento pessoal: NAO confirme pagamento nem libere nada; agradeca e avise que um atendente vai conferir, terminando com ${MARCA_HUMANO}.
-- Quando a conversa estiver terminando (a pessoa agradeceu, disse que resolveu, se despediu ou nao precisa de mais nada): se a SITUACAO DO ALUNO (no fim das instrucoes) permitir a oferta do plano e ela ainda NAO foi feita nesta conversa, faca a oferta curta com as vantagens (regra 25) SEM usar a marca ${MARCA_FIM}, para a conversa continuar e a pessoa poder responder. Caso contrario (ja ofereceu, ela recusou, ja tem plano ou nao pode receber oferta), escreva so uma despedida curta e acolhedora e termine com a marca ${MARCA_FIM}. NAO escreva voce mesmo a pergunta sobre o app: o sistema acrescenta sozinho. Se a pessoa ainda tem duvida ou esta no meio do assunto, nao use a marca.
+- Quando a conversa estiver terminando (a pessoa agradeceu, disse que resolveu, se despediu ou nao precisa de mais nada): escreva so uma despedida curta e acolhedora (uma vez so) e termine com a marca ${MARCA_FIM}. NAO escreva voce mesmo a pergunta dos R$200 no Pix: o sistema acrescenta sozinho no fim da despedida (regra 35 da base). Se a pessoa responder SIM a essa pergunta, ensine o ranking aos poucos, um passo por mensagem; so depois de terminar o ranking, e se a SITUACAO DO ALUNO permitir a oferta do plano e ela ainda NAO foi feita nesta conversa, faca a oferta curta com as vantagens (regra 25), sem a marca ${MARCA_FIM}. Se ela responder NAO, aceite em uma frase e nao insista. Se a pessoa ainda tem duvida ou esta no meio do assunto, nao use a marca.
 - IMPORTANTE: a pessoa JA esta falando com o Suporte pelo WhatsApp. NUNCA diga para ela chamar, procurar, falar com ou abrir o "WhatsApp de Suporte" ou o suporte pelo menu. Quando nao souber ou precisar da equipe, avise que um atendente vai ajudar e termine com ${MARCA_HUMANO}.
 - Nao peca para a pessoa chamar o WhatsApp de Suporte: ela ja esta falando com o suporte.`
 
@@ -238,12 +238,12 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
         passaParaHumano = true
       }
     }
-    // Fim da conversa: pergunta (uma vez so por conversa) se a pessoa ja baixou o app e ativou as notificacoes
+    // Fim da conversa: pergunta (uma vez so por conversa) se a pessoa quer ganhar R$200 no Pix (leva ao ranking)
     const acabou = texto.indexOf(MARCA_FIM) >= 0
     texto = texto.split(MARCA_FIM).join('').trim()
     if (acabou && !passaParaHumano) {
-      const jaPerguntou = linhas.some(function(m) { return m.direction === 'out' && /baixou o app/i.test(String(m.body || '')) })
-      if (!jaPerguntou && texto.indexOf(PERGUNTA_APP) < 0) texto = (texto ? texto + '\n\n' : '') + PERGUNTA_APP
+      const jaPerguntou = linhas.some(function(m) { return m.direction === 'out' && /ganhar R\$\s?200 no Pix/i.test(String(m.body || '')) })
+      if (!jaPerguntou && texto.indexOf('ganhar R$200 no Pix') < 0) texto = (texto ? texto + '\n\n' : '') + PERGUNTA_RANKING
     }
     if (!texto) { await avisarFalha(admin, convId, 'texto vazio'); return true }
 
