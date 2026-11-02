@@ -4,6 +4,23 @@ import { JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno } f
 import { phoneIdDaConversa, postMessage } from '@/lib/whatsapp'
 import { REGRA_EXPRESS_WHATSAPP, pediuLiberarExpress, removerMarcaExpress, liberarExpressPeloJunior } from '@/lib/juniorExpress'
 
+// Se a resposta tem uma lista numerada com 2 ou mais passos, deixa so o primeiro e pergunta se pode mandar o segundo.
+// Nao mexe em respostas de oferta de plano (Starter/Pro/Premium) nem em textos sem lista numerada.
+function soUmPasso(texto: string): string {
+  try {
+    if (/starter|premium/i.test(texto)) return texto
+    const linhas = texto.split('\n')
+    const idxNum: number[] = []
+    for (let i = 0; i < linhas.length; i++) { if (/^\s*\d{1,2}\s*[.)\-]\s+\S/.test(linhas[i])) idxNum.push(i) }
+    if (idxNum.length < 2) return texto
+    const fim = idxNum[1]
+    let mantido = linhas.slice(0, fim).join('\n').trim()
+    // o texto antes do passo 2 pode ja trazer a pergunta; evita repetir
+    mantido = mantido.replace(/\s*(conseguiu entender|posso (te )?mandar)[^\n]*$/i, '').trim()
+    return mantido + '\n\nConseguiu entender esse primeiro passo? Posso te mandar o segundo?'
+  } catch (e) { return texto }
+}
+
 const MARCA_HUMANO = '[[HUMANO]]'
 const MARCA_FIM = '[[FIM]]'
 const PERGUNTA_APP = 'Você já baixou o app e ativou as notificações do app para não perder as novidades?'
@@ -11,7 +28,7 @@ const PERGUNTA_APP = 'Você já baixou o app e ativou as notificações do app p
 const REGRAS_WHATSAPP = `# REGRAS DESTE ATENDIMENTO NO WHATSAPP (PRIORIDADE MAXIMA)
 - Voce esta conversando com uma pessoa pelo WhatsApp. Se perguntarem, diga que e o Junior, assistente virtual da equipe. Nunca diga que e uma pessoa.
 - Escreva mensagens curtas (ate umas 4 linhas), simples e acolhedoras, em portugues do Brasil. Sem markdown (nada de **, #, tabelas). No maximo 1 ou 2 emojis.
-- Excecao ao tamanho: quando a pessoa estiver travada num assunto e precisar de orientacao para fazer algo (portfolio da Meta, conta de anuncios, Pixel, erro etc.), responda com o passo a passo DETALHADO e so sobre esse assunto, numerado (1, 2, 3), dizendo onde entrar, o que clicar e qual opcao escolher; nesse caso pode passar de 4 linhas (ate umas 12), ainda sem markdown. ANTES de orientar, entenda o contexto fazendo UMA pergunta curta por mensagem (nunca varias de uma vez, nunca lista): espere a resposta e siga com a proxima de acordo com o que ela disse (regras 20, 24 e 26 da base). Se ela mandou so um print, diga em uma frase o que parece ver e confirme com ela, sem dar solucao nem dica generica ainda. Se a pessoa pedir ajuda sem dizer onde esta ("pode me ajudar?", "nao consegui", "qual o lugar correto?"), sua PRIMEIRA mensagem e so: "Claro, vou te ajudar! Em qual tela voce esta agora? Me mande um print dela." Nada de passo a passo nem lista numerada nessa mensagem; depois do print, siga com uma pergunta por vez. Quando ja entendeu, de o passo a passo.
+- Excecao ao tamanho: quando a pessoa estiver travada num assunto (portfolio da Meta, conta de anuncios, Pixel, erro etc.), oriente com o passo a passo, mas SEMPRE UM PASSO POR MENSAGEM (regra 27 da base): mande so o PASSO 1 (onde entrar, o que clicar, qual opcao escolher), sem lista com varios passos, e termine perguntando: "Conseguiu entender esse primeiro passo? Posso te mandar o segundo?". So mande o passo seguinte depois que ela responder que sim. Sem markdown. ANTES de orientar, entenda o contexto fazendo UMA pergunta curta por mensagem (nunca varias de uma vez, nunca lista): espere a resposta e siga com a proxima de acordo com o que ela disse (regras 20, 24 e 26 da base). Se ela mandou so um print, diga em uma frase o que parece ver e confirme com ela, sem dar solucao nem dica generica ainda. Se a pessoa pedir ajuda sem dizer onde esta ("pode me ajudar?", "nao consegui", "qual o lugar correto?"), sua PRIMEIRA mensagem e so: "Claro, vou te ajudar! Em qual tela voce esta agora? Me mande um print dela." Nada de passo a passo nem lista numerada nessa mensagem.
 - Va com calma: um passo por vez, e espere a pessoa responder.
 - Antes de responder, leia TODA a conversa anterior (mensagens da pessoa, da equipe e dos avisos automaticos). Continue de onde parou: nao repita o que ja foi dito ou perguntado e nao se apresente de novo se ja houve conversa.
 - Use SOMENTE o que esta na base de conhecimento. Nunca invente preco, desconto, prazo, promessa de ganho ou funcionalidade.
@@ -196,6 +213,8 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
 
     // Sem markdown no WhatsApp: tira ** e __ que a IA as vezes coloca
     texto = texto.replace(/\*\*/g, '').replace(/__/g, '')
+    // Trava: nunca mandar varios passos de uma vez. Fica so o passo 1 e pergunta se pode mandar o proximo.
+    texto = soUmPasso(texto)
     let passaParaHumano = texto.indexOf(MARCA_HUMANO) >= 0
     texto = texto.split(MARCA_HUMANO).join('').trim()
     if (!texto && passaParaHumano) texto = 'Vou pedir para um atendente da equipe te ajudar com isso.'
