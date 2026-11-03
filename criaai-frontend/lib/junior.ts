@@ -1282,8 +1282,16 @@ export function soUmPasso(texto: string): string {
 }
 
 // Limpeza final da resposta do chat do site: tira ** e __ e deixa so um passo por mensagem.
+// WhatsApp e o chat nao entendem link em markdown: [texto](https://...) vira so o endereco (ou "texto: endereco" quando o texto nao e o proprio endereco)
+export function tirarLinkMarkdown(texto: string): string {
+  return String(texto || '').replace(/\[([^\]\n]*)\]\(\s*(https?:\/\/[^)\s]+)\s*\)/gi, function(_m, rotulo: string, url: string) {
+    const r = String(rotulo || '').trim()
+    return !r || /^https?:\/\//i.test(r) ? url : r + ': ' + url
+  })
+}
+
 export function limparRespostaChat(texto: string): string {
-  const t = String(texto || '').replace(/\*\*/g, '').replace(/__/g, '').trim()
+  const t = tirarLinkMarkdown(String(texto || '').replace(/\*\*/g, '').replace(/__/g, '')).trim()
   return soUmPasso(t)
 }
 

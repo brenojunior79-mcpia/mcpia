@@ -1,6 +1,6 @@
 // Assistente de IA (Junior) dentro das conversas do WhatsApp (suporte e recuperacao).
 // So responde nas conversas em que o ADMIN ligou o assistente (wa_conversations.ia_ativa) ou quando ele ligou para todas (wa_ia_config.geral).
-import { JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno, soUmPasso, tipoFinalConversa, situacaoFinalConversa } from '@/lib/junior'
+import { JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno, soUmPasso, tirarLinkMarkdown, tipoFinalConversa, situacaoFinalConversa } from '@/lib/junior'
 import { phoneIdDaConversa, postMessage } from '@/lib/whatsapp'
 import { REGRA_EXPRESS_WHATSAPP, pediuLiberarExpress, removerMarcaExpress, liberarExpressPeloJunior, emailDaMarca } from '@/lib/juniorExpress'
 
@@ -27,7 +27,29 @@ const REGRAS_WHATSAPP = `# REGRAS DESTE ATENDIMENTO NO WHATSAPP (PRIORIDADE MAXI
 
 const REGRAS_CANAL: Record<string, string> = {
   suporte: '# CANAL: SUPORTE\nEsta pessoa fala com o Suporte da plataforma e da mentoria (normalmente aluno). Ajude a resolver a duvida ou dificuldade.',
-  recuperacao: '# CANAL: RECUPERACAO\nEsta pessoa foi contatada pela equipe porque iniciou uma compra e nao concluiu (ou acabou de comprar). Responda as duvidas dela com carinho, sem pressionar, e sem inventar condicoes. Questoes de pagamento, desconto ou negociacao vao para um atendente.',
+  recuperacao: '# CANAL: RECUPERACAO\nEsta pessoa foi contatada pela equipe porque iniciou uma compra e nao concluiu (ou acabou de comprar). Responda as duvidas dela com carinho, sem pressionar, e sem inventar condicoes. Questoes de pagamento, desconto ou negociacao vao para um atendente. Veja no fim das instrucoes a linha "SITUACAO DESTA PESSOA": se ela ainda NAO e aluna, siga a regra daquela linha (ela vale mais que todas as regras de aluno).',
+}
+
+// Pessoa que o sistema NAO reconhece como aluna (sem cadastro na plataforma e sem compra): nunca recebe link da plataforma nem orientacao de aluno
+const REGRA_NAO_ALUNA = `# SITUACAO DESTA PESSOA: AINDA NAO E ALUNA (PRIORIDADE MAXIMA - SOBREPOE TODAS AS REGRAS DE ALUNO ACIMA)
+O sistema NAO achou cadastro na plataforma nem compra desta pessoa. Ela NAO e aluna. Por isso:
+- NUNCA mande o link da plataforma (mcpia.site), nunca fale em "Criar conta", "Esqueci minha senha", login, menus, aulas, "continue assistindo as aulas", Produtos em Alta, Criativos Manuais, Vendendo no Automatico ou qualquer coisa que so aluno usa. Ignore as regras 24 e 31 e os trechos "ALUNO SEM ACESSO" e "NAO CONSEGUE ACESSAR" da base: eles NAO valem para esta pessoa.
+- Seu papel aqui e de recuperacao: entender com carinho, UMA pergunta por vez, o que impediu a compra, e tirar duvidas sobre a mentoria SO com o que esta na base (secao SOBRE A MENTORIA), sem pressionar e sem prometer ganho.
+- Se ela falar de pagamento, cartao, fatura, limite, falta de dinheiro, preco, parcela, Pix, desconto ou link de compra: acolha em uma frase curta e diga que um atendente da equipe vai ajudar a concluir, terminando com ${MARCA_HUMANO}. Nao invente valor, desconto, prazo ou condicao.
+- Se ela disser que JA comprou, ou que nao consegue entrar nas aulas: NAO mande link. Pergunte so "Qual e-mail voce usou na compra?" e, quando ela responder, avise que um atendente vai conferir e termine com ${MARCA_HUMANO}. (Se for sobre a Estrutura Express, siga a regra de liberacao da Estrutura Express.)
+- NUNCA diga ou sugira que ela ja e aluna, nunca invente "novos recursos serao liberados em breve" nem nada que nao esteja na base.
+- Se ela duvidar de quem voce e ou pedir para provar que voce e o Breno: diga com honestidade que voce e o Junior, assistente virtual da equipe do Breno.`
+
+// Pessoa e aluna se tem cadastro ligado a conversa ou compra (sem reembolso) pelo numero do WhatsApp. Na duvida (erro), trata como NAO aluna: o pior caso e ir para a equipe.
+async function pessoaEhAluna(admin: any, waId: string, profileId: string | null): Promise<boolean> {
+  try {
+    if (profileId) return true
+    const tail = String(waId || '').replace(/\D/g, '').slice(-8)
+    if (tail.length < 8) return false
+    const r = await admin.from('hubla_compras').select('id', { head: true, count: 'exact' }).eq('reembolsado', false).like('wa', '%' + tail)
+    if (r.error) return false
+    return (r.count || 0) > 0
+  } catch (e) { return false }
 }
 
 function rotuloTipo(t: string): string {
@@ -228,6 +250,9 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     // Para a liberacao da Estrutura Express: o Junior so pede o e-mail se o sistema nao conhece a conta desta conversa
     const tipoFinal = tipoFinalConversa(temExpress, convId)
     system = system + '\n\n' + situacaoFinalConversa(tipoFinal)
+    // Quem nao e aluna (sem cadastro e sem compra) nunca recebe orientacao nem link de aluno
+    const ehAluna = await pessoaEhAluna(admin, waId, conv.profile_id || null)
+    if (!ehAluna) system = REGRA_NAO_ALUNA + '\n\n' + system + '\n\n' + REGRA_NAO_ALUNA
     system = system + '\n\nEstrutura Express desta pessoa: ' + (temExpress === true ? 'JA TEM acesso liberado no sistema.' : temExpress === false ? 'o sistema NAO achou compra nem liberacao da Estrutura Express nesta conta.' : 'o sistema NAO sabe (conta nao identificada).')
     system = system + '\n\nConta identificada: ' + (conv.profile_id ? 'SIM (o sistema ja sabe quem e a pessoa; nao peca e-mail).' : 'NAO (peca o e-mail da plataforma antes de liberar).')
 
@@ -242,12 +267,18 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     if (!resp.ok || !texto) { await avisarFalha(admin, convId, 'IA sem resposta ' + resp.status + ' ' + JSON.stringify(j?.error || '')); return true }
 
     // Sem markdown no WhatsApp: tira ** e __ que a IA as vezes coloca
-    texto = texto.replace(/\*\*/g, '').replace(/__/g, '')
+    texto = tirarLinkMarkdown(texto.replace(/\*\*/g, '').replace(/__/g, ''))
     // Trava: nunca mandar varios passos de uma vez. Fica so o passo 1 e pergunta se pode mandar o proximo.
     texto = soUmPasso(texto)
     let passaParaHumano = texto.indexOf(MARCA_HUMANO) >= 0
     texto = texto.split(MARCA_HUMANO).join('').trim()
     if (!texto && passaParaHumano) texto = 'Vou pedir para um atendente da equipe te ajudar com isso.'
+    // Trava dura: quem nao e aluna nunca recebe link da plataforma nem "criar conta"/"esqueci minha senha" (vai para a equipe)
+    if (!ehAluna && /mcpia\.site|criar\s+conta|esqueci\s+minha\s+senha|\bsenha\b.*\be-?mail\b/i.test(texto)) {
+      console.error('[wa-ia] bloqueado: link/acesso de aluno para quem nao e aluna', convId)
+      texto = 'Vou pedir para um atendente da equipe te ajudar com isso.'
+      passaParaHumano = true
+    }
     // Trava: se mesmo assim mandar a pessoa "chamar o suporte", tira a frase e passa para a equipe
     {
       const frases = texto.split(/(?<=[.!?])\s+|\n+/)
