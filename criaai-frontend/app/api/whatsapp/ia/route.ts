@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminClient, requireAdmin, requireStaff } from '@/lib/whatsapp'
-import { responderUltimaPendente } from '@/lib/waIA'
+import { responderUltimaPendente, responderPendentesGeral } from '@/lib/waIA'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -24,7 +24,9 @@ export async function POST(req: NextRequest) {
   if (typeof body?.geral === 'boolean') {
     const r = await adminClient().from('wa_ia_config').upsert({ id: 1, geral: body.geral, atualizado_em: new Date().toISOString() })
     if (r.error) return NextResponse.json({ error: r.error.message }, { status: 500 })
-    return NextResponse.json({ ok: true, geral: body.geral })
+    // Ligou para todas: o assistente tambem responde as mensagens que ja estavam sem resposta
+    const respondendo = body.geral ? await responderPendentesGeral(adminClient()) : 0
+    return NextResponse.json({ ok: true, geral: body.geral, respondendo })
   }
 
   const ids: string[] = (Array.isArray(body?.ids) ? body.ids : body?.id ? [body.id] : []).map(function(x: any) { return String(x) }).filter(Boolean).slice(0, 500)

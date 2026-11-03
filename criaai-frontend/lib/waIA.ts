@@ -391,3 +391,24 @@ export async function responderUltimaPendente(admin: any, convId: string): Promi
   }
 }
 
+
+// Quando o admin LIGA o assistente para TODAS as conversas: responde, em cada conversa que nao foi desligada (ia_humano) e
+// cuja ultima mensagem e da pessoa (ainda sem resposta, dentro de 24h), a mensagem pendente. Devolve quantas conversas foram atendidas.
+export async function responderPendentesGeral(admin: any): Promise<number> {
+  try {
+    const desde = new Date(Date.now() - 23.5 * 3600 * 1000).toISOString()
+    const r = await admin.from('wa_conversations').select('id').gte('last_message_at', desde).or('ia_humano.is.null,ia_humano.eq.false').order('last_message_at', { ascending: false }).limit(60)
+    const ids: string[] = (r.data || []).map(function(x: any) { return String(x.id) })
+    let atendidas = 0
+    const inicio = Date.now()
+    for (let i = 0; i < ids.length; i += 5) {
+      if (Date.now() - inicio > 42000) break
+      const res = await Promise.all(ids.slice(i, i + 5).map(function(id) { return responderUltimaPendente(admin, id) }))
+      atendidas += res.filter(Boolean).length
+    }
+    return atendidas
+  } catch (e) {
+    console.error('[wa-ia] responderPendentesGeral:', e)
+    return 0
+  }
+}
