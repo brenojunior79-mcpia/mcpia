@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminClient, requireAdmin, requireStaff } from '@/lib/whatsapp'
+import { responderUltimaPendente } from '@/lib/waIA'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60
 
 // Le se o assistente esta ligado para TODAS as conversas (qualquer pessoa da equipe pode ver)
 export async function GET() {
@@ -31,5 +33,18 @@ export async function POST(req: NextRequest) {
   // Desligar numa conversa vale mesmo com o assistente geral ligado (ia_humano); ligar tira essa marca
   const r = await adminClient().from('wa_conversations').update({ ia_ativa: ativo, ia_humano: !ativo, ia_ativada_em: ativo ? new Date().toISOString() : null }).in('id', ids).select('id')
   if (r.error) return NextResponse.json({ error: r.error.message }, { status: 500 })
-  return NextResponse.json({ ok: true, ativo, total: (r.data || []).length })
+  // Ligou: o assistente responde na hora a ultima mensagem que ainda estava sem resposta (ate 20 conversas por vez, 5 de cada vez)
+  let respondendo = 0
+  if (ativo) {
+    const db = adminClient()
+    const fila = (r.data || []).map(function(x: any) { return String(x.id) }).slice(0, 20)
+    const inicio = Date.now()
+    for (let i = 0; i < fila.length; i += 5) {
+      if (Date.now() - inicio > 40000) break
+      const lote = fila.slice(i, i + 5)
+      const res = await Promise.all(lote.map(function(id: string) { return responderUltimaPendente(db, id) }))
+      respondendo += res.filter(Boolean).length
+    }
+  }
+  return NextResponse.json({ ok: true, ativo, total: (r.data || []).length, respondendo })
 }

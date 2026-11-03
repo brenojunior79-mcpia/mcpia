@@ -335,3 +335,25 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     return true
   }
 }
+
+// Quando o admin LIGA o assistente numa conversa: responde a ultima mensagem da pessoa, se ela ainda esta sem resposta
+// (a ultima mensagem da conversa e dela) e a janela de 24h do WhatsApp ainda esta aberta. Devolve true se pediu a resposta.
+export async function responderUltimaPendente(admin: any, convId: string): Promise<boolean> {
+  try {
+    const [cv, ult] = await Promise.all([
+      admin.from('wa_conversations').select('id, wa_id, name').eq('id', convId).maybeSingle(),
+      admin.from('wa_messages').select('id, direction, type, created_at').eq('conversation_id', convId).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+    ])
+    const c: any = cv.data
+    const m: any = ult.data
+    if (!c || !c.wa_id || !m || m.direction !== 'in') return false
+    // Fora da janela de 24h o WhatsApp nao deixa mandar texto livre
+    if (Date.now() - new Date(m.created_at).getTime() > 23.5 * 3600 * 1000) return false
+    await tratarIA(admin, convId, String(c.wa_id), String(m.id), String(m.type || 'text'), c.name || null)
+    return true
+  } catch (e) {
+    console.error('[wa-ia] responderUltimaPendente:', e)
+    return false
+  }
+}
+
