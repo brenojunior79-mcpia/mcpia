@@ -228,6 +228,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     // Para a liberacao da Estrutura Express: o Junior so pede o e-mail se o sistema nao conhece a conta desta conversa
     const tipoFinal = tipoFinalConversa(temExpress, convId)
     system = system + '\n\n' + situacaoFinalConversa(tipoFinal)
+    system = system + '\n\nEstrutura Express desta pessoa: ' + (temExpress === true ? 'JA TEM acesso liberado no sistema.' : temExpress === false ? 'o sistema NAO achou compra nem liberacao da Estrutura Express nesta conta.' : 'o sistema NAO sabe (conta nao identificada).')
     system = system + '\n\nConta identificada: ' + (conv.profile_id ? 'SIM (o sistema ja sabe quem e a pessoa; nao peca e-mail).' : 'NAO (peca o e-mail da plataforma antes de liberar).')
 
     const resp = await fetch('https://api.openai.com/v1/chat/completions', {

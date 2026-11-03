@@ -24,7 +24,9 @@ export function removerMarcaExpress(texto: string): string {
 }
 
 export const REGRA_EXPRESS_CHAT = `# LIBERACAO DA ESTRUTURA EXPRESS (PRIORIDADE MAXIMA - SOBREPOE A BASE ACIMA)
-Voce consegue liberar o menu da Estrutura Express para este aluno, sem pedir e-mail nem comprovante. Quando ele disser que ja e aluno da Estrutura Express, que comprou, ou que esta sem acesso a ela (menu bloqueado, conteudo nao abre, nao aparece), responda APENAS com a marca [[LIBERAR_EXPRESS]]. Nao escreva mais nada junto: o sistema libera e responde ao aluno.
+Voce consegue liberar o menu da Estrutura Express para este aluno, sem pedir e-mail nem comprovante, mas SO quando ele disser CLARAMENTE as duas coisas: (1) que COMPROU a Estrutura Express e (2) que NAO consegue acessar (menu bloqueado, conteudo nao abre, nao aparece). So nesse caso responda APENAS com a marca [[LIBERAR_EXPRESS]]. Nao escreva mais nada junto: o sistema libera e responde ao aluno.
+- NAO emita a marca quando o aluno so PERGUNTAR se tem a Estrutura Express, so tiver curiosidade, duvida ("nao sei se tenho", "tem como verificar?"), pedir explicacao do produto, ou so disser que tem a plataforma/assinatura. Isso NAO e dizer que comprou a Express.
+- Se o aluno perguntar se tem a Express: use a situacao do acesso abaixo. Se NAO tem acesso, diga que nao achou a compra da Estrutura Express nesta conta e pergunte, em uma frase curta, se ele comprou a Estrutura Express. Se ele responder que comprou e nao consegue acessar, emita a marca. Se nao comprou e quer saber mais, siga a base (preco e link oficial).
 - NUNCA diga que liberou: quem libera e o sistema. Nao peca e-mail, print nem comprovante para a Estrutura Express.
 - Situacao do acesso deste aluno agora: {{status}}
 - Quem ainda nao comprou e quer comprar: siga a base (preco e link oficial) e nao emita a marca.
@@ -38,7 +40,9 @@ export function regraExpressChat(jaTem: boolean): string {
 }
 
 export const REGRA_EXPRESS_WHATSAPP = `# LIBERACAO DA ESTRUTURA EXPRESS NO WHATSAPP (PRIORIDADE MAXIMA - SOBREPOE A BASE E AS REGRAS ACIMA)
-Voce consegue liberar o menu da Estrutura Express. Quando a pessoa disser que ja e aluna da Estrutura Express, que comprou, ou que esta sem acesso a ela (menu bloqueado, conteudo nao abre, nao aparece, "meu acesso nao esta ativo"):
+Voce consegue liberar o menu da Estrutura Express, mas SO quando a pessoa disser CLARAMENTE as duas coisas: (1) que COMPROU a Estrutura Express e (2) que NAO consegue acessar (menu bloqueado, conteudo nao abre, nao aparece, "meu acesso nao esta ativo").
+- NAO libere nem emita a marca quando a pessoa so PERGUNTAR se tem a Estrutura Express, tiver duvida ("nao sei se tenho", "tem como verificar?"), pedir explicacao do produto, ou so disser que tem plataforma/assinatura. Isso NAO e dizer que comprou a Express. Nesse caso use a linha "Estrutura Express desta pessoa" no fim das instrucoes: se o sistema nao achou compra, diga curto que nao achou a compra da Estrutura Express e pergunte se ela comprou a Estrutura Express (se nao comprou e quer saber mais, siga a base com preco e link oficial); se ela ja tem acesso, diga que o menu esta liberado; se o sistema nao sabe, use [[HUMANO]] para a equipe conferir.
+- Quando ela disser claramente que comprou e nao consegue acessar:
 - Se o e-mail dela AINDA NAO esta identificado (veja a linha "Conta identificada" no fim das instrucoes) e ela ainda nao disse o e-mail na conversa: pergunte so isto, curto: "Qual e-mail voce usa na plataforma?" Nao emita a marca ainda. Nao peca comprovante nem print.
 - Assim que ela disser o e-mail (ou se a conta ja esta identificada), responda APENAS com a marca [[LIBERAR_EXPRESS: e-mail-dela]] (se a conta ja esta identificada, [[LIBERAR_EXPRESS]]). Nao escreva mais nada junto: o sistema libera e responde a pessoa.
 - NUNCA diga que liberou: quem libera e o sistema. Nao use [[HUMANO]] junto com a marca.
