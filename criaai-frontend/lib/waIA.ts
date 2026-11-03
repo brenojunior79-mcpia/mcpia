@@ -35,6 +35,8 @@ const REGRA_NAO_ALUNA = `# SITUACAO DESTA PESSOA: AINDA NAO E ALUNA (PRIORIDADE 
 O sistema NAO achou cadastro na plataforma nem compra desta pessoa. Ela NAO e aluna. Por isso:
 - NUNCA mande o link da plataforma (mcpia.site), nunca fale em "Criar conta", "Esqueci minha senha", login, menus, aulas, "continue assistindo as aulas", Produtos em Alta, Criativos Manuais, Vendendo no Automatico ou qualquer coisa que so aluno usa. Ignore as regras 24 e 31 e os trechos "ALUNO SEM ACESSO" e "NAO CONSEGUE ACESSAR" da base: eles NAO valem para esta pessoa.
 - Seu papel aqui e de recuperacao: entender com carinho, UMA pergunta por vez, o que impediu a compra, e tirar duvidas sobre a mentoria SO com o que esta na base (secao SOBRE A MENTORIA), sem pressionar e sem prometer ganho.
+- Se ela disser que quer comprar, se inscrever, entrar na mentoria ou aceitar o que o atendente ofereceu (ex.: "pode mandar o link de pagamento", "vamos"): NAO peca e-mail e NAO diga que vai liberar acesso (ela ainda nao comprou, nao ha nada para liberar). Avise que o atendente ja vai mandar o link para concluir e termine com ${MARCA_HUMANO}.
+- Se a equipe (atendente) ja mandou mensagem nesta conversa, continue de onde ela parou e nunca ignore o que o atendente ofereceu. Nunca peca o mesmo dado (como o e-mail) duas vezes.
 - Se ela falar de pagamento, cartao, fatura, limite, falta de dinheiro, preco, parcela, Pix, desconto ou link de compra: acolha em uma frase curta e diga que um atendente da equipe vai ajudar a concluir, terminando com ${MARCA_HUMANO}. Nao invente valor, desconto, prazo ou condicao.
 - Se ela disser que JA comprou, ou que nao consegue entrar nas aulas: NAO mande link. Pergunte so "Qual e-mail voce usou na compra?" e, quando ela responder, avise que um atendente vai conferir e termine com ${MARCA_HUMANO}. (Se for sobre a Estrutura Express, siga a regra de liberacao da Estrutura Express.)
 - NUNCA diga ou sugira que ela ja e aluna, nunca invente "novos recursos serao liberados em breve" nem nada que nao esteja na base.
@@ -254,7 +256,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     const ehAluna = await pessoaEhAluna(admin, waId, conv.profile_id || null)
     if (!ehAluna) system = REGRA_NAO_ALUNA + '\n\n' + system + '\n\n' + REGRA_NAO_ALUNA
     system = system + '\n\nEstrutura Express desta pessoa: ' + (temExpress === true ? 'JA TEM acesso liberado no sistema.' : temExpress === false ? 'o sistema NAO achou compra nem liberacao da Estrutura Express nesta conta.' : 'o sistema NAO sabe (conta nao identificada).')
-    system = system + '\n\nConta identificada: ' + (conv.profile_id ? 'SIM (o sistema ja sabe quem e a pessoa; nao peca e-mail).' : 'NAO (peca o e-mail da plataforma antes de liberar).')
+    system = system + '\n\nConta identificada: ' + (conv.profile_id ? 'SIM (o sistema ja sabe quem e a pessoa; nao peca e-mail).' : ehAluna ? 'NAO (peca o e-mail da plataforma antes de liberar).' : 'NAO, e ela ainda nao e aluna (nao peca e-mail para liberar nada; so pergunte o e-mail da compra se ela disser que ja comprou).')
 
     const resp = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
