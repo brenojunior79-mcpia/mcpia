@@ -71,6 +71,7 @@ export default function AssistenteAnuncio({ onClose, onCriado }: { onClose: () =
   const somDesdeRef = useRef(0)
   const ultimoSomRef = useRef(0)
   const inicioFalaRef = useRef(0)
+  const enviandoRef = useRef(false)
   const enviarRef = useRef<((t: string) => void) | null>(null)
   const fimRef = useRef<HTMLDivElement>(null)
   const msgsRef = useRef<Msg[]>([])
@@ -206,7 +207,8 @@ export default function AssistenteAnuncio({ onClose, onCriado }: { onClose: () =
 
   async function enviar(conteudo: string, comMidia?: Midia | null) {
     const t = conteudo.trim()
-    if (!t || pensando) return
+    if (!t || enviandoRef.current) return
+    enviandoRef.current = true
     setErro('')
     pararFala()
     const lista = msgsRef.current.concat([{ role: 'user', content: t }])
@@ -220,14 +222,15 @@ export default function AssistenteAnuncio({ onClose, onCriado }: { onClose: () =
         body: JSON.stringify({ mensagens: lista, rascunho: rascunhoRef.current, temMidia: !!m }),
       })
       const j = await r.json()
-      if (!r.ok) { setErro(j.error || 'Nao consegui responder agora.'); setPensando(false); return }
+      if (!r.ok) { setErro(j.error || 'Nao consegui responder agora.'); setPensando(false); enviandoRef.current = false; return }
       setMsgs(lista.concat([{ role: 'assistant', content: j.fala }]))
       setRascunho(j.rascunho); setFalta(j.falta || []); setPronto(!!j.pronto)
       if (j.paginas) setPaginas(j.paginas)
       if (j.pixels) setPixels(j.pixels)
       setPensando(false)
+      enviandoRef.current = false
       falar(j.fala)
-    } catch (e) { setErro('Nao consegui responder agora.'); setPensando(false) }
+    } catch (e) { setErro('Nao consegui responder agora.'); setPensando(false); enviandoRef.current = false }
   }
 
   // ----- Conversa sem apertar botao -----
@@ -241,6 +244,7 @@ export default function AssistenteAnuncio({ onClose, onCriado }: { onClose: () =
     for (let i = 0; i < dados.length; i++) { const v = (dados[i] - 128) / 128; soma += v * v }
     const rms = Math.sqrt(soma / dados.length)
     nivelRef.current = rms
+    if (vadCtxRef.current && vadCtxRef.current.state === 'suspended') { try { vadCtxRef.current.resume() } catch (e) {} }
     const agora = Date.now()
     // Enquanto ela fala o limiar sobe, para o som do alto-falante nao ser confundido com a sua voz
     const limiar = Math.max(0.03, baseRef.current * 3) * (falandoRef.current ? 2.5 : 1)
@@ -413,7 +417,7 @@ export default function AssistenteAnuncio({ onClose, onCriado }: { onClose: () =
   const corStatus = !conversaAtiva ? '#94a3b8' : gravando ? '#f87171' : pensando ? '#facc15' : falando ? '#c084fc' : '#4ade80'
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'radial-gradient(ellipse at 20% 0%, #3b1a73 0%, #160d33 45%, #0b0719 100%)', color: '#fff', display: 'flex', flexDirection: 'column', height: '100dvh' }}>
+    <div onClick={function() { if (vadCtxRef.current && vadCtxRef.current.state === 'suspended') { try { vadCtxRef.current.resume() } catch (e) {} } }} style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'radial-gradient(ellipse at 20% 0%, #3b1a73 0%, #160d33 45%, #0b0719 100%)', color: '#fff', display: 'flex', flexDirection: 'column', height: '100dvh' }}>
       <style>{`
         .asst-grid{display:grid;grid-template-columns:minmax(260px,400px) 1fr;gap:16px;flex:1;min-height:0;padding:0 16px 14px}
         @media (max-width:760px){.asst-grid{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);gap:10px;padding:0 10px 10px}.asst-card{height:30vh!important;aspect-ratio:auto!important;width:auto!important;margin:0 auto}}

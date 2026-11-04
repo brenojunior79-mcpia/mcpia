@@ -4,11 +4,11 @@ export const QUADROS = ['base', 'meia', 'aberta', 'piscando'] as const
 export type Quadro = typeof QUADROS[number]
 export const PASTA_AVATAR = 'avatar-escritorio/camila'
 
-export const PROMPT_BASE = 'Ilustracao digital no estilo de personagem de animacao 3D moderna, semi-realista, de uma assistente de escritorio virtual: mulher brasileira de cerca de 30 anos, cabelo castanho escuro liso na altura dos ombros, olhos castanhos, sorriso simpatico e acolhedor, blazer azul-marinho sobre blusa branca, sentada a uma mesa de trabalho olhando para a camera, enquadramento do busto para cima, centralizada. Cenario: escritorio moderno e futurista com luzes de neon roxo e rosa, estantes ao fundo e um letreiro grande com as letras IA brilhando em neon atras dela. Boca fechada em um sorriso suave e olhos abertos. Formato retrato vertical. Sem nenhum outro texto e sem marca dagua. Personagem totalmente original.'
+export const PROMPT_BASE = 'Fotografia realista, retrato profissional de uma mulher brasileira de cerca de 32 anos (uma pessoa ficticia, que nao existe), cabelo castanho escuro liso na altura dos ombros, olhos castanhos, pele natural com textura real, sorriso simpatico e confiante, vestida de forma social: blazer azul-marinho bem cortado sobre blusa branca, discreta e elegante. Sentada em um escritorio moderno e iluminado, com leve luz roxa suave ao fundo desfocado, olhando direto para a camera. Enquadramento do busto para cima, centralizada, lente 85mm, profundidade de campo rasa, luz de estudio suave, qualidade de foto de revista. Boca fechada em um sorriso suave e olhos abertos. Formato retrato vertical. Sem texto, sem marca dagua, sem logotipos.'
 
-const IGUAL = 'Esta e a mesma personagem, no mesmo cenario, com exatamente a mesma roupa, cabelo, enquadramento, posicao, iluminacao e cores. Nao mude absolutamente nada alem do que esta descrito abaixo. '
+const IGUAL = 'Esta e a mesma personagem, no mesmo cenario, como na mesma fotografia, com exatamente a mesma roupa, cabelo, enquadramento, posicao, iluminacao e cores. Nao mude absolutamente nada alem do que esta descrito abaixo. '
 export const PROMPT_VARIACAO: Record<string, string> = {
-  meia: IGUAL + 'Altere somente a boca: deixe-a levemente entreaberta, como quem esta falando, mostrando um pouco dos dentes.',
-  aberta: IGUAL + 'Altere somente a boca: deixe-a bem aberta, como quem fala em voz alta (som de a), mostrando os dentes e um pouco da lingua.',
+  meia: IGUAL + 'Altere somente a boca: deixe-a levemente entreaberta, como quem esta falando, mostrando um pouco dos dentes, de forma natural e realista.',
+  aberta: IGUAL + 'Altere somente a boca: deixe-a bem aberta, como quem fala em voz alta (som de a), mostrando os dentes, de forma natural e realista.',
   piscando: IGUAL + 'Altere somente os olhos: deixe os dois olhos completamente fechados, como em um piscar. A boca continua como esta.',
 }
