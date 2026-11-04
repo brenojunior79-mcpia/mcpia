@@ -37,8 +37,13 @@ export default function AssistenteAnuncio({ onClose, onCriado }: { onClose: () =
   const [vozLigada, setVozLigada] = useState(true)
   const [erro, setErro] = useState('')
   const [resultado, setResultado] = useState<any>(null)
+  const [avatarIa, setAvatarIa] = useState<string | null>(null)
+  const [avatarInfo, setAvatarInfo] = useState<{ temFoto: boolean; podeCriar: boolean; restantes: number }>({ temFoto: false, podeCriar: false, restantes: 0 })
+  const [criandoAvatar, setCriandoAvatar] = useState(false)
 
   const avatarRef = useRef<HTMLDivElement>(null)
+  const imgAvatarRef = useRef<HTMLImageElement>(null)
+  const usandoFotoRef = useRef(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const ctxRef = useRef<AudioContext | null>(null)
   const analiserRef = useRef<AnalyserNode | null>(null)
@@ -56,6 +61,12 @@ export default function AssistenteAnuncio({ onClose, onCriado }: { onClose: () =
   const midiaRef = useRef<Midia | null>(null)
   const vozRef = useRef(true)
 
+  useEffect(function() { usandoFotoRef.current = !!avatarIa }, [avatarIa])
+  useEffect(function() {
+    fetch('/api/avatar/ia').then(function(r) { return r.json() }).then(function(j) {
+      if (j && !j.error) { setAvatarIa(j.avatar || null); setAvatarInfo({ temFoto: !!j.temFoto, podeCriar: !!j.podeCriar, restantes: Number(j.restantes || 0) }) }
+    }).catch(function() {})
+  }, [])
   useEffect(function() { msgsRef.current = msgs }, [msgs])
   useEffect(function() { rascunhoRef.current = rascunho }, [rascunho])
   useEffect(function() { midiaRef.current = midia }, [midia])
@@ -87,7 +98,11 @@ export default function AssistenteAnuncio({ onClose, onCriado }: { onClose: () =
       let piscar = piscarRef.current
       if (!piscar && agora > proxPiscar) { piscar = true; fimPiscar = agora + 140; proxPiscar = agora + 2500 + Math.random() * 3000 }
       else if (piscar && agora > fimPiscar) piscar = false
-      if (boca !== bocaRef.current || piscar !== piscarRef.current || agora - ultimo > 1000) {
+      if (usandoFotoRef.current) {
+        // Avatar da foto: da um leve zoom no ritmo da voz
+        if (imgAvatarRef.current) imgAvatarRef.current.style.transform = 'scale(' + (1 + boca * 0.018) + ')'
+        bocaRef.current = boca
+      } else if (boca !== bocaRef.current || piscar !== piscarRef.current || agora - ultimo > 1000) {
         bocaRef.current = boca; piscarRef.current = piscar; ultimo = agora; desenhar()
       }
       quadroRef.current = requestAnimationFrame(loop)
@@ -277,6 +292,18 @@ export default function AssistenteAnuncio({ onClose, onCriado }: { onClose: () =
     } catch (e) { setErro('Nao consegui criar o anuncio.'); setCriando(false) }
   }
 
+  async function criarAvatar() {
+    if (criandoAvatar) return
+    setCriandoAvatar(true); setErro('')
+    try {
+      const r = await fetch('/api/avatar/ia', { method: 'POST' })
+      const j = await r.json()
+      if (!r.ok) { setErro(j.error || 'Nao consegui criar o avatar.'); setCriandoAvatar(false); return }
+      setAvatarIa(j.avatar); setAvatarInfo(Object.assign({}, avatarInfo, { restantes: Number(j.restantes || 0) }))
+    } catch (e) { setErro('Nao consegui criar o avatar.') }
+    setCriandoAvatar(false)
+  }
+
   function nomeDe(lista: Opcao[], id: string | null) { const o = lista.filter(function(x) { return x.id === id })[0]; return o ? o.nome : '—' }
 
   const bolha = function(m: Msg, i: number) {
@@ -302,12 +329,17 @@ export default function AssistenteAnuncio({ onClose, onCriado }: { onClose: () =
         <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 0 }}>
           <div style={{ padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, borderRight: cx.borda, minHeight: 0 }}>
             <div style={{ width: 'min(240px, 60%)', aspectRatio: '1 / 1', borderRadius: 26, overflow: 'hidden', border: falando ? '3px solid #c084fc' : '3px solid rgba(255,255,255,0.15)', boxShadow: falando ? '0 0 36px rgba(168,85,247,0.7)' : 'none', transition: 'all .2s' }}>
-              <div ref={avatarRef} style={{ width: '100%', height: '100%' }} />
+              {avatarIa
+                ? <img ref={imgAvatarRef} src={avatarIa} alt="Seu avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform .08s' }} />
+                : <div ref={avatarRef} style={{ width: '100%', height: '100%' }} />}
             </div>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontWeight: 800, fontSize: 16 }}>Camila</div>
+              <div style={{ fontWeight: 800, fontSize: 16 }}>{avatarIa ? 'Seu avatar' : 'Camila'}</div>
               <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.65)' }}>{gravando ? 'Ouvindo você...' : pensando ? 'Pensando...' : falando ? 'Falando...' : 'Gestora de anúncios'}</div>
             </div>
+            {avatarInfo.podeCriar && avatarInfo.temFoto && avatarInfo.restantes > 0 && (
+              <button onClick={criarAvatar} disabled={criandoAvatar} style={{ cursor: criandoAvatar ? 'wait' : 'pointer', background: cx.painel, border: cx.borda, color: '#fff', borderRadius: 12, padding: '9px 14px', fontSize: 12.5, fontWeight: 700 }}>{criandoAvatar ? 'Criando o avatar... (até 1 minuto)' : avatarIa ? '🔄 Criar outro avatar com a minha foto' : '✨ Criar o meu avatar com a minha foto'}</button>
+            )}
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>

@@ -42,3 +42,36 @@ export function mensagemAmigavelImagem(msg: string): string {
   if (/(safety|moderation|content policy)/i.test(msg)) return 'Não conseguimos gerar essa imagem com esse texto. Tente mudar o título ou o tema.'
   return 'Não foi possível gerar a capa agora. Tente novamente em alguns minutos.'
 }
+
+// Edita uma imagem de referencia (ex.: foto da pessoa vira avatar ilustrado). Mesma troca automatica de modelo.
+export async function editarImagemOpenAI(opts: { prompt: string; imagem: Blob; size: string; quality: string }): Promise<{ b64: string | null; modelo: string }> {
+  const ordem = ultimoQueFuncionou
+    ? [ultimoQueFuncionou].concat(MODELOS_IMAGEM.filter(function(m) { return m !== ultimoQueFuncionou }))
+    : MODELOS_IMAGEM.slice()
+  let ultimoErro = 'Não foi possível gerar a imagem agora.'
+
+  for (const modelo of ordem) {
+    const fd = new FormData()
+    fd.append('model', modelo)
+    fd.append('prompt', opts.prompt)
+    fd.append('n', '1')
+    fd.append('size', opts.size)
+    fd.append('quality', opts.quality)
+    fd.append('image', opts.imagem, 'foto.jpg')
+    const res = await fetch('https://api.openai.com/v1/images/edits', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY },
+      body: fd,
+    })
+    const data: any = await res.json().catch(function() { return {} })
+    if (res.ok) {
+      ultimoQueFuncionou = modelo
+      return { b64: data.data?.[0]?.b64_json || null, modelo }
+    }
+    const msg = String(data?.error?.message || ('Erro ' + res.status))
+    console.error('[openaiImage/edit] modelo ' + modelo + ' falhou: ' + res.status + ' ' + msg)
+    ultimoErro = msg
+    if (!erroDeModelo(res.status, msg)) break
+  }
+  throw new Error(ultimoErro)
+}
