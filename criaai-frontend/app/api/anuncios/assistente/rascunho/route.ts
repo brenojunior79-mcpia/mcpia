@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { faltando, graph, limparRascunho, rascunhoVazio, usuarioAssistente } from '@/lib/anunciosAssistente'
+import { salvarEstado } from '@/lib/camilaEstado'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
-const CAMPOS_IA = ['produto', 'paginaId', 'pixelId', 'orcamentoDiario', 'idadeMin', 'idadeMax', 'genero', 'titulo', 'legenda', 'botao']
+const CAMPOS_IA = ['produto', 'paginaId', 'pixelId', 'orcamentoDiario', 'idadeMin', 'idadeMax', 'genero', 'titulo', 'legenda', 'botao', 'tipoProduto', 'beneficio']
 
 // Guarda no rascunho o que a IA confirmou (campos) ou o link que a pessoa colou na tela (linkColado).
 // O servidor valida tudo: pagina e pixel precisam existir na conta, link https, orcamento dentro do limite.
@@ -53,5 +54,6 @@ export async function POST(req: NextRequest) {
   }
 
   const falta = faltando(atual, temMidia)
+  try { await salvarEstado(u.id, { rascunho: atual }) } catch (e) {}
   return NextResponse.json({ rascunho: atual, falta, pronto: falta.length === 0, recusados, linkStatus })
 }

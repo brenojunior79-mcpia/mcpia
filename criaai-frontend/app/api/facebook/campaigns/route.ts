@@ -108,12 +108,17 @@ export async function GET(req: NextRequest) {
     const G = 'https://graph.facebook.com/' + GRAPH_VERSION + '/' + adAccountId
     const CAMPOS_CAMP = 'id,name,status,effective_status,objective,daily_budget,lifetime_budget,created_time'
     const filtro = function(campo: string, valores: string[]) { return '&filtering=' + encodeURIComponent(JSON.stringify([{ field: campo, operator: 'IN', value: valores }])) }
-    const [ativasResult, campaignInsightsResult, accountReachResult] = await Promise.all([
+    // Campanhas criadas pela Camila ficam PAUSADAS (sem movimento): buscamos tambem essas, pelo nome, para aparecerem na lista
+    const filtroCamila = '&filtering=' + encodeURIComponent(JSON.stringify([{ field: 'effective_status', operator: 'IN', value: ['PAUSED'] }, { field: 'name', operator: 'CONTAIN', value: 'Assistente - ' }]))
+    const [ativasBase, pausadasCamila, campaignInsightsResult, accountReachResult] = await Promise.all([
       fetchAll(G + '/campaigns?fields=' + CAMPOS_CAMP + '&limit=200' + filtro('effective_status', ['ACTIVE']) + '&access_token=' + accessToken),
+      fetchAll(G + '/campaigns?fields=' + CAMPOS_CAMP + '&limit=50' + filtroCamila + '&access_token=' + accessToken),
       fetchAll(G + '/insights?level=campaign&fields=' + INSIGHT_FIELDS + '&date_preset=' + datePreset + '&limit=200&access_token=' + accessToken),
       fetchAll(G + '/insights?level=account&fields=reach,frequency&date_preset=' + datePreset + '&access_token=' + accessToken),
     ])
 
+    const idsBase = new Set<string>(ativasBase.data.map(function(c: any) { return c.id }))
+    const ativasResult = { data: ativasBase.data.concat((pausadasCamila.data || []).filter(function(c: any) { return !idsBase.has(c.id) })), error: ativasBase.error }
     if (ativasResult.error) {
       console.error('[facebook-campaigns] erro campanhas:', ativasResult.error)
       return NextResponse.json({ error: ativasResult.error.message }, { status: 500 })

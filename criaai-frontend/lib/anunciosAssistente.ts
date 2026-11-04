@@ -75,10 +75,12 @@ export type Rascunho = {
   titulo: string | null
   legenda: string | null
   botao: 'SHOP_NOW' | 'LEARN_MORE' | 'SIGN_UP'
+  tipoProduto: 'afiliado' | 'proprio' | null
+  beneficio: string | null
 }
 
 export function rascunhoVazio(): Rascunho {
-  return { produto: null, paginaId: null, pixelId: null, link: null, orcamentoDiario: null, idadeMin: 25, idadeMax: 55, genero: 'todos', titulo: null, legenda: null, botao: 'LEARN_MORE' }
+  return { produto: null, paginaId: null, pixelId: null, link: null, orcamentoDiario: null, idadeMin: 25, idadeMax: 55, genero: 'todos', titulo: null, legenda: null, botao: 'LEARN_MORE', tipoProduto: null, beneficio: null }
 }
 
 function texto(v: any, max: number): string | null {
@@ -105,6 +107,8 @@ export function limparRascunho(bruto: any, paginas: { id: string }[], pixels: { 
   if (b.genero === 'todos' || b.genero === 'mulheres' || b.genero === 'homens') r.genero = b.genero
   if ('titulo' in b) r.titulo = texto(b.titulo, 40)
   if ('legenda' in b) r.legenda = texto(b.legenda, 500)
+  if (b.tipoProduto === 'afiliado' || b.tipoProduto === 'proprio') r.tipoProduto = b.tipoProduto
+  if ('beneficio' in b) r.beneficio = texto(b.beneficio, 200)
   if (b.botao === 'SHOP_NOW' || b.botao === 'LEARN_MORE' || b.botao === 'SIGN_UP') r.botao = b.botao
   return r
 }

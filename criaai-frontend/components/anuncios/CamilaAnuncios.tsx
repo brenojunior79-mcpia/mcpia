@@ -10,6 +10,7 @@ type Fase = 'inicio' | 'conectando' | 'ativa'
 const MAX_VIDEO = 50 * 1024 * 1024
 const MAX_IMAGEM = 8 * 1024 * 1024
 const MAX_MINUTOS = 25
+
 // Se a imagem de uma boca ainda nao existe, usa a mais parecida
 const PARECIDA: Record<string, string> = { redonda: 'meia', larga: 'aberta', aberta: 'meia', meia: 'base', piscando: 'base' }
 let gerandoImagens = false
@@ -19,11 +20,12 @@ const borda = '1px solid rgba(255,255,255,0.14)'
 
 export default function CamilaAnuncios({ onCriado }: { onCriado?: () => void }) {
   const [fase, setFase] = useState<Fase>('inicio')
+  const [boca, setBoca] = useState<string>('base')
   const [quadros, setQuadros] = useState<Record<string, string>>({})
-  const [quadroAtual, setQuadroAtual] = useState('base')
   const [prep, setPrep] = useState('')
   const [prepErro, setPrepErro] = useState('')
-  const [ehAdmin, setEhAdmin] = useState(false)
+  const [trabalhando, setTrabalhando] = useState(false)
+  const [salvo, setSalvo] = useState<any>(null)
   const [falando, setFalando] = useState(false)
   const [ouvindo, setOuvindo] = useState(false)
   const [pensando, setPensando] = useState(false)
@@ -55,7 +57,9 @@ export default function CamilaAnuncios({ onCriado }: { onCriado?: () => void }) 
   const prontoRef = useRef(false)
   const criandoRef = useRef(false)
   const faseRef = useRef<Fase>('inicio')
-  const temBaseRef = useRef(false)
+  const trabalhoRef = useRef<number>(0)
+  const dialogoRef = useRef<{ r: 'u' | 'c'; t: string }[]>([])
+  const salvarRef = useRef<number>(0)
   const textoElaRef = useRef('')
   const textoCompletoRef = useRef(false)
   const ultimoSomRef = useRef(0)
@@ -65,20 +69,17 @@ export default function CamilaAnuncios({ onCriado }: { onCriado?: () => void }) 
   useEffect(function() { midiaRef.current = midia }, [midia])
   useEffect(function() { prontoRef.current = pronto }, [pronto])
   useEffect(function() { faseRef.current = fase }, [fase])
-  useEffect(function() { temBaseRef.current = !!quadros.base }, [quadros])
 
   // ----- Imagens da Camila (iguais para todos). O admin cria as que faltam, sozinho, uma vez. -----
-  async function prepararImagens(forcar?: boolean) {
+  async function prepararImagens() {
     try {
       const r = await fetch('/api/avatar/escritorio')
       const j = await r.json()
       if (!r.ok) return
       setQuadros(j.quadros || {})
-      setEhAdmin(!!j.podeCriar)
       if (!j.podeCriar || gerandoImagens) return
       const faltam = (QUADROS as readonly string[]).filter(function(q) { return !(j.quadros || {})[q] })
       if (!faltam.length) return
-      if (!forcar && faltam.length === QUADROS.length) { /* nada criado ainda: cria tudo */ }
       gerandoImagens = true
       setPrepErro('')
       try {
@@ -95,6 +96,37 @@ export default function CamilaAnuncios({ onCriado }: { onCriado?: () => void }) 
     } catch (e) {}
   }
   useEffect(function() { prepararImagens() }, [])
+
+  // ----- Trabalho no computador (a Camila digita quando faz algo para a pessoa) -----
+  function trabalhar(ms: number) {
+    setTrabalhando(true)
+    window.clearTimeout(trabalhoRef.current)
+    trabalhoRef.current = window.setTimeout(function() { setTrabalhando(false) }, ms)
+  }
+
+  // ----- Andamento salvo: ao voltar, ela continua de onde parou -----
+  useEffect(function() {
+    fetch('/api/anuncios/assistente/estado').then(function(r) { return r.json() }).then(function(j) {
+      const e = j && j.estado
+      if (!e) return
+      setSalvo(e)
+      if (e.rascunho) { setRascunho(e.rascunho); rascunhoRef.current = e.rascunho }
+      if (e.midia) { setMidia(e.midia); midiaRef.current = e.midia }
+      dialogoRef.current = Array.isArray(e.dialogo) ? e.dialogo : []
+      fetch('/api/anuncios/assistente/rascunho', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rascunho: e.rascunho, temMidia: !!e.midia }) })
+        .then(function(r) { return r.json() }).then(function(k) { if (k && k.rascunho) { setRascunho(k.rascunho); rascunhoRef.current = k.rascunho; setPronto(!!k.pronto); prontoRef.current = !!k.pronto } }).catch(function() {})
+    }).catch(function() {})
+  }, [])
+
+  function lembrar(r: 'u' | 'c', t: string) {
+    const txt = t.trim()
+    if (!txt) return
+    dialogoRef.current = dialogoRef.current.concat([{ r: r, t: txt }]).slice(-20)
+    window.clearTimeout(salvarRef.current)
+    salvarRef.current = window.setTimeout(function() {
+      fetch('/api/anuncios/assistente/estado', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dialogo: dialogoRef.current }) }).catch(function() {})
+    }, 1200)
+  }
 
   // ----- Boca: acompanha o som da voz, no mesmo instante (sem atraso) -----
   useEffect(function() {
@@ -133,11 +165,11 @@ export default function CamilaAnuncios({ onCriado }: { onCriado?: () => void }) 
       // so troca depois de 2 a 3 quadros iguais (evita tremer)
       if (alvo === cand) candN++; else { cand = alvo; candN = 1 }
       if (cand !== atual && candN >= (cand === 'base' ? 3 : 2)) atual = cand
+      if (atual !== 'base') { ultimoSomRef.current = agora; proxPiscar = Math.max(proxPiscar, agora + 800) }
       let q = atual
-      if (q !== 'base') { ultimoSomRef.current = agora; proxPiscar = Math.max(proxPiscar, agora + 800) }
       if (q === 'base' && agora > proxPiscar) { fimPiscar = agora + 140; proxPiscar = agora + 2500 + Math.random() * 3000 }
       if (q === 'base' && agora < fimPiscar) q = 'piscando'
-      setQuadroAtual(function(p) { return p === q ? p : q })
+      setBoca(function(p) { return p === q ? p : q })
       const f = agora - ultimoSomRef.current < 450
       if (f !== falandoAgora) { falandoAgora = f; setFalando(f) }
 
@@ -198,16 +230,17 @@ export default function CamilaAnuncios({ onCriado }: { onCriado?: () => void }) 
     } catch (e) {}
   }
 
-  async function comecar() {
+  async function comecar(continuar: boolean) {
     if (faseRef.current !== 'inicio') return
     setErro(''); setResultado(null); setFase('conectando')
+    if (!continuar) { await limparAndamento() }
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !(window as any).RTCPeerConnection) {
       setErro('Este navegador não aceita conversa por voz. Use o Chrome atualizado.'); setFase('inicio'); return
     }
     const audioEl = new Audio()
     audioEl.autoplay = true
     audioElRef.current = audioEl
-    const sessaoP = fetch('/api/anuncios/assistente/realtime', { method: 'POST' })
+    const sessaoP = fetch('/api/anuncios/assistente/realtime', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ continuar: continuar }) })
       .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, j: j } }) })
       .catch(function() { return { ok: false, j: { error: 'Não consegui falar com o servidor.' } } })
     let stream: MediaStream
@@ -242,7 +275,7 @@ export default function CamilaAnuncios({ onCriado }: { onCriado?: () => void }) 
       dc.onopen = function() {
         setFase('ativa')
         relogioRef.current = window.setTimeout(function() { setErro('A conversa foi encerrada por tempo. Clique em "Vamos começar" para continuar.'); encerrar() }, MAX_MINUTOS * 60 * 1000)
-        enviarEvento({ type: 'response.create', response: { instructions: 'Cumprimente a pessoa com carinho em uma frase curta, diga que voce e a Camila e pergunte qual produto ela quer anunciar.' } })
+        enviarEvento({ type: 'response.create', response: { instructions: s.j.retomada ? 'A pessoa voltou. Diga que e bom falar de novo, resuma em uma frase o que ja esta anotado e faca a proxima pergunta que falta. Nao recomece do zero.' : 'Comece dizendo, com naturalidade e voz simpatica, exatamente isto: Olá, eu sou a Camila e eu quero te ajudar a fazer o seu anúncio. Qual produto que você já escolheu? É afiliado ou o produto é seu? Depois espere a resposta.' } })
       }
       const oferta = await pc.createOffer()
       await pc.setLocalDescription(oferta)
@@ -264,7 +297,7 @@ export default function CamilaAnuncios({ onCriado }: { onCriado?: () => void }) 
       setOuvindo(false); setPensando(true)
     } else if (tipo === 'conversation.item.input_audio_transcription.completed') {
       const t = String(ev.transcript || '').trim()
-      if (t) setLegendaVoce(t)
+      if (t) { setLegendaVoce(t); lembrar('u', t) }
     } else if (tipo === 'response.created') {
       textoElaRef.current = ''; textoCompletoRef.current = false; zerarLegendaRef.current = true; setPensando(true)
     } else if (tipo === 'response.output_audio_transcript.delta' || tipo === 'response.audio_transcript.delta') {
@@ -272,6 +305,7 @@ export default function CamilaAnuncios({ onCriado }: { onCriado?: () => void }) 
     } else if (tipo === 'response.output_audio_transcript.done' || tipo === 'response.audio_transcript.done') {
       if (ev.transcript) textoElaRef.current = String(ev.transcript)
       textoCompletoRef.current = true; ultimoSomRef.current = Date.now()
+      if (textoElaRef.current) lembrar('c', textoElaRef.current)
     } else if (tipo === 'response.done') {
       setPensando(false)
       tratarFerramentas(ev.response)
@@ -312,10 +346,12 @@ export default function CamilaAnuncios({ onCriado }: { onCriado?: () => void }) 
 
   async function executar(nome: string, args: any): Promise<any> {
     if (nome === 'atualizar_anuncio') {
+      trabalhar(2600)
       const j = await guardar({ campos: args }, !!midiaRef.current)
       return { ok: true, falta: j.falta, pronto: j.pronto, recusados: j.recusados }
     }
     if (nome === 'criar_anuncio') {
+      trabalhar(8000)
       if (!prontoRef.current || !midiaRef.current) return { erro: 'Ainda não dá para criar: falta preencher tudo e anexar o arquivo.' }
       return await criar()
     }
@@ -330,6 +366,7 @@ export default function CamilaAnuncios({ onCriado }: { onCriado?: () => void }) 
     try {
       const j = await guardar({ linkColado: t }, !!midiaRef.current)
       setLink('')
+      trabalhar(2200)
       if (j.linkStatus === 'ok') avisarModelo('(Aviso da tela: colei o link da página de vendas no campo.)')
       else if (j.linkStatus === 'rede_social') avisarModelo('(Aviso da tela: colei um link de rede social, que não serve. Explique com carinho que precisa ser o link da página de vendas e peça de novo.)')
       else avisarModelo('(Aviso da tela: o link que colei não funcionou. Peça para eu colar de novo o link completo, começando com https.)')
@@ -353,6 +390,8 @@ export default function CamilaAnuncios({ onCriado }: { onCriado?: () => void }) 
       setMidia(nova); midiaRef.current = nova
       setEnviandoMidia(false)
       try { await guardar({}, true) } catch (e) {}
+      fetch('/api/anuncios/assistente/estado', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ midia: nova }) }).catch(function() {})
+      trabalhar(2200)
       avisarModelo('(Aviso da tela: anexei ' + (j.tipo === 'video' ? 'o vídeo' : 'a imagem') + ' do anúncio.)')
     } catch (e) { setErro('Não consegui enviar o arquivo. Tente de novo.'); setEnviandoMidia(false) }
   }
@@ -368,6 +407,7 @@ export default function CamilaAnuncios({ onCriado }: { onCriado?: () => void }) 
       if (r.status === 202 && j.videoId) { const n = Object.assign({}, m, { videoId: j.videoId }); setMidia(n); midiaRef.current = n; setErro(j.error); return { erro: 'O Facebook ainda está processando o vídeo. Peça para a pessoa tocar em confirmar de novo em alguns segundos.' } }
       if (!r.ok) { setErro(j.error || 'Não consegui criar o anúncio.'); return { erro: j.error || 'Não consegui criar o anúncio.' } }
       setResultado(j)
+      limparAndamento()
       if (onCriado) onCriado()
       return { ok: true, observacao: 'Anúncio criado e PAUSADO. Avise a pessoa com alegria e diga que é só conferir e ligar quando estiver tudo certo.' }
     } catch (e) { setErro('Não consegui criar o anúncio.'); return { erro: 'Não consegui criar o anúncio.' } }
@@ -391,75 +431,92 @@ export default function CamilaAnuncios({ onCriado }: { onCriado?: () => void }) 
     if (ctxRef.current) { try { ctxRef.current.resume() } catch (e) {} }
   }
 
-  function novoAnuncio() {
-    encerrar()
-    setRascunho(null); rascunhoRef.current = null; setPronto(false); setMidia(null); midiaRef.current = null
+  async function limparAndamento() {
+    dialogoRef.current = []
+    window.clearTimeout(salvarRef.current)
+    setSalvo(null)
+    try { await fetch('/api/anuncios/assistente/estado', { method: 'DELETE' }) } catch (e) {}
+  }
+
+  function zerarTela() {
+    setRascunho(null); rascunhoRef.current = null; setPronto(false); prontoRef.current = false; setMidia(null); midiaRef.current = null
     setResultado(null); setLink(''); setLegendaVoce(''); feitosRef.current = {}
   }
 
+  function novoAnuncio() {
+    encerrar()
+    zerarTela()
+    limparAndamento()
+  }
+
   // ----- Tela -----
+  const ativa = fase === 'ativa'
+  const nomeDe = function(lista: Opcao[], id: string | null, padrao: string) { const o = lista.filter(function(x) { return x.id === id })[0]; return o ? o.nome : padrao }
+  const r = rascunho || {}
   const urlQuadro = function(q: string) {
     let k = q
     for (let i = 0; i < 4 && !quadros[k] && PARECIDA[k]; i++) k = PARECIDA[k]
     return quadros[k] || quadros.base || ''
   }
   const temFotos = !!quadros.base
-  const ativa = fase === 'ativa'
-  const nomeDe = function(lista: Opcao[], id: string | null) { const o = lista.filter(function(x) { return x.id === id })[0]; return o ? o.nome : '—' }
-  const r = rascunho || {}
-  const passos: [string, boolean][] = [
-    ['Produto', !!r.produto], ['Página', !!r.paginaId], ['Pixel', !!r.pixelId], ['Link', !!r.link], ['Valor por dia', !!r.orcamentoDiario], ['Título e texto', !!(r.titulo && r.legenda)], ['Vídeo ou imagem', !!midia],
-  ]
-  const statusTxt = mudo ? 'Microfone desligado' : ouvindo ? 'Ouvindo você...' : falando ? 'Camila falando' : pensando ? 'Pensando...' : 'Pode falar, estou ouvindo'
-  const corStatus = mudo ? '#94a3b8' : ouvindo ? '#f87171' : falando ? '#c084fc' : pensando ? '#facc15' : '#4ade80'
-  const linha = function(rot: string, val: string) {
-    return <div style={{ display: 'flex', gap: 8, fontSize: 13, padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.08)' }}><span style={{ color: 'rgba(255,255,255,0.6)', minWidth: 90 }}>{rot}</span><span style={{ fontWeight: 600, wordBreak: 'break-word' }}>{val}</span></div>
-  }
+  const statusTxt = mudo ? 'Microfone desligado' : ouvindo ? 'Ouvindo você...' : falando ? 'Camila falando' : trabalhando || criando ? 'Anotando no computador...' : pensando ? 'Pensando...' : 'Pode falar, estou ouvindo'
+  const corStatus = mudo ? '#94a3b8' : ouvindo ? '#f87171' : falando ? '#c084fc' : trabalhando || criando || pensando ? '#facc15' : '#4ade80'
+  const temAndamento = !!salvo && !ativa
+  const resumoSalvo = temAndamento ? (r.produto ? 'Produto: ' + r.produto + '. ' : '') + 'Você parou no meio do anúncio, eu lembro de tudo.' : ''
 
   return (
-    <div style={{ position: 'relative', borderRadius: 20, overflow: 'hidden', color: '#fff', border: '1px solid rgba(124,92,252,0.5)', background: 'radial-gradient(ellipse at 15% 0%, #3b1a73 0%, #1a0f3a 50%, #0e0820 100%)', padding: 18, marginBottom: 14 }}>
+    <div style={{ position: 'relative', borderRadius: 20, overflow: 'hidden', color: '#fff', border: '1px solid rgba(124,92,252,0.5)', background: 'radial-gradient(ellipse at 15% 0%, #3b1a73 0%, #1a0f3a 50%, #0e0820 100%)', padding: 16, marginBottom: 14 }}>
       <style>{`
-        .cam-grid{display:grid;grid-template-columns:${ativa ? '280px' : '170px'} minmax(0,1fr);gap:20px;align-items:${ativa ? 'start' : 'center'}}
-        @media (max-width:720px){.cam-grid{grid-template-columns:1fr}.cam-foto{max-width:${ativa ? '240px' : '150px'};margin:0 auto}}
+        .cam-linha{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start}
+        .cam-cena{flex:0 0 280px;max-width:100%}
+        @media (max-width:720px){.cam-cena{flex:1 1 100%;max-width:240px;margin:0 auto}}
+        .cam-ctrl{flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:12px}
         @keyframes camPulso{0%,100%{box-shadow:0 0 0 0 rgba(168,85,247,.5)}50%{box-shadow:0 0 0 10px rgba(168,85,247,0)}}
       `}</style>
-      <div className="cam-grid">
-        <div className="cam-foto" style={{ position: 'relative', width: '100%', aspectRatio: '2 / 3', borderRadius: 18, overflow: 'hidden', background: 'linear-gradient(160deg,#2a1757,#15102b)', border: '2px solid ' + (falando ? '#c084fc' : 'rgba(255,255,255,0.18)'), boxShadow: falando ? '0 0 36px rgba(168,85,247,0.6)' : '0 8px 30px rgba(0,0,0,0.4)', transition: 'box-shadow .15s, border-color .15s' }}>
-          {temFotos ? (QUADROS as readonly string[]).map(function(q) {
-            const url = urlQuadro(q)
-            return url ? <img key={q} src={url} alt={q === 'base' ? 'Camila, gestora de anúncios' : ''} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: quadroAtual === q ? 1 : 0 }} /> : null
-          }) : (
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 60, fontWeight: 800, color: 'rgba(255,255,255,0.35)' }}>C</div>
-          )}
-          <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '22px 12px 10px', background: 'linear-gradient(180deg, transparent, rgba(8,4,20,0.85))' }}>
-            <div style={{ fontWeight: 800, fontSize: 15 }}>Camila</div>
-            <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.75)' }}>Gestora de anúncios</div>
+      <div className="cam-linha">
+        <div className="cam-cena">
+          <div style={{ position: 'relative', width: '100%', aspectRatio: '2 / 3', borderRadius: 18, overflow: 'hidden', background: 'linear-gradient(160deg,#2a1757,#15102b)', border: '2px solid ' + (falando ? '#c084fc' : 'rgba(255,255,255,0.18)'), boxShadow: falando ? '0 0 36px rgba(168,85,247,0.6)' : '0 8px 30px rgba(0,0,0,0.4)', transition: 'box-shadow .15s, border-color .15s' }}>
+            {temFotos ? (QUADROS as readonly string[]).map(function(q) {
+              const url = urlQuadro(q)
+              return url ? <img key={q} src={url} alt={q === 'base' ? 'Camila, gestora de anúncios' : ''} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: boca === q ? 1 : 0 }} /> : null
+            }) : (
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 60, fontWeight: 800, color: 'rgba(255,255,255,0.35)' }}>C</div>
+            )}
+            <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '22px 12px 10px', background: 'linear-gradient(180deg, transparent, rgba(8,4,20,0.85))' }}>
+              <div style={{ fontWeight: 800, fontSize: 15 }}>Camila</div>
+              <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.75)' }}>Gestora de anúncios</div>
+            </div>
           </div>
         </div>
 
         {!ativa ? (
-          <div>
-            <div style={{ fontWeight: 800, fontSize: 22, lineHeight: 1.2 }}>Vamos começar o anúncio?</div>
-            <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.78)', marginTop: 8, lineHeight: 1.5 }}>Eu sou a Camila. É só conversar comigo falando, como em uma ligação, que eu monto o anúncio junto com você. Tudo é criado pausado.</div>
-            <button onClick={comecar} disabled={fase === 'conectando'} style={{ cursor: fase === 'conectando' ? 'wait' : 'pointer', marginTop: 14, background: 'linear-gradient(135deg,#7c3aed,#a21caf)', color: '#fff', border: 'none', borderRadius: 14, padding: '14px 26px', fontSize: 16, fontWeight: 800 }}>{fase === 'conectando' ? 'Conectando com a Camila...' : '🎙️ Vamos começar'}</button>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', marginTop: 10 }}>Dica: use fone de ouvido para a Camila não ouvir a própria voz. O navegador vai pedir o microfone.</div>
-            {prep && <div style={{ fontSize: 12.5, color: '#facc15', marginTop: 10 }}>{prep}</div>}
-            {prepErro && <div style={{ fontSize: 12.5, color: '#fca5a5', marginTop: 10 }}>{prepErro} <button onClick={function() { prepararImagens(true) }} style={{ cursor: 'pointer', background: 'none', border: 'none', color: '#fff', textDecoration: 'underline', fontSize: 12.5 }}>Tentar de novo</button></div>}
-            {erro && <div style={{ marginTop: 10, background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.5)', borderRadius: 12, padding: '10px 12px', fontSize: 13 }}>{erro}</div>}
+          <div className="cam-ctrl" style={{ alignSelf: 'center' }}>
+            <div style={{ fontWeight: 800, fontSize: 22, lineHeight: 1.2 }}>{temAndamento ? 'Quer continuar o seu anúncio?' : 'Vamos começar o anúncio?'}</div>
+            <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.78)', lineHeight: 1.5 }}>{temAndamento ? resumoSalvo : 'Eu sou a Camila. É só conversar comigo falando, como em uma ligação, que eu monto o anúncio junto com você. Tudo é criado pausado.'}</div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <button onClick={function() { comecar(temAndamento) }} disabled={fase === 'conectando'} style={{ cursor: fase === 'conectando' ? 'wait' : 'pointer', background: 'linear-gradient(135deg,#7c3aed,#a21caf)', color: '#fff', border: 'none', borderRadius: 14, padding: '14px 24px', fontSize: 16, fontWeight: 800 }}>{fase === 'conectando' ? 'Conectando com a Camila...' : temAndamento ? '🎙️ Continuar de onde parei' : '🎙️ Vamos começar'}</button>
+              {temAndamento && fase !== 'conectando' && (
+                <button onClick={function() { zerarTela(); comecar(false) }} style={{ cursor: 'pointer', background: roxo, border: borda, color: '#fff', borderRadius: 14, padding: '14px 18px', fontSize: 14, fontWeight: 700 }}>Começar outro do zero</button>
+              )}
+            </div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>Dica: use fone de ouvido para a Camila não ouvir a própria voz. O navegador vai pedir o microfone.</div>
+            {prep && <div style={{ fontSize: 12.5, color: '#facc15' }}>{prep}</div>}
+            {prepErro && <div style={{ fontSize: 12.5, color: '#fca5a5' }}>{prepErro} <button onClick={function() { prepararImagens() }} style={{ cursor: 'pointer', background: 'none', border: 'none', color: '#fff', textDecoration: 'underline', fontSize: 12.5 }}>Tentar de novo</button></div>}
+            {erro && <div style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.5)', borderRadius: 12, padding: '10px 12px', fontSize: 13 }}>{erro}</div>}
             {resultado && (
-              <div style={{ marginTop: 12, background: 'rgba(22,163,74,0.15)', border: '1px solid rgba(22,163,74,0.5)', borderRadius: 14, padding: 12, fontSize: 14 }}>
+              <div style={{ background: 'rgba(22,163,74,0.15)', border: '1px solid rgba(22,163,74,0.5)', borderRadius: 14, padding: 12, fontSize: 14 }}>
                 <b>Anúncio criado, pausado.</b> {resultado.nome}
               </div>
             )}
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
+          <div className="cam-ctrl">
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: roxo, border: '1px solid ' + corStatus, borderRadius: 99, padding: '7px 13px', fontSize: 13, fontWeight: 700, animation: !mudo && !falando && !pensando ? 'camPulso 1.8s infinite' : 'none' }}>
                 <span style={{ width: 10, height: 10, borderRadius: '50%', background: corStatus }} />{statusTxt}
               </div>
-              <button onClick={alternarMudo} style={{ cursor: 'pointer', marginLeft: 'auto', background: roxo, border: borda, color: '#fff', borderRadius: 10, padding: '7px 12px', fontSize: 12.5, fontWeight: 700 }}>{mudo ? '🔇 Ligar microfone' : '🎙️ Desligar microfone'}</button>
-              <button onClick={encerrar} style={{ cursor: 'pointer', background: roxo, border: borda, color: '#fff', borderRadius: 10, padding: '7px 12px', fontSize: 12.5, fontWeight: 700 }}>Encerrar</button>
+              <button onClick={alternarMudo} style={{ cursor: 'pointer', marginLeft: 'auto', background: roxo, border: borda, color: '#fff', borderRadius: 10, padding: '7px 12px', fontSize: 12.5, fontWeight: 700 }}>{mudo ? '🔇 Ligar microfone' : '🎙️ Silenciar'}</button>
+              <button onClick={encerrar} style={{ cursor: 'pointer', background: roxo, border: borda, color: '#fff', borderRadius: 10, padding: '7px 12px', fontSize: 12.5, fontWeight: 700 }}>Pausar</button>
             </div>
 
             <div style={{ minHeight: 84, background: 'rgba(0,0,0,0.25)', borderRadius: 14, padding: '12px 14px' }}>
@@ -468,36 +525,20 @@ export default function CamilaAnuncios({ onCriado }: { onCriado?: () => void }) 
             </div>
 
             {!resultado && (
-              <>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {passos.map(function(p) {
-                    return <span key={p[0]} style={{ fontSize: 11.5, fontWeight: 700, borderRadius: 99, padding: '4px 10px', background: p[1] ? 'rgba(34,197,94,0.2)' : roxo, border: p[1] ? '1px solid rgba(34,197,94,0.6)' : borda, color: p[1] ? '#86efac' : 'rgba(255,255,255,0.6)' }}>{p[1] ? '✓ ' : ''}{p[0]}</span>
-                  })}
-                </div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <input value={link} onChange={function(e) { setLink(e.target.value) }} onKeyDown={function(e) { if (e.key === 'Enter') enviarLink() }} placeholder="Cole aqui o link da página de vendas" style={{ flex: '1 1 220px', minWidth: 0, background: 'rgba(255,255,255,0.08)', border: borda, color: '#fff', borderRadius: 12, padding: '10px 12px', fontSize: 14 }} />
-                  <button onClick={enviarLink} disabled={!link.trim()} style={{ cursor: 'pointer', background: '#7c3aed', color: '#fff', border: 'none', borderRadius: 12, padding: '0 16px', fontWeight: 800, opacity: link.trim() ? 1 : 0.5 }}>Enviar link</button>
-                  <label style={{ cursor: enviandoMidia ? 'wait' : 'pointer', background: roxo, border: borda, borderRadius: 12, padding: '10px 14px', fontSize: 13, fontWeight: 700 }}>
-                    {enviandoMidia ? 'Enviando...' : midia ? '📎 Trocar arquivo' : '📎 Anexar vídeo ou imagem'}
-                    <input type="file" accept="video/*,image/*" disabled={enviandoMidia} style={{ display: 'none' }} onChange={function(e) { anexar(e.target.files && e.target.files[0] ? e.target.files[0] : null); e.target.value = '' }} />
-                  </label>
-                </div>
-              </>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <input value={link} onChange={function(e) { setLink(e.target.value) }} onKeyDown={function(e) { if (e.key === 'Enter') enviarLink() }} placeholder="Cole aqui o link da página de vendas" style={{ flex: '1 1 200px', minWidth: 0, background: 'rgba(255,255,255,0.08)', border: borda, color: '#fff', borderRadius: 12, padding: '10px 12px', fontSize: 14 }} />
+                <button onClick={enviarLink} disabled={!link.trim()} style={{ cursor: 'pointer', background: '#7c3aed', color: '#fff', border: 'none', borderRadius: 12, padding: '10px 16px', fontWeight: 800, opacity: link.trim() ? 1 : 0.5 }}>Enviar link</button>
+                <label style={{ cursor: enviandoMidia ? 'wait' : 'pointer', background: roxo, border: borda, borderRadius: 12, padding: '10px 14px', fontSize: 13, fontWeight: 700 }}>
+                  {enviandoMidia ? 'Enviando...' : midia ? '📎 Trocar arquivo' : '📎 Anexar vídeo ou imagem'}
+                  <input type="file" accept="video/*,image/*" disabled={enviandoMidia} style={{ display: 'none' }} onChange={function(e) { anexar(e.target.files && e.target.files[0] ? e.target.files[0] : null); e.target.value = '' }} />
+                </label>
+              </div>
             )}
 
             {pronto && rascunho && !resultado && (
-              <div style={{ background: roxo, border: borda, borderRadius: 16, padding: 14 }}>
-                <div style={{ fontWeight: 800, marginBottom: 6 }}>Resumo do anúncio</div>
-                {linha('Produto', r.produto || '—')}
-                {linha('Página', nomeDe(paginas, r.paginaId))}
-                {linha('Pixel', nomeDe(pixels, r.pixelId))}
-                {linha('Link', r.link || '—')}
-                {linha('Orçamento', 'R$ ' + String(r.orcamentoDiario).replace('.', ',') + ' por dia')}
-                {linha('Público', r.idadeMin + ' a ' + r.idadeMax + ' anos, ' + (r.genero === 'todos' ? 'homens e mulheres' : r.genero) + ', Brasil')}
-                {linha('Título', r.titulo || '—')}
-                {linha('Texto', r.legenda || '—')}
-                {linha('Arquivo', midia ? midia.nome : '—')}
-                <button onClick={criarPeloBotao} disabled={criando} style={{ cursor: criando ? 'wait' : 'pointer', marginTop: 12, width: '100%', background: 'linear-gradient(135deg,#16a34a,#15803d)', color: '#fff', border: 'none', borderRadius: 12, padding: '13px 16px', fontSize: 15, fontWeight: 800 }}>{criando ? 'Criando... pode levar até 1 minuto' : 'Confirmar e criar (fica pausado)'}</button>
+              <div style={{ background: roxo, border: borda, borderRadius: 16, padding: 12 }}>
+                <div style={{ fontSize: 13.5, lineHeight: 1.45 }}>Tudo pronto, confira na tela do computador. O anúncio é criado <b>pausado</b>, para você conferir antes de gastar.</div>
+                <button onClick={criarPeloBotao} disabled={criando} style={{ cursor: criando ? 'wait' : 'pointer', marginTop: 10, width: '100%', background: 'linear-gradient(135deg,#16a34a,#15803d)', color: '#fff', border: 'none', borderRadius: 12, padding: '13px 16px', fontSize: 15, fontWeight: 800 }}>{criando ? 'Criando... pode levar até 1 minuto' : 'Confirmar e criar (fica pausado)'}</button>
                 <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', marginTop: 8, textAlign: 'center' }}>Ou diga "pode criar" para a Camila.</div>
               </div>
             )}
