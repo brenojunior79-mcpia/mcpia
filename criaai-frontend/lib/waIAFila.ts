@@ -2,8 +2,9 @@
 // A resposta ja vem pronta da IA (lib/waIA.ts), mas so e enviada aqui: a mensagem aparece como lida, o WhatsApp mostra
 // "digitando...", para um instante, volta a digitar e so entao a resposta chega (respostas longas saem em 2 ou 3 mensagens).
 // O agendador do banco chama /api/whatsapp/ia/fila a cada 15 segundos; cada resposta espera a hora de leitura (ler_em).
-import { graphFetch, phoneIdDaConversa, postMessage, waConfig } from '@/lib/whatsapp'
+import { GRAPH, graphFetch, phoneIdDaConversa, postMessage, waConfig } from '@/lib/whatsapp'
 import { modoIA } from '@/lib/waIA'
+import { classificar } from '@/lib/waMedia'
 
 const LIMITE_MS = 56000 // a funcao da Vercel vive no maximo 60s
 
@@ -48,6 +49,44 @@ async function enviarParte(admin: any, it: any, phoneId: string, texto: string):
   return true
 }
 
+// Manda o video da resposta rapida "App" (canal recuperacao) para a pessoa. Se o botao nao existir ou ainda nao tiver video, nao manda nada.
+async function enviarVideoApp(admin: any, it: any, phoneId: string): Promise<boolean> {
+  try {
+    const rp = await admin.from('wa_respostas_rapidas').select('video_path, video_mime, video_nome, texto').eq('canal', 'recuperacao').ilike('titulo', 'app').not('video_path', 'is', null).order('ordem', { ascending: true }).limit(1).maybeSingle()
+    const r: any = rp.data
+    if (!r || !r.video_path) { console.error('[wa-ia-fila] video App: botao "App" sem video salvo'); return false }
+    const ext = (String(r.video_path).split('.').pop() || 'mp4').replace(/[^a-zA-Z0-9]/g, '').slice(0, 5) || 'mp4'
+    const destino = 'out/' + it.conversation_id + '/' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.' + ext
+    const cp = await admin.storage.from('wa-media').copy(r.video_path, destino)
+    if (cp.error) { console.error('[wa-ia-fila] video App copia:', cp.error.message); return false }
+    const cl = classificar(String(r.video_mime || 'video/mp4'))
+    if ('erro' in cl) { console.error('[wa-ia-fila] video App tipo:', cl.erro); return false }
+    const dl = await admin.storage.from('wa-media').download(destino)
+    if (dl.error || !dl.data || dl.data.size > cl.max) { console.error('[wa-ia-fila] video App arquivo'); return false }
+    const cfg = waConfig()
+    const filename = String(r.video_nome || 'app.mp4').replace(/[^\w.\- ()À-ſ]/g, '_').slice(0, 100)
+    const fd = new FormData()
+    fd.append('messaging_product', 'whatsapp')
+    fd.append('type', cl.mime)
+    fd.append('file', new Blob([await dl.data.arrayBuffer()], { type: cl.mime }), filename)
+    const res = await fetch(GRAPH + '/' + (phoneId || cfg.phoneId) + '/media', { method: 'POST', headers: { Authorization: 'Bearer ' + cfg.token }, body: fd })
+    const up: any = await res.json().catch(function() { return null })
+    if (!res.ok || !up?.id) { console.error('[wa-ia-fila] video App upload:', JSON.stringify(up?.error || up)); return false }
+    const legenda = String(r.texto || '').trim().slice(0, 1000)
+    const obj: any = { id: up.id }
+    if (legenda) obj.caption = legenda
+    const env = await postMessage({ messaging_product: 'whatsapp', to: it.wa_id, type: 'video', video: obj }, phoneId || undefined)
+    if (!env.ok) { console.error('[wa-ia-fila] video App envio:', JSON.stringify(env.data?.error || env.data)); return false }
+    const agora = new Date().toISOString()
+    await admin.from('wa_messages').insert({ conversation_id: it.conversation_id, wa_message_id: env.data?.messages?.[0]?.id || null, direction: 'out', type: 'video', body: legenda || null, media_path: destino, mime: cl.mime, status: 'sent', sent_by: null, created_at: agora })
+    await admin.from('wa_conversations').update({ last_message_at: agora, last_text: '🤖 🎬 ' + (legenda || 'Vídeo').slice(0, 100) }).eq('id', it.conversation_id)
+    return true
+  } catch (e) {
+    console.error('[wa-ia-fila] video App erro:', e)
+    return false
+  }
+}
+
 async function executar(admin: any, it: any, inicio: number, escala: number): Promise<string> {
   const claim = await admin.from('wa_ia_fila').update({ estado: 'enviando', iniciado_em: new Date().toISOString() }).eq('id', it.id).eq('estado', 'pendente').select('id')
   if (!claim.data || claim.data.length === 0) return 'ja_pego'
@@ -64,7 +103,8 @@ async function executar(admin: any, it: any, inicio: number, escala: number): Pr
       let parte = partes[i]
       // Sem tempo para as proximas: manda o que falta de uma vez
       if (i > 0 && restante() < (tempoDigitando(parte) + 5000) * escala) { parte = partes.slice(i).join('\n\n'); partes = partes.slice(0, i + 1) }
-      if (i === 0 && partes.length === 1 && parte.length >= 90) {
+      // (quando vai video junto, digita mais curto para sobrar tempo de enviar o video dentro dos 60s da funcao)
+      if (i === 0 && partes.length === 1 && parte.length >= 90 && !it.enviar_video) {
         // Resposta longa numa mensagem so: digita, para um instante e volta a digitar
         await digitando(phoneId, it.inbound_wa_id)
         await esperar(25500 * escala)
@@ -79,6 +119,11 @@ async function executar(admin: any, it: any, inicio: number, escala: number): Pr
       if (!(await aindaPodeResponder(admin, it))) return await fim('cancelado', enviadas ? 'cancelada no meio (aluno escreveu de novo ou equipe assumiu)' : 'aluno escreveu de novo ou equipe assumiu')
       if (!(await enviarParte(admin, it, phoneId, parte))) return await fim('falhou', 'envio recusado')
       enviadas++
+    }
+    // Pediu o video do app (demonstracao): manda logo depois da mensagem
+    if (it.enviar_video && enviadas > 0) {
+      await esperar(entre(2500, 4500) * escala)
+      if (await aindaPodeResponder(admin, it)) await enviarVideoApp(admin, it, phoneId)
     }
     // Pediu ajuda humana: o assistente se desliga sozinho nessa conversa para a equipe assumir
     // e a conversa vai para o dono (admin), se ainda nao tiver atendente

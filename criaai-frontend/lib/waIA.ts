@@ -7,6 +7,9 @@ import { REGRA_EXPRESS_WHATSAPP, pediuLiberarExpress, removerMarcaExpress, liber
 const MARCA_HUMANO = '[[HUMANO]]'
 const MARCA_FIM = '[[FIM]]'
 const MARCA_COMPROU = '[[JA_COMPROU]]'
+const MARCA_VIDEO = '[[VIDEO_APP]]'
+// Link de pagamento da mentoria Cristao Prospero (Hubla)
+const LINK_PAGAMENTO = 'https://pay.hub.la/GTKvY7Bjy0ouDG8CtPJg'
 const PERGUNTA_RANKING = 'Você gostaria de ganhar R$200 no Pix como premiação? 💰'
 const PERGUNTA_EXPRESS = 'Por acaso, você já viu os novos produtos que o Breno lançou lá na Estrutura Express? Eles estão dando uma estimativa de R$ 200 de lucro por dia (é só uma estimativa, não uma garantia).'
 
@@ -29,7 +32,7 @@ const REGRAS_WHATSAPP = `# REGRAS DESTE ATENDIMENTO NO WHATSAPP (PRIORIDADE MAXI
 
 const REGRAS_CANAL: Record<string, string> = {
   suporte: '# CANAL: SUPORTE\nEsta pessoa fala com o Suporte da plataforma e da mentoria (normalmente aluno). Ajude a resolver a duvida ou dificuldade.',
-  recuperacao: '# CANAL: RECUPERACAO\nEsta pessoa foi contatada pela equipe porque iniciou uma compra e nao concluiu (ou acabou de comprar). Responda as duvidas dela com carinho, sem pressionar, e sem inventar condicoes. Questoes de pagamento, desconto ou negociacao vao para um atendente. Veja no fim das instrucoes a linha "SITUACAO DESTA PESSOA": se ela ainda NAO e aluna, siga a regra daquela linha (ela vale mais que todas as regras de aluno).',
+  recuperacao: '# CANAL: RECUPERACAO\nVoce esta no numero de RECUPERACAO: seu papel e de vendedor acolhedor, nao de professor. Esta pessoa foi contatada pela equipe porque iniciou uma compra (por exemplo gerou um Pix) e nao concluiu, ou acabou de comprar. Tire as duvidas dela sobre a mentoria Cristao Prospero e explique como funciona, com carinho, sem pressionar, SO com o que esta na base (secao SOBRE A MENTORIA), sem inventar condicoes. Este canal NAO e para tirar duvidas sobre aulas ou uso da plataforma. Se ela pedir o link para pagar, mande o link de pagamento (regra na linha SITUACAO DESTA PESSOA). Desconto, valor negociado e problemas de pagamento vao para um atendente. Veja no fim das instrucoes a linha "SITUACAO DESTA PESSOA": se ela ainda NAO e aluna, siga a regra daquela linha (ela vale mais que todas as regras de aluno).',
 }
 
 // Pessoa que o sistema NAO reconhece como aluna (sem cadastro na plataforma e sem compra): nunca recebe link da plataforma nem orientacao de aluno
@@ -37,9 +40,11 @@ const REGRA_NAO_ALUNA = `# SITUACAO DESTA PESSOA: AINDA NAO E ALUNA (PRIORIDADE 
 O sistema NAO achou cadastro na plataforma nem compra desta pessoa. Ela NAO e aluna. Por isso:
 - NUNCA mande o link da plataforma (mcpia.site), nunca fale em "Criar conta", "Esqueci minha senha", login, menus, aulas, "continue assistindo as aulas", Produtos em Alta, Criativos Manuais, Vendendo no Automatico ou qualquer coisa que so aluno usa. A UNICA excecao e a pessoa que disse que JA COMPROU (veja a regra "JA COMPROU" abaixo). Ignore as regras 24 e 31 e os trechos "ALUNO SEM ACESSO" e "NAO CONSEGUE ACESSAR" da base: eles NAO valem para esta pessoa.
 - Seu papel aqui e de recuperacao: entender com carinho, UMA pergunta por vez, o que impediu a compra, e tirar duvidas sobre a mentoria SO com o que esta na base (secao SOBRE A MENTORIA), sem pressionar e sem prometer ganho.
-- Se ela disser que quer comprar, se inscrever, entrar na mentoria ou aceitar o que o atendente ofereceu (ex.: "pode mandar o link de pagamento", "vamos"): NAO peca e-mail e NAO diga que vai liberar acesso (ela ainda nao comprou, nao ha nada para liberar). Avise que o atendente ja vai mandar o link para concluir e termine com ${MARCA_HUMANO}.
+- NAO EXISTE AULA GRATUITA. Ignore qualquer trecho da base que diga que as aulas sao gratis ou que ficam na plataforma: isso e so para aluno. Nunca diga que ela vai "acessar as aulas pelo site", nunca explique como usar a plataforma e nunca tire duvida sobre as aulas. Se ela perguntar como acessar as aulas (ou pedir aula gratuita), diga com carinho que hoje nao tem aula gratuita e que as aulas ficam liberadas para quem entra na mentoria; se ela ainda nao tem video, pergunte se quer saber como funciona.
+- VIDEO DO APP: se ela pedir aula gratuita, uma demonstracao, um exemplo, ou perguntar como funciona ou como e por dentro, escreva UMA frase curta dizendo que hoje nao tem aula gratuita, mas que voce vai mandar um video mostrando como e o app por dentro, e termine com a marca ${MARCA_VIDEO} (o sistema envia o video depois da sua mensagem e tira a marca). So uma vez por conversa: se a linha "Video do app" no fim das instrucoes disser que ja foi enviado, nao use a marca de novo.
+- LINK DE PAGAMENTO: se ela disser que quer comprar, se inscrever, entrar na mentoria, pedir o link de pagamento ou aceitar o que o atendente ofereceu (ex.: "pode mandar o link", "vamos", "quero"): mande NESTA mesma mensagem o link ${LINK_PAGAMENTO} (so o link, em texto puro, sem markdown) e diga "Assim que finalizar o pagamento me avisa aqui". NAO peca e-mail, NAO diga que vai liberar acesso e NAO use ${MARCA_HUMANO}. Nao mande o link se ela nao pediu nem demonstrou vontade de comprar: primeiro tire as duvidas dela sobre a mentoria e, se fizer sentido, pergunte se quer que voce mande o link.
 - Se a equipe (atendente) ja mandou mensagem nesta conversa, continue de onde ela parou e nunca ignore o que o atendente ofereceu. Nunca peca o mesmo dado (como o e-mail) duas vezes.
-- Se ela falar de pagamento, cartao, fatura, limite, falta de dinheiro, preco, parcela, Pix, desconto ou link de compra: acolha em uma frase curta e diga que um atendente da equipe vai ajudar a concluir, terminando com ${MARCA_HUMANO}. Nao invente valor, desconto, prazo ou condicao.
+- Se ela falar de problema no pagamento, cartao recusado, fatura, limite, falta de dinheiro, preco, parcela, Pix que expirou, desconto ou negociacao (e NAO so pediu o link de pagamento): acolha em uma frase curta e diga que um atendente da equipe vai ajudar a concluir, terminando com ${MARCA_HUMANO}. Nao invente valor, desconto, prazo ou condicao.
 - JA COMPROU (a pessoa disse que ja comprou, que comprou faz tempo e so agora vai comecar, ou perguntou "ainda vale?"): ela e uma aluna que ainda nao entrou na plataforma. Comece a resposta com a marca ${MARCA_COMPROU} (o sistema tira a marca). Se ela perguntou se ainda vale, diga "Sim, vale sim! A mentoria é vitalícia." Depois mande o link https://www.mcpia.site/ e SO o primeiro passo, em palavras bem simples: abrir o link, clicar no botao "Criar conta" e criar a conta com o MESMO e-mail que usou na compra (se ela disser que ja tem conta, oriente entrar com o e-mail e, se esqueceu a senha, tocar em "Esqueci minha senha"). Termine com "Quando fizer isso, me avise aqui que eu te ajudo no proximo passo." Nao peca o e-mail antes, nao diga que vai conferir, nao use ${MARCA_HUMANO} nessa primeira resposta. Se for sobre a Estrutura Express, siga a regra de liberacao da Estrutura Express.
 - Se ela disser que JA tentou entrar e nao conseguiu (ou depois de seguir o passo do link ainda nao consegue): pergunte so "Qual e-mail voce usou na compra?" e, quando ela responder, avise que um atendente vai conferir e termine com ${MARCA_HUMANO}.
 - NUNCA diga ou sugira que ela ja e aluna, nunca invente "novos recursos serao liberados em breve" nem nada que nao esteja na base.
@@ -261,6 +266,10 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     system = system + '\n\nEstrutura Express desta pessoa: ' + (temExpress === true ? 'JA TEM acesso liberado no sistema.' : temExpress === false ? 'o sistema NAO achou compra nem liberacao da Estrutura Express nesta conta.' : 'o sistema NAO sabe (conta nao identificada).')
     system = system + '\n\nConta identificada: ' + (conv.profile_id ? 'SIM (o sistema ja sabe quem e a pessoa; nao peca e-mail).' : ehAluna ? 'NAO (peca o e-mail da plataforma antes de liberar).' : 'NAO, e ela ainda nao e aluna (nao peca e-mail para liberar nada; so pergunte o e-mail da compra se ela disser que ja comprou).')
 
+    // Video "App" (resposta rapida salva no canal de recuperacao): so uma vez por conversa
+    const jaVideo = linhas.some(function(m) { return m.direction === 'out' && m.type === 'video' })
+    system = system + '\n\nVideo do app: ' + (canal !== 'recuperacao' ? 'nao se aplica a este canal (nao use a marca ' + MARCA_VIDEO + ').' : jaVideo ? 'JA foi enviado nesta conversa (nao use a marca ' + MARCA_VIDEO + ' de novo; se ela quiser ver de novo, diga que o video esta logo acima na conversa).' : 'ainda NAO foi enviado nesta conversa.')
+
     const resp = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + process.env.OPENAI_API_KEY, 'Content-Type': 'application/json' },
@@ -277,10 +286,11 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     texto = soUmPasso(texto)
     let passaParaHumano = texto.indexOf(MARCA_HUMANO) >= 0
     const jaComprou = texto.indexOf(MARCA_COMPROU) >= 0
-    texto = texto.split(MARCA_COMPROU).join('').split(MARCA_HUMANO).join('').trim()
+    const querVideo = texto.indexOf(MARCA_VIDEO) >= 0 && canal === 'recuperacao' && !jaVideo
+    texto = texto.split(MARCA_COMPROU).join('').split(MARCA_VIDEO).join('').split(MARCA_HUMANO).join('').trim()
     if (!texto && passaParaHumano) texto = 'Vou pedir para um atendente da equipe te ajudar com isso.'
     // Trava dura: quem nao e aluna nunca recebe link da plataforma nem "criar conta"/"esqueci minha senha" (vai para a equipe)
-    if (!ehAluna && !jaComprou && /mcpia\.site|criar\s+conta|esqueci\s+minha\s+senha|\bsenha\b.*\be-?mail\b/i.test(texto)) {
+    if (!ehAluna && !jaComprou && /mcpia\.site|criar\s+conta|esqueci\s+minha\s+senha|\bsenha\b.*\be-?mail\b|acess(ar|e)\s+o\s+site|dentro\s+da\s+plataforma|mesmo\s+e-?mail/i.test(texto)) {
       console.error('[wa-ia] bloqueado: link/acesso de aluno para quem nao e aluna', convId)
       texto = 'Vou pedir para um atendente da equipe te ajudar com isso.'
       passaParaHumano = true
@@ -344,7 +354,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     const jaConversavam = linhas.some(function(m) { return String(m.id) !== String(msgId) && Date.now() - new Date(m.created_at).getTime() < 3 * 3600 * 1000 })
     const esperaLeituraS = jaConversavam ? 8 + Math.random() * 10 : 46 + Math.random() * 10
     const lerEm = new Date(Date.now() + esperaLeituraS * 1000).toISOString()
-    const ins = await admin.from('wa_ia_fila').insert({ ler_em: lerEm, conversation_id: convId, inbound_msg_id: String(msgId), inbound_wa_id: (ultimaIn as any).wa_message_id || null, wa_id: waId, connection_id: conv.connection_id || null, texto, passa_humano: passaParaHumano })
+    const ins = await admin.from('wa_ia_fila').insert({ ler_em: lerEm, conversation_id: convId, inbound_msg_id: String(msgId), inbound_wa_id: (ultimaIn as any).wa_message_id || null, wa_id: waId, connection_id: conv.connection_id || null, texto, passa_humano: passaParaHumano, enviar_video: querVideo && !passaParaHumano })
     if (!ins.error) return true
     console.error('[wa-ia] fila indisponivel, enviando na hora:', ins.error.message)
 
