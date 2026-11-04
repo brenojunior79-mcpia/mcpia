@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
+import TextoComLinks from '@/components/layout/TextoComLinks'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 
@@ -119,7 +120,7 @@ export default function JuniorFlutuante() {
                   <div style={{ maxWidth: '86%', padding: '9px 12px', borderRadius: eu ? '14px 14px 4px 14px' : '14px 14px 14px 4px', background: eu ? '#1f6f50' : 'var(--surface)', color: eu ? '#fff' : 'var(--text)', border: eu ? 0 : '1px solid var(--border)', fontSize: 14, lineHeight: 1.45, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                     {m.human && <div style={{ fontSize: 11, fontWeight: 800, color: '#16a34a', marginBottom: 2 }}>Atendimento da equipe</div>}
                     {m.imageUrl && <div style={{ fontSize: 12, opacity: .8, marginBottom: 4 }}>[print enviado]</div>}
-                    {m.content}
+                    <TextoComLinks texto={m.content} />
                   </div>
                 </div>
               )

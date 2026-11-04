@@ -1293,8 +1293,19 @@ export function tirarLinkMarkdown(texto: string): string {
   })
 }
 
+// Deixa todo link clicavel: endereco sem https:// ganha https:// (ex.: business.facebook.com) e link entre parenteses sai dos parenteses
+// (no WhatsApp, "(business.facebook.com)" nao vira link). E-mails nao sao alterados.
+export function linkClicavel(texto: string): string {
+  let t = String(texto || '')
+  t = t.replace(/(^|[\s(])((?:www\.)?(?:[a-z0-9-]+\.)+(?:com\.br|com|br|site|net|org|io|me|app|link|la)(?:\/[^\s)]*)?)(?=$|[\s).,;:!?])/gi, function(_m, pre: string, dom: string) {
+    return pre + 'https://' + dom
+  })
+  t = t.replace(/\(\s*(https?:\/\/[^\s)]+)\s*\)/gi, ' $1 ')
+  return t.replace(/[ \t]{2,}/g, ' ').replace(/ +([.,;:!?])/g, '$1').replace(/ +\n/g, '\n').trim()
+}
+
 export function limparRespostaChat(texto: string): string {
-  const t = tirarLinkMarkdown(String(texto || '').replace(/\*\*/g, '').replace(/__/g, '')).trim()
+  const t = linkClicavel(tirarLinkMarkdown(String(texto || '').replace(/\*\*/g, '').replace(/__/g, ''))).trim()
   return soUmPasso(t)
 }
 

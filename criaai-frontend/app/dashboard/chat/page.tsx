@@ -1,5 +1,6 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
+import TextoComLinks from '@/components/layout/TextoComLinks'
 import { createClient } from '@/lib/supabase-browser'
 import styles from './chat.module.css'
 
@@ -260,7 +261,7 @@ export default function ChatPage() {
                   {msg.imageUrl && (
                     <img src={msg.imageUrl} alt="Print enviado" style={{ maxWidth: '100%', borderRadius: 10, marginBottom: msg.content ? 8 : 0, display: 'block' }} />
                   )}
-                  {msg.content && <div className={styles.bubbleText}>{msg.content}</div>}
+                  {msg.content && <div className={styles.bubbleText}><TextoComLinks texto={msg.content} /></div>}
                   {msg.role === 'assistant' && !msg.human && i > 0 && (
                     <button className={styles.copyBtn} onClick={function() { copyText(msg.content, i) }}>
                       {copied === i
