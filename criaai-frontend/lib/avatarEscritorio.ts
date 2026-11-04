@@ -1,6 +1,6 @@
-// A Camila no escritorio: 4 imagens da MESMA personagem (boca fechada, meio aberta, aberta e olhos fechados).
+// A Camila: imagens da MESMA mulher (boca fechada, meio aberta, aberta, redonda 'o/u', larga 'e/i' e olhos fechados).
 // A tela troca de imagem no ritmo da voz e pisca de vez em quando. As imagens ficam no armazenamento (bucket page-images).
-export const QUADROS = ['base', 'meia', 'aberta', 'piscando'] as const
+export const QUADROS = ['base', 'meia', 'aberta', 'redonda', 'larga', 'piscando'] as const
 export type Quadro = typeof QUADROS[number]
 export const PASTA_AVATAR = 'avatar-escritorio/camila'
 
@@ -10,5 +10,7 @@ const IGUAL = 'Esta e a mesma personagem, no mesmo cenario, como na mesma fotogr
 export const PROMPT_VARIACAO: Record<string, string> = {
   meia: IGUAL + 'Altere somente a boca: deixe-a levemente entreaberta, como quem esta falando, mostrando um pouco dos dentes, de forma natural e realista.',
   aberta: IGUAL + 'Altere somente a boca: deixe-a bem aberta, como quem fala em voz alta (som de a), mostrando os dentes, de forma natural e realista.',
+  redonda: IGUAL + 'Altere somente a boca: deixe-a pequena e arredondada, com os labios projetados para frente, como quem fala a letra O ou U. Sem mostrar os dentes.',
+  larga: IGUAL + 'Altere somente a boca: deixe-a larga e esticada para os lados, como quem fala a letra E ou I, mostrando os dentes de cima e de baixo, entreaberta, de forma natural e realista.',
   piscando: IGUAL + 'Altere somente os olhos: deixe os dois olhos completamente fechados, como em um piscar. A boca continua como esta.',
 }
