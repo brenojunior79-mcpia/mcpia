@@ -1304,8 +1304,21 @@ export function linkClicavel(texto: string): string {
   return t.replace(/[ \t]{2,}/g, ' ').replace(/ +([.,;:!?])/g, '$1').replace(/ +\n/g, '\n').trim()
 }
 
+// Tira as frases de enrolacao no fim da resposta ("Se precisar de ajuda, e so avisar", "Me avise se precisar de mais ajuda",
+// "Qualquer duvida, e so chamar", "Se precisar de algo, estou a disposicao"). Nao mexe em "Quando fizer isso, me avise aqui que eu te mando o proximo passo".
+export function tirarFrasesDeAjuda(texto: string): string {
+  const original = String(texto || '')
+  let t = original
+  t = t.replace(/(?:\s+e)?\s*(?:Se|Caso)\s+(?:voc[eê]\s+)?(?:precisar|tiver|surgir|ficar)[^.!?\n]*?(?:[eé]\s+s[oó]|pode)\s+(?:me\s+)?(?:avisar|chamar|falar|perguntar|mandar\s+mensagem)[^.!?\n]*[.!?]?/gi, '')
+  t = t.replace(/(?:\s+e)?\s*Qualquer\s+d[uú]vida,?\s*[eé]\s+s[oó]\s+(?:me\s+)?(?:avisar|chamar|falar|perguntar)[^.!?\n]*[.!?]?/gi, '')
+  t = t.replace(/(?:\s+e)?\s*(?:Me\s+avise|Avise-me|Me\s+chame|Me\s+fale)\s+se\s+(?:precisar|tiver|surgir)[^.!?\n]*[.!?]?/gi, '')
+  t = t.replace(/\s*(?:Se|Caso)\s+[^.!?\n]*(?:precisar|tiver)[^.!?\n]*,\s*estou\s+(?:aqui|[àa]\s+disposi[cç][aã]o)[^.!?\n]*[.!?]?/gi, '')
+  t = t.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
+  return t.replace(/\s/g, '').length < 3 ? original : t
+}
+
 export function limparRespostaChat(texto: string): string {
-  const t = linkClicavel(tirarLinkMarkdown(String(texto || '').replace(/\*\*/g, '').replace(/__/g, ''))).trim()
+  const t = tirarFrasesDeAjuda(linkClicavel(tirarLinkMarkdown(String(texto || '').replace(/\*\*/g, '').replace(/__/g, '')))).trim()
   return soUmPasso(t)
 }
 

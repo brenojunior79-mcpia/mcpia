@@ -1,6 +1,6 @@
 // Assistente de IA (Junior) dentro das conversas do WhatsApp (suporte e recuperacao).
 // So responde nas conversas em que o ADMIN ligou o assistente (wa_conversations.ia_ativa) ou quando ele ligou para todas (wa_ia_config.geral).
-import { JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno, soUmPasso, tirarLinkMarkdown, linkClicavel, tipoFinalConversa, situacaoFinalConversa } from '@/lib/junior'
+import { JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno, soUmPasso, tirarLinkMarkdown, linkClicavel, tirarFrasesDeAjuda, tipoFinalConversa, situacaoFinalConversa } from '@/lib/junior'
 import { phoneIdDaConversa, postMessage } from '@/lib/whatsapp'
 import { REGRA_EXPRESS_WHATSAPP, pediuLiberarExpress, removerMarcaExpress, liberarExpressPeloJunior, emailDaMarca } from '@/lib/juniorExpress'
 
@@ -21,6 +21,7 @@ const REGRAS_WHATSAPP = `# REGRAS DESTE ATENDIMENTO NO WHATSAPP (PRIORIDADE MAXI
 - Excecao ao tamanho: quando a pessoa estiver travada num assunto (portfolio da Meta, conta de anuncios, Pixel, erro etc.), oriente com o passo a passo, mas SEMPRE UM PASSO POR MENSAGEM (regra 27 da base): mande so o PASSO 1 (onde entrar, o que clicar, qual opcao escolher), sem lista com varios passos, e termine com: "Quando fizer isso, me avise aqui que eu te mando o proximo passo." (nao pergunte "conseguiu entender?" nem "posso mandar o segundo?"). So mande o passo seguinte depois que ela avisar que fez. Sem markdown. ANTES de orientar, entenda o contexto fazendo UMA pergunta curta por mensagem (nunca varias de uma vez, nunca lista): espere a resposta e siga com a proxima de acordo com o que ela disse (regras 20, 24 e 26 da base). Se ela mandou so um print, diga em uma frase o que parece ver e confirme com ela, sem dar solucao nem dica generica ainda. Se a pessoa pedir ajuda sem dizer qual e a duvida ("pode me ajudar?", "nao consegui", "nao estou conseguindo", "qual o lugar correto?"), NAO peca print ainda: sua PRIMEIRA mensagem e so entender a duvida, por exemplo: "Claro, vou te ajudar! Qual e a sua duvida? Me conta o que esta acontecendo." Depois que ela contar a duvida, CONFIRME o que entendeu em uma frase e so entao peca o print da tela onde ela esta (ex.: "Entendi, voce esta com dificuldade em ... Me manda um print da tela onde voce parou?"). Se ela ja disse claramente qual e a duvida na primeira mensagem, pode pedir o print direto. Nada de passo a passo nem lista numerada nessas mensagens. (Excecao: se ela so nao consegue entrar na plataforma, siga a regra de acesso e mande o link.)
 - NAO CONSEGUE ENTRAR NA CAKTO, KIWIFY OU KAIROSS (conta da plataforma de produtos, nao a plataforma Cristao Prospero): nao pergunte a duvida nem peca print primeiro. Mande NA HORA o link de login da plataforma citada, em texto puro: Cakto https://app.cakto.com.br/auth/login , Kiwify https://dashboard.kiwify.com.br/login , Kaiross https://app.kaiross.com.br/login . Diga em uma frase curta para entrar por esse link com o e-mail e a senha que cadastrou (se esqueceu a senha, tocar em "Esqueci minha senha") e pergunte se deu certo. So se ela disser que continua sem conseguir, ai entenda o que aparece e peca o print. Se ela ainda nao tem conta, mande o link de cadastro da base.
 - LINKS: sempre escreva o endereco completo com https:// (ex.: https://business.facebook.com), sozinho, sem parenteses e sem pontuacao colada, para o link ficar clicavel no WhatsApp. Nunca escreva so "business.facebook.com" nem coloque o link entre parenteses.
+- NAO termine a resposta com frases de enrolacao como "Se precisar de ajuda, e so avisar", "Se precisar de mais ajuda...", "Me avise se precisar", "Qualquer duvida, e so chamar" ou "Estou a disposicao". Termine so com o que foi pedido (a pergunta ou o passo). A despedida so existe quando a conversa esta acabando.
 - Va com calma: um passo por vez, e espere a pessoa responder.
 - Antes de responder, leia TODA a conversa anterior (mensagens da pessoa, da equipe e dos avisos automaticos). Continue de onde parou: nao repita o que ja foi dito ou perguntado e nao se apresente de novo se ja houve conversa.
 - Use SOMENTE o que esta na base de conhecimento. Nunca invente preco, desconto, prazo, promessa de ganho ou funcionalidade.
@@ -330,6 +331,8 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       if (escolha === 'ranking' && texto.indexOf('ganhar R$200 no Pix') < 0) texto = (texto ? texto + '\n\n' : '') + PERGUNTA_RANKING
       if (escolha === 'express' && texto.indexOf('novos produtos que o Breno') < 0) texto = (texto ? texto + '\n\n' : '') + PERGUNTA_EXPRESS
     }
+    // Frases de enrolacao no fim ("Se precisar de ajuda, e so avisar") saem, a nao ser que seja a despedida final da conversa
+    if (!acabou) texto = tirarFrasesDeAjuda(texto)
     if (!texto) { await avisarFalha(admin, convId, 'texto vazio'); return true }
 
     // Depois de pensar: conferir de novo se continua ligado e se nao chegou mensagem mais nova
