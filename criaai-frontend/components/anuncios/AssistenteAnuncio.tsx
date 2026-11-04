@@ -32,6 +32,7 @@ export default function AssistenteAnuncio({ onClose, onCriado }: { onClose: () =
   const [pensando, setPensando] = useState(false)
   const [falando, setFalando] = useState(false)
   const [gravando, setGravando] = useState(false)
+  const [conversaAtiva, setConversaAtiva] = useState(false)
   const [enviandoMidia, setEnviandoMidia] = useState(false)
   const [criando, setCriando] = useState(false)
   const [vozLigada, setVozLigada] = useState(true)
@@ -54,7 +55,19 @@ export default function AssistenteAnuncio({ onClose, onCriado }: { onClose: () =
   const recRef = useRef<MediaRecorder | null>(null)
   const pedacosRef = useRef<Blob[]>([])
   const streamRef = useRef<MediaStream | null>(null)
-  const segurandoRef = useRef(false)
+  const ativaRef = useRef(false)
+  const gravandoRef = useRef(false)
+  const falandoRef = useRef(false)
+  const ocupadoRef = useRef(false)
+  const vadCtxRef = useRef<AudioContext | null>(null)
+  const vadAnRef = useRef<AnalyserNode | null>(null)
+  const vadTimerRef = useRef<number>(0)
+  const baseRef = useRef(0.01)
+  const nivelRef = useRef(0)
+  const somDesdeRef = useRef(0)
+  const ultimoSomRef = useRef(0)
+  const inicioFalaRef = useRef(0)
+  const enviarRef = useRef<((t: string) => void) | null>(null)
   const fimRef = useRef<HTMLDivElement>(null)
   const msgsRef = useRef<Msg[]>([])
   const rascunhoRef = useRef<any>(null)
@@ -67,6 +80,8 @@ export default function AssistenteAnuncio({ onClose, onCriado }: { onClose: () =
       if (j && !j.error) { setAvatarIa(j.avatar || null); setAvatarInfo({ temFoto: !!j.temFoto, podeCriar: !!j.podeCriar, restantes: Number(j.restantes || 0) }) }
     }).catch(function() {})
   }, [])
+  useEffect(function() { falandoRef.current = falando }, [falando])
+  useEffect(function() { ocupadoRef.current = pensando || criando }, [pensando, criando])
   useEffect(function() { msgsRef.current = msgs }, [msgs])
   useEffect(function() { rascunhoRef.current = rascunho }, [rascunho])
   useEffect(function() { midiaRef.current = midia }, [midia])
@@ -111,7 +126,9 @@ export default function AssistenteAnuncio({ onClose, onCriado }: { onClose: () =
     return function() {
       cancelAnimationFrame(quadroRef.current)
       pararFala()
+      if (vadTimerRef.current) window.clearInterval(vadTimerRef.current)
       if (streamRef.current) streamRef.current.getTracks().forEach(function(t) { t.stop() })
+      if (vadCtxRef.current) { try { vadCtxRef.current.close() } catch (e) {} }
       if (ctxRef.current) { try { ctxRef.current.close() } catch (e) {} }
     }
   }, [])
@@ -151,7 +168,7 @@ export default function AssistenteAnuncio({ onClose, onCriado }: { onClose: () =
       const r = await fetch('/api/anuncios/assistente/falar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ texto: t }) })
       if (!r.ok) return
       const blob = await r.blob()
-      if (!vozRef.current || segurandoRef.current) return
+      if (!vozRef.current || gravandoRef.current) return
       const a = audioRef.current!
       a.src = URL.createObjectURL(blob)
       a.onended = function() { setFalando(false) }
@@ -163,6 +180,7 @@ export default function AssistenteAnuncio({ onClose, onCriado }: { onClose: () =
   async function comecar() {
     prepararAudio()
     setComecou(true)
+    ativarConversa()
     setMsgs([{ role: 'assistant', content: SAUDACAO }])
     falar(FALA_SAUDACAO)
     try {
@@ -201,61 +219,106 @@ export default function AssistenteAnuncio({ onClose, onCriado }: { onClose: () =
     } catch (e) { setErro('Nao consegui responder agora.'); setPensando(false) }
   }
 
-  // ----- Segurar para falar -----
-  async function comecarGravar() {
-    if (gravando || pensando || criando) return
-    segurandoRef.current = true
+  // ----- Conversa sem apertar botao -----
+  // Ela escuta o microfone o tempo todo: quando voce fala, ela se cala; quando voce para de falar (1,3 s de silencio), ela responde.
+  function tickVad() {
+    const an = vadAnRef.current
+    if (!an || !ativaRef.current) return
+    const dados = new Uint8Array(an.fftSize)
+    an.getByteTimeDomainData(dados)
+    let soma = 0
+    for (let i = 0; i < dados.length; i++) { const v = (dados[i] - 128) / 128; soma += v * v }
+    const rms = Math.sqrt(soma / dados.length)
+    nivelRef.current = rms
+    const agora = Date.now()
+    // Enquanto ela fala o limiar sobe, para o som do alto-falante nao ser confundido com a sua voz
+    const limiar = Math.max(0.03, baseRef.current * 3) * (falandoRef.current ? 2.5 : 1)
+    const fala = rms > limiar
+    if (!gravandoRef.current) {
+      if (!fala) { baseRef.current = baseRef.current * 0.95 + rms * 0.05; somDesdeRef.current = 0; return }
+      if (ocupadoRef.current) return
+      if (!somDesdeRef.current) somDesdeRef.current = agora
+      if (agora - somDesdeRef.current >= 120) iniciarGravacao()
+    } else {
+      if (fala) ultimoSomRef.current = agora
+      else if (agora - ultimoSomRef.current >= 1300) finalizarGravacao()
+      else if (agora - inicioFalaRef.current > 60000) finalizarGravacao()
+    }
+  }
+
+  function iniciarGravacao() {
+    const stream = streamRef.current
+    if (!stream) return
     pararFala()
-    setErro('')
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      if (!segurandoRef.current) { stream.getTracks().forEach(function(t) { t.stop() }); return }
-      streamRef.current = stream
       const tipo = (window as any).MediaRecorder && MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : (MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '')
       const rec = tipo ? new MediaRecorder(stream, { mimeType: tipo }) : new MediaRecorder(stream)
       pedacosRef.current = []
       rec.ondataavailable = function(e) { if (e.data && e.data.size) pedacosRef.current.push(e.data) }
       rec.onstop = async function() {
-        stream.getTracks().forEach(function(t) { t.stop() })
+        const durFala = ultimoSomRef.current - inicioFalaRef.current
         const blob = new Blob(pedacosRef.current, { type: rec.mimeType || 'audio/webm' })
-        if (blob.size < 1500) { setGravando(false); return }
-        setPensando(true)
+        if (!ativaRef.current || durFala < 450 || blob.size < 1500) return
+        setPensando(true); ocupadoRef.current = true
         try {
           const fd = new FormData()
           fd.append('audio', blob, 'fala')
           const r = await fetch('/api/anuncios/assistente/transcrever', { method: 'POST', body: fd })
           const j = await r.json()
-          setPensando(false)
+          setPensando(false); ocupadoRef.current = false
           if (!r.ok) { setErro(j.error || 'Nao consegui entender o audio.'); return }
-          if (!j.texto) { setErro('Não ouvi nada. Segure o botão e fale de novo.'); return }
-          enviar(j.texto)
-        } catch (e) { setPensando(false); setErro('Nao consegui entender o audio.') }
+          if (!j.texto || j.texto.length < 2) return
+          if (enviarRef.current) enviarRef.current(j.texto)
+        } catch (e) { setPensando(false); ocupadoRef.current = false; setErro('Nao consegui entender o audio.') }
       }
       recRef.current = rec
       rec.start()
+      gravandoRef.current = true
+      inicioFalaRef.current = Date.now()
+      ultimoSomRef.current = Date.now()
       setGravando(true)
+    } catch (e) { gravandoRef.current = false }
+  }
+
+  function finalizarGravacao() {
+    gravandoRef.current = false
+    somDesdeRef.current = 0
+    setGravando(false)
+    const rec = recRef.current
+    if (rec && rec.state !== 'inactive') { try { rec.stop() } catch (e) {} }
+  }
+
+  async function ativarConversa() {
+    if (ativaRef.current) return
+    prepararAudio()
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
+      const AC: any = (window as any).AudioContext || (window as any).webkitAudioContext
+      const ctx = new AC()
+      const an = ctx.createAnalyser()
+      an.fftSize = 1024
+      ctx.createMediaStreamSource(stream).connect(an)
+      streamRef.current = stream; vadCtxRef.current = ctx; vadAnRef.current = an
+      baseRef.current = 0.01
+      ativaRef.current = true
+      setConversaAtiva(true)
+      vadTimerRef.current = window.setInterval(tickVad, 60)
     } catch (e) {
-      segurandoRef.current = false
       setErro('Não consegui usar o microfone. Libere o microfone no navegador ou escreva a sua resposta.')
     }
   }
 
-  function pararGravar() {
-    segurandoRef.current = false
+  function pausarConversa() {
+    ativaRef.current = false
+    gravandoRef.current = false
+    if (vadTimerRef.current) { window.clearInterval(vadTimerRef.current); vadTimerRef.current = 0 }
     const rec = recRef.current
     if (rec && rec.state !== 'inactive') { try { rec.stop() } catch (e) {} }
-    setGravando(false)
+    if (streamRef.current) { streamRef.current.getTracks().forEach(function(t) { t.stop() }); streamRef.current = null }
+    if (vadCtxRef.current) { try { vadCtxRef.current.close() } catch (e) {} vadCtxRef.current = null }
+    vadAnRef.current = null
+    setConversaAtiva(false); setGravando(false)
   }
-
-  // Barra de espaco = segurar para falar (so quando nao esta digitando)
-  useEffect(function() {
-    function dentroDeCampo(e: KeyboardEvent) { const t: any = e.target; return t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') }
-    function baixo(e: KeyboardEvent) { if (e.code === 'Space' && !e.repeat && !dentroDeCampo(e) && comecou) { e.preventDefault(); comecarGravar() } }
-    function cima(e: KeyboardEvent) { if (e.code === 'Space' && !dentroDeCampo(e) && segurandoRef.current) { e.preventDefault(); pararGravar() } }
-    window.addEventListener('keydown', baixo)
-    window.addEventListener('keyup', cima)
-    return function() { window.removeEventListener('keydown', baixo); window.removeEventListener('keyup', cima) }
-  }, [comecou, gravando, pensando, criando])
 
   // ----- Video ou imagem -----
   async function anexar(arquivo: File | null) {
@@ -304,6 +367,8 @@ export default function AssistenteAnuncio({ onClose, onCriado }: { onClose: () =
     setCriandoAvatar(false)
   }
 
+  enviarRef.current = function(t: string) { enviar(t) }
+
   function nomeDe(lista: Opcao[], id: string | null) { const o = lista.filter(function(x) { return x.id === id })[0]; return o ? o.nome : '—' }
 
   const bolha = function(m: Msg, i: number) {
@@ -347,7 +412,7 @@ export default function AssistenteAnuncio({ onClose, onCriado }: { onClose: () =
               {!comecou ? (
                 <div style={{ margin: 'auto', textAlign: 'center', maxWidth: 360 }}>
                   <p style={{ fontSize: 15, lineHeight: 1.6, color: 'rgba(255,255,255,0.85)' }}>A Camila vai conversar com você por voz, fazer uma pergunta de cada vez e montar o seu anúncio. Ele é criado <b>pausado</b>, só depois que você confirmar.</p>
-                  <button onClick={comecar} style={{ cursor: 'pointer', marginTop: 10, background: 'linear-gradient(135deg,#7c3aed,#a21caf)', color: '#fff', border: 'none', borderRadius: 14, padding: '14px 28px', fontSize: 16, fontWeight: 800 }}>Começar conversa</button>
+                  <button onClick={comecar} style={{ cursor: 'pointer', marginTop: 10, background: 'linear-gradient(135deg,#7c3aed,#a21caf)', color: '#fff', border: 'none', borderRadius: 14, padding: '14px 28px', fontSize: 16, fontWeight: 800 }}>Ativar conversa</button>
                 </div>
               ) : (
                 <>
@@ -391,15 +456,12 @@ export default function AssistenteAnuncio({ onClose, onCriado }: { onClose: () =
                     {enviandoMidia ? 'Enviando...' : midia ? '📎 Trocar arquivo' : '📎 Anexar vídeo ou imagem'}
                     <input type="file" accept="video/*,image/*" disabled={enviandoMidia} style={{ display: 'none' }} onChange={function(e) { anexar(e.target.files && e.target.files[0] ? e.target.files[0] : null); e.target.value = '' }} />
                   </label>
-                  <button
-                    onPointerDown={function(e) { e.preventDefault(); comecarGravar() }}
-                    onPointerUp={pararGravar} onPointerLeave={function() { if (segurandoRef.current) pararGravar() }} onPointerCancel={pararGravar}
-                    onContextMenu={function(e) { e.preventDefault() }}
-                    style={{ flex: 1, touchAction: 'none', userSelect: 'none', cursor: 'pointer', background: gravando ? 'linear-gradient(135deg,#dc2626,#b91c1c)' : 'linear-gradient(135deg,#7c3aed,#a21caf)', color: '#fff', border: 'none', borderRadius: 14, padding: '14px 12px', fontSize: 15, fontWeight: 800 }}>
-                    {gravando ? '🎙️ Solte para enviar' : falando ? '✋ Segure para interromper' : '🎙️ Segure para falar'}
+                  <button onClick={function() { if (conversaAtiva) pausarConversa(); else ativarConversa() }}
+                    style={{ flex: 1, cursor: 'pointer', background: conversaAtiva ? (gravando ? 'linear-gradient(135deg,#dc2626,#b91c1c)' : 'linear-gradient(135deg,#16a34a,#15803d)') : 'linear-gradient(135deg,#7c3aed,#a21caf)', color: '#fff', border: 'none', borderRadius: 14, padding: '14px 12px', fontSize: 15, fontWeight: 800 }}>
+                    {!conversaAtiva ? '🎙️ Ativar conversa' : gravando ? '🎙️ Ouvindo você...' : pensando ? '⏳ Pensando...' : falando ? '🔊 Camila falando (pode interromper)' : '🎙️ Conversa ativa, pode falar'}
                   </button>
                 </div>
-                <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>No computador, você também pode segurar a barra de espaço.{falta.length > 0 && rascunho ? ' Falta: ' + falta.join(', ') + '.' : ''}</div>
+                <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>Fale normalmente: ela espera você terminar. Toque no botão verde para pausar a conversa.{falta.length > 0 && rascunho ? ' Falta: ' + falta.join(', ') + '.' : ''}</div>
               </div>
             )}
           </div>
