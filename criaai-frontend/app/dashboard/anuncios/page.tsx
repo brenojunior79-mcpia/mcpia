@@ -6,6 +6,7 @@ import Funil from '@/components/anuncios/Funil'
 import ResumoFinanceiro from '@/components/anuncios/ResumoFinanceiro'
 import AnalisandoMetricas from '@/components/metricas/AnalisandoMetricas'
 import CampanhasTabela from '@/components/anuncios/CampanhasTabela'
+import AssistenteAnuncio from '@/components/anuncios/AssistenteAnuncio'
 import CriativosAnuncios from '@/components/anuncios/CriativosAnuncios'
 import { orcamentoDiario } from '@/components/anuncios/CampanhaCard'
 import { cartao, titulo, moeda } from '@/components/anuncios/estilo'
@@ -17,6 +18,7 @@ export default function AnunciosPage() {
   const [permitido, setPermitido] = useState<boolean | null>(null)
   const [semPlano, setSemPlano] = useState(false)
   const [ehAdmin, setEhAdmin] = useState(false)
+  const [assistenteAberto, setAssistenteAberto] = useState(false)
   const [loading, setLoading] = useState(true)
   const [connection, setConnection] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
@@ -251,6 +253,16 @@ export default function AnunciosPage() {
           </div>
         ) : (
           <>
+            {ehAdmin && (
+              <div style={{ ...cartao, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', border: '1px solid rgba(124,92,252,0.4)' }}>
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <div style={{ fontWeight: 800, fontSize: 14 }}>Criar anúncio com a Camila (teste, só para você)</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginTop: 2 }}>Converse por voz ou texto e a IA monta a campanha, o conjunto e o anúncio. Tudo é criado pausado.</div>
+                </div>
+                <button onClick={function() { setAssistenteAberto(true) }} style={{ cursor: 'pointer', background: 'linear-gradient(135deg,#4b3fe8,#5b4ef8,#8b6dfa)', color: '#fff', border: 'none', borderRadius: 12, padding: '11px 20px', fontSize: 14, fontWeight: 800 }}>🎙️ Criar anúncio</button>
+              </div>
+            )}
+            {assistenteAberto && <AssistenteAnuncio onClose={function() { setAssistenteAberto(false) }} onCriado={function() { loadCampaigns(periodo, true) }} />}
             <div style={{ ...cartao, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
               <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#1877f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <i className="ti ti-brand-facebook" style={{ color: '#fff', fontSize: 18 }} />
