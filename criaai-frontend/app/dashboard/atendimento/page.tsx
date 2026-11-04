@@ -488,10 +488,24 @@ export default function AtendimentoPage() {
     }
   }
 
-  function usarRapida(r: { texto: string }) {
+  function usarRapida(r: { texto: string; id?: string; tem_video?: boolean }) {
     const primeiro = (atual && atual.name ? atual.name : '').trim().split(/\s+/)[0] || ''
     const txt = r.texto.indexOf('{{nome}}') >= 0 ? r.texto.split('{{nome}}').join(primeiro).replace(/\s+([,.!?])/g, '$1') : r.texto
+    if (r.tem_video && r.id) { enviarRapidaVideo(r.id, txt); return }
     enviar(undefined, txt)
+  }
+
+  // Mensagem rapida com video: o servidor pega o video guardado no botao e manda pelo WhatsApp (o texto vai como legenda)
+  async function enviarRapidaVideo(rapidaId: string, legenda: string) {
+    if (!atual || enviando) return
+    setEnviando(true); setErro('')
+    try {
+      const r = await fetch('/api/whatsapp/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId: atual.id, media: { rapidaId: rapidaId, caption: legenda } }) })
+      const j = await r.json().catch(function() { return {} })
+      if (!r.ok) setErro(j.error || 'Não foi possível enviar o vídeo.')
+      else { fetch('/api/whatsapp/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId: atual.id }) }).catch(function() {}); await carregarMsgs(atual.id); carregarConvs() }
+    } catch (e) { setErro('Sem conexão. Tente de novo.') }
+    setEnviando(false)
   }
   const horasRestantes = atual && atual.last_inbound_at ? Math.max(0, Math.ceil((WIN - (Date.now() - new Date(atual.last_inbound_at).getTime())) / 3600000)) : 0
 
@@ -1141,12 +1155,12 @@ export default function AtendimentoPage() {
                   <>
                     <div style={{ fontSize: 11.5, color: 'var(--muted2)', marginBottom: 6 }}>Você pode responder por mais ~{horasRestantes}h.</div>
                     {(function() {
-                      const lista: { id?: string; titulo: string; texto: string }[] = rapidasDb[canalConv] || (atual.connection_id ? RAPIDAS : RAPIDAS_SUPORTE)
+                      const lista: { id?: string; titulo: string; texto: string; tem_video?: boolean }[] = rapidasDb[canalConv] || (atual.connection_id ? RAPIDAS : RAPIDAS_SUPORTE)
                       if (lista.length === 0 && !isAdmin) return null
                       return (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
                           {lista.map(function(r) {
-                            return <button key={r.id || r.titulo} disabled={enviando} title={r.texto} onClick={function() { usarRapida(r) }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 999, padding: '6px 12px', fontSize: 13, fontWeight: 700, opacity: enviando ? 0.55 : 1 }}>⚡ {r.titulo}</button>
+                            return <button key={r.id || r.titulo} disabled={enviando} title={r.texto} onClick={function() { usarRapida(r) }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 999, padding: '6px 12px', fontSize: 13, fontWeight: 700, opacity: enviando ? 0.55 : 1 }}>{r.tem_video ? '🎬' : '⚡'} {r.titulo}</button>
                           })}
                           {isAdmin && <button onClick={function() { setGerRapidas(true) }} title="Adicionar, editar ou apagar mensagens rápidas" style={{ cursor: 'pointer', border: '1px dashed var(--border2)', background: 'transparent', color: 'var(--muted2)', borderRadius: 999, padding: '6px 12px', fontSize: 13, fontWeight: 700 }}>＋ Adicionar / editar</button>}
                         </div>

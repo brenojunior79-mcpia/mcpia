@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   const convId = String(input?.conversationId || '')
   const text = typeof input?.text === 'string' ? input.text.trim() : ''
   const tpl = input?.template && typeof input.template.name === 'string' ? input.template : null
-  const media = input?.media && typeof input.media.path === 'string' ? input.media : null
+  let media = input?.media && (typeof input.media.path === 'string' || typeof input.media.rapidaId === 'string') ? input.media : null
   if (!convId || (!text && !tpl && !media)) return NextResponse.json({ error: 'Escreva uma mensagem.' }, { status: 400 })
   if (text.length > 4000) return NextResponse.json({ error: 'Mensagem muito longa.' }, { status: 400 })
 
@@ -59,6 +59,17 @@ export async function POST(req: NextRequest) {
     const last = c.data.last_inbound_at ? new Date(c.data.last_inbound_at).getTime() : 0
     if (Date.now() - last > 24 * 60 * 60 * 1000) {
       return NextResponse.json({ error: 'Passaram 24 horas desde a ultima mensagem do aluno. Envie um modelo aprovado.', window: 'closed' }, { status: 409 })
+    }
+    // Mensagem rapida com video: copia o video guardado do botao para a pasta desta conversa (continua visivel na conversa mesmo se o botao for apagado)
+    if (typeof media.rapidaId === 'string' && media.rapidaId) {
+      const rp = await admin.from('wa_respostas_rapidas').select('video_path, video_mime, video_nome').eq('id', media.rapidaId).maybeSingle()
+      const vp = (rp.data as any)?.video_path as string | undefined
+      if (!vp) return NextResponse.json({ error: 'Esse botao nao tem mais video.' }, { status: 400 })
+      const ext = (vp.split('.').pop() || 'mp4').replace(/[^a-zA-Z0-9]/g, '').slice(0, 5) || 'mp4'
+      const destino = 'out/' + convId + '/' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.' + ext
+      const cp = await admin.storage.from('wa-media').copy(vp, destino)
+      if (cp.error) return NextResponse.json({ error: 'Nao consegui preparar o video. Tente de novo.' }, { status: 500 })
+      media = { path: destino, mime: (rp.data as any).video_mime || 'video/mp4', filename: (rp.data as any).video_nome || 'video.mp4', caption: typeof media.caption === 'string' ? media.caption : '' }
     }
     const path = String(media.path)
     if (path.indexOf('out/' + convId + '/') !== 0 || path.indexOf('..') >= 0) return NextResponse.json({ error: 'Arquivo invalido.' }, { status: 400 })
