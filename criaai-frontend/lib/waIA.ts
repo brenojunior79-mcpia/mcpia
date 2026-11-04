@@ -6,6 +6,7 @@ import { REGRA_EXPRESS_WHATSAPP, pediuLiberarExpress, removerMarcaExpress, liber
 
 const MARCA_HUMANO = '[[HUMANO]]'
 const MARCA_FIM = '[[FIM]]'
+const MARCA_COMPROU = '[[JA_COMPROU]]'
 const PERGUNTA_RANKING = 'Você gostaria de ganhar R$200 no Pix como premiação? 💰'
 const PERGUNTA_EXPRESS = 'Por acaso, você já viu os novos produtos que o Breno lançou lá na Estrutura Express? Eles estão dando uma estimativa de R$ 200 de lucro por dia (é só uma estimativa, não uma garantia).'
 
@@ -23,7 +24,8 @@ const REGRAS_WHATSAPP = `# REGRAS DESTE ATENDIMENTO NO WHATSAPP (PRIORIDADE MAXI
 - Se a pessoa mandar print, foto ou PDF, voce consegue ver o conteudo: leia com atencao, diga em uma frase o que entendeu e ajude com base nisso. Se a imagem estiver ilegivel ou nao der para entender, peca outro print mais nitido. Comprovante de pagamento ou documento pessoal: NAO confirme pagamento nem libere nada; agradeca e avise que um atendente vai conferir, terminando com ${MARCA_HUMANO}.
 - Quando a conversa estiver terminando (a pessoa agradeceu, disse que resolveu, se despediu ou nao precisa de mais nada): escreva so uma despedida curta e acolhedora (uma vez so) e termine com a marca ${MARCA_FIM}. NAO escreva voce mesmo a pergunta final (R$200 no Pix ou Estrutura Express): o sistema acrescenta sozinho no fim da despedida (regras 35 e 36 da base). Se a pessoa responder SIM a pergunta dos R$200, ensine o ranking aos poucos, um passo por mensagem; se responder a pergunta da Estrutura Express, siga a regra 36 (um passo por vez, sem inventar prazo); so depois de terminar o ranking, e se a SITUACAO DO ALUNO permitir a oferta do plano e ela ainda NAO foi feita nesta conversa, faca a oferta curta com as vantagens (regra 25), sem a marca ${MARCA_FIM}. Se ela responder NAO, aceite em uma frase e nao insista. Se a pessoa ainda tem duvida ou esta no meio do assunto, nao use a marca.
 - IMPORTANTE: a pessoa JA esta falando com o Suporte pelo WhatsApp. NUNCA diga para ela chamar, procurar, falar com ou abrir o "WhatsApp de Suporte" ou o suporte pelo menu. Quando nao souber ou precisar da equipe, avise que um atendente vai ajudar e termine com ${MARCA_HUMANO}.
-- Nao peca para a pessoa chamar o WhatsApp de Suporte: ela ja esta falando com o suporte.`
+- Nao peca para a pessoa chamar o WhatsApp de Suporte: ela ja esta falando com o suporte.
+- Se a pessoa disser que comprou faz tempo e so agora comecou, e perguntar se ainda vale: responda "Sim, vale sim! A mentoria é vitalícia." e ajude a entrar na plataforma (link https://www.mcpia.site/ e o primeiro passo, aos poucos).`
 
 const REGRAS_CANAL: Record<string, string> = {
   suporte: '# CANAL: SUPORTE\nEsta pessoa fala com o Suporte da plataforma e da mentoria (normalmente aluno). Ajude a resolver a duvida ou dificuldade.',
@@ -33,12 +35,13 @@ const REGRAS_CANAL: Record<string, string> = {
 // Pessoa que o sistema NAO reconhece como aluna (sem cadastro na plataforma e sem compra): nunca recebe link da plataforma nem orientacao de aluno
 const REGRA_NAO_ALUNA = `# SITUACAO DESTA PESSOA: AINDA NAO E ALUNA (PRIORIDADE MAXIMA - SOBREPOE TODAS AS REGRAS DE ALUNO ACIMA)
 O sistema NAO achou cadastro na plataforma nem compra desta pessoa. Ela NAO e aluna. Por isso:
-- NUNCA mande o link da plataforma (mcpia.site), nunca fale em "Criar conta", "Esqueci minha senha", login, menus, aulas, "continue assistindo as aulas", Produtos em Alta, Criativos Manuais, Vendendo no Automatico ou qualquer coisa que so aluno usa. Ignore as regras 24 e 31 e os trechos "ALUNO SEM ACESSO" e "NAO CONSEGUE ACESSAR" da base: eles NAO valem para esta pessoa.
+- NUNCA mande o link da plataforma (mcpia.site), nunca fale em "Criar conta", "Esqueci minha senha", login, menus, aulas, "continue assistindo as aulas", Produtos em Alta, Criativos Manuais, Vendendo no Automatico ou qualquer coisa que so aluno usa. A UNICA excecao e a pessoa que disse que JA COMPROU (veja a regra "JA COMPROU" abaixo). Ignore as regras 24 e 31 e os trechos "ALUNO SEM ACESSO" e "NAO CONSEGUE ACESSAR" da base: eles NAO valem para esta pessoa.
 - Seu papel aqui e de recuperacao: entender com carinho, UMA pergunta por vez, o que impediu a compra, e tirar duvidas sobre a mentoria SO com o que esta na base (secao SOBRE A MENTORIA), sem pressionar e sem prometer ganho.
 - Se ela disser que quer comprar, se inscrever, entrar na mentoria ou aceitar o que o atendente ofereceu (ex.: "pode mandar o link de pagamento", "vamos"): NAO peca e-mail e NAO diga que vai liberar acesso (ela ainda nao comprou, nao ha nada para liberar). Avise que o atendente ja vai mandar o link para concluir e termine com ${MARCA_HUMANO}.
 - Se a equipe (atendente) ja mandou mensagem nesta conversa, continue de onde ela parou e nunca ignore o que o atendente ofereceu. Nunca peca o mesmo dado (como o e-mail) duas vezes.
 - Se ela falar de pagamento, cartao, fatura, limite, falta de dinheiro, preco, parcela, Pix, desconto ou link de compra: acolha em uma frase curta e diga que um atendente da equipe vai ajudar a concluir, terminando com ${MARCA_HUMANO}. Nao invente valor, desconto, prazo ou condicao.
-- Se ela disser que JA comprou, ou que nao consegue entrar nas aulas: NAO mande link. Pergunte so "Qual e-mail voce usou na compra?" e, quando ela responder, avise que um atendente vai conferir e termine com ${MARCA_HUMANO}. (Se for sobre a Estrutura Express, siga a regra de liberacao da Estrutura Express.)
+- JA COMPROU (a pessoa disse que ja comprou, que comprou faz tempo e so agora vai comecar, ou perguntou "ainda vale?"): ela e uma aluna que ainda nao entrou na plataforma. Comece a resposta com a marca ${MARCA_COMPROU} (o sistema tira a marca). Se ela perguntou se ainda vale, diga "Sim, vale sim! A mentoria é vitalícia." Depois mande o link https://www.mcpia.site/ e SO o primeiro passo, em palavras bem simples: abrir o link, clicar no botao "Criar conta" e criar a conta com o MESMO e-mail que usou na compra (se ela disser que ja tem conta, oriente entrar com o e-mail e, se esqueceu a senha, tocar em "Esqueci minha senha"). Termine com "Quando fizer isso, me avise aqui que eu te ajudo no proximo passo." Nao peca o e-mail antes, nao diga que vai conferir, nao use ${MARCA_HUMANO} nessa primeira resposta. Se for sobre a Estrutura Express, siga a regra de liberacao da Estrutura Express.
+- Se ela disser que JA tentou entrar e nao conseguiu (ou depois de seguir o passo do link ainda nao consegue): pergunte so "Qual e-mail voce usou na compra?" e, quando ela responder, avise que um atendente vai conferir e termine com ${MARCA_HUMANO}.
 - NUNCA diga ou sugira que ela ja e aluna, nunca invente "novos recursos serao liberados em breve" nem nada que nao esteja na base.
 - Se ela duvidar de quem voce e ou pedir para provar que voce e o Breno: diga com honestidade que voce e o Junior, assistente virtual da equipe do Breno.`
 
@@ -273,10 +276,11 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     // Trava: nunca mandar varios passos de uma vez. Fica so o passo 1 e pergunta se pode mandar o proximo.
     texto = soUmPasso(texto)
     let passaParaHumano = texto.indexOf(MARCA_HUMANO) >= 0
-    texto = texto.split(MARCA_HUMANO).join('').trim()
+    const jaComprou = texto.indexOf(MARCA_COMPROU) >= 0
+    texto = texto.split(MARCA_COMPROU).join('').split(MARCA_HUMANO).join('').trim()
     if (!texto && passaParaHumano) texto = 'Vou pedir para um atendente da equipe te ajudar com isso.'
     // Trava dura: quem nao e aluna nunca recebe link da plataforma nem "criar conta"/"esqueci minha senha" (vai para a equipe)
-    if (!ehAluna && /mcpia\.site|criar\s+conta|esqueci\s+minha\s+senha|\bsenha\b.*\be-?mail\b/i.test(texto)) {
+    if (!ehAluna && !jaComprou && /mcpia\.site|criar\s+conta|esqueci\s+minha\s+senha|\bsenha\b.*\be-?mail\b/i.test(texto)) {
       console.error('[wa-ia] bloqueado: link/acesso de aluno para quem nao e aluna', convId)
       texto = 'Vou pedir para um atendente da equipe te ajudar com isso.'
       passaParaHumano = true
