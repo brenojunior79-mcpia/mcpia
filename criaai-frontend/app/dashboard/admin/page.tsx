@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 import styles from './admin.module.css'
 import BillingCard from '@/components/admin/BillingCard'
+import CaktoConferirCard from '@/components/admin/CaktoConferirCard'
 import SalesMonthsCard from '@/components/admin/SalesMonthsCard'
 import ReferralPayoutsCard from '@/components/admin/ReferralPayoutsCard'
 import HublaPanel from '@/components/admin/HublaPanel'
@@ -355,6 +356,9 @@ export default function AdminPage() {
 
         {/* Assinaturas ativas, recebido e proximas cobrancas */}
         <BillingCard data={billing} />
+
+        {/* Conferencia das assinaturas direto na Cakto (API) */}
+        <CaktoConferirCard />
 
         {/* Melhores meses de vendas (Mentoria + Estrutura Express), atualiza com os avisos da Hubla e da Cakto */}
         <SalesMonthsCard />
