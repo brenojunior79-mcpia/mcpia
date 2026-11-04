@@ -6,7 +6,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 40
 
-function prompt(paginas: any[], pixels: any[], rascunho: any, temMidia: boolean): string {
+function prompt(paginas: any[], pixels: any[], rascunho: any, temMidia: boolean, notaLink: string): string {
   return [
     'Voce e a Camila, gestora de anuncios da Plataforma Cristao Prospero. Voce conversa por VOZ com uma pessoa leiga e a ajuda a criar um anuncio de VENDAS no Facebook e Instagram.',
     'Sua fala sera lida em voz alta: use palavras simples, frases curtas (no maximo 3), sem emojis, sem listas, sem simbolos e sem enderecos de internet. Seja simpatica e acolhedora, como uma amiga paciente.',
@@ -17,6 +17,8 @@ function prompt(paginas: any[], pixels: any[], rascunho: any, temMidia: boolean)
     'PAGINAS disponiveis (use o id no campo paginaId): ' + (paginas.length ? JSON.stringify(paginas) : 'NENHUMA. Explique que ela precisa ter uma pagina no Facebook e conectar de novo.'),
     'PIXELS disponiveis (use o id no campo pixelId): ' + (pixels.length ? JSON.stringify(pixels) : 'NENHUM. Explique que sem o pixel o Facebook nao consegue otimizar para vendas e que ela precisa criar um pixel no Facebook.'),
     'Se houver uma unica pagina ou um unico pixel, sugira esse e pergunte se pode usar. Se houver varios, fale os nomes e pergunte qual.',
+    'IMPORTANTE sobre links: voce NAO precisa abrir nem acessar nenhum link. Nunca diga que nao consegue acessar links. Quando a pessoa colar um link, ele e guardado automaticamente no campo link e voce so segue para a proxima pergunta.',
+    notaLink,
     'Estado atual do anuncio (rascunho): ' + JSON.stringify(rascunho) + '. Video ou imagem anexado: ' + (temMidia ? 'SIM' : 'NAO') + '.',
     'Quando tudo estiver preenchido e a midia anexada, diga que o resumo esta na tela, que o anuncio sera criado PAUSADO para ela conferir antes de gastar, e pergunte se pode criar. Nunca diga que ja criou: quem cria e o botao da tela.',
     'Responda SOMENTE um JSON com os campos: "fala" (texto que voce vai falar) e "rascunho" (objeto com TODOS estes campos atualizados, null quando ainda nao souber: produto, paginaId, pixelId, link, orcamentoDiario (numero em reais), idadeMin, idadeMax, genero ("todos", "mulheres" ou "homens"), titulo, legenda, botao).',
@@ -42,18 +44,31 @@ export async function POST(req: NextRequest) {
   ])
   const paginas = pg.ok ? ((pg.data.data || []) as any[]).map(function(p) { return { id: String(p.id), nome: String(p.name || p.id) } }) : []
   const pixels = px.ok ? ((px.data.data || []) as any[]).map(function(p) { return { id: String(p.id), nome: String(p.name || p.id) } }) : []
-  const atual = limparRascunho(b.rascunho, paginas, pixels, rascunhoVazio())
+  let atual = limparRascunho(b.rascunho, paginas, pixels, rascunhoVazio())
+  // Link colado pela pessoa: o servidor guarda sozinho (a IA nao abre links)
+  let notaLink = ''
+  const achou = mensagens[mensagens.length - 1].content.match(/https?:\/\/[^\s]+/i)
+  if (achou) {
+    const url = achou[0].replace(/[.,;)]+$/, '')
+    if (/(instagram\.com|facebook\.com|fb\.com|fb\.watch|youtube\.com|youtu\.be|wa\.me|whatsapp\.com|tiktok\.com)/i.test(url)) {
+      notaLink = 'A pessoa colou um link de rede social (' + url + '), que NAO serve para o anuncio. Explique com carinho que precisa ser o link da pagina de vendas do produto e peca de novo.'
+    } else {
+      atual = limparRascunho({ link: url.indexOf('http://') === 0 ? 'https://' + url.slice(7) : url }, paginas, pixels, atual)
+      notaLink = atual.link ? 'O link da pagina de vendas foi recebido e ja esta guardado no campo link. Confirme em uma frase curta e siga para a proxima pergunta.' : 'O link que a pessoa colou parece invalido. Peca para colar de novo o link completo da pagina de vendas, comecando com https.'
+    }
+  }
 
   try {
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
     const r = await openai.chat.completions.create({
       model: 'gpt-4o-mini', temperature: 0.4, max_tokens: 700,
       response_format: { type: 'json_object' },
-      messages: [{ role: 'system', content: prompt(paginas, pixels, atual, temMidia) }].concat(mensagens as any) as any,
+      messages: [{ role: 'system', content: prompt(paginas, pixels, atual, temMidia, notaLink) }].concat(mensagens as any) as any,
     })
     let j: any = {}
     try { j = JSON.parse(r.choices[0].message.content || '{}') } catch (e) {}
     const novo = limparRascunho(j.rascunho, paginas, pixels, atual)
+    novo.link = atual.link // o link so muda quando a pessoa cola um link (a IA nao altera)
     const falta = faltando(novo, temMidia)
     let fala = String(j.fala || '').replace(/\s+/g, ' ').trim()
     if (!fala) fala = 'Desculpa, nao entendi direito. Pode repetir?'

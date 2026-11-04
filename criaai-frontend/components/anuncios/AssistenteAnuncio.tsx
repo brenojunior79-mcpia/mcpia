@@ -55,6 +55,7 @@ export default function AssistenteAnuncio({ onClose, onCriado }: { onClose: () =
   const recRef = useRef<MediaRecorder | null>(null)
   const pedacosRef = useRef<Blob[]>([])
   const streamRef = useRef<MediaStream | null>(null)
+  const falaIdRef = useRef(0)
   const ativaRef = useRef(false)
   const gravandoRef = useRef(false)
   const falandoRef = useRef(false)
@@ -89,7 +90,7 @@ export default function AssistenteAnuncio({ onClose, onCriado }: { onClose: () =
   useEffect(function() { if (fimRef.current) fimRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, [msgs, pensando, pronto, resultado])
 
   function desenhar() {
-    if (avatarRef.current) avatarRef.current.innerHTML = avatarSvg(AVATAR, bocaRef.current, piscarRef.current)
+    if (avatarRef.current) avatarRef.current.innerHTML = avatarSvg(AVATAR, bocaRef.current, piscarRef.current).replace('width="400" height="400"', 'width="100%" height="100%"')
   }
 
   // Avatar: a boca acompanha o volume da voz e os olhos piscam de vez em quando
@@ -155,6 +156,7 @@ export default function AssistenteAnuncio({ onClose, onCriado }: { onClose: () =
   }
 
   function pararFala() {
+    falaIdRef.current++
     const a = audioRef.current
     if (a) { try { a.pause(); a.currentTime = 0 } catch (e) {} }
     setFalando(false)
@@ -164,11 +166,12 @@ export default function AssistenteAnuncio({ onClose, onCriado }: { onClose: () =
     if (!vozRef.current) return
     prepararAudio()
     pararFala()
+    const meuId = ++falaIdRef.current
     try {
       const r = await fetch('/api/anuncios/assistente/falar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ texto: t }) })
       if (!r.ok) return
       const blob = await r.blob()
-      if (!vozRef.current || gravandoRef.current) return
+      if (meuId !== falaIdRef.current || !vozRef.current || gravandoRef.current) return
       const a = audioRef.current!
       a.src = URL.createObjectURL(blob)
       a.onended = function() { setFalando(false) }
