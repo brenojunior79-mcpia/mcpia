@@ -162,7 +162,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
     { href: '/dashboard/indique', icon: 'ti-gift', label: 'Indique e ganhe', locked: false, highlight: true },
     { href: '/dashboard/vendas', icon: 'ti-rocket', label: 'Vendendo no Automatico', locked: false },
     { href: '/dashboard/estrutura-express', icon: 'ti-bolt', label: 'Estrutura Express', locked: false, badge: 'NOVO' },
-    { href: '/dashboard/anuncios', icon: 'ti-brand-meta', label: 'Gerenciando seus anúncios no automático', locked: false, semClique: anunciosSemClique },
+    { href: '/dashboard/anuncios', icon: 'ti-brand-meta', label: 'Gerenciando seus anúncios', locked: false, semClique: anunciosSemClique },
     { href: '/dashboard/suporte', icon: 'ti-brand-whatsapp', label: 'WhatsApp de Suporte', locked: false },
     { href: '/dashboard/aulas', icon: 'ti-device-tv', label: 'Aulas ao Vivo', locked: false },
     { href: '/dashboard/planos', icon: 'ti-credit-card', label: 'Planos', locked: false },
