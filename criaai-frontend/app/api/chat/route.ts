@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 import { regraExpressChat, pediuLiberarExpress, removerMarcaExpress, liberarExpressPeloJunior } from '@/lib/juniorExpress'
+import { REGRA_ASSINATURA_CHAT, pediuVerificarAssinatura, removerMarcaAssinatura, emailsDaMarcaAssinatura, verificarAssinaturaPeloJunior } from '@/lib/juniorAssinatura'
 
 import { JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno, REGRAS_ESTILO_CHAT, limparRespostaChat, tipoFinalConversa, situacaoFinalConversa } from '@/lib/junior'
 
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
     // Estrutura Express: o Junior pode conferir a compra e liberar o menu (quem confere e o sistema, nao a IA)
     let jaTemExpress = false
     try { jaTemExpress = (await supabase.rpc('tem_estrutura_express')).data === true } catch (e) {}
-    systemContent = systemContent + '\n\n' + regraExpressChat(jaTemExpress)
+    systemContent = systemContent + '\n\n' + regraExpressChat(jaTemExpress) + '\n\n' + REGRA_ASSINATURA_CHAT
 
     // Nos 7 primeiros dias, aluno sem plano nao pode saber que existem planos
     const subStatus = profileResult.data?.subscription_status
@@ -123,8 +124,12 @@ export async function POST(req: NextRequest) {
       if (profileResult.data?.is_admin === true) reply += '\n\n[Aviso so para o admin] OpenAI respondeu: ' + motivo
     }
 
-    // O Junior pediu para liberar a Estrutura Express: o sistema confere a compra e escreve a resposta
-    if (pediuLiberarExpress(reply)) {
+    // O Junior pediu para conferir a assinatura (plano da plataforma): o sistema confere o pagamento, libera se estiver certo e escreve a resposta
+    if (pediuVerificarAssinatura(reply) && !pediuLiberarExpress(reply)) {
+      const db2: any = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } })
+      const resA = await verificarAssinaturaPeloJunior(db2, { conta: user.email || '', origem: 'chat', emails: emailsDaMarcaAssinatura(reply) })
+      reply = resA.texto
+    } else if (pediuLiberarExpress(reply)) {
       if (jaTemExpress) {
         reply = 'O seu acesso à Estrutura Express já está liberado nesta conta. Atualize a página (ou saia e entre de novo) e abra o menu "Estrutura Express" na barra lateral.'
       } else {
@@ -133,7 +138,7 @@ export async function POST(req: NextRequest) {
         reply = res.texto
       }
     } else {
-      reply = removerMarcaExpress(reply) || reply
+      reply = removerMarcaAssinatura(removerMarcaExpress(reply)) || reply
       // Mesma conduta do WhatsApp: sem ** e so um passo por mensagem
       reply = limparRespostaChat(reply) || reply
     }

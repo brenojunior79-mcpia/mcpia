@@ -3,6 +3,7 @@
 import { JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno, soUmPasso, tirarLinkMarkdown, linkClicavel, tirarFrasesDeAjuda, tipoFinalConversa, situacaoFinalConversa } from '@/lib/junior'
 import { phoneIdDaConversa, postMessage } from '@/lib/whatsapp'
 import { REGRA_EXPRESS_WHATSAPP, pediuLiberarExpress, removerMarcaExpress, liberarExpressPeloJunior, emailDaMarca } from '@/lib/juniorExpress'
+import { REGRA_ASSINATURA_WHATSAPP, pediuVerificarAssinatura, removerMarcaAssinatura, emailsDaMarcaAssinatura, verificarAssinaturaPeloJunior } from '@/lib/juniorAssinatura'
 
 const MARCA_HUMANO = '[[HUMANO]]'
 const MARCA_FIM = '[[FIM]]'
@@ -258,7 +259,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     const primeiro = nome.split(' ')[0] || 'voce'
     const canal = conv.connection_id ? 'recuperacao' : 'suporte'
 
-    let system = JUNIOR_PROMPT.split('{{firstName}}').join(primeiro) + '\n\n' + FINAL_REMINDER + '\n\n' + REGRAS_CANAL[canal] + '\n\n' + REGRAS_WHATSAPP + '\n\n' + REGRA_EXPRESS_WHATSAPP + '\n\nNome da pessoa: ' + (nome || 'desconhecido')
+    let system = JUNIOR_PROMPT.split('{{firstName}}').join(primeiro) + '\n\n' + FINAL_REMINDER + '\n\n' + REGRAS_CANAL[canal] + '\n\n' + REGRAS_WHATSAPP + '\n\n' + REGRA_EXPRESS_WHATSAPP + '\n\n' + REGRA_ASSINATURA_WHATSAPP + '\n\nNome da pessoa: ' + (nome || 'desconhecido')
     if (esconderPlanos) system = NEW_STUDENT_RULE + '\n\n' + system + '\n\n' + NEW_STUDENT_RULE
     const sitPlano = situacaoPlanoAluno(temPlano, esconderPlanos)
     if (sitPlano) system = system + '\n\n' + sitPlano
@@ -350,8 +351,17 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     if (!cv2.data || !(await modoIA(admin, cv2.data))) return true
     if (!ult.data || String((ult.data as any).id) !== String(msgId)) return true
 
-    // O assistente pediu para liberar a Estrutura Express: o sistema confere a compra e escreve a resposta
-    if (pediuLiberarExpress(texto)) {
+    // O assistente pediu para conferir a assinatura (plano da plataforma): o sistema confere o pagamento, libera se estiver tudo certo e escreve a resposta
+    if (pediuVerificarAssinatura(texto) && !pediuLiberarExpress(texto)) {
+      let contaEmail = ''
+      if (conv.profile_id) {
+        const pe = await admin.from('profiles').select('email').eq('id', conv.profile_id).maybeSingle()
+        contaEmail = String((pe.data as any)?.email || '')
+      }
+      const resA = await verificarAssinaturaPeloJunior(admin, { conta: contaEmail, waId, origem: 'whatsapp', emails: emailsDaMarcaAssinatura(texto) })
+      texto = resA.texto
+      if (resA.humano) passaParaHumano = true
+    } else if (pediuLiberarExpress(texto)) {
       // Conta ligada a conversa (se houver); senao o banco acha pelo numero do WhatsApp
       let contaEmail = ''
       if (conv.profile_id) {
@@ -362,7 +372,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       texto = res.texto
       if (res.humano) passaParaHumano = true
     } else {
-      texto = removerMarcaExpress(texto)
+      texto = removerMarcaAssinatura(removerMarcaExpress(texto))
       if (!texto) { await avisarFalha(admin, convId, 'texto vazio apos marca express'); return true }
     }
 

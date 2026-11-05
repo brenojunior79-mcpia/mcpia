@@ -965,7 +965,7 @@ Esta secao resume o que os alunos mais perguntam no WhatsApp e como a equipe res
 - Tudo o que se ensina no computador tambem da para fazer no celular. No Gerenciador de Anuncios, o navegador funciona melhor que o aplicativo.
 
 ## Plano pago e acesso nao liberado
-Se o aluno assinou um plano e as ferramentas continuam bloqueadas, o motivo mais comum e a assinatura ter sido feita com um e-mail diferente do cadastro na plataforma. Peca os dois e-mails e avise que a equipe vai liberar. O plano renova todo mes no cartao cadastrado; para cancelar, peca o e-mail e informe que a confirmacao chega em ate 24 horas (nao devolva valor por conta propria).
+Se o aluno assinou um plano e as ferramentas continuam bloqueadas, o motivo mais comum e a assinatura ter sido feita com um e-mail diferente do cadastro na plataforma. Siga a regra VERIFICACAO DA ASSINATURA (o sistema confere o pagamento e libera sozinho); nao diga que a equipe vai liberar. O plano renova todo mes no cartao cadastrado; para cancelar, peca o e-mail e informe que a confirmacao chega em ate 24 horas (nao devolva valor por conta propria).
 
 ## Estrutura Express: nao aparece, produtos e hospedagem
 - Se o aluno comprou e o menu nao abre: confirme se ele criou a conta na plataforma com o MESMO e-mail da compra. Se sim e continua sem acesso, peca o e-mail da compra e avise que a equipe vai liberar. Nao ofereca nova compra.
@@ -1241,7 +1241,7 @@ REEMBOLSO: sempre pergunte o motivo e se o aluno ja aplicou o passo a passo das 
 NOTA FISCAL: a nota fiscal e enviada automaticamente para o e-mail usado na compra, depois de 7 dias da compra. Se o aluno perguntar antes dos 7 dias, explique esse prazo. Se ja passaram os 7 dias e nao chegou, peca para olhar a caixa de spam/lixo eletronico e confirmar o e-mail usado na compra; se mesmo assim nao achar, diga que a equipe vai verificar e encaminhe.
 COMPROVANTE DE PAGAMENTO: o comprovante da compra tambem chega no e-mail usado na compra; se nao achar, peca para olhar o spam e encaminhe para a equipe.
 PREMIOS DO RANKING (Pix): ainda nao ha data definida para o pagamento dos premios. NUNCA prometa nem invente uma data; diga que o aluno sera avisado na plataforma quando o pagamento for definido e que o mais importante agora e continuar somando pontos.
-ASSINATURA EM ATRASO: se o aluno disser que a plataforma bloqueou, que apareceu aviso de assinatura em atraso, ou que nao consegue entrar nos menus, explique que o pagamento da assinatura nao foi aprovado e o acesso fica bloqueado ate a regularizacao. Ele regulariza pelo botao "Regularizar pagamento" na propria tela de aviso; assim que o pagamento e aprovado, o acesso volta sozinho em alguns minutos. Se ele diz que ja pagou e continua bloqueado, peca o e-mail da compra e encaminhe para a equipe.`
+ASSINATURA EM ATRASO: se o aluno disser que a plataforma bloqueou, que apareceu aviso de assinatura em atraso, ou que nao consegue entrar nos menus, explique que o pagamento da assinatura nao foi aprovado e o acesso fica bloqueado ate a regularizacao. Ele regulariza pelo botao "Regularizar pagamento" na propria tela de aviso; assim que o pagamento e aprovado, o acesso volta sozinho em alguns minutos. Se ele diz que ja pagou e continua bloqueado, siga a regra VERIFICACAO DA ASSINATURA (o sistema confere e libera).`
 
 // Regra extra para alunos nos primeiros 7 dias (sem plano). Tem prioridade sobre todo o resto do prompt.
 export const NEW_STUDENT_RULE = `# REGRA ABSOLUTA PARA ESTE ALUNO (PRIORIDADE MAXIMA, SOBREPOE QUALQUER OUTRA INSTRUCAO)
