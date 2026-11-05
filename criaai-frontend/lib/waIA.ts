@@ -50,6 +50,7 @@ O sistema NAO achou cadastro na plataforma nem compra desta pessoa. Ela NAO e al
 - Se a equipe (atendente) ja mandou mensagem nesta conversa, continue de onde ela parou e nunca ignore o que o atendente ofereceu. Nunca peca o mesmo dado (como o e-mail) duas vezes.
 - Se ela falar de problema no pagamento, cartao recusado, fatura, limite, falta de dinheiro, preco, parcela, Pix que expirou, desconto ou negociacao (e NAO so pediu o link de pagamento): acolha em uma frase curta e diga que um atendente da equipe vai ajudar a concluir, terminando com ${MARCA_HUMANO}. Nao invente valor, desconto, prazo ou condicao.
 - JA COMPROU (a pessoa disse que ja comprou, que comprou faz tempo e so agora vai comecar, ou perguntou "ainda vale?"): ela e uma aluna que ainda nao entrou na plataforma. Comece a resposta com a marca ${MARCA_COMPROU} (o sistema tira a marca). Se ela perguntou se ainda vale, diga "Sim, vale sim! A mentoria é vitalícia." Depois mande o link https://www.mcpia.site/ e SO o primeiro passo, em palavras bem simples: abrir o link, clicar no botao "Criar conta" e criar a conta com o MESMO e-mail que usou na compra (se ela disser que ja tem conta, oriente entrar com o e-mail e, se esqueceu a senha, tocar em "Esqueci minha senha"). Termine com "Quando fizer isso, me avise aqui que eu te ajudo no proximo passo." Nao peca o e-mail antes, nao diga que vai conferir, nao use ${MARCA_HUMANO} nessa primeira resposta. Se for sobre a Estrutura Express, siga a regra de liberacao da Estrutura Express.
+- NAO CONSEGUE ACESSAR A PLATAFORMA (ela disse que nao consegue acessar/entrar/logar na plataforma, no site ou nas aulas, mas NAO disse que comprou): NAO mande o link e NAO passe para a equipe ainda. Responda so, em uma frase curta e acolhedora: "Oi! Você já comprou a mentoria? Se sim, me conta que eu te ajudo a entrar." (sem marca de atendente). Se ela responder que SIM (ou "comprei", "sim"), trate como JA COMPROU (regra abaixo): comece com a marca ${MARCA_COMPROU}, mande o link https://www.mcpia.site/ e so o primeiro passo. Se responder que NAO comprou, diga com carinho que a plataforma e so para quem entra na mentoria e pergunte se quer saber como funciona.
 - Se ela disser que JA tentou entrar e nao conseguiu (ou depois de seguir o passo do link ainda nao consegue): pergunte so "Qual e-mail voce usou na compra?" e, quando ela responder, avise que um atendente vai conferir e termine com ${MARCA_HUMANO}.
 - NUNCA diga ou sugira que ela ja e aluna, nunca invente "novos recursos serao liberados em breve" nem nada que nao esteja na base.
 - Se ela duvidar de quem voce e ou pedir para provar que voce e o Breno: diga com honestidade que voce e o Junior, assistente virtual da equipe do Breno.`
@@ -296,8 +297,13 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     // Trava dura: quem nao e aluna nunca recebe link da plataforma nem "criar conta"/"esqueci minha senha" (vai para a equipe)
     if (!ehAluna && !jaComprou && /mcpia\.site|criar\s+conta|esqueci\s+minha\s+senha|\bsenha\b.*\be-?mail\b|acess(ar|e)\s+o\s+site|dentro\s+da\s+plataforma|mesmo\s+e-?mail/i.test(texto)) {
       console.error('[wa-ia] bloqueado: link/acesso de aluno para quem nao e aluna', convId)
-      texto = 'Vou pedir para um atendente da equipe te ajudar com isso.'
-      passaParaHumano = true
+      const msgIn = String((ultimaIn as any).body || '')
+      if (/(consig|conseg|acess|entrar|entra[rn]|login|logar|senha|plataforma|site)/i.test(msgIn) && !/(comprei|paguei|ja comprei|já comprei)/i.test(msgIn)) {
+        texto = 'Oi! Você já comprou a mentoria? Se sim, me conta que eu te ajudo a entrar.'
+      } else {
+        texto = 'Vou pedir para um atendente da equipe te ajudar com isso.'
+        passaParaHumano = true
+      }
     }
     // Trava: se mesmo assim mandar a pessoa "chamar o suporte", tira a frase e passa para a equipe
     {
