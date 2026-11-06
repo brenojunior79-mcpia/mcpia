@@ -85,6 +85,26 @@ async function findUserIdByEmail(email: string): Promise<string | null> {
 // Roda antes de procurar o aluno: quem compra Mentoria/Express quase nunca tem cadastro na plataforma.
 async function trackSale(eventName: string, payload: any, email: string | null): Promise<void> {
   const d = payload.data || {}
+  // Lista de compradores: quem compra por aqui pode se cadastrar na plataforma com este e-mail
+  try {
+    const em = String(email || '').trim().toLowerCase()
+    if (em && eventName === 'purchase_approved') {
+      const nomeProd = String(d.product?.name || d.offer?.name || '').toLowerCase()
+      const prod = nomeProd.indexOf('express') >= 0 ? 'e' : nomeProd.indexOf('mentoria') >= 0 ? 'm' : nomeProd.indexOf('cr') >= 0 && nomeProd.indexOf('dito') >= 0 ? 'c' : 'o'
+      const tel = String(d.customer?.phone || '').replace(/\D/g, '').slice(-11)
+      const ex = await admin.from('compras_externas').select('plataformas, produtos').eq('email', em).maybeSingle()
+      const plats = String((ex.data as any)?.plataformas || '')
+      const prods = String((ex.data as any)?.produtos || '')
+      await admin.from('compras_externas').upsert({
+        email: em, tel: tel.length >= 10 ? tel : null,
+        plataformas: plats.indexOf('k') >= 0 ? plats : plats + 'k',
+        produtos: prods.indexOf(prod) >= 0 ? prods : prods + prod,
+        pago_mes: new Date().toISOString().slice(2, 7).replace('-', ''), reembolsada: false, origem: 'webhook-cakto',
+      }, { onConflict: 'email' })
+    } else if (em && (eventName === 'refund' || eventName === 'chargeback')) {
+      await admin.from('compras_externas').update({ reembolsada: true }).eq('email', em)
+    }
+  } catch (e) { console.error('[cakto-webhook] lista de compradores:', e) }
   const id = d.refId || d.id
   if (eventName === 'purchase_approved') {
     await recordSale(admin, { provider: 'cakto', externalId: id, productName: d.product?.name || d.offer?.name, amount: d.baseAmount ?? d.offer?.price ?? d.amount, paidAt: d.paidAt || d.paid_at, email })

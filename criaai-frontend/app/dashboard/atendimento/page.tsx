@@ -5,6 +5,7 @@ import Modelos, { type Tpl } from '@/components/whatsapp/Modelos'
 import TemplatePicker, { type TplSend } from '@/components/whatsapp/TemplatePicker'
 import Atendentes from '@/components/whatsapp/Atendentes'
 import Fluxos from '@/components/whatsapp/Fluxos'
+import BaseConhecimento from '@/components/whatsapp/BaseConhecimento'
 import Conexoes from '@/components/whatsapp/Conexoes'
 import Eventos from '@/components/whatsapp/Eventos'
 import Disparo from '@/components/whatsapp/Disparo'
@@ -207,7 +208,7 @@ export default function AtendimentoPage() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [iaGeral, setIaGeral] = useState(false)
   const [iaAgenda, setIaAgenda] = useState<{ agenda: boolean; inicio: string; fim: string }>({ agenda: false, inicio: '08:00', fim: '20:00' })
-  const [tab, setTab] = useState<'conversas' | 'atendentes' | 'modelos' | 'disparo' | 'fluxos' | 'eventos' | 'conexoes'>('conversas')
+  const [tab, setTab] = useState<'conversas' | 'atendentes' | 'modelos' | 'disparo' | 'fluxos' | 'conhecimento' | 'eventos' | 'conexoes'>('conversas')
   const [tpls, setTpls] = useState<Tpl[] | null>(null)
   const [disparoAberto, setDisparoAberto] = useState(false)
   const [tplErro, setTplErro] = useState('')
@@ -907,7 +908,7 @@ export default function AtendimentoPage() {
 
       {/* Abas */}
       <div style={{ display: 'flex', gap: 6, padding: '8px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface)', overflowX: 'auto' }}>
-        {([['conversas', '💬 Conversas'], ['atendentes', '👥 Atendentes'], ['modelos', '📄 Modelos'], ['disparo', '📣 Disparo'], ['fluxos', '⚡ Fluxos'], ['eventos', '🔔 Eventos'], ['conexoes', '🔌 Conexões']] as const).filter(function(t) { return (t[0] !== 'atendentes' && t[0] !== 'fluxos' && t[0] !== 'disparo' && t[0] !== 'eventos' && t[0] !== 'conexoes') || isAdmin }).map(function(t) {
+        {([['conversas', '💬 Conversas'], ['atendentes', '👥 Atendentes'], ['modelos', '📄 Modelos'], ['disparo', '📣 Disparo'], ['fluxos', '⚡ Fluxos'], ['conhecimento', '🧠 Base de conhecimento'], ['eventos', '🔔 Eventos'], ['conexoes', '🔌 Conexões']] as const).filter(function(t) { return (t[0] !== 'atendentes' && t[0] !== 'fluxos' && t[0] !== 'conhecimento' && t[0] !== 'disparo' && t[0] !== 'eventos' && t[0] !== 'conexoes') || isAdmin }).map(function(t) {
           const on = tab === t[0]
           return <button key={t[0]} onClick={function() { setTab(t[0]); if (t[0] === 'modelos') carregarTpls(); if (t[0] === 'disparo') setDisparoAberto(true) }} style={{ cursor: 'pointer', border: 0, borderRadius: 999, padding: '7px 16px', fontWeight: 800, fontSize: 13, whiteSpace: 'nowrap', transition: 'all .15s', background: on ? 'linear-gradient(135deg,#22c55e,#16a34a)' : 'var(--surface2)', color: on ? '#fff' : 'var(--muted2)', boxShadow: on ? '0 3px 8px rgba(22,163,74,0.35)' : 'none' }}>{t[1]}</button>
         })}
@@ -926,6 +927,7 @@ export default function AtendimentoPage() {
       {tab === 'atendentes' && isAdmin && <Atendentes />}
       {disparoAberto && isAdmin && <div style={tab === 'disparo' ? { display: 'contents' } : { display: 'none' }}><Disparo tpls={tpls} onLoadTpls={carregarTpls} /></div>}
       {tab === 'fluxos' && isAdmin && <Fluxos />}
+      {tab === 'conhecimento' && isAdmin && <BaseConhecimento />}
       {tab === 'eventos' && isAdmin && <Eventos onAbrir={abrirDeEvento} />}
       {tab === 'conexoes' && isAdmin && <Conexoes />}
 

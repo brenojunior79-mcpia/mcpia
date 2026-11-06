@@ -90,7 +90,9 @@ export default function LoginPage() {
   }
 
   // Traduz erros do Supabase para português
+  const MSG_SEM_COMPRA = 'Não encontramos uma compra com esse e-mail. Para criar sua conta, use o mesmo e-mail que você usou na hora da compra. Se tiver dúvida, toque em "Fale conosco" aqui embaixo.'
   function traduzErro(msg: string): string {
+    if (msg.includes('Database error saving new user')) return MSG_SEM_COMPRA
     if (!msg) return 'Ocorreu um erro. Tente novamente.'
     if (msg.includes('Invalid login credentials')) return 'E-mail ou senha incorretos. Confira se digitou o mesmo e-mail da compra. Se esqueceu a senha, toque em "Esqueci minha senha".'
     if (/known to be weak|easy to guess|pwned|leaked/i.test(msg)) return 'Essa senha é muito comum e fácil de adivinhar. Escolha uma senha diferente, com letras e números (ex.: Prospero2026).'
@@ -144,6 +146,13 @@ export default function LoginPage() {
       return
     }
     setLoading(true)
+    // So cria a conta quem comprou: o e-mail precisa ser o mesmo da compra
+    try {
+      const r = await fetch('/api/cadastro/verificar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) })
+      const v = await r.json().catch(function() { return null })
+      if (r.status === 429) { setError('Muitas tentativas. Aguarde alguns minutos e tente de novo.'); setLoading(false); return }
+      if (v && v.ok === false) { setError(MSG_SEM_COMPRA); setLoading(false); return }
+    } catch (e) { /* sem internet na conferencia: o banco confere de novo ao criar */ }
     const result = await supabase.auth.signUp({
       email,
       password,
@@ -392,6 +401,7 @@ export default function LoginPage() {
                     <button type="submit" className={s.submit} disabled={loading} style={{ marginTop: 4 }}>
                       {loading ? <><span className={s.spinner} /> Criando sua conta...</> : 'Criar conta gratuita'}
                     </button>
+                    <p className={s.hint} style={{ textAlign: 'center' }}>Use o <strong>mesmo e-mail da sua compra</strong>. Só assim o cadastro é liberado.</p>
                     <p className={s.fine}>Ao criar sua conta você concorda com nossos termos de uso.</p>
                   </form>
                 )}
@@ -401,6 +411,17 @@ export default function LoginPage() {
 
         </main>
       </div>
+
+      {/* Suporte: quem nao consegue entrar ou se cadastrar fala com a gente no WhatsApp */}
+      <a href={'https://wa.me/553791348869?text=' + encodeURIComponent('Olá, estou com dúvida para criar minha conta na Plataforma do Cristão Próspero')} target="_blank" rel="noopener noreferrer" aria-label="Falar com o suporte no WhatsApp"
+        style={{ position: 'fixed', right: 20, bottom: 94, zIndex: 999, background: '#fff', color: '#1a1a1a', border: '1px solid #d9d9e3', borderRadius: 14, padding: '9px 14px', fontSize: 13.5, fontWeight: 700, boxShadow: '0 6px 22px rgba(0,0,0,.18)', lineHeight: 1.3, textDecoration: 'none' }}>
+        Está com dúvidas?<br /><span style={{ color: '#1f6f50' }}>Fale conosco</span>
+        <span style={{ position: 'absolute', right: 26, bottom: -6, width: 12, height: 12, background: '#fff', borderRight: '1px solid #d9d9e3', borderBottom: '1px solid #d9d9e3', transform: 'rotate(45deg)' }} />
+      </a>
+      <a href={'https://wa.me/553791348869?text=' + encodeURIComponent('Olá, estou com dúvida para criar minha conta na Plataforma do Cristão Próspero')} target="_blank" rel="noopener noreferrer" aria-label="Falar com o suporte no WhatsApp"
+        style={{ position: 'fixed', right: 20, bottom: 20, zIndex: 1001, width: 62, height: 62, borderRadius: '50%', background: '#1f6f50', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(31,111,80,.45)' }}>
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="#fff"><path d="M12 3C6.9 3 3 6.6 3 11c0 2 .8 3.8 2.2 5.2L4 21l4.4-1.6c1.1.4 2.4.6 3.6.6 5.1 0 9-3.6 9-8s-3.9-9-9-9z" /></svg>
+      </a>
     </div>
   )
 }

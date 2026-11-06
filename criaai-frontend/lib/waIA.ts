@@ -1,9 +1,10 @@
 // Assistente de IA (Junior) dentro das conversas do WhatsApp (suporte e recuperacao).
 // So responde nas conversas em que o ADMIN ligou o assistente (wa_conversations.ia_ativa) ou quando ele ligou para todas (wa_ia_config.geral).
-import { JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno, soUmPasso, tirarLinkMarkdown, linkClicavel, tirarFrasesDeAjuda, tipoFinalConversa, situacaoFinalConversa } from '@/lib/junior'
+import { REGRA_RESPONSAVEL, JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno, soUmPasso, tirarLinkMarkdown, linkClicavel, tirarFrasesDeAjuda, tipoFinalConversa, situacaoFinalConversa } from '@/lib/junior'
 import { phoneIdDaConversa, postMessage } from '@/lib/whatsapp'
 import { agoraNoFuso } from '@/lib/waHours'
 import { REGRA_EXPRESS_WHATSAPP, pediuLiberarExpress, removerMarcaExpress, liberarExpressPeloJunior, emailDaMarca } from '@/lib/juniorExpress'
+import { REGRA_COMPRA_WHATSAPP, pediuConsultarCompra, removerMarcaCompra, dadosDaMarcaCompra, consultarCompraPeloJunior } from '@/lib/juniorCompra'
 import { REGRA_ASSINATURA_WHATSAPP, pediuVerificarAssinatura, removerMarcaAssinatura, emailsDaMarcaAssinatura, verificarAssinaturaPeloJunior } from '@/lib/juniorAssinatura'
 
 const MARCA_HUMANO = '[[HUMANO]]'
@@ -41,6 +42,28 @@ const REGRAS_CANAL: Record<string, string> = {
 }
 
 // Pessoa que o sistema NAO reconhece como aluna (sem cadastro na plataforma e sem compra): nunca recebe link da plataforma nem orientacao de aluno
+// ===== BASE DE CONHECIMENTO (editavel pelo admin na aba "Base de conhecimento") =====
+// O texto de cada chat (suporte e recuperacao) fica em wa_conhecimento. Enquanto ninguem salvar nada, vale o texto padrao abaixo
+// (a base do Junior + regras do chat + como conversar no WhatsApp), separado por etapas. As regras do sistema (quem resolve e o Junior,
+// marcas de liberacao, consulta de compra) continuam fixas no codigo e sao sempre somadas depois.
+export function baseCanalPadrao(canal: string): string {
+  const c = canal === 'recuperacao' ? 'recuperacao' : 'suporte'
+  const jr = JUNIOR_PROMPT.split(REGRA_RESPONSAVEL).join('').trim()
+  return '=== ETAPA 1 - QUEM E O JUNIOR E TODA A BASE DE CONHECIMENTO ===\n' + jr
+    + '\n\n=== ETAPA 2 - REGRAS DESTE CHAT (' + (c === 'recuperacao' ? 'RECUPERACAO' : 'SUPORTE') + ') ===\n' + REGRAS_CANAL[c]
+    + '\n\n=== ETAPA 3 - COMO CONVERSAR NO WHATSAPP ===\n' + REGRAS_WHATSAPP
+}
+
+export async function baseDoCanal(admin: any, canal: string): Promise<string> {
+  try {
+    const c = canal === 'recuperacao' ? 'recuperacao' : 'suporte'
+    const r = await admin.from('wa_conhecimento').select('texto').eq('canal', c).maybeSingle()
+    const t = String((r.data as any)?.texto || '').trim()
+    if (t.length >= 200) return t
+  } catch (e) { console.error('[wa-ia] base de conhecimento:', e) }
+  return baseCanalPadrao(canal)
+}
+
 const REGRA_NAO_ALUNA = `# SITUACAO DESTA PESSOA: AINDA NAO E ALUNA (PRIORIDADE MAXIMA - SOBREPOE TODAS AS REGRAS DE ALUNO ACIMA)
 O sistema NAO achou cadastro na plataforma nem compra desta pessoa. Ela NAO e aluna. Por isso:
 - NUNCA mande o link da plataforma (mcpia.site), nunca fale em "Criar conta", "Esqueci minha senha", login, menus, aulas, "continue assistindo as aulas", Produtos em Alta, Criativos Manuais, Vendendo no Automatico ou qualquer coisa que so aluno usa. A UNICA excecao e a pessoa que disse que JA COMPROU (veja a regra "JA COMPROU" abaixo). Ignore as regras 24 e 31 e os trechos "ALUNO SEM ACESSO" e "NAO CONSEGUE ACESSAR" da base: eles NAO valem para esta pessoa.
@@ -277,7 +300,8 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     const primeiro = nome.split(' ')[0] || 'voce'
     const canal = conv.connection_id ? 'recuperacao' : 'suporte'
 
-    let system = JUNIOR_PROMPT.split('{{firstName}}').join(primeiro) + '\n\n' + FINAL_REMINDER + '\n\n' + REGRAS_CANAL[canal] + '\n\n' + REGRAS_WHATSAPP + '\n\n' + REGRA_EXPRESS_WHATSAPP + '\n\n' + REGRA_ASSINATURA_WHATSAPP + '\n\nNome da pessoa: ' + (nome || 'desconhecido')
+    const baseTexto = (await baseDoCanal(admin, canal)).split('{{firstName}}').join(primeiro)
+    let system = REGRA_RESPONSAVEL + '\n\n' + baseTexto + '\n\n' + FINAL_REMINDER + '\n\n' + REGRA_EXPRESS_WHATSAPP + '\n\n' + REGRA_ASSINATURA_WHATSAPP + '\n\n' + REGRA_COMPRA_WHATSAPP + '\n\nNome da pessoa: ' + (nome || 'desconhecido')
     if (esconderPlanos) system = NEW_STUDENT_RULE + '\n\n' + system + '\n\n' + NEW_STUDENT_RULE
     const sitPlano = situacaoPlanoAluno(temPlano, esconderPlanos)
     if (sitPlano) system = system + '\n\n' + sitPlano
@@ -380,7 +404,12 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     if (!ult.data || String((ult.data as any).id) !== String(msgId)) return true
 
     // O assistente pediu para conferir a assinatura (plano da plataforma): o sistema confere o pagamento, libera se estiver tudo certo e escreve a resposta
-    if (pediuVerificarAssinatura(texto) && !pediuLiberarExpress(texto)) {
+    if (pediuConsultarCompra(texto)) {
+      // Consulta nos relatorios de vendas (Hubla e Cakto) pelo e-mail/telefone informado e pelo numero desta conversa
+      const dm = dadosDaMarcaCompra(texto)
+      const resC = await consultarCompraPeloJunior(admin, { emails: dm.emails, telefones: dm.telefones, waId })
+      texto = resC.texto
+    } else if (pediuVerificarAssinatura(texto) && !pediuLiberarExpress(texto)) {
       let contaEmail = ''
       if (conv.profile_id) {
         const pe = await admin.from('profiles').select('email').eq('id', conv.profile_id).maybeSingle()
@@ -400,7 +429,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       texto = res.texto
       if (res.humano) passaParaHumano = true
     } else {
-      texto = removerMarcaAssinatura(removerMarcaExpress(texto))
+      texto = removerMarcaCompra(removerMarcaAssinatura(removerMarcaExpress(texto)))
       if (!texto) { await avisarFalha(admin, convId, 'texto vazio apos marca express'); return true }
     }
 

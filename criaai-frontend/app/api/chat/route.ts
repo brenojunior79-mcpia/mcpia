@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 import { regraExpressChat, pediuLiberarExpress, removerMarcaExpress, liberarExpressPeloJunior } from '@/lib/juniorExpress'
+import { REGRA_COMPRA_CHAT, pediuConsultarCompra, removerMarcaCompra, dadosDaMarcaCompra, consultarCompraPeloJunior } from '@/lib/juniorCompra'
 import { REGRA_ASSINATURA_CHAT, pediuVerificarAssinatura, removerMarcaAssinatura, emailsDaMarcaAssinatura, verificarAssinaturaPeloJunior } from '@/lib/juniorAssinatura'
 
 import { JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno, REGRAS_ESTILO_CHAT, limparRespostaChat, tipoFinalConversa, situacaoFinalConversa } from '@/lib/junior'
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
     // Estrutura Express: o Junior pode conferir a compra e liberar o menu (quem confere e o sistema, nao a IA)
     let jaTemExpress = false
     try { jaTemExpress = (await supabase.rpc('tem_estrutura_express')).data === true } catch (e) {}
-    systemContent = systemContent + '\n\n' + regraExpressChat(jaTemExpress) + '\n\n' + REGRA_ASSINATURA_CHAT
+    systemContent = systemContent + '\n\n' + regraExpressChat(jaTemExpress) + '\n\n' + REGRA_ASSINATURA_CHAT + '\n\n' + REGRA_COMPRA_CHAT
 
     // Nos 7 primeiros dias, aluno sem plano nao pode saber que existem planos
     const subStatus = profileResult.data?.subscription_status
@@ -131,7 +132,13 @@ export async function POST(req: NextRequest) {
     }
 
     // O Junior pediu para conferir a assinatura (plano da plataforma): o sistema confere o pagamento, libera se estiver certo e escreve a resposta
-    if (pediuVerificarAssinatura(reply) && !pediuLiberarExpress(reply)) {
+    if (pediuConsultarCompra(reply)) {
+      // Consulta nos relatorios de vendas (Hubla e Cakto): quem escreve a resposta e o sistema
+      const dbC: any = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } })
+      const dm = dadosDaMarcaCompra(reply)
+      const resC = await consultarCompraPeloJunior(dbC, { emails: dm.emails, telefones: dm.telefones })
+      reply = resC.texto
+    } else if (pediuVerificarAssinatura(reply) && !pediuLiberarExpress(reply)) {
       const db2: any = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } })
       const resA = await verificarAssinaturaPeloJunior(db2, { conta: user.email || '', origem: 'chat', emails: emailsDaMarcaAssinatura(reply) })
       reply = resA.texto
@@ -144,7 +151,7 @@ export async function POST(req: NextRequest) {
         reply = res.texto
       }
     } else {
-      reply = removerMarcaAssinatura(removerMarcaExpress(reply)) || reply
+      reply = removerMarcaCompra(removerMarcaAssinatura(removerMarcaExpress(reply))) || reply
       // Mesma conduta do WhatsApp: sem ** e so um passo por mensagem
       reply = limparRespostaChat(reply) || reply
     }

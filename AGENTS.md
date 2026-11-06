@@ -42,6 +42,14 @@ com um assistente de IA chamado **Júnior**.
 
 **Produtos Sazonais:** menu escondido para todos, inclusive admin (`lib/acessoSazonais.ts`, `SAZONAIS_ADMIN_VE = false`).
 
+**Cadastro só com o e-mail da compra:** `public.email_pode_cadastrar(email)` (tabelas `compras_externas` = relatórios de venda Hubla/Cakto, `hubla_compras`, `estrutura_liberados`, `cadastro_liberados` = liberação manual). A tela de login pergunta em `/api/cadastro/verificar` e o banco confere de novo num gatilho `BEFORE INSERT` em `auth.users`. Para criar conta de teste/equipe à mão, primeiro coloque o e-mail em `cadastro_liberados`. O webhook da Cakto grava compradores novos em `compras_externas`; o da Hubla grava em `hubla_compras`.
+
+**Júnior liga sozinho (WhatsApp):** `wa_ia_config.agenda_ativa` + `agenda_inicio/fim` (padrão 08:00 às 20:00, todos os dias, Brasília). Dentro da janela vale como "assistente em todas as conversas"; fora dela vale o aviso de horário de atendimento (`wa_settings` chave `hours`). Lógica em `estadoAgendaIA` (`lib/waIA.ts`); às 8h o cron de 1 minuto (`/api/whatsapp/auto/run`) responde o que chegou de madrugada.
+
+**Base de conhecimento do Júnior (WhatsApp):** aba "Base de conhecimento" em Atendimento; texto por chat (suporte e recuperação) em `wa_conhecimento`. Sem texto salvo vale o padrão do código (`baseCanalPadrao` em `lib/waIA.ts`). As regras do sistema (`REGRA_RESPONSAVEL`, `FINAL_REMINDER`, marcas de Express, assinatura e consulta de compra) ficam no código e sempre somam por cima. O chat do site (`app/api/chat/route.ts`) ainda usa só `lib/junior.ts`.
+
+**Consulta de compra pelo Júnior:** marca `[[CONSULTAR_COMPRA: e-mail ou telefone]]` (`lib/juniorCompra.ts`) procura em `compras_externas` e `hubla_compras` por e-mail e telefone e devolve a resposta pronta; no WhatsApp o número da conversa também é consultado.
+
 **Reembolso:** o Júnior nunca promete prazo nem diz que o dinheiro foi devolvido. Primeiro pergunta o motivo e tenta ajudar; só passa para a equipe se o aluno mantiver o pedido. A equipe executa.
 
 ## Júnior (assistente de IA)
