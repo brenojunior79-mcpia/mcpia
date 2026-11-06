@@ -3,3 +3,7 @@ node_modules
 package-lock.json
 tsconfig.tsbuildinfo
 public/ffmpeg
+
+.env
+.env.*
+!.env.example

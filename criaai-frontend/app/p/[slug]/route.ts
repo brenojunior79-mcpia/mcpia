@@ -35,6 +35,8 @@ export async function GET(_req: NextRequest, { params }: { params: { slug: strin
       'Content-Type': 'text/html; charset=utf-8',
       'Cache-Control': 'no-store',
       'X-Content-Type-Options': 'nosniff',
+      // A pagina de venda e HTML escrito pelo aluno: roda isolada (sem acesso ao login do site) mas com scripts, formularios e links funcionando
+      'Content-Security-Policy': 'sandbox allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation',
       'Referrer-Policy': 'strict-origin-when-cross-origin',
     },
   })

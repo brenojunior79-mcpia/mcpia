@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { recordPayment, clearBilling, firstFutureDate, toAmount } from '@/lib/billing'
@@ -116,11 +117,23 @@ export async function POST(req: NextRequest) {
   try {
     const payload = await req.json()
 
+    // O aviso so vale com o token da Hubla (cabecalho x-hubla-token) OU com a chave na propria URL (?k=...).
+    // Enquanto nenhum dos dois estiver configurado na Vercel, o aviso passa (para nao derrubar as vendas),
+    // mas fica um alerta no log. Para fechar de vez: configure HUBLA_URL_KEY (e a mesma chave na URL do webhook na Hubla)
+    // e depois ligue HUBLA_EXIGIR_CHAVE=1.
     const tokenEnv = process.env.HUBLA_WEBHOOK_TOKEN
-    const incomingToken = req.headers.get('x-hubla-token')
-
-    if (tokenEnv && incomingToken !== tokenEnv) {
-      return NextResponse.json({ error: 'Token invalido' }, { status: 401 })
+    const keyEnv = process.env.HUBLA_URL_KEY
+    const seguro = function(a: string | null | undefined, b: string | undefined): boolean {
+      if (!a || !b) return false
+      const x = Buffer.from(a), y = Buffer.from(b)
+      return x.length === y.length && timingSafeEqual(x, y)
+    }
+    const okToken = seguro(req.headers.get('x-hubla-token'), tokenEnv)
+    const okChave = seguro(req.nextUrl.searchParams.get('k'), keyEnv)
+    if (!okToken && !okChave) {
+      // Quem ja configurou o token da Hubla (HUBLA_WEBHOOK_TOKEN) ou ligou HUBLA_EXIGIR_CHAVE=1 so aceita aviso com segredo valido
+      if (tokenEnv || process.env.HUBLA_EXIGIR_CHAVE === '1') return NextResponse.json({ error: 'Token invalido' }, { status: 401 })
+      console.error('[hubla-webhook] ALERTA: aviso aceito SEM token/chave (configure HUBLA_URL_KEY e HUBLA_EXIGIR_CHAVE=1)')
     }
 
     const eventType: string = payload.type || ''

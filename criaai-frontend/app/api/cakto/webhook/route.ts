@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { recordPayment, clearBilling, firstFutureDate, toAmount } from '@/lib/billing'
@@ -143,7 +144,14 @@ export async function POST(req: NextRequest) {
     const secretEnv = process.env.CAKTO_WEBHOOK_SECRET
     const incomingSecret = payload.secret || req.headers.get('x-cakto-secret') || req.nextUrl.searchParams.get('secret')
 
-    if (secretEnv && incomingSecret !== secretEnv) {
+    // Sem segredo configurado o aviso NUNCA e aceito (antes, sem o segredo, qualquer pessoa podia simular uma compra)
+    if (!secretEnv) {
+      console.error('[cakto-webhook] CAKTO_WEBHOOK_SECRET nao configurado: aviso recusado')
+      return NextResponse.json({ error: 'Webhook nao configurado' }, { status: 500 })
+    }
+    const a = Buffer.from(String(incomingSecret || ''))
+    const b = Buffer.from(secretEnv)
+    if (a.length !== b.length || !timingSafeEqual(a, b)) {
       return NextResponse.json({ error: 'Assinatura invalida' }, { status: 401 })
     }
 

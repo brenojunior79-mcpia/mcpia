@@ -122,7 +122,12 @@ async function fluxosPersonalizados(admin: any, convId: string, waId: string, te
 export async function POST(req: NextRequest) {
   const cfg = waConfig()
   const raw = await req.text()
-  if (cfg.appSecret && !validSignature(raw, req.headers.get('x-hub-signature-256'), cfg.appSecret)) {
+  // Sem o segredo do app configurado a mensagem NUNCA e aceita (antes, sem ele, qualquer pessoa podia simular uma mensagem)
+  if (!cfg.appSecret) {
+    console.error('[whatsapp] WHATSAPP_APP_SECRET nao configurado: mensagem recusada')
+    return new NextResponse('Webhook nao configurado', { status: 500 })
+  }
+  if (!validSignature(raw, req.headers.get('x-hub-signature-256'), cfg.appSecret)) {
     return new NextResponse('Assinatura invalida', { status: 401 })
   }
   try {
