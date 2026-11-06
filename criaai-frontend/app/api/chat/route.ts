@@ -12,7 +12,13 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
-    const { messages, imageBase64 } = await req.json()
+    const corpo = await req.json()
+    const imageBase64 = corpo?.imageBase64
+    // Seguranca: do navegador so aceitamos falas de aluno e do Junior (nunca "system"), com tamanho limitado
+    const messages: { role: 'user' | 'assistant'; content: string }[] = (Array.isArray(corpo?.messages) ? corpo.messages : [])
+      .filter(function(m: any) { return m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string' })
+      .map(function(m: any) { return { role: m.role, content: String(m.content).slice(0, 4000) } })
+      .slice(-30)
 
     const profileResult = await supabase.from('profiles').select('full_name, created_at, subscription_status, is_admin').eq('id', user.id).single()
     const firstName = ((profileResult.data?.full_name || '').split(' ')[0]) || ''
@@ -74,7 +80,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Se veio uma imagem (print), monta a ultima mensagem do aluno no formato de visao da OpenAI
-    const apiMessages = [...messages]
+    const apiMessages: any[] = [...messages]
     if (imageBase64 && apiMessages.length > 0) {
       const lastIdx = apiMessages.length - 1
       const lastMsg = apiMessages[lastIdx]

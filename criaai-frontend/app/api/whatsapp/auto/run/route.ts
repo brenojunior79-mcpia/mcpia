@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { timingSafeEqual } from 'crypto'
 import { adminClient, requireAdmin, waConfig } from '@/lib/whatsapp'
 import { processarFluxos } from '@/lib/waAuto'
+import { estadoAgendaIA, responderPendentesGeral } from '@/lib/waIA'
 
 export const maxDuration = 60
 export const dynamic = 'force-dynamic'
@@ -27,5 +28,15 @@ export async function POST(req: NextRequest) {
   const cfg = waConfig()
   if (!cfg.token) return NextResponse.json({ error: 'WhatsApp nao conectado.' }, { status: 400 })
   const r = await processarFluxos(admin, cfg.token)
-  return NextResponse.json({ ok: true, ...r })
+  // Agenda do assistente: quando a janela abre (ex.: 8h), responde o que chegou de madrugada. Uma vez por dia.
+  let abertura = 0
+  try {
+    const ag = await estadoAgendaIA(admin)
+    if (ag.agendaAtiva && ag.dentro) {
+      const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+      const claim = await admin.from('wa_ia_config').update({ agenda_varrida: hoje }).eq('id', 1).or('agenda_varrida.is.null,agenda_varrida.neq.' + hoje).select('id')
+      if (!claim.error && claim.data && claim.data.length > 0) abertura = await responderPendentesGeral(admin)
+    }
+  } catch (e) { console.error('[wa-ia] abertura da agenda:', e) }
+  return NextResponse.json({ ok: true, ...r, abertura })
 }

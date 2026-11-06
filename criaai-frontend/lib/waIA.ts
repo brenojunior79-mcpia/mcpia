@@ -2,6 +2,7 @@
 // So responde nas conversas em que o ADMIN ligou o assistente (wa_conversations.ia_ativa) ou quando ele ligou para todas (wa_ia_config.geral).
 import { JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno, soUmPasso, tirarLinkMarkdown, linkClicavel, tirarFrasesDeAjuda, tipoFinalConversa, situacaoFinalConversa } from '@/lib/junior'
 import { phoneIdDaConversa, postMessage } from '@/lib/whatsapp'
+import { agoraNoFuso } from '@/lib/waHours'
 import { REGRA_EXPRESS_WHATSAPP, pediuLiberarExpress, removerMarcaExpress, liberarExpressPeloJunior, emailDaMarca } from '@/lib/juniorExpress'
 import { REGRA_ASSINATURA_WHATSAPP, pediuVerificarAssinatura, removerMarcaAssinatura, emailsDaMarcaAssinatura, verificarAssinaturaPeloJunior } from '@/lib/juniorAssinatura'
 
@@ -135,11 +136,28 @@ async function avisarFalha(admin: any, convId: string, motivo: string): Promise<
 //  - 'manual': o admin ligou nesta conversa (ia_ativa)
 //  - 'geral': o admin ligou o assistente para TODAS as conversas (wa_ia_config.geral), a conversa nao foi desligada
 //    de proposito (ia_humano). Ligado = responde sempre, mesmo que a equipe tenha respondido antes
+export type AgendaIA = { geral: boolean; agendaAtiva: boolean; inicio: string; fim: string; dentro: boolean }
+
+// Le a configuracao do assistente: ligado para todas (geral) e/ou agenda diaria (ex.: das 08:00 as 20:00, todos os dias, horario de Brasilia)
+export async function estadoAgendaIA(admin: any, d: Date = new Date()): Promise<AgendaIA> {
+  const c = await admin.from('wa_ia_config').select('geral, agenda_ativa, agenda_inicio, agenda_fim').eq('id', 1).maybeSingle()
+  const x: any = c.data || {}
+  const inicio = /^([01]\d|2[0-3]):[0-5]\d$/.test(String(x.agenda_inicio)) ? String(x.agenda_inicio) : '08:00'
+  const fim = /^([01]\d|2[0-3]):[0-5]\d$/.test(String(x.agenda_fim)) ? String(x.agenda_fim) : '20:00'
+  const hm = agoraNoFuso('America/Sao_Paulo', d).hm
+  const dentro = inicio < fim ? (hm >= inicio && hm < fim) : (hm >= inicio || hm < fim)
+  return { geral: x.geral === true, agendaAtiva: x.agenda_ativa === true, inicio, fim, dentro }
+}
+
+// true quando o atendimento "de verdade" esta valendo agora para o aviso de horario:
+// com a agenda ligada, o assistente atende dentro da janela e fora dela vale o aviso de horario de atendimento
+export function assistenteAtendendoAgora(a: AgendaIA): boolean { return a.geral || (a.agendaAtiva && a.dentro) }
+
 export async function modoIA(admin: any, conv: any): Promise<'manual' | 'geral' | null> {
   if (conv.ia_ativa === true) return 'manual'
   if (conv.ia_humano === true) return null
-  const c = await admin.from('wa_ia_config').select('geral').eq('id', 1).maybeSingle()
-  if ((c.data as any)?.geral !== true) return null
+  const a = await estadoAgendaIA(admin)
+  if (!assistenteAtendendoAgora(a)) return null
   return 'geral'
 }
 

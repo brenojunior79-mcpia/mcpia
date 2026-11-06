@@ -3,7 +3,7 @@ import { adminClient, graphFetch, postMessage, validSignature, waConfig } from '
 import { abertoAgora, normalizar } from '@/lib/waHours'
 import { aplicaNome, casaPalavra } from '@/lib/waFlows'
 import { primeiroNome } from '@/lib/waBroadcast'
-import { tratarIA } from '@/lib/waIA'
+import { tratarIA, estadoAgendaIA } from '@/lib/waIA'
 
 export const maxDuration = 30
 export const dynamic = 'force-dynamic'
@@ -62,7 +62,11 @@ async function respostaAutomatica(admin: any, convId: string, waId: string): Pro
   try {
     const st = await admin.from('wa_settings').select('value').eq('key', 'hours').maybeSingle()
     const h = normalizar(st.data?.value)
-    if (!h.away_enabled || !h.away_message.trim() || abertoAgora(h)) return false
+    if (!h.away_enabled || !h.away_message.trim()) return false
+    // Com a agenda do assistente ligada (ex.: 8h as 20h), "fora do horario" e fora dessa janela; senao vale o horario da equipe
+    const ag = await estadoAgendaIA(admin)
+    const aberto = ag.agendaAtiva ? ag.dentro : abertoAgora(h)
+    if (aberto) return false
     const since = new Date(Date.now() - h.cooldown_hours * 3600000).toISOString()
     const prev = await admin.from('wa_messages').select('id').eq('conversation_id', convId).eq('direction', 'out').eq('type', 'text').is('sent_by', null).is('flow_id', null).gte('created_at', since).limit(1)
     if (prev.data && prev.data.length > 0) return false
@@ -92,7 +96,8 @@ async function fluxosPersonalizados(admin: any, convId: string, waId: string, te
     const lista: any[] = fl.data || []
     if (lista.length === 0) return
     const st = await admin.from('wa_settings').select('value').eq('key', 'hours').maybeSingle()
-    const aberto = abertoAgora(normalizar(st.data?.value))
+    const ag = await estadoAgendaIA(admin)
+    const aberto = ag.agendaAtiva ? ag.dentro : abertoAgora(normalizar(st.data?.value))
     const cnt = await admin.from('wa_messages').select('id', { count: 'exact', head: true }).eq('conversation_id', convId).eq('direction', 'in')
     const primeira = (cnt.count || 0) <= 1
     for (const f of lista) {

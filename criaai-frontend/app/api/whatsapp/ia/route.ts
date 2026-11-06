@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminClient, requireAdmin, requireStaff } from '@/lib/whatsapp'
-import { responderUltimaPendente, responderPendentesGeral } from '@/lib/waIA'
+import { responderUltimaPendente, responderPendentesGeral, estadoAgendaIA, assistenteAtendendoAgora } from '@/lib/waIA'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -9,8 +9,9 @@ export const maxDuration = 60
 export async function GET() {
   const uid = await requireStaff()
   if (!uid) return NextResponse.json({ error: 'Nao autorizado' }, { status: 401 })
-  const c = await adminClient().from('wa_ia_config').select('geral').eq('id', 1).maybeSingle()
-  return NextResponse.json({ geral: (c.data as any)?.geral === true })
+  const a = await estadoAgendaIA(adminClient())
+  // geral = o assistente esta atendendo todas as conversas AGORA (ligado a mao ou dentro da agenda)
+  return NextResponse.json({ geral: assistenteAtendendoAgora(a), manual: a.geral, agenda: a.agendaAtiva, inicio: a.inicio, fim: a.fim, dentro: a.dentro })
 }
 
 // Liga ou desliga o assistente de IA numa conversa (ids + ativo) ou em todas (geral). SOMENTE o admin (atendentes nao conseguem).
@@ -19,6 +20,17 @@ export async function POST(req: NextRequest) {
   if (!adminId) return NextResponse.json({ error: 'Somente o admin pode ligar ou desligar o assistente.' }, { status: 403 })
   let body: any = {}
   try { body = await req.json() } catch (e) {}
+
+  // Agenda diaria: o assistente liga sozinho dentro da janela (ex.: 08:00 as 20:00, todos os dias)
+  if (typeof body?.agenda === 'boolean') {
+    const hhmm = /^([01]\d|2[0-3]):[0-5]\d$/
+    const upd: any = { id: 1, agenda_ativa: body.agenda, atualizado_em: new Date().toISOString() }
+    if (hhmm.test(String(body.inicio))) upd.agenda_inicio = String(body.inicio)
+    if (hhmm.test(String(body.fim))) upd.agenda_fim = String(body.fim)
+    const r = await adminClient().from('wa_ia_config').upsert(upd)
+    if (r.error) return NextResponse.json({ error: r.error.message }, { status: 500 })
+    return NextResponse.json({ ok: true })
+  }
 
   // Todas as conversas (inclusive as novas que chegarem)
   if (typeof body?.geral === 'boolean') {

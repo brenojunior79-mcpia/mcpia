@@ -206,6 +206,7 @@ export default function AtendimentoPage() {
   const [staff, setStaff] = useState<boolean | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [iaGeral, setIaGeral] = useState(false)
+  const [iaAgenda, setIaAgenda] = useState<{ agenda: boolean; inicio: string; fim: string }>({ agenda: false, inicio: '08:00', fim: '20:00' })
   const [tab, setTab] = useState<'conversas' | 'atendentes' | 'modelos' | 'disparo' | 'fluxos' | 'eventos' | 'conexoes'>('conversas')
   const [tpls, setTpls] = useState<Tpl[] | null>(null)
   const [disparoAberto, setDisparoAberto] = useState(false)
@@ -705,8 +706,25 @@ export default function AtendimentoPage() {
   // Em qual chat a conversa aparece: se o assistente esta atendendo ela vai para o chat do Assistente; quando ele passa para a equipe, volta para o chat de origem
   function canalDaConv(c: Conv): Canal { return iaOn(c) ? 'assistente' : (c.connection_id ? 'recuperacao' : 'suporte') }
   useEffect(function() {
-    fetch('/api/whatsapp/ia', { cache: 'no-store' }).then(function(r) { return r.ok ? r.json() : null }).then(function(j) { if (j && typeof j.geral === 'boolean') setIaGeral(j.geral) }).catch(function() {})
+    fetch('/api/whatsapp/ia', { cache: 'no-store' }).then(function(r) { return r.ok ? r.json() : null }).then(function(j) { if (j && typeof j.geral === 'boolean') { setIaGeral(j.geral); if (typeof j.agenda === 'boolean') setIaAgenda({ agenda: j.agenda, inicio: String(j.inicio || '08:00'), fim: String(j.fim || '20:00') }) } }).catch(function() {})
   }, [])
+  // Agenda diaria do assistente (ex.: liga sozinho das 8h as 20h, todos os dias); fora disso vale o aviso de horario de atendimento
+  async function alternarAgenda() {
+    if (!isAdmin) return
+    const novo = !iaAgenda.agenda
+    const aviso = novo
+      ? 'Ligar o assistente automaticamente todos os dias, das ' + iaAgenda.inicio.slice(0, 2) + 'h às ' + iaAgenda.fim.slice(0, 2) + 'h (horário de Brasília)? Fora desse horário ele para e vale o aviso de horário de atendimento.'
+      : 'Desligar a agenda automática do assistente?'
+    if (!window.confirm(aviso)) return
+    setErro('')
+    try {
+      const r = await fetch('/api/whatsapp/ia', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agenda: novo, inicio: iaAgenda.inicio, fim: iaAgenda.fim }) })
+      const j = await r.json().catch(function() { return {} })
+      if (!r.ok) { setErro(j.error || 'Não foi possível mudar a agenda do assistente.'); return }
+      setIaAgenda({ agenda: novo, inicio: iaAgenda.inicio, fim: iaAgenda.fim })
+      fetch('/api/whatsapp/ia', { cache: 'no-store' }).then(function(x) { return x.ok ? x.json() : null }).then(function(y) { if (y && typeof y.geral === 'boolean') setIaGeral(y.geral) }).catch(function() {})
+    } catch (e) { setErro('Sem conexão. Tente de novo.') }
+  }
   async function alternarIAGeral() {
     if (!isAdmin) return
     const novo = !iaGeral
@@ -936,6 +954,12 @@ export default function AtendimentoPage() {
               <button onClick={alternarIAGeral} title="Liga ou desliga o assistente de IA em todas as conversas de uma vez (inclusive as novas)" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, border: '1px solid ' + (iaGeral ? '#7c3aed' : 'var(--border2)'), background: iaGeral ? 'rgba(124,58,237,0.12)' : 'var(--surface2)', color: iaGeral ? '#7c3aed' : 'var(--text)', borderRadius: 10, padding: '8px 10px', fontWeight: 800, fontSize: 12.5 }}>
                 <span>🤖 Assistente em todas as conversas</span>
                 <span style={{ background: iaGeral ? '#7c3aed' : 'var(--border2)', color: iaGeral ? '#fff' : 'var(--muted2)', borderRadius: 999, padding: '2px 10px', fontSize: 11.5 }}>{iaGeral ? 'LIGADO' : 'desligado'}</span>
+              </button>
+            )}
+            {isAdmin && (
+              <button onClick={alternarAgenda} title="O assistente liga sozinho todos os dias neste horário. Fora dele vale o aviso de horário de atendimento." style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, border: '1px solid ' + (iaAgenda.agenda ? '#7c3aed' : 'var(--border2)'), background: iaAgenda.agenda ? 'rgba(124,58,237,0.12)' : 'var(--surface2)', color: iaAgenda.agenda ? '#7c3aed' : 'var(--text)', borderRadius: 10, padding: '8px 10px', fontWeight: 800, fontSize: 12.5 }}>
+                <span>⏰ Automático das {iaAgenda.inicio.slice(0, 2)}h às {iaAgenda.fim.slice(0, 2)}h</span>
+                <span style={{ background: iaAgenda.agenda ? '#7c3aed' : 'var(--border2)', color: iaAgenda.agenda ? '#fff' : 'var(--muted2)', borderRadius: 999, padding: '2px 10px', fontSize: 11.5 }}>{iaAgenda.agenda ? 'LIGADO' : 'desligado'}</span>
               </button>
             )}
             {(function() {
