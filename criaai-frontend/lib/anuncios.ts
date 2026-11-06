@@ -15,7 +15,7 @@ export const LIMITES = {
   minPagina: 50,
   minCheckout: 15,
   cpm: { bom: 30, atencao: 50 },          // R$ por mil exibicoes (menor e melhor)
-  ctr: { bom: 1.5, atencao: 1 },          // % (maior e melhor)
+  ctr: { bom: 2, atencao: 1 },            // % (maior e melhor): no minimo 2%
   cpc: { bom: 1.5, atencao: 3 },          // R$ (menor e melhor)
   connect: { bom: 80, atencao: 65 },      // % (maior e melhor)
   checkout: { bom: 10, atencao: 5 },      // % (maior e melhor)
@@ -233,7 +233,7 @@ export function relatorioDoFunil(m: Metricas): Relatorio {
 
 export const GUIA_FUNIL: { icone: string; nome: string; oQue: string; mede: string; melhorar: string }[] = [
   { icone: '👀', nome: '1. Viram o anúncio', oQue: 'É a quantidade de pessoas diferentes para quem o Facebook mostrou seu anúncio.', mede: 'Alcance e CPM (o preço para aparecer).', melhorar: 'Se o CPM está alto, troque o criativo e teste um público mais aberto. Se o alcance é baixo, o orçamento pode estar pequeno.' },
-  { icone: '🖱️', nome: '2. Clicaram no link', oQue: 'Das pessoas que viram, quantas se interessaram e clicaram para saber mais.', mede: 'CTR do link (meta: acima de 1,5%) e CPC (quanto custa cada clique).', melhorar: 'Aqui quem manda é o criativo. Mude o gancho (os 3 primeiros segundos), a imagem ou a promessa.' },
+  { icone: '🖱️', nome: '2. Clicaram no link', oQue: 'Das pessoas que viram, quantas se interessaram e clicaram para saber mais.', mede: 'CTR do link (meta: no mínimo 2%) e CPC (quanto custa cada clique).', melhorar: 'Aqui quem manda é o criativo. Mude o gancho (os 3 primeiros segundos), a imagem ou a promessa.' },
   { icone: '📄', nome: '3. Chegaram na página', oQue: 'Dos que clicaram, quantos esperaram a página abrir de verdade.', mede: 'Chegada na página (meta: acima de 80%).', melhorar: 'Se está baixo, sua página está lenta ou o pixel não está registrando. Teste no celular com 4G e deixe o site mais leve.' },
   { icone: '🛒', nome: '4. Clicaram no checkout', oQue: 'Das pessoas que viram a página, quantas clicaram no botão de comprar.', mede: 'Taxa de checkout (meta: acima de 10%).', melhorar: 'Aqui quem manda é a página. Deixe a promessa mais clara, mostre prova (depoimentos), e ponha o botão de comprar bem visível.' },
   { icone: '✅', nome: '5. Compraram', oQue: 'Das pessoas que chegaram no checkout, quantas pagaram.', mede: 'Taxa de compra (meta: acima de 25%), custo por venda e ROAS.', melhorar: 'Confira o preço, ofereça Pix, e teste o checkout no celular. Se o ROAS está bom, aumente o orçamento em até 20% por vez.' },

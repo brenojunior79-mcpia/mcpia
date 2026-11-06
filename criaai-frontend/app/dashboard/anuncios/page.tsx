@@ -8,6 +8,7 @@ import AnalisandoMetricas from '@/components/metricas/AnalisandoMetricas'
 import CampanhasTabela from '@/components/anuncios/CampanhasTabela'
 import CamilaAnuncios from '@/components/anuncios/CamilaAnuncios'
 import CriativosAnuncios from '@/components/anuncios/CriativosAnuncios'
+import MetricasExplicadas from '@/components/anuncios/MetricasExplicadas'
 import { orcamentoDiario } from '@/components/anuncios/CampanhaCard'
 import { cartao, titulo, moeda } from '@/components/anuncios/estilo'
 import { statusAnuncios } from '@/lib/acessoAnuncios'
@@ -375,6 +376,8 @@ export default function AnunciosPage() {
                         </>
                       )}
                     </div>
+
+                    <MetricasExplicadas m={mFunil} nome={nomeFunil} periodo={rotuloPeriodo} />
 
                     <CriativosAnuncios criativos={criativos} carregando={criativosLoading} erro={criativosErro} />
 
