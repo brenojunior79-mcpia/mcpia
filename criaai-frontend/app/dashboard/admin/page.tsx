@@ -8,6 +8,7 @@ import CaktoConferirCard from '@/components/admin/CaktoConferirCard'
 import SalesMonthsCard from '@/components/admin/SalesMonthsCard'
 import ReferralPayoutsCard from '@/components/admin/ReferralPayoutsCard'
 import HublaPanel from '@/components/admin/HublaPanel'
+import FacebookConectadosCard from '@/components/admin/FacebookConectadosCard'
 
 export default function AdminPage() {
   const [profiles, setProfiles] = useState<any[]>([])
@@ -363,6 +364,9 @@ export default function AdminPage() {
         {/* Melhores meses de vendas (Mentoria + Estrutura Express), atualiza com os avisos da Hubla e da Cakto */}
         <SalesMonthsCard />
         <ReferralPayoutsCard />
+
+        {/* Alunos que conectaram o Facebook (aba Gerenciando seus anuncios) */}
+        <FacebookConectadosCard />
 
         {/* Dias e horarios de maior acesso */}
         <div className={styles.stat} style={{ marginBottom: 28 }}>
