@@ -51,11 +51,11 @@ export default function AnunciosPage() {
     supabase.auth.getUser().then(async function(r) {
       const uid = r.data.user ? r.data.user.id : null
       if (!uid) { setPermitido(false); return }
-      const p = await supabase.from('profiles').select('is_admin, email, created_at, subscription_status').eq('id', uid).maybeSingle()
+      const p = await supabase.from('profiles').select('is_admin, email, created_at, subscription_status, plans(name)').eq('id', uid).maybeSingle()
       const admin = !!(p.data && (p.data as any).is_admin)
       setEhAdmin(admin)
       const email = (p.data && (p.data as any).email) || (r.data.user ? r.data.user.email : null)
-      const st = statusAnuncios(admin, email, p.data ? (p.data as any).created_at : null, p.data ? (p.data as any).subscription_status : null)
+      const st = statusAnuncios(admin, email, p.data ? (p.data as any).created_at : null, p.data ? (p.data as any).subscription_status : null, p.data ? (((p.data as any).plans || {}).name || (Array.isArray((p.data as any).plans) ? (p.data as any).plans[0]?.name : null)) : null)
       // Nos primeiros 7 dias sem plano o menu nem aparece: se abrir o endereco direto, volta para o painel
       if (st === 'oculto') { window.location.replace('/dashboard'); return }
       if (st === 'plano') { setSemPlano(true); setPermitido(false); return }
@@ -208,7 +208,7 @@ export default function AnunciosPage() {
       <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', padding: '40px 20px 60px' }}>
         <div style={{ maxWidth: 580, margin: '0 auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 22, padding: '34px 26px', textAlign: 'center', boxShadow: 'var(--shadow-sm)' }}>
           <div style={{ width: 68, height: 68, borderRadius: 20, margin: '0 auto 14px', background: 'linear-gradient(135deg,#4b3fe8,#5b4ef8,#8b6dfa)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 34, boxShadow: '0 10px 26px rgba(91,78,248,0.35)' }}><i className="ti ti-robot" /></div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(124,92,252,0.10)', border: '1px solid rgba(124,92,252,0.3)', color: 'var(--accent)', fontSize: 11.5, fontWeight: 800, borderRadius: 999, padding: '4px 12px', marginBottom: 12 }}><i className="ti ti-lock" /> EXCLUSIVO PARA ASSINANTES</div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(124,92,252,0.10)', border: '1px solid rgba(124,92,252,0.3)', color: 'var(--accent)', fontSize: 11.5, fontWeight: 800, borderRadius: 999, padding: '4px 12px', marginBottom: 12 }}><i className="ti ti-lock" /> EXCLUSIVO DOS PLANOS PRO E PREMIUM</div>
           <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: 'clamp(22px, 5vw, 28px)', fontWeight: 800, margin: '0 0 10px', lineHeight: 1.2 }}>Automatize as suas campanhas</h1>
           <p style={{ fontSize: 15, color: 'var(--muted2)', lineHeight: 1.6, margin: '0 0 20px' }}>Não fique perdido no Gerenciador de Anúncios. <b style={{ color: 'var(--text)' }}>Aqui, a IA faz tudo por você.</b></p>
           <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 10, margin: '0 auto 24px', maxWidth: 450 }}>
@@ -220,7 +220,7 @@ export default function AnunciosPage() {
             ) })}
           </div>
           <a href="/dashboard/planos" style={{ display: 'inline-block', background: 'linear-gradient(135deg,#4b3fe8,#5b4ef8,#8b6dfa)', color: '#fff', textDecoration: 'none', fontWeight: 800, fontSize: 15.5, padding: '14px 32px', borderRadius: 14, boxShadow: '0 8px 22px rgba(91,78,248,0.35)' }}>Quero automatizar minhas campanhas</a>
-          <div style={{ marginTop: 12, fontSize: 12.5, color: 'var(--muted2)' }}>Qualquer plano libera o acesso.</div>
+          <div style={{ marginTop: 12, fontSize: 12.5, color: 'var(--muted2)' }}>Disponível nos planos Pro e Premium.</div>
         </div>
       </div>
     )

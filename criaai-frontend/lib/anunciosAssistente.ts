@@ -19,10 +19,10 @@ export async function usuarioAssistente(): Promise<UsuarioAssistente | { erro: s
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { erro: 'Entre na sua conta.', status: 401 }
-  const p = await supabase.from('profiles').select('is_admin, email, created_at, subscription_status').eq('id', user.id).maybeSingle()
+  const p = await supabase.from('profiles').select('is_admin, email, created_at, subscription_status, plans(name)').eq('id', user.id).maybeSingle()
   const d: any = p.data || {}
   const admin = !!d.is_admin
-  const liberado = admin || (ASSISTENTE_PARA_ALUNOS && statusAnuncios(admin, d.email || user.email, d.created_at, d.subscription_status) === 'liberado')
+  const liberado = admin || (ASSISTENTE_PARA_ALUNOS && statusAnuncios(admin, d.email || user.email, d.created_at, d.subscription_status, Array.isArray(d.plans) ? (d.plans[0] && d.plans[0].name) : (d.plans && d.plans.name)) === 'liberado')
   if (!liberado) return { erro: 'Este recurso ainda nao esta liberado para a sua conta.', status: 403 }
   const c = await supabase.from('facebook_connections').select('access_token, ad_account_id, ad_account_name, token_expires_at').eq('user_id', user.id).maybeSingle()
   const cd: any = c.data

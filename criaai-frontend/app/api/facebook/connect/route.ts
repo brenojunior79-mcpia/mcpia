@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { bloqueioAnuncios } from '@/lib/acessoAnunciosServidor'
 
 const FACEBOOK_APP_ID = process.env.FACEBOOK_APP_ID!
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mcpia.site'
@@ -15,6 +16,7 @@ export async function GET(req: NextRequest) {
 
   const user = (await supabase.auth.getUser()).data.user
   if (!user) return NextResponse.redirect(APP_URL + '/login')
+  { const bloqueio = await bloqueioAnuncios(user); if (bloqueio) return NextResponse.redirect(APP_URL + '/dashboard/anuncios') }
 
   const state = crypto.randomUUID()
   const redirectUri = APP_URL + '/api/facebook/callback'

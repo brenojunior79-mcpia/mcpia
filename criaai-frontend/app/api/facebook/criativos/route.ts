@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { bloqueioAnuncios } from '@/lib/acessoAnunciosServidor'
 
 // Lista os criativos (anuncios) da conta com imagem, links, UTM e metricas do periodo.
 const GRAPH_VERSION = 'v26.0'
@@ -63,6 +64,7 @@ export async function GET(req: NextRequest) {
   )
   const user = (await supabase.auth.getUser()).data.user
   if (!user) return NextResponse.json({ error: 'Nao autorizado' }, { status: 401 })
+  { const bloqueio = await bloqueioAnuncios(user); if (bloqueio) return bloqueio }
 
   const conexao = (await supabase.from('facebook_connections').select('access_token, ad_account_id').eq('user_id', user.id).maybeSingle()).data
   if (!conexao || !conexao.ad_account_id) return NextResponse.json({ error: 'Nenhuma conta de anuncios conectada' }, { status: 404 })

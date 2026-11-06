@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { registrarEventosRanking, inicioRankingISO } from '@/lib/rankingFacebook'
+import { bloqueioAnuncios } from '@/lib/acessoAnunciosServidor'
 
 const GRAPH_VERSION = 'v26.0'
 
@@ -88,6 +89,7 @@ export async function GET(req: NextRequest) {
 
   const user = (await supabase.auth.getUser()).data.user
   if (!user) return NextResponse.json({ error: 'Nao autorizado' }, { status: 401 })
+  { const bloqueio = await bloqueioAnuncios(user); if (bloqueio) return bloqueio }
 
   const connection = (await supabase
     .from('facebook_connections')

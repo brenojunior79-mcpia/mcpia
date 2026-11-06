@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { bloqueioAnuncios } from '@/lib/acessoAnunciosServidor'
 
 const GRAPH_VERSION = 'v26.0'
 
@@ -14,6 +15,7 @@ export async function POST(req: NextRequest) {
   )
   const user = (await supabase.auth.getUser()).data.user
   if (!user) return NextResponse.json({ error: 'Nao autorizado' }, { status: 401 })
+  { const bloqueio = await bloqueioAnuncios(user); if (bloqueio) return bloqueio }
 
   const conn = (await supabase.from('facebook_connections').select('access_token, ad_account_id').eq('user_id', user.id).maybeSingle()).data
   if (!conn) return NextResponse.json({ error: 'Nenhuma conta conectada' }, { status: 404 })

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import OpenAI from 'openai'
+import { bloqueioAnuncios } from '@/lib/acessoAnunciosServidor'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
 
@@ -15,6 +16,7 @@ export async function POST(req: NextRequest) {
 
   const user = (await supabase.auth.getUser()).data.user
   if (!user) return NextResponse.json({ error: 'Nao autorizado' }, { status: 401 })
+  { const bloqueio = await bloqueioAnuncios(user); if (bloqueio) return bloqueio }
 
   const body = await req.json()
   const accountInsights = body.accountInsights

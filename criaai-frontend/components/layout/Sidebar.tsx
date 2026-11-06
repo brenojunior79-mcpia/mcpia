@@ -139,7 +139,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
   const hidePlans = isNewUser && !hasActivePlan
 
   // Gerenciador de Anuncios: liberado para quem tem plano; sem plano so aparece depois de 7 dias (e pede para assinar); admin e conta do revisor da Meta sempre abrem
-  const statusAnu = statusAnuncios(!!isAdmin, profile?.email || user?.email, profile?.created_at, profile?.subscription_status)
+  const statusAnu = statusAnuncios(!!isAdmin, profile?.email || user?.email, profile?.created_at, profile?.subscription_status, plan?.name)
   const verAnuncios = ANUNCIOS_MENU_VISIVEL_PARA_TODOS || statusAnu !== 'oculto'
   // Menu visivel para todos. Plano ativo abre; sem plano (7+ dias) abre e mostra o aviso para assinar; nos 7 primeiros dias sem plano o clique nao faz nada
   const anunciosSemClique = statusAnu === 'oculto'
