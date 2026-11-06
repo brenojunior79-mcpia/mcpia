@@ -176,12 +176,33 @@ export async function estadoAgendaIA(admin: any, d: Date = new Date()): Promise<
 // com a agenda ligada, o assistente atende dentro da janela e fora dela vale o aviso de horario de atendimento
 export function assistenteAtendendoAgora(a: AgendaIA): boolean { return a.geral || (a.agendaAtiva && a.dentro) }
 
-export async function modoIA(admin: any, conv: any): Promise<'manual' | 'geral' | null> {
+export async function modoIA(admin: any, conv: any, quando?: Date): Promise<'manual' | 'geral' | null> {
   if (conv.ia_ativa === true) return 'manual'
   if (conv.ia_humano === true) return null
-  const a = await estadoAgendaIA(admin)
-  if (!assistenteAtendendoAgora(a)) return null
-  return 'geral'
+  const a = await estadoAgendaIA(admin, quando)
+  if (assistenteAtendendoAgora(a)) return 'geral'
+  // Fora do horario, mas a pessoa ainda esta conversando com o assistente: ele continua ate terminar a conversa
+  if (a.agendaAtiva && !a.dentro && await conversaEmAndamento(admin, String(conv.id || ''))) return 'geral'
+  return null
+}
+
+// A conversa esta no meio? (o assistente respondeu ha pouco e ainda nao se despediu). Usado depois do fim do horario:
+// quem ja estava sendo atendido nao e cortado as 20h; encerra quando a conversa termina ou fica parada por um tempo.
+const MINUTOS_CONVERSA_ATIVA = 45
+const DESPEDIDA_RE = /dispo[sz]i[cç][aã]o|qualquer\s+d[uú]vida|aben[cç]oe|bons\s+estudos|boa\s+sorte|at[eé]\s+mais|[eé]\s+s[oó]\s+(me\s+)?chamar|comecar a estudar|começar a estudar/i
+export async function conversaEmAndamento(admin: any, convId: string): Promise<boolean> {
+  try {
+    if (!convId) return false
+    const desde = new Date(Date.now() - MINUTOS_CONVERSA_ATIVA * 60000).toISOString()
+    const r = await admin.from('wa_messages').select('body, created_at').eq('conversation_id', convId).eq('direction', 'out').eq('type', 'text').is('sent_by', null).is('flow_id', null).gte('created_at', desde).order('created_at', { ascending: false }).limit(6)
+    // Ignora o aviso de horario de atendimento (tambem sai sem remetente)
+    const msgs: any[] = (r.data || []).filter(function(m: any) { return !/^Ol[aá]! .{0,6}Nosso atendimento funciona/i.test(String(m.body || '')) && !/^⚠️/.test(String(m.body || '')) })
+    if (msgs.length === 0) return false
+    const ultima = String(msgs[0].body || '').trim()
+    // Se a ultima fala do assistente foi uma despedida sem pergunta, a conversa terminou
+    if (!/\?\s*$/.test(ultima) && DESPEDIDA_RE.test(ultima) && ultima.indexOf('?') < 0) return false
+    return true
+  } catch (e) { return false }
 }
 
 // Chamado pelo webhook a cada mensagem recebida.
@@ -400,7 +421,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       admin.from('wa_conversations').select('id, ia_ativa, ia_humano').eq('id', convId).maybeSingle(),
       admin.from('wa_messages').select('id').eq('conversation_id', convId).eq('direction', 'in').order('created_at', { ascending: false }).limit(1).maybeSingle(),
     ])
-    if (!cv2.data || !(await modoIA(admin, cv2.data))) return true
+    if (!cv2.data || !(await modoIA(admin, cv2.data, new Date(Date.now() - 3 * 60000)))) return true
     if (!ult.data || String((ult.data as any).id) !== String(msgId)) return true
 
     // O assistente pediu para conferir a assinatura (plano da plataforma): o sistema confere o pagamento, libera se estiver tudo certo e escreve a resposta

@@ -33,7 +33,7 @@ function tempoDigitando(texto: string): number {
 // Ainda faz sentido responder? (assistente ligado, aluno nao escreveu de novo, equipe nao assumiu)
 async function aindaPodeResponder(admin: any, it: any): Promise<boolean> {
   const cv = await admin.from('wa_conversations').select('id, ia_ativa, ia_humano').eq('id', it.conversation_id).maybeSingle()
-  if (!cv.data || !(await modoIA(admin, cv.data))) return false
+  if (!cv.data || !(await modoIA(admin, cv.data, it.criado_em ? new Date(it.criado_em) : undefined))) return false
   const ult = await admin.from('wa_messages').select('id').eq('conversation_id', it.conversation_id).eq('direction', 'in').order('created_at', { ascending: false }).limit(1).maybeSingle()
   if (!ult.data || String((ult.data as any).id) !== String(it.inbound_msg_id)) return false
   const eq = await admin.from('wa_messages').select('id').eq('conversation_id', it.conversation_id).eq('direction', 'out').not('sent_by', 'is', null).gte('created_at', it.criado_em).limit(1)
