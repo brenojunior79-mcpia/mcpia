@@ -138,14 +138,14 @@ export async function verificarAssinaturaPeloJunior(db: any, p: { conta?: string
     // 5) Reembolso: nao libera, e quem explica e a equipe
     if (perfil.refunded_at || (validas.length === 0 && reembolsadas.length > 0)) {
       status = 'reembolsada'
-      return { status, humano: true, texto: 'Conferi aqui e o pagamento dessa assinatura consta como reembolsado, por isso o plano não está ativo. Um atendente da equipe vai te explicar e continuar com você em breve.' }
+      return { status, humano: true, texto: 'Conferi aqui e o pagamento dessa assinatura consta como reembolsado, por isso o plano não está ativo.' }
     }
 
     // 6) Sem pagamento encontrado
     if (validas.length === 0) {
       if (digitouOutro) {
         status = 'sem_pagamento_equipe'
-        return { status, humano: true, texto: 'Conferi com os dois e-mails e com o seu número e não achei o pagamento da plataforma. Um atendente da equipe vai conferir direto na plataforma de pagamento e te responde em breve.' }
+        return { status, humano: true, texto: 'Conferi com os dois e-mails e com o seu número e não achei o pagamento da plataforma. Me manda o comprovante da compra (um print ou o PDF) para eu deixar o seu caso registrado.' }
       }
       status = 'sem_pagamento'
       return { status, humano: false, texto: 'Conferi aqui e não achei nenhum pagamento da plataforma com esse e-mail nem com o seu número. Se você pagou com outro e-mail, me diga qual foi (ele aparece no comprovante que a Hubla enviou). Se ainda não assinou, você pode assinar por aqui: ' + LINK_STARTER }
@@ -173,7 +173,7 @@ export async function verificarAssinaturaPeloJunior(db: any, p: { conta?: string
     // 9) Pagamento confirmado e conta existe: libera
     const pl = await db.from('plans').select('id, name').eq('name', 'Starter').maybeSingle()
     const planoId = (pl.data as any)?.id
-    if (!planoId) { status = 'erro'; return { status, humano: true, texto: 'Não consegui liberar agora. Um atendente da equipe vai continuar com você em breve.' } }
+    if (!planoId) { status = 'erro'; return { status, humano: true, texto: 'Não consegui liberar agora, mas deixei o seu caso registrado aqui.' } }
     const up = await db.from('profiles').update({
       subscription_status: 'active',
       plan_id: planoId,
@@ -187,7 +187,7 @@ export async function verificarAssinaturaPeloJunior(db: any, p: { conta?: string
     if (up.error) {
       console.error('[junior-assinatura] update:', up.error.message)
       status = 'erro'
-      return { status, humano: true, texto: 'Não consegui liberar agora. Um atendente da equipe vai continuar com você em breve.' }
+      return { status, humano: true, texto: 'Não consegui liberar agora, mas deixei o seu caso registrado aqui.' }
     }
     try {
       await db.from('hubla_events').insert({ provider: 'junior', event_type: 'junior.assinatura_liberada', email: conta, user_id: perfil.id, action: 'liberado', note: ('Junior liberou o plano Starter (pagamento de ' + dataBR(ultima as string) + ', origem ' + p.origem + ')').slice(0, 300) })
@@ -196,6 +196,6 @@ export async function verificarAssinaturaPeloJunior(db: any, p: { conta?: string
     return { status, humano: false, texto: 'Pronto! Conferi aqui e o seu pagamento da plataforma está confirmado. 🙏 Liberei o seu plano Starter. ' + linkVer + ' Depois é só abrir o Gerador de Criativos. Se você assinou outro plano (Pro ou Premium), me avise aqui.' }
   } catch (e) {
     console.error('[junior-assinatura] erro:', e)
-    return { status: 'erro', humano: true, texto: 'Não consegui conferir agora. Um atendente da equipe vai continuar com você em breve.' }
+    return { status: 'erro', humano: true, texto: 'Não consegui conferir agora, mas deixei o seu caso registrado aqui. Pode me mandar uma mensagem daqui a pouco?' }
   }
 }

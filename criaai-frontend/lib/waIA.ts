@@ -26,12 +26,12 @@ const REGRAS_WHATSAPP = `# REGRAS DESTE ATENDIMENTO NO WHATSAPP (PRIORIDADE MAXI
 - Va com calma: um passo por vez, e espere a pessoa responder.
 - Antes de responder, leia TODA a conversa anterior (mensagens da pessoa, da equipe e dos avisos automaticos). Continue de onde parou: nao repita o que ja foi dito ou perguntado e nao se apresente de novo se ja houve conversa.
 - Use SOMENTE o que esta na base de conhecimento. Nunca invente preco, desconto, prazo, promessa de ganho ou funcionalidade.
-- Pagamento, cobranca, reembolso, negociacao, desconto, acesso que depende de acao administrativa, reclamacao seria ou pedido para falar com uma pessoa: avise que um atendente da equipe vai continuar a conversa em breve e termine a resposta com a marca ${MARCA_HUMANO} (a marca e removida antes do envio).
-- Se nao souber responder com a base, faca o mesmo: avise que um atendente vai ajudar e termine com ${MARCA_HUMANO}.
+- Reembolso mantido pela pessoa, cobranca ou pagamento que o sistema nao acha: siga a regra QUEM RESOLVE E VOCE (item 6): diga em primeira pessoa que anotou o pedido (sem a palavra "atendente", sem "a equipe vai ajudar" e sem prazo) e termine com a marca ${MARCA_HUMANO}. Para tudo o mais (desconto, duvida, reclamacao, acesso), VOCE resolve: nunca passe a pessoa adiante so porque ela pediu para falar com alguem; diga que voce e o Junior e que vai ajudar, e ajude.
+- Se nao souber responder com a base: NAO passe para a equipe. Diga com honestidade o que voce sabe, faca UMA pergunta para entender melhor ou peca o print da tela, e continue ajudando. So registre o caso (marca ${MARCA_HUMANO}) depois de tentar de duas formas diferentes, como diz o item 6 da regra QUEM RESOLVE E VOCE.
 - Se a pessoa mandar print, foto ou PDF, voce consegue ver o conteudo: leia com atencao, diga em uma frase o que entendeu e ajude com base nisso. Se a imagem estiver ilegivel ou nao der para entender, peca outro print mais nitido. Comprovante de pagamento ou documento pessoal: NAO confirme pagamento nem libere nada; agradeca e avise que um atendente vai conferir, terminando com ${MARCA_HUMANO}.
 - Quando a conversa estiver terminando (a pessoa agradeceu, disse que resolveu, se despediu ou nao precisa de mais nada): escreva so uma despedida curta e acolhedora (uma vez so) e termine com a marca ${MARCA_FIM}. NAO escreva voce mesmo a pergunta final (R$200 no Pix ou Estrutura Express): o sistema acrescenta sozinho no fim da despedida (regras 35 e 36 da base). Se a pessoa responder SIM a pergunta dos R$200, ensine o ranking aos poucos, um passo por mensagem; se responder a pergunta da Estrutura Express, siga a regra 36 (um passo por vez, sem inventar prazo); so depois de terminar o ranking, e se a SITUACAO DO ALUNO permitir a oferta do plano e ela ainda NAO foi feita nesta conversa, faca a oferta curta com as vantagens (regra 25), sem a marca ${MARCA_FIM}. Se ela responder NAO, aceite em uma frase e nao insista. Se a pessoa ainda tem duvida ou esta no meio do assunto, nao use a marca.
-- IMPORTANTE: a pessoa JA esta falando com o Suporte pelo WhatsApp. NUNCA diga para ela chamar, procurar, falar com ou abrir o "WhatsApp de Suporte" ou o suporte pelo menu. Quando nao souber ou precisar da equipe, avise que um atendente vai ajudar e termine com ${MARCA_HUMANO}.
-- Nao peca para a pessoa chamar o WhatsApp de Suporte: ela ja esta falando com o suporte.
+- IMPORTANTE: a pessoa JA esta falando com o Suporte pelo WhatsApp, e quem atende e VOCE. NUNCA diga para ela chamar, procurar, falar com ou abrir o "WhatsApp de Suporte" nem o suporte pelo menu, e nunca diga "um atendente vai ajudar".
+- Nao peca para a pessoa chamar o WhatsApp de Suporte: ela ja esta falando com o suporte (com voce).
 - Se a pessoa disser que comprou faz tempo e so agora comecou, e perguntar se ainda vale: responda "Sim, vale sim! A mentoria é vitalícia." e ajude a entrar na plataforma (link https://www.mcpia.site/ e o primeiro passo, aos poucos).`
 
 const REGRAS_CANAL: Record<string, string> = {
@@ -49,10 +49,10 @@ O sistema NAO achou cadastro na plataforma nem compra desta pessoa. Ela NAO e al
 - VIDEO DO APP: neste video o Breno apresenta o aplicativo e a plataforma e mostra como a pessoa usa, entao ela consegue ver ANTES de comprar. Use quando ela tiver duvida sobre a mentoria ou o app, perguntar como funciona, como e por dentro, o que vai receber, se vale a pena, pedir demonstracao, exemplo, prova ou aula gratuita. Escreva UMA frase curta e acolhedora dizendo que vai mandar um video que mostra o aplicativo e como funciona por dentro (se ela pediu aula gratuita, diga antes, com carinho, que hoje nao tem aula gratuita) e termine com a marca ${MARCA_VIDEO} (o sistema envia o video depois da sua mensagem e tira a marca). Se ela fez uma pergunta especifica, responda em uma frase com a base e mande o video junto. So uma vez por conversa: se a linha "Video do app" no fim das instrucoes disser que ja foi enviado, nao use a marca de novo. Depois do video, pergunte se ficou alguma duvida.
 - LINK DE PAGAMENTO: se ela disser que quer comprar, se inscrever, entrar na mentoria, pedir o link de pagamento ou aceitar o que o atendente ofereceu (ex.: "pode mandar o link", "vamos", "quero"): mande NESTA mesma mensagem o link ${LINK_PAGAMENTO} (so o link, em texto puro, sem markdown) e diga "Assim que finalizar o pagamento me avisa aqui". NAO peca e-mail, NAO diga que vai liberar acesso e NAO use ${MARCA_HUMANO}. Nao mande o link se ela nao pediu nem demonstrou vontade de comprar: primeiro tire as duvidas dela sobre a mentoria e, se fizer sentido, pergunte se quer que voce mande o link.
 - Se a equipe (atendente) ja mandou mensagem nesta conversa, continue de onde ela parou e nunca ignore o que o atendente ofereceu. Nunca peca o mesmo dado (como o e-mail) duas vezes.
-- Se ela falar de problema no pagamento, cartao recusado, fatura, limite, falta de dinheiro, preco, parcela, Pix que expirou, desconto ou negociacao (e NAO so pediu o link de pagamento): acolha em uma frase curta e diga que um atendente da equipe vai ajudar a concluir, terminando com ${MARCA_HUMANO}. Nao invente valor, desconto, prazo ou condicao.
+- Se ela falar de problema no pagamento, cartao recusado, fatura, limite, falta de dinheiro, preco, parcela, Pix que expirou, desconto ou negociacao (e NAO so pediu o link de pagamento): acolha em uma frase curta e ajude voce mesmo: Pix que expirou ou cartao recusado = mande de novo o link ${LINK_PAGAMENTO} (so o link, sozinho) e diga que la ela gera outro Pix ou tenta outro cartao; preco, parcela ou desconto = diga com carinho que o valor e o que aparece na tela de pagamento e que voce nao negocia valores. Nao invente valor, desconto, prazo ou condicao. So se ela insistir muito em negociar ou o problema continuar depois do link, diga que anotou o pedido (sem a palavra "atendente") e termine com ${MARCA_HUMANO}.
 - JA COMPROU (a pessoa disse que ja comprou, que comprou faz tempo e so agora vai comecar, ou perguntou "ainda vale?"): ela e uma aluna que ainda nao entrou na plataforma. Comece a resposta com a marca ${MARCA_COMPROU} (o sistema tira a marca). Se ela perguntou se ainda vale, diga "Sim, vale sim! A mentoria é vitalícia." Depois mande o link https://www.mcpia.site/ e SO o primeiro passo, em palavras bem simples: abrir o link, clicar no botao "Criar conta" e criar a conta com o MESMO e-mail que usou na compra (se ela disser que ja tem conta, oriente entrar com o e-mail e, se esqueceu a senha, tocar em "Esqueci minha senha"). Termine com "Quando fizer isso, me avise aqui que eu te ajudo no proximo passo." Nao peca o e-mail antes, nao diga que vai conferir, nao use ${MARCA_HUMANO} nessa primeira resposta. Se for sobre a Estrutura Express, siga a regra de liberacao da Estrutura Express.
 - NAO CONSEGUE ACESSAR A PLATAFORMA (ela disse que nao consegue acessar/entrar/logar na plataforma, no site ou nas aulas, mas NAO disse que comprou): NAO mande o link e NAO passe para a equipe ainda. Responda so, em uma frase curta e acolhedora: "Oi! Você já comprou a mentoria? Se sim, me conta que eu te ajudo a entrar." (sem marca de atendente). Se ela responder que SIM (ou "comprei", "sim"), trate como JA COMPROU (regra abaixo): comece com a marca ${MARCA_COMPROU}, mande o link https://www.mcpia.site/ e so o primeiro passo. Se responder que NAO comprou, diga com carinho que a plataforma e so para quem entra na mentoria e pergunte se quer saber como funciona.
-- Se ela disser que JA tentou entrar e nao conseguiu (ou depois de seguir o passo do link ainda nao consegue): pergunte so "Qual e-mail voce usou na compra?" e, quando ela responder, avise que um atendente vai conferir e termine com ${MARCA_HUMANO}.
+- Se ela disser que JA tentou entrar e nao conseguiu (ou depois de seguir o passo do link ainda nao consegue): pergunte so "Qual e-mail voce usou na compra?" e, quando ela responder, diga que anotou o e-mail e o caso (sem a palavra "atendente" e sem prazo) e termine com ${MARCA_HUMANO}.
 - NUNCA diga ou sugira que ela ja e aluna, nunca invente "novos recursos serao liberados em breve" nem nada que nao esteja na base.
 - Se ela duvidar de quem voce e ou pedir para provar que voce e o Breno: diga com honestidade que voce e o Junior, assistente virtual da equipe do Breno.`
 
@@ -267,7 +267,8 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     const tipoFinal = tipoFinalConversa(temExpress, convId)
     system = system + '\n\n' + situacaoFinalConversa(tipoFinal)
     // Quem nao e aluna (sem cadastro e sem compra) nunca recebe orientacao nem link de aluno
-    const ehAluna = await pessoaEhAluna(admin, waId, conv.profile_id || null)
+    // No numero de SUPORTE a pessoa e tratada como aluna (muitos alunos compraram com outro telefone e o sistema nao os reconhece). A trava de "nao aluna" vale so no numero de recuperacao.
+    const ehAluna = canal === 'suporte' ? true : await pessoaEhAluna(admin, waId, conv.profile_id || null)
     if (!ehAluna) system = REGRA_NAO_ALUNA + '\n\n' + system + '\n\n' + REGRA_NAO_ALUNA
     system = system + '\n\nEstrutura Express desta pessoa: ' + (temExpress === true ? 'JA TEM acesso liberado no sistema.' : temExpress === false ? 'o sistema NAO achou compra nem liberacao da Estrutura Express nesta conta.' : 'o sistema NAO sabe (conta nao identificada).')
     system = system + '\n\nConta identificada: ' + (conv.profile_id ? 'SIM (o sistema ja sabe quem e a pessoa; nao peca e-mail).' : ehAluna ? 'NAO (peca o e-mail da plataforma antes de liberar).' : 'NAO, e ela ainda nao e aluna (nao peca e-mail para liberar nada; so pergunte o e-mail da compra se ela disser que ja comprou).')
@@ -294,7 +295,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     const jaComprou = texto.indexOf(MARCA_COMPROU) >= 0
     const querVideo = texto.indexOf(MARCA_VIDEO) >= 0 && canal === 'recuperacao' && !jaVideo
     texto = texto.split(MARCA_COMPROU).join('').split(MARCA_VIDEO).join('').split(MARCA_HUMANO).join('').trim()
-    if (!texto && passaParaHumano) texto = 'Vou pedir para um atendente da equipe te ajudar com isso.'
+    if (!texto && passaParaHumano) texto = 'Anotei o seu pedido aqui, ' + primeiro + '.'
     // Trava dura: quem nao e aluna nunca recebe link da plataforma nem "criar conta"/"esqueci minha senha" (vai para a equipe)
     if (!ehAluna && !jaComprou && /mcpia\.site|criar\s+conta|esqueci\s+minha\s+senha|\bsenha\b.*\be-?mail\b|acess(ar|e)\s+o\s+site|dentro\s+da\s+plataforma|mesmo\s+e-?mail/i.test(texto)) {
       console.error('[wa-ia] bloqueado: link/acesso de aluno para quem nao e aluna', convId)
@@ -302,8 +303,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       if (/(consig|conseg|acess|entrar|entra[rn]|login|logar|senha|plataforma|site)/i.test(msgIn) && !/(comprei|paguei|ja comprei|já comprei)/i.test(msgIn)) {
         texto = 'Oi! Você já comprou a mentoria? Se sim, me conta que eu te ajudo a entrar.'
       } else {
-        texto = 'Vou pedir para um atendente da equipe te ajudar com isso.'
-        passaParaHumano = true
+        texto = 'Me conta um pouquinho melhor o que você precisa, ' + primeiro + '? Se puder, manda um print da tela.'
       }
     }
     // Trava: se mesmo assim mandar a pessoa "chamar o suporte", tira a frase e passa para a equipe
@@ -312,9 +312,19 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       const ruim = /(whatsapp\s+de\s+suporte|chama(r)?\s+(o\s+)?suporte|fale\s+com\s+o\s+suporte|entre\s+em\s+contato\s+com\s+o\s+suporte|suporte\s+pelo\s+menu)/i
       const boas = frases.filter(function(f) { return f.trim() && !ruim.test(f) })
       if (boas.length < frases.filter(function(f) { return f.trim() }).length) {
+        // So tira a frase que manda a pessoa para o suporte; o Junior continua responsavel pela conversa
         texto = boas.join('\n\n').trim()
-        if (!/atendente|equipe/i.test(texto)) texto = (texto ? texto + '\n\n' : '') + 'Vou pedir para um atendente da equipe te ajudar com isso.'
-        passaParaHumano = true
+        if (!texto) texto = 'Me conta um pouquinho melhor o que está acontecendo, ' + primeiro + '? Se puder, manda um print da tela.'
+      }
+    }
+    // Trava: o Junior e o responsavel, entao nao pode dizer que "um atendente / a equipe vai ajudar". Tira so a frase (a marca interna continua avisando o Breno em silencio).
+    {
+      const promete = /(um|o|nosso)\s+atendente|(a\s+)?equipe\s+(da\s+equipe\s+)?(vai|ira|irá|vem|entra|continua|continuar[aá]|te\s+ajud|verific|confer|libera|assum)|vou\s+(pedir|passar|encaminhar|chamar)\b.{0,40}(atendente|equipe)|vou\s+(verificar|conferir)\s+(a\s+sua|o\s+seu|sua|seu)\s+(conta|cadastro|acesso)/i
+      const fr = texto.split(/(?<=[.!?])\s+|\n+/).filter(function(f) { return f.trim() })
+      const ok = fr.filter(function(f) { return !promete.test(f) })
+      if (ok.length < fr.length) {
+        texto = ok.join('\n\n').trim()
+        if (!texto) texto = passaParaHumano ? 'Anotei o seu pedido aqui, ' + primeiro + '.' : 'Me conta um pouquinho melhor o que você precisa, ' + primeiro + '? Se puder, manda um print da tela.'
       }
     }
     // Fim da conversa: pergunta (uma vez so por conversa) se a pessoa quer ganhar R$200 no Pix (leva ao ranking)

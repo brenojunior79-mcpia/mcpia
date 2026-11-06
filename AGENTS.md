@@ -50,6 +50,7 @@ com um assistente de IA chamado **Júnior**.
 - As regras numeradas no começo têm prioridade máxima. Quando mudar uma funcionalidade da plataforma, atualize também a seção correspondente do prompt (ex.: "GERENCIANDO SEUS ANUNCIOS") e a lista de menus da regra 17.
 - Para passar a conversa a um atendente, o Júnior termina a resposta com a marca `[[HUMANO]]` (removida antes do envio).
 - Modelo atual: `gpt-4o-mini` (OpenAI). Chave `OPENAI_API_KEY` na Vercel.
+- **Quem resolve é o Júnior** (bloco `REGRA_RESPONSAVEL` no começo e no fim do prompt): ele nunca diz "um atendente da equipe vai ajudar" nem manda chamar o suporte. Só registra o caso (marca `[[HUMANO]]` no WhatsApp, sem avisar "atendente") em reembolso mantido ou quando já tentou de duas formas. Há travas no código que tiram essas frases (`tirarPromessaDeEquipe` em `lib/junior.ts`, `lib/waIA.ts`). No número de suporte, quem fala é tratado como aluno.
 
 ## Atendimento WhatsApp (painel interno)
 

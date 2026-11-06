@@ -70,8 +70,8 @@ export async function liberarExpressPeloJunior(db: any, p: { conta?: string | nu
     ? 'Entre na plataforma (' + LINK_PLATAFORMA + '), abra o menu "Estrutura Express" e, se não aparecer, saia e entre de novo.'
     : 'Atualize a página (ou saia e entre de novo) e abra o menu "Estrutura Express" na barra lateral.'
   const equipe = zap
-    ? 'Um atendente da equipe vai continuar com você em breve.'
-    : 'Chame o WhatsApp de Suporte da plataforma que a equipe te ajuda.'
+    ? 'Deixei o seu caso registrado aqui.'
+    : 'Me conta o que aparece na sua tela (ou manda um print) que eu continuo te ajudando.'
 
   switch (status) {
     case 'liberado':
