@@ -67,14 +67,27 @@ export async function POST(req: NextRequest) {
 
   try {
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-    const r = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      temperature: 0.85,
-      max_tokens: 1200,
-      response_format: { type: 'json_object' },
-      messages: [{ role: 'system', content: sistema }, { role: 'user', content: usuario }],
-    })
-    const j = JSON.parse(r.choices[0]?.message?.content || '{}')
+    // Ate 2 tentativas: uma falha passageira da OpenAI (ou JSON quebrado) nao deve aparecer como erro para a aluna
+    let j: any = null
+    let ultimoErro: any = null
+    for (let t = 0; t < 2 && !j; t++) {
+      try {
+        const r = await openai.chat.completions.create({
+          model: 'gpt-4o-mini',
+          temperature: 0.85,
+          max_tokens: 1500,
+          response_format: { type: 'json_object' },
+          messages: [{ role: 'system', content: sistema }, { role: 'user', content: usuario }],
+        })
+        const ch = r.choices[0]
+        if (ch && ch.finish_reason && ch.finish_reason !== 'stop') console.error('[criativo/roteiro] finish_reason:', ch.finish_reason)
+        j = JSON.parse((ch && ch.message && ch.message.content) || '{}')
+      } catch (e: any) {
+        ultimoErro = e
+        console.error('[criativo/roteiro] tentativa ' + (t + 1) + ':', (e && (e.status || e.code)) || '', (e && e.message) || e)
+      }
+    }
+    if (!j) throw ultimoErro || new Error('sem resposta')
     const out: Record<string, string> = {}
     for (const k of (bloco ? [bloco] : BLOCOS)) out[k] = String(j[k] || '').trim()
     if (Object.values(out).some(function(v) { return !v })) return NextResponse.json({ error: 'A IA nao devolveu o roteiro completo. Tente de novo.' }, { status: 502 })
