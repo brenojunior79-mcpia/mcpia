@@ -9,7 +9,7 @@ export const ANUNCIOS_EMAILS_LIBERADOS: string[] = ['revisor.meta@mcpia.site', '
 export const ANUNCIOS_DIAS_APOS_CADASTRO = 7
 // Enquanto o Facebook (Meta) nao liberar o login para todos, o menu fica OCULTO para os alunos (so admin e conta do revisor da Meta).
 // Quando o Meta aprovar, mude para true: ai vale a regra de 7 dias + plano descrita acima.
-export const ANUNCIOS_MENU_PARA_ALUNOS = false // BLOQUEADO de novo em 06/11/2026: o login do Facebook ainda da 'Recurso indisponivel' para quem nao tem funcao no app (bug aberto na Meta). Quando resolver, mude para true.
+export const ANUNCIOS_MENU_PARA_ALUNOS = true // Liberado de novo em 06/11/2026: a Meta aprovou o public_profile (17:02) e a conta de teste sem funcao no app conectou.
 
 // O MENU aparece para todos os alunos, mas fica sem clique (nada abre) para quem nao tem acesso, ate o Meta liberar. Para voltar a esconder o menu, mude para false.
 export const ANUNCIOS_MENU_VISIVEL_PARA_TODOS = true
