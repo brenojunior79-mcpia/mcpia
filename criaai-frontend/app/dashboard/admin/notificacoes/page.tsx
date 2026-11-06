@@ -13,6 +13,7 @@ const LINKS = [
   { value: '/dashboard/vendas', label: 'Vendendo no Automático' },
   { value: '/dashboard/aulas', label: 'Aulas ao Vivo' },
   { value: '/dashboard/chat', label: 'Assistente IA' },
+  { value: '/dashboard/anuncios', label: 'Gerenciando seus anúncios' },
   { value: '/dashboard/planos', label: 'Planos' },
 ]
 
@@ -21,9 +22,17 @@ const AUDIENCES = [
   { value: 'todos', label: 'Todos que aceitaram' },
   { value: 'sem_plano', label: 'Quem não tem plano' },
   { value: 'com_plano', label: 'Quem tem plano' },
+  { value: 'pro_premium', label: 'Só Pro e Premium' },
+  { value: 'sem_pro_premium', label: 'Todos, menos Pro e Premium' },
 ]
 
 function hasPlan(status: any) { return status === 'active' || status === 'trialing' }
+function isProPremium(prof: any) {
+  if (!prof || !hasPlan(prof.subscription_status)) return false
+  const pl: any = Array.isArray(prof.plans) ? prof.plans[0] : prof.plans
+  const n = String((pl && pl.name) || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+  return n === 'pro' || n === 'premium'
+}
 
 export default function NotificacoesPage() {
   const supabase = createClient()
@@ -45,7 +54,7 @@ export default function NotificacoesPage() {
     while (true) {
       const r = await supabase
         .from('push_subscriptions')
-        .select('id, user_id, platform, profiles(subscription_status)')
+        .select('id, user_id, platform, profiles(subscription_status, plans(name))')
         .order('created_at', { ascending: true })
         .order('id', { ascending: true })
         .range(from, from + 999)
@@ -80,6 +89,8 @@ export default function NotificacoesPage() {
       if (aud === 'teste') return s.user_id === myId
       if (aud === 'sem_plano') return !hasPlan(prof?.subscription_status)
       if (aud === 'com_plano') return hasPlan(prof?.subscription_status)
+      if (aud === 'pro_premium') return isProPremium(prof)
+      if (aud === 'sem_pro_premium') return !isProPremium(prof)
       return true
     }).length
   }

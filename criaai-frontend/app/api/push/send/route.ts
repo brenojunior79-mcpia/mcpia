@@ -7,10 +7,18 @@ import { VAPID_PUBLIC_KEY } from '@/lib/push-config'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-const AUDIENCES = ['teste', 'todos', 'sem_plano', 'com_plano']
+const AUDIENCES = ['teste', 'todos', 'sem_plano', 'com_plano', 'pro_premium', 'sem_pro_premium']
 
 function hasPlan(status: any) {
   return status === 'active' || status === 'trialing'
+}
+
+// Plano Pro ou Premium ativo (o que libera o Gerenciando seus anuncios)
+function isProPremium(prof: any) {
+  if (!prof || !hasPlan(prof.subscription_status)) return false
+  const pl: any = Array.isArray(prof.plans) ? prof.plans[0] : prof.plans
+  const n = String((pl && pl.name) || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+  return n === 'pro' || n === 'premium'
 }
 
 export async function POST(req: NextRequest) {
@@ -48,7 +56,7 @@ export async function POST(req: NextRequest) {
     while (true) {
       const page = await supabase
         .from('push_subscriptions')
-        .select('id, endpoint, p256dh, auth, user_id, profiles(subscription_status)')
+        .select('id, endpoint, p256dh, auth, user_id, profiles(subscription_status, plans(name))')
         .order('created_at', { ascending: true })
         .order('id', { ascending: true })
         .range(from, from + 999)
@@ -65,6 +73,8 @@ export async function POST(req: NextRequest) {
       if (audience === 'teste') return s.user_id === user.id
       if (audience === 'sem_plano') return !hasPlan(status)
       if (audience === 'com_plano') return hasPlan(status)
+      if (audience === 'pro_premium') return isProPremium(prof)
+      if (audience === 'sem_pro_premium') return !isProPremium(prof)
       return true
     })
 
