@@ -12,7 +12,8 @@ import { orcamentoDiario } from '@/components/anuncios/CampanhaCard'
 import { cartao, titulo, moeda } from '@/components/anuncios/estilo'
 import { statusAnuncios } from '@/lib/acessoAnuncios'
 
-const PERIODOS: [string, string][] = [['today', 'Hoje'], ['yesterday', 'Ontem'], ['last_7d', 'Últimos 7 dias'], ['last_14d', 'Últimos 14 dias'], ['last_30d', 'Últimos 30 dias'], ['this_month', 'Este mês']]
+const PERIODOS: [string, string, string][] = [['today', 'Hoje', 'Hoje'], ['yesterday', 'Ontem', 'Ontem'], ['last_7d', '7 dias', 'Nos últimos 7 dias'], ['last_14d', '14 dias', 'Nos últimos 14 dias'], ['last_30d', '30 dias', 'Nos últimos 30 dias'], ['this_month', 'Este mês', 'Neste mês']]
+const reais = function(v: number) { return 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
 
 export default function AnunciosPage() {
   const [permitido, setPermitido] = useState<boolean | null>(null)
@@ -24,7 +25,7 @@ export default function AnunciosPage() {
   const [disconnecting, setDisconnecting] = useState(false)
   const [switching, setSwitching] = useState(false)
 
-  const [periodo, setPeriodo] = useState('last_7d')
+  const [periodo, setPeriodo] = useState('today')
   const [campaignsLoading, setCampaignsLoading] = useState(false)
   const [campaignsData, setCampaignsData] = useState<any>(null)
   const [campaignsError, setCampaignsError] = useState<string | null>(null)
@@ -194,6 +195,17 @@ export default function AnunciosPage() {
   const relatorio = relatorioDoFunil(mFunil)
   const nomeFunil = camp ? camp.name : ativas.length ? (ativas.length === 1 ? ativas[0].name : 'Todas as campanhas ativas (' + ativas.length + ')') : 'Todas as campanhas da conta'
 
+  const rotuloPeriodo = (PERIODOS.find(function(pp) { return pp[0] === periodo }) || PERIODOS[0])[2]
+  const sobra = mFunil.valor - mFunil.gasto
+  const fraseResultado = mFunil.gasto <= 0 && mFunil.compras <= 0 ? ''
+    : mFunil.compras <= 0 ? 'Ainda sem vendas neste período.'
+    : sobra >= 0 ? 'Sobraram ' + reais(sobra) + ' depois de pagar o anúncio.'
+    : 'Ainda faltam ' + reais(-sobra) + ' para o anúncio se pagar.'
+  const tomPainel = mFunil.compras > 0 && sobra >= 0
+    ? { fundo: 'var(--green-light)', borda: 'rgba(22,163,74,0.30)', texto: 'var(--green)' }
+    : mFunil.gasto > 0 ? { fundo: 'var(--surface)', borda: 'var(--border)', texto: 'var(--amber)' }
+    : { fundo: 'var(--surface)', borda: 'var(--border)', texto: 'var(--muted2)' }
+
   const sel: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border2)', borderRadius: 10, padding: '9px 12px', color: 'var(--text)', fontSize: 13, fontWeight: 600, maxWidth: '100%' }
 
   if (permitido === null) return <div style={{ padding: 32, color: 'var(--muted2)' }}>Carregando...</div>
@@ -230,12 +242,12 @@ export default function AnunciosPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', padding: '28px 20px 60px' }}>
       <div style={{ maxWidth: 980, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 18 }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ fontSize: 28 }}>📊</div>
-            <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: 24, fontWeight: 800, margin: 0 }}>Gerenciador de Anúncios</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ width: 46, height: 46, borderRadius: 14, background: 'var(--accent-light)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 25, flexShrink: 0 }}><i className="ti ti-brand-meta" /></div>
+          <div style={{ minWidth: 0 }}>
+            <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: 'clamp(21px, 5vw, 26px)', fontWeight: 800, margin: 0, lineHeight: 1.15 }}>Gerenciando seus anúncios</h1>
+            <p style={{ fontSize: 13.5, color: 'var(--muted2)', margin: '4px 0 0', lineHeight: 1.45 }}>Veja como suas campanhas estão e ajuste sem sair daqui. Criar a campanha continua sendo no Gerenciador de Anúncios do Facebook.</p>
           </div>
-          <p style={{ fontSize: 14, color: 'var(--muted2)', margin: '6px 0 0' }}>Veja onde seu funil está falhando e otimize suas campanhas sem sair daqui. Só a criação da campanha é feita no Gerenciador do Facebook.</p>
         </div>
 
         {error && <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '12px 16px', fontSize: 13, color: '#ef4444' }}>Erro ao conectar: {error}</div>}
@@ -273,16 +285,49 @@ export default function AnunciosPage() {
               <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 10, padding: '12px 16px', fontSize: 13, color: '#b45309' }}>Nenhuma conta de anúncios encontrada nesse login.</div>
             ) : (
               <>
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <select value={periodo} onChange={function(e) { setPeriodo(e.target.value); loadCampaigns(e.target.value); loadCriativos(e.target.value) }} style={sel}>
-                    {PERIODOS.map(function(p) { return <option key={p[0]} value={p[0]}>{p[1]}</option> })}
-                  </select>
-                  <select value={selecionada} onChange={function(e) { setSelecionada(e.target.value) }} style={sel}>
-                    <option value="todas">{ativas.length ? 'Funil de: todas as campanhas ativas' : 'Funil de: todas as campanhas'}</option>
-                    {comDados.map(function(c) { return <option key={c.id} value={c.id}>{'Funil de: ' + c.name}</option> })}
-                  </select>
-                  <button onClick={function() { loadCampaigns(); loadCriativos() }} disabled={campaignsLoading} style={{ ...sel, cursor: 'pointer' }}>{campaignsLoading ? 'Atualizando...' : '🔄 Atualizar'}</button>
+                <div role="group" aria-label="Período" style={{ display: 'flex', gap: 4, padding: 4, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 14, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                  {PERIODOS.map(function(pp) {
+                    const ativo = periodo === pp[0]
+                    return (
+                      <button key={pp[0]} aria-pressed={ativo} onClick={function() { if (ativo) return; setPeriodo(pp[0]); loadCampaigns(pp[0]); loadCriativos(pp[0]) }}
+                        style={{ flex: '1 0 auto', cursor: 'pointer', border: 'none', borderRadius: 10, padding: '9px 14px', fontSize: 13.5, fontWeight: ativo ? 800 : 600, whiteSpace: 'nowrap', background: ativo ? 'var(--surface)' : 'transparent', color: ativo ? 'var(--accent)' : 'var(--muted2)', boxShadow: ativo ? 'var(--shadow-sm)' : 'none', transition: 'background .15s, color .15s' }}>
+                        {pp[1]}
+                      </button>
+                    )
+                  })}
                 </div>
+
+                {campaignsData && !campaignsLoading && (
+                  <div style={{ ...cartao, padding: '22px 22px 18px', background: tomPainel.fundo, borderColor: tomPainel.borda }}>
+                    <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 'clamp(20px, 4.6vw, 27px)', lineHeight: 1.25, letterSpacing: '-0.01em' }}>
+                      {rotuloPeriodo}, {mFunil.gasto > 0 || mFunil.compras > 0 ? <>você investiu <span style={{ whiteSpace: 'nowrap' }}>{reais(mFunil.gasto)}</span> e vendeu <span style={{ whiteSpace: 'nowrap' }}>{reais(mFunil.valor)}</span>.</> : <>ainda não houve gasto nas campanhas.</>}
+                    </div>
+                    {fraseResultado && <div style={{ marginTop: 8, fontSize: 15, fontWeight: 700, color: tomPainel.texto }}>{fraseResultado}</div>}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(128px, 1fr))', gap: 0, marginTop: 18, borderTop: '1px solid var(--border)' }}>
+                      {([
+                        ['Investido', reais(mFunil.gasto), 'em anúncios'],
+                        ['Vendido', reais(mFunil.valor), 'em vendas'],
+                        ['Vendas', String(mFunil.compras), mFunil.cpa !== null && mFunil.compras > 0 ? reais(mFunil.cpa) + ' cada' : 'no período'],
+                        ['Retorno', mFunil.roas !== null ? reais(mFunil.roas) : '—', 'a cada R$ 1 investido'],
+                      ] as [string, string, string][]).map(function(it, idx) {
+                        return (
+                          <div key={it[0]} style={{ padding: '14px 14px 2px', paddingLeft: idx === 0 ? 0 : 14, borderLeft: idx === 0 ? 'none' : '1px solid var(--border)' }}>
+                            <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--muted2)' }}>{it[0]}</div>
+                            <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 20, marginTop: 2 }}>{it[1]}</div>
+                            <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 1 }}>{it[2]}</div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <div style={{ marginTop: 14, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <select aria-label="Qual campanha mostrar" value={selecionada} onChange={function(e) { setSelecionada(e.target.value) }} style={{ ...sel, flex: '1 1 220px' }}>
+                        <option value="todas">{ativas.length ? 'Mostrando: todas as campanhas ativas' : 'Mostrando: todas as campanhas'}</option>
+                        {comDados.map(function(c) { return <option key={c.id} value={c.id}>{'Mostrando: ' + c.name}</option> })}
+                      </select>
+                      <button onClick={function() { loadCampaigns(); loadCriativos() }} disabled={campaignsLoading} style={{ ...sel, cursor: 'pointer', flex: '0 0 auto' }}>{campaignsLoading ? 'Atualizando...' : '🔄 Atualizar'}</button>
+                    </div>
+                  </div>
+                )}
 
                 {campaignsError && <div style={{ fontSize: 13, color: '#b91c1c', background: 'rgba(239,68,68,0.08)', borderRadius: 9, padding: '12px 16px' }}>{campaignsError}</div>}
                 {aviso && <div style={{ fontSize: 13, fontWeight: 700, borderRadius: 9, padding: '10px 14px', color: aviso.tipo === 'ok' ? '#15803d' : '#b91c1c', background: aviso.tipo === 'ok' ? 'rgba(22,163,74,0.10)' : 'rgba(239,68,68,0.08)' }}>{aviso.texto}</div>}
