@@ -28,7 +28,7 @@ function Selo({ pct, rotulo, tipo }: { pct: number | null; rotulo: string; tipo:
   const bom = tipo === 'alta-boa' ? subiu : null
   const estilo: React.CSSProperties = bom === null
     ? { background: 'var(--surface2)', color: 'var(--muted2)', border: '1px solid var(--border)' }
-    : bom ? { background: '#0f7a4d', color: '#fff', border: '1px solid #0f7a4d' } : { background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5' }
+    : bom ? { background: 'var(--green)', color: 'var(--surface)', border: '1px solid var(--green)' } : { background: 'var(--red-light)', color: 'var(--red)', border: '1px solid color-mix(in srgb, var(--red) 40%, transparent)' }
   return <span style={{ ...estilo, fontSize: 12.5, fontWeight: 800, padding: '4px 11px', borderRadius: 999, whiteSpace: 'nowrap' }}>{texto}</span>
 }
 
@@ -57,16 +57,16 @@ export default function ResumoFinanceiro({ periodo }: { periodo: string }) {
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))', gap: 14 }}>
         {!dados && [0, 1, 2].map(function(i) { return <div key={i} style={{ ...cartao, minHeight: 130, opacity: 0.5 }} /> })}
         {cards.map(function(c) {
           return (
             <div key={c.id} style={{ ...cartao, padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: 14.5, color: 'var(--muted2)', fontWeight: 600 }}>{c.titulo}</span>
-                <button onClick={function() { setAjuda(ajuda === c.id ? '' : c.id) }} aria-label={'O que é ' + c.titulo} style={{ cursor: 'pointer', width: 22, height: 22, borderRadius: '50%', border: '1px solid var(--border2)', background: 'var(--surface)', color: 'var(--muted2)', fontSize: 12, fontWeight: 700, padding: 0 }}>?</button>
+                <button type="button" className="anu-btn" aria-expanded={ajuda === c.id} onClick={function() { setAjuda(ajuda === c.id ? '' : c.id) }} aria-label={'O que é ' + c.titulo} style={{ cursor: 'pointer', width: 32, height: 32, borderRadius: '50%', border: '1px solid var(--border2)', background: 'var(--surface)', color: 'var(--muted2)', fontSize: 12, fontWeight: 700, padding: 0 }}>?</button>
               </div>
-              <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 32, fontWeight: 800, letterSpacing: -0.5, lineHeight: 1.1 }}>{c.valor}</div>
+              <div className="anu-num" style={{ fontFamily: 'Syne, sans-serif', fontSize: 'clamp(26px, 7vw, 32px)', fontWeight: 800, letterSpacing: -0.5, lineHeight: 1.1 }}>{c.valor}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>{c.selo}<span style={{ fontSize: 13, color: 'var(--muted2)' }}>{c.id === 'lucro' ? '' : c.nota}</span></div>
               {c.id === 'lucro' && <div style={{ fontSize: 13, color: 'var(--muted2)', marginTop: -4 }}>{c.nota}</div>}
               {ajuda === c.id && <div style={{ fontSize: 12.5, lineHeight: 1.5, color: 'var(--text)', background: 'var(--surface2)', borderRadius: 10, padding: '9px 12px' }}>{AJUDA[c.id]}</div>}

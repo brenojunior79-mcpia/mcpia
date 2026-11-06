@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { Metricas, Relatorio, etapasDoFunil, PASSAGENS, avaliar, valorMetrica, EXPLICA } from '@/lib/anuncios'
-import { COR, cartao, titulo, inteiro } from './estilo'
+import { COR, cartao, titulo, subtitulo, iconeTitulo, inteiro } from './estilo'
 
 // Larguras (em %) de cada camada do funil, de cima para baixo
 const LARGURAS = [100, 80, 62, 46, 32]
@@ -45,8 +45,8 @@ export default function Funil({ m, relatorio, nomeCampanha }: { m: Metricas; rel
 
   return (
     <div style={cartao}>
-      <h2 style={titulo}>🔻 Funil do anúncio</h2>
-      <div style={{ fontSize: 13, color: 'var(--muted2)', marginTop: 2, marginBottom: 14 }}>{nomeCampanha}</div>
+      <h2 style={titulo}><span aria-hidden="true" style={iconeTitulo}><i className="ti ti-filter" /></span>Funil do anúncio</h2>
+      <p style={{ ...subtitulo, overflowWrap: 'anywhere' }}>{nomeCampanha}</p>
 
       <style>{CSS}</style>
       <div key={nomeCampanha + '|' + etapas.map(function(e) { return e.valor }).join('-')} className="funil-anim" style={{ maxWidth: 520, margin: '0 auto' }}>
@@ -61,7 +61,7 @@ export default function Funil({ m, relatorio, nomeCampanha }: { m: Metricas; rel
             <div key={e.id}>
               {passagem && av && (
                 <div style={{ display: 'flex', justifyContent: 'center', margin: '4px 0', opacity: 0, animation: 'funilPilula .4s ease-out ' + (i * 0.22 + 0.1) + 's forwards' }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 999, background: COR[av.nivel].bg, color: COR[av.nivel].fg, border: '1px solid ' + COR[av.nivel].borda }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, padding: '4px 12px', borderRadius: 999, background: COR[av.nivel].bg, color: COR[av.nivel].fg, border: '1px solid ' + COR[av.nivel].borda }}>
                     ▼ {EXPLICA[passagem.metrica].nome}: {valorMetrica(passagem.metrica, m)}
                   </span>
                 </div>
@@ -74,25 +74,25 @@ export default function Funil({ m, relatorio, nomeCampanha }: { m: Metricas; rel
                   padding: '0 ' + Math.max(6, recuo) + '%',
                 }}>
                   <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.28) 50%, transparent 70%)', backgroundSize: '250% 100%', animation: 'funilBrilho 3.2s ease-in-out ' + (i * 0.35 + 1) + 's infinite', pointerEvents: 'none' }} />
-                  <div style={{ fontSize: 22, fontWeight: 800, fontFamily: 'Syne, sans-serif', lineHeight: 1.1, position: 'relative' }}><Contagem valor={e.valor} atraso={i * 220 + 150} /></div>
-                  <div style={{ fontSize: 12.5, fontWeight: 700, opacity: 0.95 }}>{e.icone} {e.nome}</div>
+                  <div className="anu-num" style={{ fontSize: 23, fontWeight: 800, fontFamily: 'Syne, sans-serif', lineHeight: 1.1, position: 'relative' }}><Contagem valor={e.valor} atraso={i * 220 + 150} /></div>
+                  <div style={{ fontSize: 13, fontWeight: 700, opacity: 0.95, lineHeight: 1.2 }}>{e.icone} {e.nome}</div>
                 </div>
-                {falha && <div style={{ position: 'absolute', right: -6, top: -8, background: '#b91c1c', color: '#fff', fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 999, animation: 'funilSelo 1.4s ease-in-out infinite' }}>⚠ falha aqui</div>}
+                {falha && <div style={{ position: 'absolute', right: -6, top: -8, background: 'var(--red)', color: '#fff', fontSize: 12, fontWeight: 800, padding: '2px 8px', borderRadius: 999, animation: 'funilSelo 1.4s ease-in-out infinite' }}>⚠ falha aqui</div>}
               </div>
             </div>
           )
         })}
       </div>
 
-      <div style={{ marginTop: 18, borderRadius: 14, padding: '14px 16px', background: COR[nivelRel].bg, border: '1px solid ' + COR[nivelRel].borda }}>
-        <div style={{ fontWeight: 800, fontSize: 15, color: COR[nivelRel].fg }}>📋 Relatório: {relatorio.titulo}</div>
-        <div style={{ fontSize: 13.5, marginTop: 4, lineHeight: 1.5 }}>{relatorio.resumo}</div>
+      <div style={{ marginTop: 18, borderRadius: 'var(--radius-lg)', padding: '16px 18px', background: COR[nivelRel].bg, border: '1px solid ' + COR[nivelRel].borda }}>
+        <div style={{ fontWeight: 800, fontSize: 16, color: COR[nivelRel].fg, display: 'flex', gap: 8, alignItems: 'center' }}><i className="ti ti-clipboard-text" aria-hidden="true" style={{ fontSize: 20 }} />Relatório: {relatorio.titulo}</div>
+        <div style={{ fontSize: 15, marginTop: 6, lineHeight: 1.55 }}>{relatorio.resumo}</div>
         {relatorio.itens.length > 0 && (
           <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
             {relatorio.itens.map(function(it, i) {
               return (
-                <div key={i} style={{ display: 'flex', gap: 8, fontSize: 13, lineHeight: 1.45 }}>
-                  <span>{COR[it.nivel].rotulo.split(' ')[0]}</span>
+                <div key={i} style={{ display: 'flex', gap: 10, fontSize: 14.5, lineHeight: 1.5 }}>
+                  <span aria-hidden="true">{COR[it.nivel].rotulo.split(' ')[0]}</span>
                   <div><b>{it.titulo}</b><div style={{ color: 'var(--muted2)' }}>{it.texto}</div></div>
                 </div>
               )

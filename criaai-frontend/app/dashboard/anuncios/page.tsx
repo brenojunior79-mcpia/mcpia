@@ -9,7 +9,7 @@ import CampanhasTabela from '@/components/anuncios/CampanhasTabela'
 import CamilaAnuncios from '@/components/anuncios/CamilaAnuncios'
 import CriativosAnuncios from '@/components/anuncios/CriativosAnuncios'
 import { orcamentoDiario } from '@/components/anuncios/CampanhaCard'
-import { cartao, titulo, moeda } from '@/components/anuncios/estilo'
+import { cartao, titulo, subtitulo, iconeTitulo, botao, avisoErro, avisoOk, avisoAtencao, CSS_ANUNCIOS, moeda } from '@/components/anuncios/estilo'
 import { statusAnuncios } from '@/lib/acessoAnuncios'
 
 const PERIODOS: [string, string, string][] = [['today', 'Hoje', 'Hoje'], ['yesterday', 'Ontem', 'Ontem'], ['last_7d', '7 dias', 'Nos últimos 7 dias'], ['last_14d', '14 dias', 'Nos últimos 14 dias'], ['last_30d', '30 dias', 'Nos últimos 30 dias'], ['this_month', 'Este mês', 'Neste mês']]
@@ -202,13 +202,13 @@ export default function AnunciosPage() {
     : sobra >= 0 ? 'Sobraram ' + reais(sobra) + ' depois de pagar o anúncio.'
     : 'Ainda faltam ' + reais(-sobra) + ' para o anúncio se pagar.'
   const tomPainel = mFunil.compras > 0 && sobra >= 0
-    ? { fundo: 'var(--green-light)', borda: 'rgba(22,163,74,0.30)', texto: 'var(--green)' }
-    : mFunil.gasto > 0 ? { fundo: 'var(--surface)', borda: 'var(--border)', texto: 'var(--amber)' }
-    : { fundo: 'var(--surface)', borda: 'var(--border)', texto: 'var(--muted2)' }
+    ? { fundo: 'var(--green-light)', borda: 'color-mix(in srgb, var(--green) 30%, transparent)', texto: 'var(--green)', icone: 'ti-circle-check' }
+    : mFunil.gasto > 0 ? { fundo: 'var(--surface)', borda: 'var(--border)', texto: 'var(--amber)', icone: 'ti-info-circle' }
+    : { fundo: 'var(--surface)', borda: 'var(--border)', texto: 'var(--muted2)', icone: 'ti-info-circle' }
 
-  const sel: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border2)', borderRadius: 10, padding: '9px 12px', color: 'var(--text)', fontSize: 13, fontWeight: 600, maxWidth: '100%' }
+  const sel: React.CSSProperties = { ...botao, justifyContent: 'flex-start', background: 'var(--surface)', color: 'var(--text)', fontWeight: 600, padding: '0 12px', maxWidth: '100%', minWidth: 0 }
 
-  if (permitido === null) return <div style={{ padding: 32, color: 'var(--muted2)' }}>Carregando...</div>
+  if (permitido === null) return <div role="status" style={{ padding: 32, color: 'var(--muted2)' }}>Carregando…</div>
   if (semPlano) {
     const itens = [
       { i: 'ti-sparkles', t: 'A IA analisa os seus criativos por você' },
@@ -237,60 +237,64 @@ export default function AnunciosPage() {
       </div>
     )
   }
-  if (!permitido) return <div style={{ padding: 32, color: 'var(--muted2)' }}>Redirecionando...</div>
+  if (!permitido) return <div role="status" style={{ padding: 32, color: 'var(--muted2)' }}>Redirecionando…</div>
+
+  const contaNome = connection?.adAccountName || 'Sem conta selecionada'
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', padding: '28px 20px 60px' }}>
-      <div style={{ maxWidth: 980, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 18 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 46, height: 46, borderRadius: 14, background: 'var(--accent-light)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 25, flexShrink: 0 }}><i className="ti ti-brand-meta" /></div>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', padding: 'clamp(18px, 4vw, 32px) 16px 64px' }}>
+      <style>{CSS_ANUNCIOS}</style>
+      <div style={{ maxWidth: 980, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <header style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+          <div aria-hidden="true" style={{ width: 48, height: 48, borderRadius: 'var(--radius-lg)', background: 'var(--accent-light)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, flexShrink: 0 }}><i className="ti ti-speakerphone" /></div>
           <div style={{ minWidth: 0 }}>
-            <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: 'clamp(21px, 5vw, 26px)', fontWeight: 800, margin: 0, lineHeight: 1.15 }}>Gerenciando seus anúncios</h1>
-            <p style={{ fontSize: 13.5, color: 'var(--muted2)', margin: '4px 0 0', lineHeight: 1.45 }}>Veja como suas campanhas estão e ajuste sem sair daqui. Criar a campanha continua sendo no Gerenciador de Anúncios do Facebook.</p>
+            <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: 'clamp(22px, 5.5vw, 28px)', fontWeight: 800, margin: 0, lineHeight: 1.15, textWrap: 'balance' as any }}>Gerenciando seus anúncios</h1>
+            <p style={{ fontSize: 15, color: 'var(--muted2)', margin: '6px 0 0', lineHeight: 1.5 }}>Veja como suas campanhas estão e ajuste sem sair daqui. Para criar uma campanha nova, use o Gerenciador de Anúncios do Facebook.</p>
           </div>
-        </div>
+        </header>
 
-        {error && <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '12px 16px', fontSize: 13, color: '#ef4444' }}>Erro ao conectar: {error}</div>}
+        {error && <div role="alert" style={avisoErro}><i className="ti ti-alert-circle" aria-hidden="true" style={{ fontSize: 20, flexShrink: 0 }} /><span>Não foi possível conectar: {error}. Tente conectar de novo.</span></div>}
 
         {loading ? (
-          <p style={{ color: 'var(--muted2)' }}>Carregando...</p>
+          <p role="status" style={{ color: 'var(--muted2)', fontSize: 15 }}>Carregando…</p>
         ) : !connection?.connected ? (
-          <div style={{ ...cartao, padding: 32, textAlign: 'center' }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>🔗</div>
-            <p style={{ fontSize: 14, color: 'var(--muted2)', marginBottom: 20 }}>Conecte seu Facebook para ver o funil e as métricas das suas campanhas.</p>
-            <a href="/api/facebook/connect" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#1877f2', color: '#fff', fontWeight: 700, fontSize: 14, padding: '12px 24px', borderRadius: 10, textDecoration: 'none' }}>
-              <i className="ti ti-brand-facebook" style={{ fontSize: 18 }} /> Conectar com Facebook
+          <div style={{ ...cartao, padding: 'clamp(24px, 6vw, 40px) 20px', textAlign: 'center' }}>
+            <div aria-hidden="true" style={{ width: 64, height: 64, borderRadius: '50%', margin: '0 auto 14px', background: 'var(--accent-light)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}><i className="ti ti-plug-connected" /></div>
+            <h2 style={{ ...titulo, justifyContent: 'center', marginBottom: 6 }}>Conecte seu Facebook</h2>
+            <p style={{ fontSize: 15, color: 'var(--muted2)', margin: '0 auto 22px', maxWidth: 420, lineHeight: 1.5 }}>Conecte seu Facebook para ver o funil e as métricas das suas campanhas.</p>
+            <a href="/api/facebook/connect" className="anu-foco" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10, minHeight: 52, background: '#1877f2', color: '#fff', fontWeight: 800, fontSize: 16, padding: '0 28px', borderRadius: 'var(--radius-md)', textDecoration: 'none', width: '100%', maxWidth: 340 }}>
+              <i className="ti ti-brand-facebook" aria-hidden="true" style={{ fontSize: 22 }} /> Conectar com Facebook
             </a>
           </div>
         ) : (
           <>
             {ehAdmin && <CamilaAnuncios onCriado={function() { loadCampaigns(periodo, true) }} />}
-            <div style={{ ...cartao, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-              <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#1877f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <i className="ti ti-brand-facebook" style={{ color: '#fff', fontSize: 18 }} />
+            <div style={{ ...cartao, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <div aria-hidden="true" style={{ width: 40, height: 40, borderRadius: '50%', background: '#1877f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <i className="ti ti-brand-facebook" style={{ color: '#fff', fontSize: 20 }} />
               </div>
-              <div style={{ flex: 1, minWidth: 160 }}>
-                <div style={{ fontWeight: 700, fontSize: 14 }}>{connection.fbUserName}</div>
-                <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 2 }}>{connection.adAccountName || 'Sem conta selecionada'}</div>
+              <div style={{ flex: '1 1 160px', minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 15, overflowWrap: 'anywhere' }} translate="no">{connection.fbUserName}</div>
+                <div style={{ fontSize: 13, color: 'var(--muted2)', marginTop: 2, overflowWrap: 'anywhere' }}>{contaNome}</div>
               </div>
               {connection.adAccounts && connection.adAccounts.length > 1 && (
-                <select value={connection.adAccountId || ''} onChange={function(e) { selectAccount(e.target.value) }} disabled={switching} style={sel}>
+                <select aria-label="Escolher a conta de anúncios" value={connection.adAccountId || ''} onChange={function(e) { selectAccount(e.target.value) }} disabled={switching} className="anu-foco" style={{ ...sel, flex: '1 1 220px' }}>
                   {connection.adAccounts.map(function(acc: any) { return <option key={acc.id} value={acc.id}>{(acc.businessName ? acc.businessName + ' · ' : '') + acc.name}</option> })}
                 </select>
               )}
-              <button onClick={disconnect} disabled={disconnecting} style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--muted2)', fontWeight: 600, fontSize: 12, padding: '8px 14px', borderRadius: 9, cursor: 'pointer' }}>{disconnecting ? 'Desconectando...' : 'Desconectar'}</button>
+              <button type="button" onClick={disconnect} disabled={disconnecting} className="anu-btn" style={{ ...botao, fontSize: 13.5, color: 'var(--muted2)', border: '1px solid var(--border)' }}>{disconnecting ? 'Desconectando…' : 'Desconectar'}</button>
             </div>
 
             {!connection.adAccountId ? (
-              <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 10, padding: '12px 16px', fontSize: 13, color: '#b45309' }}>Nenhuma conta de anúncios encontrada nesse login.</div>
+              <div role="status" style={avisoAtencao}><i className="ti ti-alert-triangle" aria-hidden="true" style={{ fontSize: 20, flexShrink: 0 }} /><span>Nenhuma conta de anúncios encontrada nesse login.</span></div>
             ) : (
               <>
-                <div role="group" aria-label="Período" style={{ display: 'flex', gap: 4, padding: 4, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 14, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                <div role="group" aria-label="Escolha o período" style={{ display: 'flex', gap: 4, padding: 4, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
                   {PERIODOS.map(function(pp) {
                     const ativo = periodo === pp[0]
                     return (
-                      <button key={pp[0]} aria-pressed={ativo} onClick={function() { if (ativo) return; setPeriodo(pp[0]); loadCampaigns(pp[0]); loadCriativos(pp[0]) }}
-                        style={{ flex: '1 0 auto', cursor: 'pointer', border: 'none', borderRadius: 10, padding: '9px 14px', fontSize: 13.5, fontWeight: ativo ? 800 : 600, whiteSpace: 'nowrap', background: ativo ? 'var(--surface)' : 'transparent', color: ativo ? 'var(--accent)' : 'var(--muted2)', boxShadow: ativo ? 'var(--shadow-sm)' : 'none', transition: 'background .15s, color .15s' }}>
+                      <button type="button" key={pp[0]} aria-pressed={ativo} className="anu-foco" onClick={function() { if (ativo) return; setPeriodo(pp[0]); loadCampaigns(pp[0]); loadCriativos(pp[0]) }}
+                        style={{ flex: '1 0 auto', cursor: 'pointer', border: 'none', borderRadius: 'var(--radius-md)', minHeight: 44, padding: '0 16px', fontSize: 15, fontWeight: ativo ? 800 : 600, whiteSpace: 'nowrap', background: ativo ? 'var(--surface)' : 'transparent', color: ativo ? 'var(--accent)' : 'var(--muted2)', boxShadow: ativo ? 'var(--shadow-sm)' : 'none', transition: 'background-color .15s, color .15s', touchAction: 'manipulation' }}>
                         {pp[1]}
                       </button>
                     )
@@ -298,39 +302,41 @@ export default function AnunciosPage() {
                 </div>
 
                 {campaignsData && !campaignsLoading && (
-                  <div style={{ ...cartao, padding: '22px 22px 18px', background: tomPainel.fundo, borderColor: tomPainel.borda }}>
-                    <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 'clamp(20px, 4.6vw, 27px)', lineHeight: 1.25, letterSpacing: '-0.01em' }}>
-                      {rotuloPeriodo}, {mFunil.gasto > 0 || mFunil.compras > 0 ? <>você investiu <span style={{ whiteSpace: 'nowrap' }}>{reais(mFunil.gasto)}</span> e vendeu <span style={{ whiteSpace: 'nowrap' }}>{reais(mFunil.valor)}</span>.</> : <>ainda não houve gasto nas campanhas.</>}
-                    </div>
-                    {fraseResultado && <div style={{ marginTop: 8, fontSize: 15, fontWeight: 700, color: tomPainel.texto }}>{fraseResultado}</div>}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(128px, 1fr))', gap: 0, marginTop: 18, borderTop: '1px solid var(--border)' }}>
+                  <section aria-label="Resumo do período" style={{ ...cartao, padding: 'clamp(18px, 4.5vw, 26px)', background: tomPainel.fundo, borderColor: tomPainel.borda }}>
+                    <p style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 'clamp(22px, 5.6vw, 30px)', lineHeight: 1.25, letterSpacing: '-0.01em', margin: 0, textWrap: 'balance' as any }}>
+                      {rotuloPeriodo}, {mFunil.gasto > 0 || mFunil.compras > 0 ? <>você investiu <span className="anu-num" style={{ whiteSpace: 'nowrap', color: 'var(--accent)' }}>{reais(mFunil.gasto)}</span> e vendeu <span className="anu-num" style={{ whiteSpace: 'nowrap', color: 'var(--green)' }}>{reais(mFunil.valor)}</span>.</> : <>ainda não houve gasto nas campanhas.</>}
+                    </p>
+                    {fraseResultado && <p style={{ margin: '10px 0 0', fontSize: 16, fontWeight: 700, color: tomPainel.texto, display: 'flex', gap: 8, alignItems: 'center' }}><i className={'ti ' + tomPainel.icone} aria-hidden="true" style={{ fontSize: 20, flexShrink: 0 }} />{fraseResultado}</p>}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))', gap: 10, marginTop: 18 }}>
                       {([
-                        ['Investido', reais(mFunil.gasto), 'em anúncios'],
-                        ['Vendido', reais(mFunil.valor), 'em vendas'],
-                        ['Vendas', String(mFunil.compras), mFunil.cpa !== null && mFunil.compras > 0 ? reais(mFunil.cpa) + ' cada' : 'no período'],
-                        ['Retorno', mFunil.roas !== null ? reais(mFunil.roas) : '—', 'a cada R$ 1 investido'],
-                      ] as [string, string, string][]).map(function(it, idx) {
+                        ['ti-wallet', 'Investido', reais(mFunil.gasto), 'em anúncios'],
+                        ['ti-cash', 'Vendido', reais(mFunil.valor), 'em vendas'],
+                        ['ti-shopping-cart', 'Vendas', String(mFunil.compras), mFunil.cpa !== null && mFunil.compras > 0 ? reais(mFunil.cpa) + ' cada' : 'no período'],
+                        ['ti-trending-up', 'Retorno', mFunil.roas !== null ? reais(mFunil.roas) : '—', 'a cada R$ 1 investido'],
+                      ] as [string, string, string, string][]).map(function(it) {
                         return (
-                          <div key={it[0]} style={{ padding: '14px 14px 2px', paddingLeft: idx === 0 ? 0 : 14, borderLeft: idx === 0 ? 'none' : '1px solid var(--border)' }}>
-                            <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--muted2)' }}>{it[0]}</div>
-                            <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 20, marginTop: 2 }}>{it[1]}</div>
-                            <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 1 }}>{it[2]}</div>
+                          <div key={it[1]} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '12px 14px', minWidth: 0 }}>
+                            <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--muted2)', display: 'flex', alignItems: 'center', gap: 6 }}><i className={'ti ' + it[0]} aria-hidden="true" style={{ fontSize: 17 }} />{it[1]}</div>
+                            <div className="anu-num" style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 21, marginTop: 4, overflowWrap: 'anywhere' }}>{it[2]}</div>
+                            <div style={{ fontSize: 13, color: 'var(--muted2)', marginTop: 2 }}>{it[3]}</div>
                           </div>
                         )
                       })}
                     </div>
-                    <div style={{ marginTop: 14, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <select aria-label="Qual campanha mostrar" value={selecionada} onChange={function(e) { setSelecionada(e.target.value) }} style={{ ...sel, flex: '1 1 220px' }}>
+                    <div style={{ marginTop: 14, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                      <select aria-label="Qual campanha mostrar" value={selecionada} onChange={function(e) { setSelecionada(e.target.value) }} className="anu-foco" style={{ ...sel, flex: '1 1 220px' }}>
                         <option value="todas">{ativas.length ? 'Mostrando: todas as campanhas ativas' : 'Mostrando: todas as campanhas'}</option>
                         {comDados.map(function(c) { return <option key={c.id} value={c.id}>{'Mostrando: ' + c.name}</option> })}
                       </select>
-                      <button onClick={function() { loadCampaigns(); loadCriativos() }} disabled={campaignsLoading} style={{ ...sel, cursor: 'pointer', flex: '0 0 auto' }}>{campaignsLoading ? 'Atualizando...' : '🔄 Atualizar'}</button>
+                      <button type="button" onClick={function() { loadCampaigns(); loadCriativos() }} disabled={campaignsLoading} className="anu-btn" style={{ ...botao, flex: '0 0 auto' }}><i className="ti ti-refresh" aria-hidden="true" style={{ fontSize: 18 }} />{campaignsLoading ? 'Atualizando…' : 'Atualizar'}</button>
                     </div>
-                  </div>
+                  </section>
                 )}
 
-                {campaignsError && <div style={{ fontSize: 13, color: '#b91c1c', background: 'rgba(239,68,68,0.08)', borderRadius: 9, padding: '12px 16px' }}>{campaignsError}</div>}
-                {aviso && <div style={{ fontSize: 13, fontWeight: 700, borderRadius: 9, padding: '10px 14px', color: aviso.tipo === 'ok' ? '#15803d' : '#b91c1c', background: aviso.tipo === 'ok' ? 'rgba(22,163,74,0.10)' : 'rgba(239,68,68,0.08)' }}>{aviso.texto}</div>}
+                <div aria-live="polite" style={{ display: 'contents' }}>
+                  {campaignsError && <div role="alert" style={avisoErro}><i className="ti ti-alert-circle" aria-hidden="true" style={{ fontSize: 20, flexShrink: 0 }} /><span>{campaignsError}</span></div>}
+                  {aviso && <div style={{ ...(aviso.tipo === 'ok' ? avisoOk : avisoErro), fontWeight: 700 }}><i className={'ti ' + (aviso.tipo === 'ok' ? 'ti-circle-check' : 'ti-alert-circle')} aria-hidden="true" style={{ fontSize: 20, flexShrink: 0 }} /><span>{aviso.texto}</span></div>}
+                </div>
 
                 {campaignsData && !campaignsLoading && (
                   <>
@@ -339,49 +345,49 @@ export default function AnunciosPage() {
                     <Funil m={mFunil} relatorio={relatorio} nomeCampanha={nomeFunil} />
 
                     <div>
-                      <button onClick={analyzeMetrics} disabled={analyzing} style={{ background: 'var(--surface)', border: '1px solid var(--border2)', color: 'var(--text)', fontWeight: 700, fontSize: 13, padding: '10px 18px', borderRadius: 10, cursor: 'pointer' }}>
-                        ✨ {analyzing ? 'Analisando com IA...' : 'Pedir uma análise com IA'}
+                      <button type="button" onClick={analyzeMetrics} disabled={analyzing} className="anu-btn" style={{ ...botao, minHeight: 48, fontSize: 15, background: 'var(--accent-light)', color: 'var(--accent)', border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)', width: '100%', maxWidth: 360 }}>
+                        <i className="ti ti-sparkles" aria-hidden="true" style={{ fontSize: 20 }} />{analyzing ? 'Analisando com IA…' : 'Pedir uma análise com IA'}
                       </button>
-                      {analysis && <div style={{ ...cartao, marginTop: 12, fontSize: 13.5, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{analysis}</div>}
+                      <div aria-live="polite">{analysis && <div style={{ ...cartao, marginTop: 12, fontSize: 15, lineHeight: 1.7, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{analysis}</div>}</div>
                     </div>
 
-                    <div>
-                      <h2 style={{ ...titulo, marginBottom: 4 }}>🚀 Suas campanhas</h2>
-                      <div style={{ fontSize: 13, color: 'var(--muted2)', marginBottom: 12 }}>O selo diz o que fazer com cada campanha. Os pontinhos coloridos mostram se o número está bom, em atenção ou ruim. Toque no nome da campanha para ver as dicas e o que cada número significa.</div>
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-                        {([['ativas', 'Campanhas ativas', ativas.length], ['desativadas', 'Campanhas desativadas', desativadas.length]] as ['ativas' | 'desativadas', string, number][]).map(function(ch) {
+                    <section aria-labelledby="titulo-campanhas">
+                      <h2 id="titulo-campanhas" style={titulo}><span aria-hidden="true" style={iconeTitulo}><i className="ti ti-rocket" /></span>Suas campanhas</h2>
+                      <p style={subtitulo}>O selo diz o que fazer com cada campanha. As bolinhas coloridas mostram se o número está bom, em atenção ou ruim. Toque no nome da campanha para ver dicas e o que cada número quer dizer.</p>
+                      <div role="group" aria-label="Filtrar campanhas" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                        {([['ativas', 'Ativas', ativas.length], ['desativadas', 'Desativadas', desativadas.length]] as ['ativas' | 'desativadas', string, number][]).map(function(ch) {
                           const ativo = filtroCamp === ch[0]
                           return (
-                            <button key={ch[0]} onClick={function() { setFiltroCamp(ch[0]); setVerTodas(false) }} style={{ cursor: 'pointer', fontSize: 12.5, fontWeight: 700, padding: '7px 14px', borderRadius: 999, border: '1px solid ' + (ativo ? 'var(--text)' : 'var(--border2)'), background: ativo ? 'var(--text)' : 'var(--surface)', color: ativo ? 'var(--bg)' : 'var(--text)' }}>
-                              {ch[1]} · {ch[2]}
+                            <button type="button" key={ch[0]} aria-pressed={ativo} className="anu-foco" onClick={function() { setFiltroCamp(ch[0]); setVerTodas(false) }} style={{ cursor: 'pointer', minHeight: 44, fontSize: 14.5, fontWeight: 700, padding: '0 18px', borderRadius: 999, border: '1px solid ' + (ativo ? 'var(--accent)' : 'var(--border2)'), background: ativo ? 'var(--accent)' : 'var(--surface)', color: ativo ? '#fff' : 'var(--text)', touchAction: 'manipulation' }}>
+                              {ch[1]} <span className="anu-num" style={{ opacity: 0.8 }}>· {ch[2]}</span>
                             </button>
                           )
                         })}
                       </div>
                       {!listaCamp.length ? (
-                        <p style={{ color: 'var(--muted2)', fontSize: 13 }}>{filtroCamp === 'ativas' ? 'Nenhuma campanha ativa no momento.' : 'Nenhuma campanha desativada.'}</p>
+                        <div style={{ ...cartao, textAlign: 'center', color: 'var(--muted2)', fontSize: 15 }}>{filtroCamp === 'ativas' ? 'Nenhuma campanha ativa no momento.' : 'Nenhuma campanha desativada.'}</div>
                       ) : (
                         <>
                           <CampanhasTabela campanhas={mostradas} ocupadoId={ocupadoId} selecionadaId={selecionada}
                             onAlternar={function(c) { alternar(c) }} onOrcamento={function(c, p) { mudarOrcamento(c, p) }}
                             onVerFunil={function(c) { setSelecionada(c.id); window.scrollTo({ top: 0, behavior: 'smooth' }) }} />
                           {listaCamp.length > 3 && (
-                            <div style={{ textAlign: 'center', marginTop: 12 }}>
-                              <button onClick={function() { setVerTodas(!verTodas) }} style={{ cursor: 'pointer', fontSize: 13, fontWeight: 700, padding: '9px 20px', borderRadius: 10, border: '1px solid var(--border2)', background: 'var(--surface)', color: 'var(--text)' }}>
-                                {verTodas ? 'Ver menos' : 'Ver mais (' + (listaCamp.length - 3) + ')'}
+                            <div style={{ textAlign: 'center', marginTop: 14 }}>
+                              <button type="button" onClick={function() { setVerTodas(!verTodas) }} className="anu-btn" style={botao}>
+                                <i className={'ti ' + (verTodas ? 'ti-chevron-up' : 'ti-chevron-down')} aria-hidden="true" />{verTodas ? 'Ver menos' : 'Ver mais (' + (listaCamp.length - 3) + ')'}
                               </button>
                             </div>
                           )}
                         </>
                       )}
-                    </div>
+                    </section>
 
                     <CriativosAnuncios criativos={criativos} carregando={criativosLoading} erro={criativosErro} />
 
                     <AnalisandoMetricas embutido />
                   </>
                 )}
-                {campaignsLoading && <p style={{ color: 'var(--muted2)', fontSize: 13 }}>Carregando campanhas...</p>}
+                {campaignsLoading && <p role="status" style={{ color: 'var(--muted2)', fontSize: 15 }}>Carregando campanhas…</p>}
               </>
             )}
           </>
