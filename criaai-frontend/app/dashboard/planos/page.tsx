@@ -20,15 +20,14 @@ const plans = [
     name: 'Pro',
     price: 49.90,
     featured: true,
-    features: ['18 criativos/mes', '3 ebooks/mes', '3 sites/mes', 'Gerenciador de Anúncios com IA (em breve)'],
+    features: ['18 criativos/mes', '3 ebooks/mes', '3 sites/mes', 'Gerenciador de Anúncios com IA'],
     missing: [],
   },
   {
     name: 'Premium',
     price: 79.90,
-    features: ['30 criativos/mes', '10 ebooks/mes', '10 sites/mes', 'Gerenciador de Anúncios com IA (em breve)'],
+    features: ['30 criativos/mes', '10 ebooks/mes', '10 sites/mes', 'Gerenciador de Anúncios com IA', 'Grupo VIP no WhatsApp com o Breno'],
     missing: [],
-    extra: { title: 'Grupo VIP no WhatsApp com o Breno', desc: 'Um grupo fechado no WhatsApp, só para quem é Premium, para conversar com o Breno de perto.' },
   },
 ]
 
