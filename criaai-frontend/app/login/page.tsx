@@ -415,11 +415,11 @@ export default function LoginPage() {
       {/* Suporte: quem nao consegue entrar ou se cadastrar fala com a gente no WhatsApp */}
       <a href={'https://wa.me/553791348869?text=' + encodeURIComponent('Olá, estou com dúvida para criar minha conta na Plataforma do Cristão Próspero')} target="_blank" rel="noopener noreferrer" aria-label="Falar com o suporte no WhatsApp"
         style={{ position: 'fixed', right: 20, bottom: 94, zIndex: 999, background: '#fff', color: '#1a1a1a', border: '1px solid #d9d9e3', borderRadius: 14, padding: '9px 14px', fontSize: 13.5, fontWeight: 700, boxShadow: '0 6px 22px rgba(0,0,0,.18)', lineHeight: 1.3, textDecoration: 'none' }}>
-        Está com dúvidas?<br /><span style={{ color: '#1f6f50' }}>Fale conosco</span>
+        Está com dúvidas?<br /><span style={{ color: '#5b4ef8' }}>Fale conosco</span>
         <span style={{ position: 'absolute', right: 26, bottom: -6, width: 12, height: 12, background: '#fff', borderRight: '1px solid #d9d9e3', borderBottom: '1px solid #d9d9e3', transform: 'rotate(45deg)' }} />
       </a>
       <a href={'https://wa.me/553791348869?text=' + encodeURIComponent('Olá, estou com dúvida para criar minha conta na Plataforma do Cristão Próspero')} target="_blank" rel="noopener noreferrer" aria-label="Falar com o suporte no WhatsApp"
-        style={{ position: 'fixed', right: 20, bottom: 20, zIndex: 1001, width: 62, height: 62, borderRadius: '50%', background: '#1f6f50', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(31,111,80,.45)' }}>
+        style={{ position: 'fixed', right: 20, bottom: 20, zIndex: 1001, width: 62, height: 62, borderRadius: '50%', background: 'linear-gradient(110deg, #4b3fe8 0%, #5b4ef8 40%, #8b6dfa 100%)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(91,78,248,.45)' }}>
         <svg width="30" height="30" viewBox="0 0 24 24" fill="#fff"><path d="M12 3C6.9 3 3 6.6 3 11c0 2 .8 3.8 2.2 5.2L4 21l4.4-1.6c1.1.4 2.4.6 3.6.6 5.1 0 9-3.6 9-8s-3.9-9-9-9z" /></svg>
       </a>
     </div>
