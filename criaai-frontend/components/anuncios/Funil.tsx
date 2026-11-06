@@ -45,7 +45,7 @@ export default function Funil({ m, relatorio, nomeCampanha }: { m: Metricas; rel
 
   return (
     <div style={cartao}>
-      <h2 style={titulo}><span aria-hidden="true" style={iconeTitulo}><i className="ti ti-filter" /></span>Funil do anúncio</h2>
+      <h2 style={titulo}><span aria-hidden="true" style={iconeTitulo}><i className="ti ti-chart-bar" /></span>Funil do anúncio</h2>
       <p style={{ ...subtitulo, overflowWrap: 'anywhere' }}>{nomeCampanha}</p>
 
       <style>{CSS}</style>
@@ -85,7 +85,7 @@ export default function Funil({ m, relatorio, nomeCampanha }: { m: Metricas; rel
       </div>
 
       <div style={{ marginTop: 18, borderRadius: 'var(--radius-lg)', padding: '16px 18px', background: COR[nivelRel].bg, border: '1px solid ' + COR[nivelRel].borda }}>
-        <div style={{ fontWeight: 800, fontSize: 16, color: COR[nivelRel].fg, display: 'flex', gap: 8, alignItems: 'center' }}><i className="ti ti-clipboard-text" aria-hidden="true" style={{ fontSize: 20 }} />Relatório: {relatorio.titulo}</div>
+        <div style={{ fontWeight: 800, fontSize: 16, color: COR[nivelRel].fg, display: 'flex', gap: 8, alignItems: 'center' }}><i className="ti ti-info-circle" aria-hidden="true" style={{ fontSize: 20 }} />Relatório: {relatorio.titulo}</div>
         <div style={{ fontSize: 15, marginTop: 6, lineHeight: 1.55 }}>{relatorio.resumo}</div>
         {relatorio.itens.length > 0 && (
           <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>

@@ -246,20 +246,20 @@ export default function AnunciosPage() {
       <style>{CSS_ANUNCIOS}</style>
       <div style={{ maxWidth: 980, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
         <header style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-          <div aria-hidden="true" style={{ width: 48, height: 48, borderRadius: 'var(--radius-lg)', background: 'var(--accent-light)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, flexShrink: 0 }}><i className="ti ti-speakerphone" /></div>
+          <div aria-hidden="true" style={{ width: 48, height: 48, borderRadius: 'var(--radius-lg)', background: 'var(--accent-light)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, flexShrink: 0 }}><i className="ti ti-bell-ringing" /></div>
           <div style={{ minWidth: 0 }}>
             <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: 'clamp(22px, 5.5vw, 28px)', fontWeight: 800, margin: 0, lineHeight: 1.15, textWrap: 'balance' as any }}>Gerenciando seus anúncios</h1>
             <p style={{ fontSize: 15, color: 'var(--muted2)', margin: '6px 0 0', lineHeight: 1.5 }}>Veja como suas campanhas estão e ajuste sem sair daqui. Para criar uma campanha nova, use o Gerenciador de Anúncios do Facebook.</p>
           </div>
         </header>
 
-        {error && <div role="alert" style={avisoErro}><i className="ti ti-alert-circle" aria-hidden="true" style={{ fontSize: 20, flexShrink: 0 }} /><span>Não foi possível conectar: {error}. Tente conectar de novo.</span></div>}
+        {error && <div role="alert" style={avisoErro}><i className="ti ti-alert-triangle" aria-hidden="true" style={{ fontSize: 20, flexShrink: 0 }} /><span>Não foi possível conectar: {error}. Tente conectar de novo.</span></div>}
 
         {loading ? (
           <p role="status" style={{ color: 'var(--muted2)', fontSize: 15 }}>Carregando…</p>
         ) : !connection?.connected ? (
           <div style={{ ...cartao, padding: 'clamp(24px, 6vw, 40px) 20px', textAlign: 'center' }}>
-            <div aria-hidden="true" style={{ width: 64, height: 64, borderRadius: '50%', margin: '0 auto 14px', background: 'var(--accent-light)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}><i className="ti ti-plug-connected" /></div>
+            <div aria-hidden="true" style={{ width: 64, height: 64, borderRadius: '50%', margin: '0 auto 14px', background: 'var(--accent-light)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}><i className="ti ti-link" /></div>
             <h2 style={{ ...titulo, justifyContent: 'center', marginBottom: 6 }}>Conecte seu Facebook</h2>
             <p style={{ fontSize: 15, color: 'var(--muted2)', margin: '0 auto 22px', maxWidth: 420, lineHeight: 1.5 }}>Conecte seu Facebook para ver o funil e as métricas das suas campanhas.</p>
             <a href="/api/facebook/connect" className="anu-foco" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10, minHeight: 52, background: '#1877f2', color: '#fff', fontWeight: 800, fontSize: 16, padding: '0 28px', borderRadius: 'var(--radius-md)', textDecoration: 'none', width: '100%', maxWidth: 340 }}>
@@ -334,8 +334,8 @@ export default function AnunciosPage() {
                 )}
 
                 <div aria-live="polite" style={{ display: 'contents' }}>
-                  {campaignsError && <div role="alert" style={avisoErro}><i className="ti ti-alert-circle" aria-hidden="true" style={{ fontSize: 20, flexShrink: 0 }} /><span>{campaignsError}</span></div>}
-                  {aviso && <div style={{ ...(aviso.tipo === 'ok' ? avisoOk : avisoErro), fontWeight: 700 }}><i className={'ti ' + (aviso.tipo === 'ok' ? 'ti-circle-check' : 'ti-alert-circle')} aria-hidden="true" style={{ fontSize: 20, flexShrink: 0 }} /><span>{aviso.texto}</span></div>}
+                  {campaignsError && <div role="alert" style={avisoErro}><i className="ti ti-alert-triangle" aria-hidden="true" style={{ fontSize: 20, flexShrink: 0 }} /><span>{campaignsError}</span></div>}
+                  {aviso && <div style={{ ...(aviso.tipo === 'ok' ? avisoOk : avisoErro), fontWeight: 700 }}><i className={'ti ' + (aviso.tipo === 'ok' ? 'ti-circle-check' : 'ti-alert-triangle')} aria-hidden="true" style={{ fontSize: 20, flexShrink: 0 }} /><span>{aviso.texto}</span></div>}
                 </div>
 
                 {campaignsData && !campaignsLoading && (

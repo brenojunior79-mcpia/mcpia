@@ -73,7 +73,7 @@ export default function CampanhasTabela({ campanhas, ocupadoId, selecionadaId, o
         <div style={{ padding: '14px 16px 0', fontSize: 14, lineHeight: 1.5 }}><b>{l.v.rotulo}:</b> {l.v.motivo}</div>
         <DetalheMetricas m={l.m} />
         <div style={{ padding: '0 16px 16px', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button type="button" className="anu-btn" onClick={function() { onVerFunil(l.c) }} style={botao}><i className="ti ti-filter" aria-hidden="true" /> Ver o funil desta campanha</button>
+          <button type="button" className="anu-btn" onClick={function() { onVerFunil(l.c) }} style={botao}><i className="ti ti-chart-bar" aria-hidden="true" /> Ver o funil desta campanha</button>
         </div>
       </div>
     )
