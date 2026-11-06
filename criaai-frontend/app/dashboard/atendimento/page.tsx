@@ -266,9 +266,10 @@ export default function AtendimentoPage() {
   }, [])
 
   const carregarMsgs = useCallback(async function(id: string, descartar?: string) {
-    const r = await supabase.from('wa_messages').select('id, conversation_id, direction, sent_by, type, body, media_path, mime, status, error, created_at, wa_message_id, reply_to_wa_id, template').eq('conversation_id', id).order('created_at', { ascending: true }).limit(500)
+    const r = await supabase.from('wa_messages').select('id, conversation_id, direction, sent_by, type, body, media_path, mime, status, error, created_at, wa_message_id, reply_to_wa_id, template').eq('conversation_id', id).order('created_at', { ascending: false }).limit(500)
     if (!r.error && r.data && selRef.current === id) {
-      const reais = r.data as Msg[]
+      // Pega as 500 mais RECENTES (conversas longas nao podem esconder as mensagens novas) e volta para a ordem do mais antigo para o mais novo
+      const reais = (r.data as Msg[]).slice().reverse()
       // Mantem as mensagens ainda "enviando" (provisorias), sem duplicar as que ja chegaram do banco
       cacheMsgs.current[id] = reais
       setMsgs(function(old) {
