@@ -4,7 +4,7 @@ import { abertoAgora, normalizar } from '@/lib/waHours'
 import { aplicaNome, casaPalavra } from '@/lib/waFlows'
 import { primeiroNome } from '@/lib/waBroadcast'
 import { tratarIA, estadoAgendaIA } from '@/lib/waIA'
-import { iniciarPorPalavra } from '@/lib/waSeq'
+import { tratarMensagemSequencias } from '@/lib/waSeq'
 
 export const maxDuration = 30
 export const dynamic = 'force-dynamic'
@@ -166,7 +166,7 @@ export async function POST(req: NextRequest) {
               // Assistente de IA: so responde se o admin ligou nesta conversa
               if (out?.conversation_id && out?.message_id) {
                 // Fluxo do construtor iniciado por palavra: ele responde (o assistente nao responde esta mensagem)
-                const iniciou = d.type === 'text' ? await iniciarPorPalavra(admin, { convId: out.conversation_id, waId: String(m.from), msgId: String(m.id), texto: String(d.body || ''), nome: name, connectionId: connId }) : false
+                const iniciou = await tratarMensagemSequencias(admin, { convId: out.conversation_id, waId: String(m.from), msgId: String(m.id), tipo: d.type, texto: d.type === 'text' ? String(d.body || '') : '', nome: name, connectionId: connId })
                 if (!iniciou) await tratarIA(admin, out.conversation_id, String(m.from), out.message_id, d.type, name)
               }
             }

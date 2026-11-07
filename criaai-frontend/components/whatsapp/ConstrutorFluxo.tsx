@@ -15,6 +15,7 @@ const OFFS = [70, 0, 96, 24] // alturas alternadas, como no desenho do exemplo
 
 const MENU: { tipo: PassoSeq['tipo']; icone: string; cor: string; desc: string }[] = [
   { tipo: 'atraso', icone: '⏱', cor: '#ef4444', desc: 'Espera um tempo antes do próximo bloco' },
+  { tipo: 'resposta', icone: '↩️', cor: '#8b5cf6', desc: 'Espera a pessoa responder antes de continuar' },
   { tipo: 'texto', icone: '💬', cor: '#16a34a', desc: 'Envia uma mensagem de texto' },
   { tipo: 'audio', icone: '🎤', cor: '#16a34a', desc: 'Envia um áudio' },
   { tipo: 'imagem', icone: '🖼️', cor: '#16a34a', desc: 'Envia uma imagem com legenda' },
@@ -25,6 +26,7 @@ const MENU: { tipo: PassoSeq['tipo']; icone: string; cor: string; desc: string }
 function novoPasso(tipo: PassoSeq['tipo']): PassoSeq {
   const id = novoId()
   if (tipo === 'atraso') return { id, tipo, valor: 5, unidade: 'segundos' }
+  if (tipo === 'resposta') return { id, tipo, valor: 0, unidade: 'horas', aoExpirar: 'encerrar' }
   if (tipo === 'texto') return { id, tipo, texto: '' }
   if (tipo === 'audio') return { id, tipo, path: '', mime: '', nome: '' }
   if (tipo === 'imagem') return { id, tipo, path: '', mime: '', nome: '', legenda: '' }
@@ -36,7 +38,7 @@ function novoPasso(tipo: PassoSeq['tipo']): PassoSeq {
 function numeros(st: StatsSeq | undefined, passos: PassoSeq[], i: number) {
   const s = st || { runs: [], sends: [] }
   const p = passos[i]
-  if (p && p.tipo === 'atraso') {
+  if (p && (p.tipo === 'atraso' || p.tipo === 'resposta')) {
     let agendado = 0, pendente = 0, concluido = 0
     for (const r of s.runs) {
       if (r.status === 'ativo' && r.step_index === i + 1) { if (r.vencido) pendente += r.n; else agendado += r.n }
@@ -323,9 +325,9 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
   function cartao(n: { key: string; passo: PassoSeq | null; i: number }, k: number) {
     const p = n.passo
     const selecionado = sel === n.key
-    const cor = !p ? '#f59e0b' : p.tipo === 'atraso' ? '#ef4444' : '#16a34a'
+    const cor = !p ? '#f59e0b' : p.tipo === 'atraso' ? '#ef4444' : p.tipo === 'resposta' ? '#8b5cf6' : '#16a34a'
     const icone = !p ? '🔔' : MENU.find(function(m) { return m.tipo === p.tipo })!.icone
-    const tag = !p ? 'Gatilho' : p.tipo === 'atraso' ? 'Lógica' : 'Mensagem'
+    const tag = !p ? 'Gatilho' : p.tipo === 'atraso' || p.tipo === 'resposta' ? 'Lógica' : 'Mensagem'
     const titulo = !p ? 'Quando…' : ROTULO_TIPO[p.tipo]
     const num = p ? numeros(stats, seq.steps, n.i) as any : null
     let corpo: React.ReactNode = null
@@ -334,6 +336,7 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
         ? <div style={caixa}><b>O contato interagiu</b><div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 2 }}>{g.match === 'igual' ? 'A mensagem é ' : 'A mensagem contém '}<b>{g.palavras.length ? g.palavras.join(', ') : '…'}</b></div></div>
         : <div style={caixa}><b>{evento ? evento.nome : 'Evento da compra'}</b>{g.metodo ? <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 2 }}>Só {g.metodo}</div> : null}</div>
     } else if (p.tipo === 'atraso') corpo = <div style={caixa}>⏱ {textoAtraso(p)}</div>
+    else if (p.tipo === 'resposta') corpo = <div style={caixa}>↩️ Espera a pessoa responder{p.valor > 0 ? ' por até ' + p.valor + ' ' + p.unidade + ' (depois ' + (p.aoExpirar === 'continuar' ? 'continua' : 'encerra') + ')' : ''}</div>
     else if (p.tipo === 'texto') corpo = <div style={{ ...caixa, maxHeight: 96, overflow: 'hidden', whiteSpace: 'pre-wrap' }}>{p.texto || <i style={{ color: 'var(--muted2)' }}>Mensagem vazia. Clique para escrever.</i>}</div>
     else if (p.tipo === 'audio') corpo = <div style={caixa}>{p.path ? '🎤 ' + (p.nome || 'áudio') : <i style={{ color: 'var(--muted2)' }}>Sem áudio. Clique para enviar.</i>}</div>
     else if (p.tipo === 'imagem' || p.tipo === 'video') corpo = <div style={caixa}>{p.path ? (p.tipo === 'imagem' ? '🖼️ ' : '🎬 ') + (p.nome || p.tipo) + (p.legenda ? ' — ' + p.legenda.slice(0, 40) : '') : <i style={{ color: 'var(--muted2)' }}>Sem arquivo. Clique para enviar.</i>}</div>
@@ -352,7 +355,8 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
         <div style={{ borderTop: '1px solid var(--border)' }}>
           {!p && <Numeros itens={[['Iniciaram', nGatilho]]} />}
           {p && p.tipo === 'atraso' && <Numeros itens={[['Agendado', num.agendado], ['Pendente', num.pendente], ['Concluído', num.concluido]]} />}
-          {p && p.tipo !== 'atraso' && <Numeros itens={[['Enviado', num.enviado], ['Entregue', num.entregue], ['Lido', num.lido], ['Falha', num.falha]]} />}
+          {p && p.tipo === 'resposta' && <Numeros itens={[['Aguardando', num.agendado], ['Pendente', num.pendente], ['Concluído', num.concluido]]} />}
+          {p && p.tipo !== 'atraso' && p.tipo !== 'resposta' && <Numeros itens={[['Enviado', num.enviado], ['Entregue', num.entregue], ['Lido', num.lido], ['Falha', num.falha]]} />}
           <div style={{ padding: '0 12px 10px' }}>{corpo}</div>
         </div>
         <div style={{ borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', background: 'var(--surface2)', borderRadius: '0 0 12px 12px' }}>
@@ -436,6 +440,31 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
             </select>
           </div>
           <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 8, lineHeight: 1.5 }}>Depois desse tempo o fluxo segue para o próximo bloco. De 1 segundo até 30 dias. Cuidado: texto, áudio, imagem e vídeo só saem até 24 horas depois da última mensagem da pessoa. Passou disso, use um Modelo aprovado.</div>
+        </div>
+      )
+    }
+    if (p.tipo === 'resposta') {
+      return (
+        <div>
+          {titulo}
+          <div style={{ ...caixa, marginBottom: 12, lineHeight: 1.5 }}>O fluxo para aqui e só segue para o próximo bloco <b>depois que a pessoa responder</b> (qualquer resposta: texto, áudio ou imagem). Quando ela responde, a janela de 24 horas se abre e dá para enviar texto, áudio, imagem e vídeo.</div>
+          <label style={lab}>Esperar a resposta por até (0 = sem limite, até 30 dias)</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input className="at-input" type="number" min={0} value={p.valor} onChange={function(e) { const v = Math.max(0, Math.round(Number(e.target.value) || 0)); setPasso(p.id, function(x) { return { ...(x as any), valor: v } }) }} style={{ width: 100 }} />
+            <select className="at-input" value={p.unidade} onChange={function(e) { const u = e.target.value as Unidade; setPasso(p.id, function(x) { return { ...(x as any), unidade: u } }) }} style={{ width: 'auto' }}>
+              <option value="minutos">minutos</option><option value="horas">horas</option><option value="dias">dias</option>
+            </select>
+          </div>
+          {p.valor > 0 && (
+            <div style={{ marginTop: 12 }}>
+              <label style={lab}>Se a pessoa não responder nesse tempo</label>
+              <select className="at-input" value={p.aoExpirar} onChange={function(e) { const v = e.target.value === 'continuar' ? 'continuar' : 'encerrar'; setPasso(p.id, function(x) { return { ...(x as any), aoExpirar: v } }) }}>
+                <option value="encerrar">Encerrar o fluxo</option>
+                <option value="continuar">Continuar para o próximo bloco mesmo assim</option>
+              </select>
+            </div>
+          )}
+          <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 10, lineHeight: 1.5 }}>Enquanto a pessoa responde o fluxo, o assistente não responde essas mensagens: o próprio fluxo continua a conversa.</div>
         </div>
       )
     }

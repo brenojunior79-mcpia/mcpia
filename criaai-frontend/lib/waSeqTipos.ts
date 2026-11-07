@@ -6,6 +6,7 @@ export type ParamModelo = { mode: 'nome' | 'produto' | 'link' | 'texto'; value: 
 
 export type PassoSeq =
   | { id: string; tipo: 'atraso'; valor: number; unidade: Unidade }
+  | { id: string; tipo: 'resposta'; valor: number; unidade: Unidade; aoExpirar: 'continuar' | 'encerrar' }
   | { id: string; tipo: 'texto'; texto: string }
   | { id: string; tipo: 'audio'; path: string; mime: string; nome: string }
   | { id: string; tipo: 'imagem'; path: string; mime: string; nome: string; legenda: string }
@@ -49,5 +50,5 @@ export function novoId(): string {
 }
 
 export const ROTULO_TIPO: Record<PassoSeq['tipo'], string> = {
-  atraso: 'Atraso inteligente', texto: 'Mensagem de texto', audio: 'Mensagem de áudio', imagem: 'Mensagem com imagem', video: 'Mensagem com vídeo', modelo: 'Modelo aprovado da Meta',
+  atraso: 'Atraso inteligente', resposta: 'Depois que a pessoa responder', texto: 'Mensagem de texto', audio: 'Mensagem de áudio', imagem: 'Mensagem com imagem', video: 'Mensagem com vídeo', modelo: 'Modelo aprovado da Meta',
 }

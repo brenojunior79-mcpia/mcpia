@@ -42,6 +42,12 @@ export function validarSeq(input: any): { ok: true; seq: Sequencia } | { ok: fal
       const seg = segundosDoAtraso({ valor, unidade })
       if (!(valor >= 1) || seg > MAX_ATRASO_S) return { ok: false, erro: 'O atraso deve ficar entre 1 segundo e 30 dias.' }
       steps.push({ id, tipo: 'atraso', valor, unidade })
+    } else if (s?.tipo === 'resposta') {
+      const u = String(s.unidade)
+      const unidade: Unidade = u === 'segundos' || u === 'minutos' || u === 'dias' ? u : 'horas'
+      const valor = Math.max(0, Math.round(Number(s.valor) || 0))
+      if (valor > 0 && segundosDoAtraso({ valor, unidade }) > MAX_ATRASO_S) return { ok: false, erro: 'O limite de espera pela resposta é de até 30 dias.' }
+      steps.push({ id, tipo: 'resposta', valor, unidade, aoExpirar: s.aoExpirar === 'continuar' ? 'continuar' : 'encerrar' })
     } else if (s?.tipo === 'texto') {
       const texto = String(s.texto || '').slice(0, 4000)
       steps.push({ id, tipo: 'texto', texto })
@@ -79,7 +85,7 @@ export function validarSeq(input: any): { ok: true; seq: Sequencia } | { ok: fal
 export function erroParaLigar(seq: Sequencia): string {
   if (!seq.connection_id) return 'Escolha o número de WhatsApp do fluxo antes de ligar.'
   if (seq.trigger.tipo === 'palavra' && seq.trigger.palavras.length === 0) return 'Escreva a palavra que inicia o fluxo antes de ligar.'
-  const envios = seq.steps.filter(function(s) { return s.tipo !== 'atraso' })
+  const envios = seq.steps.filter(function(s) { return s.tipo !== 'atraso' && s.tipo !== 'resposta' })
   if (envios.length === 0) return 'Adicione pelo menos uma mensagem ao fluxo antes de ligar.'
   for (const s of seq.steps) {
     if (s.tipo === 'texto' && !s.texto.trim()) return 'Tem uma mensagem de texto vazia no fluxo.'
@@ -113,6 +119,35 @@ export async function iniciarPorPalavra(admin: any, p: { convId: string; waId: s
     }
   } catch (e) { console.error('[wa-seq] palavra:', e) }
   return false
+}
+
+// A pessoa respondeu: quem estava esperando a resposta (bloco "Depois que a pessoa responder") segue o fluxo agora
+export async function retomarPorResposta(admin: any, p: { waId: string; connectionId: string | null }): Promise<number> {
+  try {
+    if (!p.connectionId) return 0
+    const sq = await admin.from('wa_sequencias').select('id').eq('connection_id', p.connectionId).limit(100)
+    const ids: string[] = (sq.data || []).map(function(x: any) { return x.id })
+    if (ids.length === 0) return 0
+    const q = await admin.from('wa_seq_runs').select('id, data').in('seq_id', ids).in('wa_id', variantes(p.waId)).eq('status', 'ativo').limit(20)
+    let n = 0
+    for (const r of (q.data || []) as any[]) {
+      if (!r.data || r.data.aguarda_resposta !== true) continue
+      const novo = { ...r.data, respondeu: true }
+      delete novo.aguarda_resposta
+      delete novo.aguarda_acao
+      const u = await admin.from('wa_seq_runs').update({ data: novo, next_run_at: new Date().toISOString(), claimed_at: null, updated_at: new Date().toISOString() }).eq('id', r.id).eq('status', 'ativo').select('id')
+      if (u.data && u.data.length > 0) n++
+    }
+    return n
+  } catch (e) { console.error('[wa-seq] resposta:', e) }
+  return 0
+}
+
+// Mensagem recebida: primeiro retoma quem esperava a resposta; senao, ve se a palavra inicia um fluxo. true = o fluxo cuida desta mensagem (o assistente nao responde).
+export async function tratarMensagemSequencias(admin: any, p: { convId: string; waId: string; msgId: string; tipo: string; texto: string; nome: string | null; connectionId: string | null }): Promise<boolean> {
+  if ((await retomarPorResposta(admin, { waId: p.waId, connectionId: p.connectionId })) > 0) return true
+  if (p.tipo !== 'text') return false
+  return iniciarPorPalavra(admin, { convId: p.convId, waId: p.waId, msgId: p.msgId, texto: p.texto, nome: p.nome, connectionId: p.connectionId })
 }
 
 // Aviso da Hubla: cancela quem comprou e inicia os fluxos ligados para o evento
@@ -276,6 +311,16 @@ export async function processarSequencias(admin: any, token: string): Promise<{ 
     const cn = conns[sq.connection_id]
     if (!cn || !cn.active) { await fim('falhou', 'O número de WhatsApp deste fluxo não está ativo.'); continue }
 
+    // Chegou o limite de espera pela resposta da pessoa (se ela tivesse respondido, o bloco ja teria sido retomado)
+    if (run.data && run.data.aguarda_resposta === true) {
+      if (run.data.aguarda_acao === 'encerrar') { await fim('cancelado', 'A pessoa não respondeu'); continue }
+      const limpo = { ...run.data }
+      delete limpo.aguarda_resposta
+      delete limpo.aguarda_acao
+      run.data = limpo
+      await admin.from('wa_seq_runs').update({ data: limpo }).eq('id', run.id)
+    }
+
     const steps: PassoSeq[] = Array.isArray(run.data?.steps_override) ? run.data.steps_override : (Array.isArray(sq.steps) ? sq.steps : [])
     let idx: number = run.step_index
     let parou = false
@@ -284,6 +329,13 @@ export async function processarSequencias(admin: any, token: string): Promise<{ 
       if (s.tipo === 'atraso') {
         const seg = Math.max(1, segundosDoAtraso(s))
         await fim('ativo', null, { step_index: idx + 1, next_run_at: new Date(Date.now() + seg * 1000).toISOString() })
+        parou = true
+        break
+      }
+      if (s.tipo === 'resposta') {
+        // Fica esperando a pessoa responder (ate o limite escolhido, ou ate 30 dias)
+        const seg = s.valor > 0 ? Math.max(1, segundosDoAtraso(s)) : MAX_ATRASO_S
+        await fim('ativo', null, { step_index: idx + 1, next_run_at: new Date(Date.now() + seg * 1000).toISOString(), data: { ...(run.data || {}), aguarda_resposta: true, aguarda_acao: s.valor > 0 ? s.aoExpirar : 'encerrar' } })
         parou = true
         break
       }
