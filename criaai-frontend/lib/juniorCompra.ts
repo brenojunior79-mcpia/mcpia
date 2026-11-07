@@ -31,9 +31,23 @@ export function dadosDaMarcaCompra(texto: string): { emails: string[]; telefones
   return { emails: emails.slice(0, 3), telefones: telefones.slice(0, 3) }
 }
 
-const COMUM = `Voce consegue consultar os RELATORIOS DE VENDAS do Breno (todas as vendas do ano na Hubla e na Cakto), mas quem consulta e escreve o resultado e o SISTEMA, nao voce.
-- QUANDO EMITIR: a pessoa diz que ja COMPROU (Mentoria, Estrutura Express, creditos, plano...) por outra plataforma ou com outro e-mail, ou diz que nao consegue criar a conta/fazer o cadastro porque "o e-mail nao e aceito", ou pergunta se a compra dela aparece. Nao peca comprovante antes: consulte primeiro.
-- COMO: responda APENAS com a marca [[CONSULTAR_COMPRA: e-mail ou telefone]] usando o que ela informou (pode colocar ate 2 e-mails e 1 telefone). Se ela ainda nao informou nenhum e-mail nem telefone, pergunte so isto: "Qual e-mail você usou na hora da compra?" (no WhatsApp, o numero desta conversa tambem e consultado automaticamente: pode emitir a marca sem pedir nada).
+// Mensagem padrao do primeiro acesso (texto definido pelo Breno). O Junior copia exatamente assim.
+export const MENSAGEM_PRIMEIRO_ACESSO = 'https://www.mcpia.site/login\n\nEntra aqui e cria sua conta e depois faz o login, com isso você já vai acessar o aplicativo.\n\nAssim que você fizer isso me confirma que se deu certinho!'
+
+const COMUM = `# PRIMEIRO ACESSO: COMO FUNCIONA (LOGICA QUE VOCE PRECISA ENTENDER)
+- O acesso a plataforma NAO e enviado por e-mail, por WhatsApp nem pela Hubla/Cakto. Ninguem recebe login nem senha pronta. Quem comprou CRIA a propria conta no site, com o MESMO e-mail da compra, e depois entra com o e-mail e a senha que criou.
+- Por isso, quando a pessoa diz "nao recebi nada", "nao recebi o acesso", "nao chegou o e-mail", "como eu entro?", "nao tenho login" ou "nao consigo acessar": ela AINDA NAO TEM CONTA. Nao pergunte o e-mail, nao procure a compra e nao fale em "e-mail que voce recebeu". Responda NA HORA com a MENSAGEM PADRAO abaixo, copiando exatamente (so o link na primeira linha, sozinho, em texto puro):
+
+${MENSAGEM_PRIMEIRO_ACESSO}
+
+- Se, antes ou depois da mensagem padrao, a pessoa estranhar ("mas eu nao recebi nada") explique em UMA frase simples: "O acesso não chega por e-mail: é você mesmo que cria a sua conta nesse link, com o e-mail da compra."
+- NUNCA diga "se voce ja tem conta, clique em Entrar" nem sugira "Esqueci minha senha" para quem disse que nao recebeu nada ou que nunca entrou: essa pessoa nao tem conta nem senha. Se ela perguntar "entro ou crio conta?", responda: "Clique em Criar conta, porque você ainda não tem conta. Depois é só fazer o login." So fale em "Entrar" ou "Esqueci minha senha" se ELA disser que ja criou a conta antes e a senha nao funciona.
+
+# CONSULTA DE COMPRA NOS RELATORIOS DE VENDAS
+Voce consegue consultar os RELATORIOS DE VENDAS do Breno (todas as vendas do ano na Hubla e na Cakto), mas quem consulta e escreve o resultado e o SISTEMA, nao voce.
+- QUANDO EMITIR: a pessoa diz que comprou (Mentoria, Estrutura Express, creditos, plano...) por OUTRA plataforma ou com OUTRO e-mail, ou diz que JA TENTOU criar a conta e o sistema nao aceitou o e-mail ("e-mail nao e aceito", "nao encontramos compra"), ou pergunta se a compra dela aparece, ou JA INFORMOU um e-mail ou telefone da compra. Nao peca comprovante antes: consulte primeiro.
+- COMO: responda APENAS com a marca [[CONSULTAR_COMPRA: e-mail ou telefone]] usando o que ela informou (pode colocar ate 2 e-mails e 1 telefone). E SO depois de ela ter tentado criar a conta pela mensagem padrao e nao ter conseguido que voce pergunta, so isto: "Qual e-mail você usou na hora da compra?" (no WhatsApp, o numero desta conversa tambem e consultado automaticamente: pode emitir a marca sem pedir nada).
+- Se ela informar um e-mail da compra, use SEMPRE [[CONSULTAR_COMPRA: e-mail]] (nunca [[VERIFICAR_ASSINATURA]], que e so para o plano da plataforma).
 - NUNCA diga que a compra existe ou nao existe, nem o e-mail da compra, antes de o sistema responder. Depois que o sistema responder, siga a conversa a partir do resultado.
 - Se o sistema nao achou a compra: peca o comprovante (print ou PDF) para voce conferir. Se for um comprovante de pagamento, o sistema nao confirma sozinho: diga que anotou e vai conferir. Nao mande a pessoa para outra plataforma nem para atendente.`
 
@@ -110,9 +124,9 @@ export async function consultarCompraPeloJunior(db: any, p: { emails: string[]; 
     let texto = 'Achei sim! Consta nos relatórios de vendas: ' + linhas.slice(0, 3).join('; ') + '.'
     if (bateu.length === 0 && emailsCompra.length) {
       // Achou pelo telefone: o cadastro precisa ser com o e-mail da compra (mostramos so uma parte dele)
-      texto += ' O e-mail dessa compra é ' + mascarar(emailsCompra[0]) + '. Para criar a conta na plataforma, use exatamente esse e-mail.'
+      texto += ' O e-mail dessa compra é ' + mascarar(emailsCompra[0]) + '. Entra em https://www.mcpia.site/login e cria a sua conta usando exatamente esse e-mail. Depois faz o login e me confirma que se deu certinho!'
     } else if (bateu.length) {
-      texto += ' O e-mail ' + bateu[0] + ' é o da compra, então é com ele que você cria a conta na plataforma.'
+      texto += ' O e-mail ' + bateu[0] + ' é o da compra. Entra em https://www.mcpia.site/login, cria a sua conta com esse e-mail e depois faz o login. Assim que fizer isso me confirma que se deu certinho!'
     }
     try { await db.from('hubla_events').insert({ provider: 'junior', event_type: 'junior.consulta_compra', email: emails[0] || emailsCompra[0] || null, action: 'achou', note: ('Compra achada: ' + linhas.join('; ')).slice(0, 300) }) } catch (e) { /* historico e so conforto */ }
     return { achou: true, texto }

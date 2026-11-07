@@ -120,6 +120,20 @@ export async function verificarAssinaturaPeloJunior(db: any, p: { conta?: string
         status = 'sem_email'
         return { status, humano: false, texto: 'Qual e-mail você usa na plataforma?' }
       }
+      // O e-mail pode ser de quem comprou a Mentoria/Express e so ainda nao criou a conta: nesse caso nao diga que "nao achou"
+      try {
+        let comprou = false
+        const h = await db.from('hubla_compras').select('id', { head: true, count: 'exact' }).in('email', digitados).eq('reembolsado', false)
+        if ((h.count || 0) > 0) comprou = true
+        if (!comprou) {
+          const x = await db.from('compras_externas').select('email', { head: true, count: 'exact' }).in('email', digitados).eq('reembolsada', false)
+          if ((x.count || 0) > 0) comprou = true
+        }
+        if (comprou) {
+          status = 'sem_conta_com_compra'
+          return { status, humano: false, texto: 'Achei a sua compra com esse e-mail! Só falta criar a sua conta.\n\n' + 'https://www.mcpia.site/login\n\nEntra aqui e cria sua conta com esse mesmo e-mail e depois faz o login, com isso você já vai acessar o aplicativo.\n\nAssim que você fizer isso me confirma que se deu certinho!' }
+        }
+      } catch (e) { /* segue para a resposta padrao */ }
       status = 'sem_conta'
       return { status, humano: false, texto: 'Não achei esse e-mail na plataforma. Confere se ele está certinho e me manda de novo? Se você ainda não criou a conta, crie em ' + LINK_PLATAFORMA + ' (botão "Criar conta").' }
     }
