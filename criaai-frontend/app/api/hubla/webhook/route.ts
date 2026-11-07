@@ -5,6 +5,7 @@ import { recordPayment, clearBilling, firstFutureDate, toAmount } from '@/lib/bi
 import { recordSale, markRefunded } from '@/lib/sales-ledger'
 import { trackReferralSale, trackReferralRefund } from '@/lib/referrals'
 import { tratarEventoHubla, lerEvento } from '@/lib/waAuto'
+import { tratarEventoSequencias } from '@/lib/waSeq'
 import { avisarVendaAdmin } from '@/lib/pushAdmin'
 
 const admin = createClient(
@@ -174,6 +175,7 @@ export async function POST(req: NextRequest) {
 
     // Fluxos de WhatsApp por evento (recuperacao). Nunca pode atrapalhar o resto do aviso.
     try { await tratarEventoHubla(admin, eventType, payload) } catch (e) { console.error('[hubla-webhook] fluxos whatsapp:', e) }
+    try { await tratarEventoSequencias(admin, eventType, payload) } catch (e) { console.error('[hubla-webhook] fluxos do construtor:', e) }
 
     if (!email) {
       console.error('[hubla-webhook] sem email no payload')

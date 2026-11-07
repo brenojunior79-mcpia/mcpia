@@ -4,6 +4,7 @@ import { abertoAgora, normalizar } from '@/lib/waHours'
 import { aplicaNome, casaPalavra } from '@/lib/waFlows'
 import { primeiroNome } from '@/lib/waBroadcast'
 import { tratarIA, estadoAgendaIA } from '@/lib/waIA'
+import { iniciarPorPalavra } from '@/lib/waSeq'
 
 export const maxDuration = 30
 export const dynamic = 'force-dynamic'
@@ -163,7 +164,11 @@ export async function POST(req: NextRequest) {
               if (d.mediaId && out?.message_id) await saveMedia(admin, out.conversation_id, out.message_id, d.mediaId, d.mime)
               if (m.context?.id && out?.message_id) await admin.from('wa_messages').update({ reply_to_wa_id: String(m.context.id) }).eq('id', out.message_id)
               // Assistente de IA: so responde se o admin ligou nesta conversa
-              if (out?.conversation_id && out?.message_id) await tratarIA(admin, out.conversation_id, String(m.from), out.message_id, d.type, name)
+              if (out?.conversation_id && out?.message_id) {
+                // Fluxo do construtor iniciado por palavra: ele responde (o assistente nao responde esta mensagem)
+                const iniciou = d.type === 'text' ? await iniciarPorPalavra(admin, { convId: out.conversation_id, waId: String(m.from), msgId: String(m.id), texto: String(d.body || ''), nome: name, connectionId: connId }) : false
+                if (!iniciou) await tratarIA(admin, out.conversation_id, String(m.from), out.message_id, d.type, name)
+              }
             }
           }
           for (const s of v.statuses || []) {
@@ -178,6 +183,10 @@ export async function POST(req: NextRequest) {
               const e0 = s.errors?.[0]
               await admin.from('wa_auto_sends').update({ status: 'failed', error: String(e0?.error_data?.details || e0?.message || e0?.title || 'Falha no envio').slice(0, 300), updated_at: agora }).eq('wa_message_id', id).in('status', ['sent', 'delivered'])
             }
+            // Fluxos do construtor: entregue / lido / falha de cada envio
+            if (st === 'delivered') await admin.from('wa_seq_sends').update({ status: 'delivered', updated_at: agora }).eq('wa_message_id', id).eq('status', 'sent')
+            else if (st === 'read') await admin.from('wa_seq_sends').update({ status: 'read', updated_at: agora }).eq('wa_message_id', id).in('status', ['sent', 'delivered'])
+            else if (st === 'failed') { const e2 = s.errors?.[0]; await admin.from('wa_seq_sends').update({ status: 'failed', error: String(e2?.error_data?.details || e2?.message || e2?.title || 'Falha no envio').slice(0, 300), updated_at: agora }).eq('wa_message_id', id).in('status', ['sent', 'delivered']) }
             // Mesmo status no historico da conversa (tracinhos do chat de recuperacao)
             if (st === 'delivered') await admin.from('wa_messages').update({ status: 'delivered' }).eq('wa_message_id', id).in('status', ['sending', 'sent'])
             else if (st === 'read') await admin.from('wa_messages').update({ status: 'read' }).eq('wa_message_id', id).in('status', ['sending', 'sent', 'delivered'])

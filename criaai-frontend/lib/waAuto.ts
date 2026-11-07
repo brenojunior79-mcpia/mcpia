@@ -6,7 +6,7 @@ import { EVENTOS, type Metodo, type Passo, type FluxoAuto } from '@/lib/waAutoTi
 export type { Metodo, Passo, FluxoAuto }
 
 // Eventos que provam que a pessoa comprou: cancelam fluxos de recuperacao que ainda estao esperando
-const COMPRA = ['invoice.payment_succeeded', 'customer.member_added', 'subscription.activated']
+export const COMPRA = ['invoice.payment_succeeded', 'customer.member_added', 'subscription.activated']
 
 // ---------- leitura do aviso da Hubla (tolerante: a Hubla muda campos de evento para evento) ----------
 function str(v: any): string { return typeof v === 'string' ? v.trim() : '' }
@@ -34,7 +34,7 @@ export function lerEvento(eventType: string, payload: any): Info {
   return { wa: normalizarNumero(phone), email, nome: primeiroNome(nomeCru), produto, link, metodo, chave }
 }
 
-function passaFiltro(f: FluxoAuto['trigger_filter'], info: Info): boolean {
+export function passaFiltro(f: FluxoAuto['trigger_filter'], info: Info): boolean {
   if (f?.metodo && info.metodo !== f.metodo) return false
   const p = String(f?.produto || '').trim().toLowerCase()
   if (p && info.produto.toLowerCase().indexOf(p) < 0) return false
@@ -175,7 +175,7 @@ async function registrarNaConversa(admin: any, connId: string, run: any, texto: 
 
 // Texto que a pessoa recebeu (titulo, corpo, rodape e botoes do modelo, com as variaveis preenchidas)
 const cacheModelos: Record<string, { t: number; comps: any[] }> = {}
-async function textoDoModelo(cn: any, p: Extract<Passo, { tipo: 'modelo' }>, run: any): Promise<string> {
+export async function textoDoModelo(cn: any, p: Extract<Passo, { tipo: 'modelo' }>, run: any): Promise<string> {
   const reserva = '[Modelo: ' + p.template + ']'
   try {
     const waba = String(cn?.waba_id || '')
@@ -209,7 +209,7 @@ async function textoDoModelo(cn: any, p: Extract<Passo, { tipo: 'modelo' }>, run
 }
 
 // A pessoa ja pagou? (evita mandar "Pix gerado", carrinho abandonado etc. para quem ja comprou)
-async function jaPagou(admin: any, run: any): Promise<boolean> {
+export async function jaPagou(admin: any, run: any): Promise<boolean> {
   try {
     const email = String(run.email || '').toLowerCase()
     const wa = String(run.wa_id || '')
@@ -232,9 +232,9 @@ async function jaPagou(admin: any, run: any): Promise<boolean> {
   }
 }
 
-const LIMITE = [130429, 131048, 80007, 4, 17, 32, 613]
+export const LIMITE = [130429, 131048, 80007, 4, 17, 32, 613]
 
-function montar(params: { mode: string; value: string }[], run: any): string[] {
+export function montar(params: { mode: string; value: string }[], run: any): string[] {
   const d = run.data || {}
   return params.map(function(p) {
     if (p.mode === 'nome') return run.name || (p.value || '').trim() || 'amigo(a)'
@@ -244,7 +244,7 @@ function montar(params: { mode: string; value: string }[], run: any): string[] {
   })
 }
 
-async function enviar(token: string, phoneId: string, to: string, p: Extract<Passo, { tipo: 'modelo' }>, run: any): Promise<{ ok: boolean; code: number; msgId: string; erro: string }> {
+export async function enviar(token: string, phoneId: string, to: string, p: Extract<Passo, { tipo: 'modelo' }>, run: any): Promise<{ ok: boolean; code: number; msgId: string; erro: string }> {
   try {
     const res = await fetch(GRAPH + '/' + phoneId + '/messages', {
       method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },

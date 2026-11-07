@@ -5,6 +5,8 @@ import { GATILHOS, VAZIO, aplicaNome, type Fluxo } from '@/lib/waFlows'
 import Horario from './Horario'
 import EditorEvento, { VAZIO_EVENTO, textoEspera, type ConexaoLeve } from './FluxoEvento'
 import { nomeEvento, type FluxoAuto } from '@/lib/waAutoTipos'
+import ConstrutorFluxo, { type StatsSeq, type ConexaoSeq } from './ConstrutorFluxo'
+import { VAZIA_SEQ, type Sequencia } from '@/lib/waSeqTipos'
 
 const CURTO: Record<string, string> = { mon: 'Seg', tue: 'Ter', wed: 'Qua', thu: 'Qui', fri: 'Sex', sat: 'Sáb', sun: 'Dom' }
 
@@ -142,7 +144,11 @@ function Editor({ inicial, onVoltar }: { inicial: Fluxo; onVoltar: (recarregar: 
 
 // Lista de fluxos de automacao do WhatsApp. Cada fluxo abre a propria tela de configuracao.
 export default function Fluxos() {
-  const [tela, setTela] = useState<'lista' | 'horario' | 'editar' | 'escolher' | 'evento'>('lista')
+  const [tela, setTela] = useState<'lista' | 'horario' | 'editar' | 'escolher' | 'evento' | 'construtor'>('lista')
+  const [seqs, setSeqs] = useState<(Sequencia & { id: string })[]>([])
+  const [seqStats, setSeqStats] = useState<Record<string, StatsSeq>>({})
+  const [seqConexoes, setSeqConexoes] = useState<ConexaoSeq[]>([])
+  const [editSeq, setEditSeq] = useState<Sequencia>(VAZIA_SEQ)
   const [autos, setAutos] = useState<(FluxoAuto & { id: string })[]>([])
   const [stats, setStats] = useState<Record<string, any>>({})
   const [conexoes, setConexoes] = useState<ConexaoLeve[]>([])
@@ -157,6 +163,9 @@ export default function Fluxos() {
     fetch('/api/whatsapp/flows', { cache: 'no-store' }).then(function(r) { return r.json().then(function(j) { return { ok: r.ok, j: j } }) }).then(function(x) {
       if (x.ok) { setFluxos(x.j.fluxos || []); setErro('') } else setErro(x.j.error || 'Não foi possível carregar os fluxos.')
     }).catch(function() { setErro('Sem conexão.') })
+    fetch('/api/whatsapp/seq', { cache: 'no-store' }).then(function(r) { return r.json().then(function(j) { return { ok: r.ok, j: j } }) }).then(function(x) {
+      if (x.ok) { setSeqs(x.j.fluxos || []); setSeqStats(x.j.stats || {}); setSeqConexoes(x.j.conexoes || []) }
+    }).catch(function() {})
     fetch('/api/whatsapp/auto', { cache: 'no-store' }).then(function(r) { return r.json().then(function(j) { return { ok: r.ok, j: j } }) }).then(function(x) {
       if (x.ok) { setAutos(x.j.fluxos || []); setStats(x.j.stats || {}); setConexoes(x.j.conexoes || []) }
     }).catch(function() {})
@@ -178,6 +187,8 @@ export default function Fluxos() {
     carregar()
   }
 
+  if (tela === 'construtor') return <ConstrutorFluxo key={editSeq.id || 'novo'} inicial={editSeq} conexoes={seqConexoes} stats={editSeq.id ? seqStats[editSeq.id] : undefined} onVoltar={function() { setTela('lista') }} />
+
   if (tela === 'evento') return <EditorEvento inicial={editAuto} conexoes={conexoes} onVoltar={function() { setTela('lista') }} />
 
   if (tela === 'escolher') {
@@ -198,6 +209,7 @@ export default function Fluxos() {
         <div style={{ maxWidth: 680, margin: '0 auto' }}>
           <button onClick={function() { setTela('lista') }} style={{ cursor: 'pointer', border: 0, background: 'transparent', color: 'var(--accent)', fontWeight: 800, fontSize: 13.5, padding: 0, marginBottom: 10 }}>← Voltar para fluxos</button>
           <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--text)', marginBottom: 12 }}>Que tipo de fluxo você quer criar?</div>
+          {op('🧩', 'Fluxo em blocos (construtor)', 'Monte uma sequência: começa quando a pessoa manda uma palavra ou quando acontece algo na compra, com atrasos, textos, áudios, imagens, vídeos e modelos. Você vê quantos enviaram, entregaram e leram.', function() { setEditSeq({ ...VAZIA_SEQ, steps: [] }); setTela('construtor') })}
           {op('💬', 'Resposta automática', 'Responde sozinho quando alguém escreve para o suporte (palavra-chave, primeira mensagem…).', function() { setEdit(VAZIO); setTela('editar') })}
           {op('🛒', 'Fluxo por evento da Hubla', 'Começa quando acontece algo na Hubla: carrinho abandonado, Pix gerado, cartão recusado, compra aprovada… Com esperas e modelos de mensagem.', function() { setEditAuto({ ...VAZIO_EVENTO, connection_id: conexoes.length === 1 ? conexoes[0].id : null }); setTela('evento') })}
         </div>
@@ -255,6 +267,29 @@ export default function Fluxos() {
               </div>
               <button onClick={function(e) { e.stopPropagation(); ligar(f, !f.enabled) }} title={f.enabled ? 'Clique para desligar' : 'Clique para ligar'} style={{ cursor: 'pointer', border: 0, ...chip(f.enabled, true) }}>{f.enabled ? '● Ativo' : '○ Desligado'}</button>
               <span style={{ color: 'var(--accent)', fontWeight: 800, fontSize: 13.5 }}>Editar ›</span>
+            </div>
+          )
+        })}
+
+        {seqs.length > 0 && <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', margin: '18px 0 8px' }}>🧩 Fluxos em blocos</div>}
+        {seqs.map(function(f) {
+          const cn = seqConexoes.find(function(c) { return c.id === f.connection_id })
+          const g = f.trigger
+          const gat = g.tipo === 'palavra' ? 'Palavra: ' + (g.palavras.length ? g.palavras.join(', ') : '…') : 'Evento: ' + nomeEvento(g.evento) + (g.metodo ? ' · ' + g.metodo : '')
+          const msgs = f.steps.filter(function(x) { return x.tipo !== 'atraso' }).length
+          const entraram = ((seqStats[f.id] || { runs: [] }).runs || []).reduce(function(a, r) { return a + r.n }, 0)
+          return (
+            <div key={f.id} onClick={function() { setEditSeq(f); setTela('construtor') }} style={{ cursor: 'pointer', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 14, marginBottom: 10, opacity: f.enabled ? 1 : 0.75 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--accent-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>🧩</div>
+                <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+                  <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--text)' }}>{f.name}</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginTop: 2 }}>{gat}{cn ? ' · ' + cn.name : ''}</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text)', marginTop: 4 }}>{msgs} mensagem(ns) · {f.steps.length - msgs} atraso(s) · {entraram} pessoa(s) entraram</div>
+                </div>
+                <span style={chip(f.enabled, true)}>{f.enabled ? '● Ligado' : '○ Desligado'}</span>
+                <span style={{ color: 'var(--accent)', fontWeight: 800, fontSize: 13.5 }}>Abrir ›</span>
+              </div>
             </div>
           )
         })}
