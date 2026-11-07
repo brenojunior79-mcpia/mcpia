@@ -10,6 +10,9 @@ import { REGRA_COMPRA_WHATSAPP, MENSAGEM_PRIMEIRO_ACESSO, pediuConsultarCompra, 
 import { REGRA_ASSINATURA_WHATSAPP, pediuVerificarAssinatura, removerMarcaAssinatura, emailsDaMarcaAssinatura, verificarAssinaturaPeloJunior } from '@/lib/juniorAssinatura'
 
 const MARCA_HUMANO = '[[HUMANO]]'
+// Aviso que o construtor de fluxos deixa na conversa quando passa a conversa para o Junior (ele continua sem cumprimentar de novo)
+export const MARCA_FLUXO_IA = '🤖 O fluxo passou a conversa para o Júnior'
+const REGRA_SEM_SAUDACAO = `# CONTINUACAO DE CONVERSA (SEM SAUDACAO)\nUm fluxo automatico acabou de passar esta conversa para voce. A conversa JA ESTA EM ANDAMENTO: a pessoa ja foi cumprimentada. NAO cumprimente (nada de "Oi", "Ola", "Bom dia/tarde/noite"), NAO se apresente e NAO diga que esta assumindo a conversa. Responda direto ao que a pessoa acabou de dizer e continue de onde as mensagens acima pararam, no mesmo tom.`
 const MARCA_FIM = '[[FIM]]'
 const MARCA_COMPROU = '[[JA_COMPROU]]'
 const MARCA_VIDEO = '[[VIDEO_APP]]'
@@ -292,6 +295,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
 
     const msgs: { role: 'user' | 'assistant'; content: any }[] = []
     for (const m of linhas) {
+      if (m.type === 'system' && String(m.body || '') === MARCA_FLUXO_IA) continue
       const txt = m.type === 'audio' && String(m.body || '').trim() ? '[audio transcrito] ' + String(m.body).trim() : (String(m.body || '').trim() || rotuloTipo(String(m.type || '')))
       if (!txt) continue
       const role = m.direction === 'in' ? 'user' : 'assistant'
@@ -364,6 +368,13 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     // Eventos reais da pessoa (Hubla e plataforma): o Junior entende o momento dela antes de responder
     const blocoEventos = await eventosDaPessoa(admin, { waId, profileId: conv.profile_id || null })
     if (blocoEventos) system = system + '\n\n' + blocoEventos
+
+    // O fluxo passou a conversa para o Junior e ele ainda nao respondeu depois disso: continua sem cumprimentar
+    {
+      let iMarca = -1
+      for (let i = linhas.length - 1; i >= 0; i--) { if (linhas[i].type === 'system' && String(linhas[i].body || '') === MARCA_FLUXO_IA) { iMarca = i; break } }
+      if (iMarca >= 0 && !linhas.slice(iMarca + 1).some(function(m) { return m.direction === 'out' && m.type !== 'system' })) system = system + '\n\n' + REGRA_SEM_SAUDACAO
+    }
 
     // Video "App" (resposta rapida salva no canal de recuperacao): so uma vez por conversa
     const jaVideo = linhas.some(function(m) { return m.direction === 'out' && m.type === 'video' })

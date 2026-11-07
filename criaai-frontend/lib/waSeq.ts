@@ -5,6 +5,7 @@ import { normalizarNumero, primeiroNome } from '@/lib/waBroadcast'
 import { casaPalavra, aplicaNome } from '@/lib/waFlows'
 import { classificar } from '@/lib/waMedia'
 import { EVENTOS, type Metodo } from '@/lib/waAutoTipos'
+import { responderUltimaPendente, MARCA_FLUXO_IA } from '@/lib/waIA'
 import { COMPRA, LIMITE, lerEvento, passaFiltro, enviar, textoDoModelo, jaPagou } from '@/lib/waAuto'
 import { MAX_ATRASO_S, segundosDoAtraso, type PassoSeq, type Sequencia, type Unidade } from '@/lib/waSeqTipos'
 
@@ -48,6 +49,8 @@ export function validarSeq(input: any): { ok: true; seq: Sequencia } | { ok: fal
       const valor = Math.max(0, Math.round(Number(s.valor) || 0))
       if (valor > 0 && segundosDoAtraso({ valor, unidade }) > MAX_ATRASO_S) return { ok: false, erro: 'O limite de espera pela resposta é de até 30 dias.' }
       steps.push({ id, tipo: 'resposta', valor, unidade, aoExpirar: s.aoExpirar === 'continuar' ? 'continuar' : 'encerrar' })
+    } else if (s?.tipo === 'ia') {
+      steps.push({ id, tipo: 'ia' })
     } else if (s?.tipo === 'texto') {
       const texto = String(s.texto || '').slice(0, 4000)
       steps.push({ id, tipo: 'texto', texto })
@@ -85,8 +88,11 @@ export function validarSeq(input: any): { ok: true; seq: Sequencia } | { ok: fal
 export function erroParaLigar(seq: Sequencia): string {
   if (!seq.connection_id) return 'Escolha o número de WhatsApp do fluxo antes de ligar.'
   if (seq.trigger.tipo === 'palavra' && seq.trigger.palavras.length === 0) return 'Escreva a palavra que inicia o fluxo antes de ligar.'
-  const envios = seq.steps.filter(function(s) { return s.tipo !== 'atraso' && s.tipo !== 'resposta' })
+  const envios = seq.steps.filter(function(s) { return s.tipo !== 'atraso' && s.tipo !== 'resposta' && s.tipo !== 'ia' })
   if (envios.length === 0) return 'Adicione pelo menos uma mensagem ao fluxo antes de ligar.'
+  for (let i = 0; i < seq.steps.length - 1; i++) {
+    if (seq.steps[i].tipo === 'ia') return 'O bloco "Transferir para a IA" precisa ser o último do fluxo (depois dele quem conversa é a IA).'
+  }
   for (const s of seq.steps) {
     if (s.tipo === 'texto' && !s.texto.trim()) return 'Tem uma mensagem de texto vazia no fluxo.'
     if ((s.tipo === 'audio' || s.tipo === 'imagem' || s.tipo === 'video') && !s.path) return 'Tem um bloco de ' + (s.tipo === 'audio' ? 'áudio' : s.tipo) + ' sem arquivo.'
@@ -336,6 +342,19 @@ export async function processarSequencias(admin: any, token: string): Promise<{ 
         // Fica esperando a pessoa responder (ate o limite escolhido, ou ate 30 dias)
         const seg = s.valor > 0 ? Math.max(1, segundosDoAtraso(s)) : MAX_ATRASO_S
         await fim('ativo', null, { step_index: idx + 1, next_run_at: new Date(Date.now() + seg * 1000).toISOString(), data: { ...(run.data || {}), aguarda_resposta: true, aguarda_acao: s.valor > 0 ? s.aoExpirar : 'encerrar' } })
+        parou = true
+        break
+      }
+      if (s.tipo === 'ia') {
+        // Passa a conversa para o Junior: liga a IA nesta conversa e ele responde a ultima mensagem da pessoa (se estiver sem resposta), sem cumprimentar de novo
+        const conv = await acharConversa(admin, sq.connection_id, run.wa_id)
+        if (!conv) { await fim('concluido', null, { step_index: idx + 1 }); parou = true; break }
+        try {
+          await admin.from('wa_conversations').update({ ia_ativa: true, ia_humano: false }).eq('id', conv.id)
+          await admin.from('wa_messages').insert({ conversation_id: conv.id, direction: 'out', type: 'system', body: MARCA_FLUXO_IA, status: 'sent', sent_by: null, created_at: new Date().toISOString() })
+          await responderUltimaPendente(admin, conv.id)
+        } catch (e) { console.error('[wa-seq] transferir para IA:', e) }
+        await fim('concluido', null, { step_index: idx + 1 })
         parou = true
         break
       }
