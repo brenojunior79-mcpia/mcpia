@@ -78,12 +78,12 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
   const [seq, setSeq] = useState<Sequencia>(inicial)
   const [id, setId] = useState<string | undefined>(inicial.id)
   const [sel, setSel] = useState<string>('gatilho')
-  const [menu, setMenu] = useState<number | null>(null) // -1 = depois do gatilho; i = depois do bloco i
+  const [menu, setMenu] = useState<{ i: number; x: number; y: number } | null>(null) // i: -1 = depois do gatilho; i = depois do bloco i (x,y = onde abrir, na tela)
   const [sujo, setSujo] = useState(!inicial.id)
   const [salvando, setSalvando] = useState(false)
   const [msg, setMsg] = useState('')
   const [ok, setOk] = useState('')
-  const [zoom, setZoom] = useState(1)
+  const [view, setView] = useState({ x: 24, y: 8, k: 1 })
   const [alturas, setAlturas] = useState<Record<string, number>>({})
   const [palavrasTxt, setPalavrasTxt] = useState((inicial.trigger.tipo === 'palavra' ? inicial.trigger.palavras : []).join(', '))
   const [modelos, setModelos] = useState<Modelo[]>([])
@@ -97,7 +97,9 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
   const [testando, setTestando] = useState(false)
   const area = useRef<HTMLDivElement>(null)
   const refs = useRef<Record<string, HTMLDivElement | null>>({})
-  const arrasto = useRef<{ x: number; y: number; sl: number; st: number } | null>(null)
+  const arrasto = useRef<{ x: number; y: number; vx: number; vy: number; moveu: boolean; id: number } | null>(null)
+  const viewRef = useRef(view)
+  viewRef.current = view
 
   // Escolhe sozinho o numero quando so existe um ativo
   useEffect(function() {
@@ -144,6 +146,8 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
     const p = novoPasso(tipo)
     mudar(function(s) { const l = s.steps.slice(); l.splice(depoisDe + 1, 0, p); return { ...s, steps: l } })
     setMenu(null); setSel(p.id)
+    const k = depoisDe + 2
+    setTimeout(function() { mostrarNo(k) }, 30)
   }
   function duplicar(i: number) {
     const o = seq.steps[i]
@@ -226,20 +230,91 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
   const largura = 40 + nos.length * (W + GAP) + 380
   const altura = Math.max(...nos.map(function(n, k) { return pos[k].y + h(n.key) })) + 140
 
-  function aoPressionar(e: React.MouseEvent) {
-    if ((e.target as HTMLElement).closest('[data-bloco]') || (e.target as HTMLElement).closest('[data-ctl]')) return
+  // ---------- mover e dar zoom no quadro ----------
+  function limita(k: number) { return Math.min(2, Math.max(0.3, k)) }
+  function zoomEm(cx: number, cy: number, fator: number) {
+    setView(function(v) {
+      const k = limita(v.k * fator)
+      const r = k / v.k
+      return { k, x: cx - (cx - v.x) * r, y: cy - (cy - v.y) * r }
+    })
+  }
+  function zoomCentro(fator: number) {
     const el = area.current
     if (!el) return
-    arrasto.current = { x: e.clientX, y: e.clientY, sl: el.scrollLeft, st: el.scrollTop }
+    zoomEm(el.clientWidth / 2, el.clientHeight / 2, fator)
+  }
+  function ajustar() {
+    const el = area.current
+    if (!el) return
+    const cw = el.clientWidth, ch = el.clientHeight
+    const cw2 = pos[pos.length - 1].x + W + 60
+    const ch2 = altura - 90
+    const k = limita(Math.min(1, (cw - 32) / cw2, (ch - 32) / ch2))
+    setView({ k, x: 16, y: Math.max(8, (ch - ch2 * k) / 2) })
+  }
+  function cem() { setView({ x: 24, y: 8, k: 1 }) }
+  // Traz um bloco para a parte visivel do quadro (depois de adicionar)
+  function mostrarNo(k: number) {
+    const el = area.current
+    if (!el) return
+    const v = viewRef.current
+    const xd = 40 + k * (W + GAP)
+    const direita = v.x + (xd + W + 24) * v.k
+    const esquerda = v.x + (xd - 24) * v.k
+    let nx = v.x
+    if (direita > el.clientWidth) nx = el.clientWidth - (xd + W + 24) * v.k
+    if (esquerda + (nx - v.x) < 0) nx = -(xd - 24) * v.k
+    if (nx !== v.x) setView({ ...v, x: nx })
+  }
+  function aoPressionar(e: React.PointerEvent) {
+    if ((e.target as HTMLElement).closest('[data-ctl]')) return
+    if (e.button !== undefined && e.button > 0 && e.button !== 1) return
+    arrasto.current = { x: e.clientX, y: e.clientY, vx: viewRef.current.x, vy: viewRef.current.y, moveu: false, id: e.pointerId }
     setMenu(null)
   }
-  function aoMover(e: React.MouseEvent) {
-    const a = arrasto.current, el = area.current
-    if (!a || !el) return
-    el.scrollLeft = a.sl - (e.clientX - a.x)
-    el.scrollTop = a.st - (e.clientY - a.y)
+  function aoMover(e: React.PointerEvent) {
+    const a = arrasto.current
+    if (!a) return
+    const dx = e.clientX - a.x, dy = e.clientY - a.y
+    if (!a.moveu) {
+      if (Math.hypot(dx, dy) < 5) return
+      a.moveu = true
+      try { (e.currentTarget as HTMLElement).setPointerCapture(a.id) } catch (err) {}
+    }
+    setView(function(v) { return { ...v, x: a.vx + dx, y: a.vy + dy } })
   }
   function soltar() { arrasto.current = null }
+
+  // Roda do mouse: rola o quadro. Ctrl (ou Cmd) + roda, ou o gesto de pinca do touchpad: zoom na posicao do mouse.
+  useEffect(function() {
+    const el = area.current
+    if (!el) return
+    function roda(e: WheelEvent) {
+      e.preventDefault()
+      const r = el!.getBoundingClientRect()
+      if (e.ctrlKey || e.metaKey) zoomEm(e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * 0.01))
+      else setView(function(v) { return { ...v, x: v.x - e.deltaX, y: v.y - e.deltaY } })
+    }
+    el.addEventListener('wheel', roda, { passive: false })
+    return function() { el.removeEventListener('wheel', roda) }
+  }, [])
+
+  // Esc fecha o menu de blocos
+  useEffect(function() {
+    function tecla(e: KeyboardEvent) { if (e.key === 'Escape') setMenu(null) }
+    window.addEventListener('keydown', tecla)
+    return function() { window.removeEventListener('keydown', tecla) }
+  }, [])
+
+  // Ao abrir: se o fluxo for largo, ajusta para caber na tela
+  useEffect(function() {
+    const t = setTimeout(function() {
+      const el = area.current
+      if (el && pos[pos.length - 1].x + W + 60 > el.clientWidth) ajustar()
+    }, 60)
+    return function() { clearTimeout(t) }
+  }, [])
 
   const g = seq.trigger
   const evento = g.tipo === 'evento' ? EVENTOS.find(function(x) { return x.k === g.evento }) : null
@@ -285,21 +360,8 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
             {p && <button data-ctl="1" title="Duplicar bloco" onClick={function(e) { e.stopPropagation(); duplicar(n.i) }} style={miniBtn}>⧉</button>}
             {p && <button data-ctl="1" title="Apagar bloco" onClick={function(e) { e.stopPropagation(); remover(n.i) }} style={miniBtn}>🗑</button>}
           </div>
-          <button data-ctl="1" title="Adicionar o próximo bloco" onClick={function(e) { e.stopPropagation(); setMenu(menu === n.i ? null : n.i) }} style={{ cursor: 'pointer', width: 30, height: 30, borderRadius: 99, border: 0, background: '#3f3f46', color: '#fff', fontSize: 20, lineHeight: '28px', fontWeight: 700, padding: 0 }}>+</button>
+          <button data-ctl="1" title="Adicionar o próximo bloco" onClick={function(e) { e.stopPropagation(); if (menu && menu.i === n.i) { setMenu(null); return } const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); setMenu({ i: n.i, x: r.right + 12, y: r.top }) }} style={{ cursor: 'pointer', width: 30, height: 30, borderRadius: 99, border: 0, background: '#3f3f46', color: '#fff', fontSize: 20, lineHeight: '28px', fontWeight: 700, padding: 0 }}>+</button>
         </div>
-        {menu === n.i && (
-          <div data-ctl="1" onClick={function(e) { e.stopPropagation() }} style={{ position: 'absolute', left: W + 14, bottom: 0, width: 270, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, boxShadow: '0 10px 30px rgba(0,0,0,0.18)', zIndex: 30, padding: 6 }}>
-            <div style={{ ...etiqueta, padding: '6px 8px' }}>Adicionar bloco</div>
-            {MENU.map(function(m) {
-              return (
-                <button key={m.tipo} onClick={function() { adicionar(n.i, m.tipo) }} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', border: 0, background: 'transparent', color: 'var(--text)', padding: '8px', borderRadius: 8 }}>
-                  <span style={{ width: 32, height: 32, borderRadius: 8, background: m.cor + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{m.icone}</span>
-                  <span><span style={{ display: 'block', fontWeight: 800, fontSize: 13 }}>{ROTULO_TIPO[m.tipo]}</span><span style={{ display: 'block', fontSize: 11.5, color: 'var(--muted2)' }}>{m.desc}</span></span>
-                </button>
-              )
-            })}
-          </div>
-        )}
       </div>
     )
   }
@@ -451,7 +513,6 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
     )
   }
 
-  const zoomStyle: any = { zoom }
   return (
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       <style>{`
@@ -487,9 +548,9 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
       )}
       <div className="cb-corpo">
         <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
-          <div ref={area} onMouseDown={aoPressionar} onMouseMove={aoMover} onMouseUp={soltar} onMouseLeave={soltar}
-            style={{ position: 'absolute', inset: 0, overflow: 'auto', background: 'var(--surface2)', backgroundImage: 'radial-gradient(var(--border) 1px, transparent 1px)', backgroundSize: '22px 22px', cursor: 'grab' }}>
-            <div style={{ position: 'relative', width: largura, height: altura, ...zoomStyle }}>
+          <div ref={area} onPointerDown={aoPressionar} onPointerMove={aoMover} onPointerUp={soltar} onPointerCancel={soltar}
+            style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: 'var(--surface2)', backgroundImage: 'radial-gradient(var(--border) 1px, transparent 1px)', backgroundSize: (22 * view.k) + 'px ' + (22 * view.k) + 'px', backgroundPosition: view.x + 'px ' + view.y + 'px', cursor: arrasto.current && arrasto.current.moveu ? 'grabbing' : 'grab', userSelect: 'none', WebkitUserSelect: 'none', touchAction: 'none' }}>
+            <div style={{ position: 'absolute', left: 0, top: 0, width: largura, height: altura, transformOrigin: '0 0', transform: 'translate(' + view.x + 'px, ' + view.y + 'px) scale(' + view.k + ')' }}>
               <svg width={largura} height={altura} style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none' }}>
                 {nos.slice(0, -1).map(function(n, k) {
                   const x1 = pos[k].x + W
@@ -504,13 +565,28 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
             </div>
           </div>
           <div data-ctl="1" style={{ position: 'absolute', left: 12, bottom: 12, display: 'flex', alignItems: 'center', gap: 4, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: 3, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-            <button onClick={function() { setZoom(function(z) { return Math.max(0.5, Math.round((z - 0.1) * 10) / 10) }) }} style={miniBtn}>−</button>
-            <span style={{ fontSize: 12.5, fontWeight: 800, minWidth: 34, textAlign: 'center', color: 'var(--text)' }}>{zoom.toFixed(2)}</span>
-            <button onClick={function() { setZoom(function(z) { return Math.min(1.3, Math.round((z + 0.1) * 10) / 10) }) }} style={miniBtn}>+</button>
+            <button title="Diminuir" onClick={function() { zoomCentro(1 / 1.2) }} style={miniBtn}>−</button>
+            <button title="Voltar para 100%" onClick={cem} style={{ ...miniBtn, width: 'auto', minWidth: 52, padding: '0 6px', fontSize: 12.5 }}>{view.k.toFixed(2)}</button>
+            <button title="Aumentar" onClick={function() { zoomCentro(1.2) }} style={miniBtn}>+</button>
+            <button title="Ajustar o fluxo à tela" onClick={ajustar} style={{ ...miniBtn, width: 'auto', padding: '0 8px', fontSize: 12.5 }}>Ajustar</button>
           </div>
+          <div data-ctl="1" style={{ position: 'absolute', right: 12, bottom: 12, fontSize: 11.5, color: 'var(--muted2)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 8px', pointerEvents: 'none' }}>Arraste para mover · Ctrl + roda para zoom</div>
         </div>
         <div className="cb-painel">{painel()}</div>
       </div>
+      {menu && (
+        <div data-ctl="1" style={{ position: 'fixed', left: Math.max(8, Math.min(menu.x, (typeof window !== 'undefined' ? window.innerWidth : 1200) - 290)), top: Math.max(8, Math.min(menu.y, (typeof window !== 'undefined' ? window.innerHeight : 800) - 380)), width: 270, maxHeight: 'calc(100vh - 16px)', overflowY: 'auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, boxShadow: '0 10px 30px rgba(0,0,0,0.22)', zIndex: 1000, padding: 6 }}>
+          <div style={{ ...etiqueta, padding: '6px 8px' }}>Adicionar bloco</div>
+          {MENU.map(function(m) {
+            return (
+              <button key={m.tipo} onClick={function() { adicionar(menu.i, m.tipo) }} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', border: 0, background: 'transparent', color: 'var(--text)', padding: '8px', borderRadius: 8 }}>
+                <span style={{ width: 32, height: 32, borderRadius: 8, background: m.cor + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{m.icone}</span>
+                <span><span style={{ display: 'block', fontWeight: 800, fontSize: 13 }}>{ROTULO_TIPO[m.tipo]}</span><span style={{ display: 'block', fontSize: 11.5, color: 'var(--muted2)' }}>{m.desc}</span></span>
+              </button>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
