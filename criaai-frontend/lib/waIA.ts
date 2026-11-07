@@ -5,6 +5,7 @@ import { phoneIdDaConversa, postMessage } from '@/lib/whatsapp'
 import { agoraNoFuso } from '@/lib/waHours'
 import { REGRA_EXPRESS_WHATSAPP, pediuLiberarExpress, removerMarcaExpress, liberarExpressPeloJunior, emailDaMarca } from '@/lib/juniorExpress'
 import { eventosDaPessoa } from '@/lib/juniorEventos'
+import { falouEmReembolso, AVISO_REEMBOLSO } from '@/lib/juniorReembolso'
 import { REGRA_COMPRA_WHATSAPP, MENSAGEM_PRIMEIRO_ACESSO, pediuConsultarCompra, removerMarcaCompra, dadosDaMarcaCompra, consultarCompraPeloJunior } from '@/lib/juniorCompra'
 import { REGRA_ASSINATURA_WHATSAPP, pediuVerificarAssinatura, removerMarcaAssinatura, emailsDaMarcaAssinatura, verificarAssinaturaPeloJunior } from '@/lib/juniorAssinatura'
 
@@ -265,6 +266,29 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     // Se ja chegou mensagem mais nova, ela mesma sera respondida (com a conversa completa)
     const ultimaIn = [...linhas].reverse().find(function(m) { return m.direction === 'in' })
     if (!ultimaIn || String(ultimaIn.id) !== String(msgId)) return true
+
+    // REEMBOLSO: o assistente nao responde. Se a pessoa falou em reembolso desde a ultima resposta, deixa um aviso e a conversa com o dono (Breno) responder
+    {
+      let falou = false
+      let jaAvisou = false
+      for (let i = linhas.length - 1; i >= 0; i--) {
+        const m = linhas[i]
+        if (m.direction === 'out' && m.type === 'system') { if (String(m.body || '') === AVISO_REEMBOLSO) jaAvisou = true; continue }
+        if (m.direction !== 'in') break
+        if (falouEmReembolso(String(m.body || ''))) falou = true
+      }
+      if (falou) {
+        try {
+          if (!jaAvisou) await admin.from('wa_messages').insert({ conversation_id: convId, direction: 'out', type: 'system', body: AVISO_REEMBOLSO, status: 'sent', sent_by: null, created_at: new Date().toISOString() })
+          const atual = await admin.from('wa_conversations').select('assigned_to').eq('id', convId).maybeSingle()
+          if (atual.data && !(atual.data as any).assigned_to) {
+            const dono = await admin.from('profiles').select('id').eq('is_admin', true).order('created_at', { ascending: true }).limit(1).maybeSingle()
+            if (dono.data?.id) await admin.from('wa_conversations').update({ assigned_to: (dono.data as any).id }).eq('id', convId)
+          }
+        } catch (e) { /* o aviso e so conforto */ }
+        return true
+      }
+    }
 
     const msgs: { role: 'user' | 'assistant'; content: any }[] = []
     for (const m of linhas) {

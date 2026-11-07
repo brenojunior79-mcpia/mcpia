@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase-server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 import { regraExpressChat, pediuLiberarExpress, removerMarcaExpress, liberarExpressPeloJunior } from '@/lib/juniorExpress'
 import { eventosDaPessoa } from '@/lib/juniorEventos'
+import { falouEmReembolso } from '@/lib/juniorReembolso'
 import { REGRA_COMPRA_CHAT, pediuConsultarCompra, removerMarcaCompra, dadosDaMarcaCompra, consultarCompraPeloJunior } from '@/lib/juniorCompra'
 import { REGRA_ASSINATURA_CHAT, pediuVerificarAssinatura, removerMarcaAssinatura, emailsDaMarcaAssinatura, verificarAssinaturaPeloJunior } from '@/lib/juniorAssinatura'
 
@@ -84,6 +85,12 @@ export async function POST(req: NextRequest) {
     // Se um atendente humano assumiu a conversa, o Junior nao responde: so guarda a mensagem do aluno
     const takeoverResult = await supabase.from('chat_takeovers').select('active').eq('user_id', user.id).maybeSingle()
     if (takeoverResult.data?.active === true) {
+      await saveConversation(null)
+      return NextResponse.json({ reply: null, human: true })
+    }
+
+    // Reembolso: o Junior nao responde, so guarda a mensagem para o Breno responder
+    if (messages.length > 0 && messages[messages.length - 1].role === 'user' && falouEmReembolso(messages[messages.length - 1].content)) {
       await saveConversation(null)
       return NextResponse.json({ reply: null, human: true })
     }
