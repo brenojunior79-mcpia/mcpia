@@ -85,3 +85,11 @@ com um assistente de IA chamado **Júnior**.
 - Textos para alunos: simples, curtos, sem termos técnicos em inglês (se precisar de um, explique).
 - Dados dos alunos são pessoais: não registre tokens, senhas ou conteúdo de conversas em logs.
 - Alterações no banco (Supabase) devem ser pedidas ao Breno ou feitas por migração revisada; nunca apague dados sem confirmação.
+
+## Construtor visual de fluxos do WhatsApp (Atendimento > Fluxos > + Novo fluxo > Fluxo em blocos)
+- Tabelas: `wa_sequencias` (fluxo: gatilho e blocos em JSON), `wa_seq_runs` (cada pessoa dentro de um fluxo), `wa_seq_sends` (cada envio, com entregue/lido/falha vindos do webhook). Funcoes: `wa_seq_claim`, `wa_seq_stats`.
+- Codigo: `lib/waSeq.ts` (validacao, gatilhos, motor), `lib/waSeqTipos.ts` (tipos), `components/whatsapp/ConstrutorFluxo.tsx` (tela em blocos), rotas `app/api/whatsapp/seq/*`.
+- Gatilhos: palavra enviada (numero de Recuperacao, repete so apos 12 h; o assistente nao responde essa mensagem) e eventos da Hubla (via `tratarEventoSequencias` no webhook da Hubla).
+- Blocos: atraso (1 s a 30 dias), texto, audio, imagem, video (so dentro de 24 h da ultima mensagem da pessoa) e modelo aprovado.
+- Motor: pg_cron `wa-seq-run` a cada 15 s chama `/api/whatsapp/seq/run` (mesmo segredo `x-auto-secret`).
+- Os fluxos antigos por evento (`wa_auto_flows`: "Pix Gerado" e "Aprovada") continuam separados e rodando em `lib/waAuto.ts`.
