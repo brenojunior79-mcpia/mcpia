@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 import { regraExpressChat, pediuLiberarExpress, removerMarcaExpress, liberarExpressPeloJunior } from '@/lib/juniorExpress'
+import { eventosDaPessoa } from '@/lib/juniorEventos'
 import { REGRA_COMPRA_CHAT, pediuConsultarCompra, removerMarcaCompra, dadosDaMarcaCompra, consultarCompraPeloJunior } from '@/lib/juniorCompra'
 import { REGRA_ASSINATURA_CHAT, pediuVerificarAssinatura, removerMarcaAssinatura, emailsDaMarcaAssinatura, verificarAssinaturaPeloJunior } from '@/lib/juniorAssinatura'
 
@@ -43,6 +44,13 @@ export async function POST(req: NextRequest) {
     if (sit) systemContent = systemContent + '\n\n' + sit
     // Final da conversa alternado (R$200 no Pix ou Estrutura Express com cupom, so para quem nao tem a Express); muda a cada dia
     systemContent = systemContent + '\n\n' + situacaoFinalConversa(tipoFinalConversa(jaTemExpress || profileResult.data?.is_admin === true, user.id + new Date().toISOString().slice(0, 10)))
+
+    // Eventos reais do aluno (Hubla e plataforma): o Junior entende o momento dele antes de responder
+    try {
+      const dbEv: any = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } })
+      const blocoEventos = await eventosDaPessoa(dbEv, { emails: [user.email || ''], profileId: user.id })
+      if (blocoEventos) systemContent = systemContent + '\n\n' + blocoEventos
+    } catch (e) {}
 
     // Salva a mensagem do aluno (e a resposta do Junior, se houver) para o monitoramento
     const saveConversation = async function(replyText: string | null) {

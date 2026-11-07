@@ -4,6 +4,7 @@ import { REGRA_RESPONSAVEL, JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, sit
 import { phoneIdDaConversa, postMessage } from '@/lib/whatsapp'
 import { agoraNoFuso } from '@/lib/waHours'
 import { REGRA_EXPRESS_WHATSAPP, pediuLiberarExpress, removerMarcaExpress, liberarExpressPeloJunior, emailDaMarca } from '@/lib/juniorExpress'
+import { eventosDaPessoa } from '@/lib/juniorEventos'
 import { REGRA_COMPRA_WHATSAPP, MENSAGEM_PRIMEIRO_ACESSO, pediuConsultarCompra, removerMarcaCompra, dadosDaMarcaCompra, consultarCompraPeloJunior } from '@/lib/juniorCompra'
 import { REGRA_ASSINATURA_WHATSAPP, pediuVerificarAssinatura, removerMarcaAssinatura, emailsDaMarcaAssinatura, verificarAssinaturaPeloJunior } from '@/lib/juniorAssinatura'
 
@@ -335,6 +336,10 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     if (!ehAluna) system = REGRA_NAO_ALUNA + '\n\n' + system + '\n\n' + REGRA_NAO_ALUNA
     system = system + '\n\nEstrutura Express desta pessoa: ' + (temExpress === true ? 'JA TEM acesso liberado no sistema.' : temExpress === false ? 'o sistema NAO achou compra nem liberacao da Estrutura Express nesta conta.' : 'o sistema NAO sabe (conta nao identificada).')
     system = system + '\n\nConta identificada: ' + (conv.profile_id ? 'SIM (o sistema ja sabe quem e a pessoa; nao peca e-mail).' : ehAluna ? 'NAO (peca o e-mail da plataforma antes de liberar).' : 'NAO, e ela ainda nao e aluna (nao peca e-mail para liberar nada; so pergunte o e-mail da compra se ela disser que ja comprou).')
+
+    // Eventos reais da pessoa (Hubla e plataforma): o Junior entende o momento dela antes de responder
+    const blocoEventos = await eventosDaPessoa(admin, { waId, profileId: conv.profile_id || null })
+    if (blocoEventos) system = system + '\n\n' + blocoEventos
 
     // Video "App" (resposta rapida salva no canal de recuperacao): so uma vez por conversa
     const jaVideo = linhas.some(function(m) { return m.direction === 'out' && m.type === 'video' })
