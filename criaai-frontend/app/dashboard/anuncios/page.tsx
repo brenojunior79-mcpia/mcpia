@@ -200,8 +200,8 @@ export default function AnunciosPage() {
   const sobra = mFunil.valor - mFunil.gasto
   const fraseResultado = mFunil.gasto <= 0 && mFunil.compras <= 0 ? ''
     : mFunil.compras <= 0 ? 'Ainda sem vendas neste período.'
-    : sobra >= 0 ? 'Sobraram ' + reais(sobra) + ' depois de pagar o anúncio.'
-    : 'Ainda faltam ' + reais(-sobra) + ' para o anúncio se pagar.'
+    : sobra >= 0 ? 'Pelo Facebook, sobraram ' + reais(sobra) + ' depois de pagar o anúncio (ainda sem tirar as taxas de pagamento).'
+    : 'Pelo Facebook, ainda faltam ' + reais(-sobra) + ' para o anúncio se pagar.'
   const tomPainel = mFunil.compras > 0 && sobra >= 0
     ? { fundo: 'var(--green-light)', borda: 'rgba(22,163,74,0.30)', texto: 'var(--green)' }
     : mFunil.gasto > 0 ? { fundo: 'var(--surface)', borda: 'var(--border)', texto: 'var(--amber)' }
@@ -300,6 +300,7 @@ export default function AnunciosPage() {
 
                 {campaignsData && !campaignsLoading && (
                   <div style={{ ...cartao, padding: '22px 22px 18px', background: tomPainel.fundo, borderColor: tomPainel.borda }}>
+                    <div style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: 0.6, textTransform: 'uppercase', color: 'var(--muted2)', marginBottom: 6 }}>Resultado dos anúncios, contado pelo Facebook</div>
                     <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 'clamp(20px, 4.6vw, 27px)', lineHeight: 1.25, letterSpacing: '-0.01em' }}>
                       {rotuloPeriodo}, {mFunil.gasto > 0 || mFunil.compras > 0 ? <>você investiu <span style={{ whiteSpace: 'nowrap' }}>{reais(mFunil.gasto)}</span> e vendeu <span style={{ whiteSpace: 'nowrap' }}>{reais(mFunil.valor)}</span>.</> : <>ainda não houve gasto nas campanhas.</>}
                     </div>
@@ -307,7 +308,7 @@ export default function AnunciosPage() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(128px, 1fr))', gap: 0, marginTop: 18, borderTop: '1px solid var(--border)' }}>
                       {([
                         ['Investido', reais(mFunil.gasto), 'em anúncios'],
-                        ['Vendido', reais(mFunil.valor), 'em vendas'],
+                        ['Vendido', reais(mFunil.valor), 'em vendas do anúncio'],
                         ['Vendas', String(mFunil.compras), mFunil.cpa !== null && mFunil.compras > 0 ? reais(mFunil.cpa) + ' cada' : 'no período'],
                         ['Retorno', mFunil.roas !== null ? reais(mFunil.roas) : '—', 'a cada R$ 1 investido'],
                       ] as [string, string, string][]).map(function(it, idx) {
@@ -327,6 +328,7 @@ export default function AnunciosPage() {
                       </select>
                       <button onClick={function() { loadCampaigns(); loadCriativos() }} disabled={campaignsLoading} style={{ ...sel, cursor: 'pointer', flex: '0 0 auto' }}>{campaignsLoading ? 'Atualizando...' : '🔄 Atualizar'}</button>
                     </div>
+                    {ehAdmin && <div style={{ marginTop: 12, fontSize: 12.5, lineHeight: 1.5, color: 'var(--muted2)' }}>Este quadro mostra só as vendas que o Facebook ligou aos anúncios. O dinheiro de verdade (todas as vendas aprovadas na Hubla e na Cakto, já sem as taxas) está nos 3 cartões logo abaixo, por isso os números podem ser diferentes.</div>}
                   </div>
                 )}
 

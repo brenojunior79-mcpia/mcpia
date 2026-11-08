@@ -10,9 +10,9 @@ type Resumo = {
 }
 
 const AJUDA: Record<string, string> = {
-  faturamento: 'Soma das vendas aprovadas de Mentoria e Estrutura Express (Hubla e Cakto) no período, sem os reembolsos.',
-  gasto: 'Quanto o Facebook cobrou de anúncios em todas as campanhas da conta no período.',
-  lucro: 'Valor que realmente sobra: vendas já sem as taxas da plataforma de pagamento, menos o gasto em anúncios.',
+  faturamento: 'Soma de TODAS as vendas aprovadas de Mentoria e Estrutura Express (Hubla e Cakto) no período, sem os reembolsos. Inclui vendas que o Facebook não consegue ligar ao anúncio, por isso pode ser maior que o "Vendido" do quadro de cima.',
+  gasto: 'Quanto o Facebook cobrou de anúncios em TODAS as campanhas da conta no período (o quadro de cima soma só as campanhas ativas).',
+  lucro: 'O lucro de verdade: vendas já sem as taxas da plataforma de pagamento, menos o gasto em anúncios. É este número que sobra no seu bolso.',
 }
 
 function variacao(atual: number | null, anterior: number | null): number | null {
@@ -52,11 +52,15 @@ export default function ResumoFinanceiro({ periodo }: { periodo: string }) {
   const cards: { id: string; titulo: string; valor: string; selo: React.ReactNode; nota: string }[] = dados ? [
     { id: 'faturamento', titulo: 'Faturamento', valor: moeda(dados.faturamento.valor), selo: <Selo pct={variacao(dados.faturamento.valor, dados.faturamento.anterior)} rotulo={dados.rotuloComparacao} tipo="alta-boa" />, nota: inteiro(dados.faturamento.vendas) + (dados.faturamento.vendas === 1 ? ' venda aprovada' : ' vendas aprovadas') },
     { id: 'gasto', titulo: 'Gasto em anúncios', valor: dados.gasto.valor === null ? '—' : moeda(dados.gasto.valor), selo: <Selo pct={variacao(dados.gasto.valor, dados.gasto.anterior)} rotulo={dados.rotuloComparacao} tipo="neutro" />, nota: 'Cobrado pelo Meta' },
-    { id: 'lucro', titulo: 'Lucro', valor: dados.lucro.valor === null ? '—' : moeda(dados.lucro.valor), selo: <Selo pct={variacao(dados.lucro.valor, dados.lucro.anterior)} rotulo={dados.rotuloComparacao} tipo="alta-boa" />, nota: 'Já tirando anúncios e taxas' },
+    { id: 'lucro', titulo: 'Lucro de verdade', valor: dados.lucro.valor === null ? '—' : moeda(dados.lucro.valor), selo: <Selo pct={variacao(dados.lucro.valor, dados.lucro.anterior)} rotulo={dados.rotuloComparacao} tipo="alta-boa" />, nota: 'Já tirando anúncios e taxas de pagamento' },
   ] : []
 
   return (
     <div>
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 16, color: 'var(--text)' }}>Dinheiro de verdade (vendas aprovadas na Hubla e na Cakto)</div>
+        <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginTop: 2, lineHeight: 1.45 }}>Aqui entram todas as vendas pagas, já sem reembolsos e sem as taxas. É a conta certa do que você ganhou.</div>
+      </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
         {!dados && [0, 1, 2].map(function(i) { return <div key={i} style={{ ...cartao, minHeight: 130, opacity: 0.5 }} /> })}
         {cards.map(function(c) {
