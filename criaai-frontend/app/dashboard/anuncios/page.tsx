@@ -298,7 +298,23 @@ export default function AnunciosPage() {
                   })}
                 </div>
 
-                {campaignsData && !campaignsLoading && (
+                {campaignsData && !campaignsLoading && ehAdmin && (
+                  <>
+                    <ResumoFinanceiro periodo={periodo} />
+                    <div style={{ ...cartao, padding: '14px 16px' }}>
+                      <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginBottom: 8 }}>Escolha a campanha para ver o funil e as métricas logo abaixo.</div>
+                      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <select aria-label="Qual campanha mostrar" value={selecionada} onChange={function(e) { setSelecionada(e.target.value) }} style={{ ...sel, flex: '1 1 220px' }}>
+                        <option value="todas">{ativas.length ? 'Mostrando: todas as campanhas ativas' : 'Mostrando: todas as campanhas'}</option>
+                        {comDados.map(function(c) { return <option key={c.id} value={c.id}>{'Mostrando: ' + c.name}</option> })}
+                      </select>
+                      <button onClick={function() { loadCampaigns(); loadCriativos() }} disabled={campaignsLoading} style={{ ...sel, cursor: 'pointer', flex: '0 0 auto' }}>{campaignsLoading ? 'Atualizando...' : '🔄 Atualizar'}</button>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {campaignsData && !campaignsLoading && !ehAdmin && (
                   <div style={{ ...cartao, padding: '22px 22px 18px', background: tomPainel.fundo, borderColor: tomPainel.borda }}>
                     <div style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: 0.6, textTransform: 'uppercase', color: 'var(--muted2)', marginBottom: 6 }}>Resultado dos anúncios, contado pelo Facebook</div>
                     <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 'clamp(20px, 4.6vw, 27px)', lineHeight: 1.25, letterSpacing: '-0.01em' }}>
@@ -328,7 +344,6 @@ export default function AnunciosPage() {
                       </select>
                       <button onClick={function() { loadCampaigns(); loadCriativos() }} disabled={campaignsLoading} style={{ ...sel, cursor: 'pointer', flex: '0 0 auto' }}>{campaignsLoading ? 'Atualizando...' : '🔄 Atualizar'}</button>
                     </div>
-                    {ehAdmin && <div style={{ marginTop: 12, fontSize: 12.5, lineHeight: 1.5, color: 'var(--muted2)' }}>Este quadro mostra só as vendas que o Facebook ligou aos anúncios. O dinheiro de verdade (todas as vendas aprovadas na Hubla e na Cakto, já sem as taxas) está nos 3 cartões logo abaixo, por isso os números podem ser diferentes.</div>}
                   </div>
                 )}
 
@@ -337,8 +352,6 @@ export default function AnunciosPage() {
 
                 {campaignsData && !campaignsLoading && (
                   <>
-                    {ehAdmin && <ResumoFinanceiro periodo={periodo} />}
-
                     <Funil m={mFunil} relatorio={relatorio} nomeCampanha={nomeFunil} />
 
                     <div>
