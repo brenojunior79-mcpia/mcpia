@@ -3,6 +3,7 @@
 // e tambem para quem ainda nao tem o plano Pro ou Premium.
 // Mostra primeiro uma imagem da aula com o botao de play (em vez de uma tela preta); o video so carrega quando a pessoa toca.
 import { useEffect, useState } from 'react'
+import { carregarPlayerJs } from '@/lib/vimeoAssistida'
 
 const VIDEO_ID = '1244797172'
 const URL_VIDEO = 'https://vimeo.com/' + VIDEO_ID
@@ -29,6 +30,11 @@ export default function AulaGerenciador({ titulo, recolhivel }: { titulo?: strin
           title="Aula: conhecendo o Gerenciador de Anúncios"
           allow="autoplay; fullscreen; picture-in-picture"
           allowFullScreen
+          onLoad={function(e) {
+            // A aula comeca SEM legenda (o aluno ainda pode ligar no botao CC do player)
+            const f = e.currentTarget
+            carregarPlayerJs().then(function(V) { const pl = new V.Player(f); pl.ready().then(function() { return pl.disableTextTrack() }).catch(function() {}) }).catch(function() {})
+          }}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 }}
         />
       ) : (

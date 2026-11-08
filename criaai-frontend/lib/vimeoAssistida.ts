@@ -3,7 +3,7 @@
 declare global { interface Window { Vimeo?: any } }
 
 let carregando: Promise<any> | null = null
-function carregarPlayerJs(): Promise<any> {
+export function carregarPlayerJs(): Promise<any> {
   if (typeof window === 'undefined') return Promise.reject()
   if (window.Vimeo && window.Vimeo.Player) return Promise.resolve(window.Vimeo)
   if (carregando) return carregando
