@@ -276,8 +276,8 @@ export default function Fluxos() {
           const cn = seqConexoes.find(function(c) { return c.id === f.connection_id })
           const g = f.trigger
           const gat = g.tipo === 'palavra' ? 'Palavra: ' + (g.palavras.length ? g.palavras.join(', ') : '…') : 'Evento: ' + nomeEvento(g.evento) + (g.metodo ? ' · ' + g.metodo : '')
-          const msgs = f.steps.filter(function(x) { return x.tipo !== 'atraso' }).length
-          const entraram = ((seqStats[f.id] || { runs: [] }).runs || []).reduce(function(a, r) { return a + r.n }, 0)
+          // Relatorio: quantos fluxos ja foram enviados (pessoas que passaram por todos os blocos)
+          const enviados = ((seqStats[f.id] || { runs: [] }).runs || []).filter(function(r) { return r.status === 'concluido' }).reduce(function(a, r) { return a + r.n }, 0)
           return (
             <div key={f.id} onClick={function() { setEditSeq(f); setTela('construtor') }} style={{ cursor: 'pointer', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 14, marginBottom: 10, opacity: f.enabled ? 1 : 0.75 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -285,7 +285,7 @@ export default function Fluxos() {
                 <div style={{ flex: '1 1 220px', minWidth: 0 }}>
                   <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--text)' }}>{f.name}</div>
                   <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginTop: 2 }}>{gat}{cn ? ' · ' + cn.name : ''}</div>
-                  <div style={{ fontSize: 12.5, color: 'var(--text)', marginTop: 4 }}>{msgs} mensagem(ns) · {f.steps.length - msgs} atraso(s) · {entraram} pessoa(s) entraram</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text)', marginTop: 4 }}>✅ {enviados} {enviados === 1 ? 'fluxo enviado' : 'fluxos enviados'}</div>
                 </div>
                 <span style={chip(f.enabled, true)}>{f.enabled ? '● Ligado' : '○ Desligado'}</span>
                 <span style={{ color: 'var(--accent)', fontWeight: 800, fontSize: 13.5 }}>Abrir ›</span>
