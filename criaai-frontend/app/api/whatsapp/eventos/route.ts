@@ -33,6 +33,18 @@ export async function GET(req: NextRequest) {
   const r = await qb
   if (r.error) return NextResponse.json({ error: 'Nao foi possivel carregar os eventos.' }, { status: 500 })
   let runs: any[] = r.data || []
+
+  // Fluxos NOVOS (construtor em blocos): entram na mesma lista, marcados com a origem 'seq'
+  let qs = admin.from('wa_seq_runs')
+    .select('id, seq_id, conversation_id, wa_id, email, name, event_type, data, status, error, created_at')
+    .eq('is_test', false)
+    .order('created_at', { ascending: false })
+    .limit(q ? 600 : 150)
+  if (tipo) qs = qs.eq('event_type', tipo)
+  const rs = await qs
+  const runsSeq: any[] = (rs.data || []).map(function(x: any) { return Object.assign({}, x, { _seq: true }) })
+  runs = runs.concat(runsSeq).sort(function(a, b) { return String(b.created_at).localeCompare(String(a.created_at)) }).slice(0, q ? 1200 : 150)
+
   if (q) {
     const qd = q.replace(/\D/g, '')
     runs = runs.filter(function(x) {
@@ -43,13 +55,15 @@ export async function GET(req: NextRequest) {
   const fl = await admin.from('wa_auto_flows').select('id, name, connection_id')
   const fluxos: Record<string, { name: string; connection_id: string | null }> = {}
   for (const f of (fl.data || []) as any[]) fluxos[f.id] = { name: f.name, connection_id: f.connection_id }
+  const sq = await admin.from('wa_sequencias').select('id, name, connection_id')
+  for (const f of (sq.data || []) as any[]) fluxos[f.id] = { name: f.name, connection_id: f.connection_id }
 
   // Conversa de cada pessoa (no chat de recuperacao do fluxo), achando com ou sem o 9
   const todas: string[] = []
   const conexoes: string[] = []
   for (const x of runs) {
     for (const v of variantes(x.wa_id)) if (todas.indexOf(v) === -1) todas.push(v)
-    const c = fluxos[x.flow_id]?.connection_id
+    const c = fluxos[x._seq ? x.seq_id : x.flow_id]?.connection_id
     if (c && conexoes.indexOf(c) === -1) conexoes.push(c)
   }
   const mapa: Record<string, string> = {}
@@ -59,7 +73,7 @@ export async function GET(req: NextRequest) {
   }
 
   const eventos = runs.map(function(x) {
-    const fx = fluxos[x.flow_id]
+    const fx = fluxos[x._seq ? x.seq_id : x.flow_id]
     const conn = fx?.connection_id || null
     return {
       id: x.id,
@@ -74,7 +88,7 @@ export async function GET(req: NextRequest) {
       sent_count: x.sent_count || 0,
       error: x.error || '',
       fluxo: fx?.name || '',
-      conversation_id: conn ? (mapa[conn + '|' + chave(x.wa_id)] || null) : null,
+      conversation_id: x.conversation_id || (conn ? (mapa[conn + '|' + chave(x.wa_id)] || null) : null),
     }
   })
   return NextResponse.json({ eventos })
