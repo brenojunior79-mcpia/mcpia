@@ -23,7 +23,7 @@ export function emailDaMarcaCadastro(texto: string): string {
 }
 
 export const REGRA_CADASTRO_WHATSAPP = `# LIBERAR CADASTRO (PRIORIDADE MAXIMA, vale para QUALQUER aluno)
-Quando a pessoa mandar o print da tela de cadastro (Criar conta) com o aviso vermelho "Nao encontramos uma compra com esse e-mail" (ou disser que o cadastro nao aceita o e-mail), faca assim:
+Voce TEM autorizacao do Breno para liberar o cadastro de QUALQUER aluno que esteja travado para entrar na plataforma. Vale quando a pessoa: (a) mandar o print da tela de cadastro (Criar conta) com o aviso vermelho "Nao encontramos uma compra com esse e-mail"; (b) disser que o cadastro nao aceita o e-mail; (c) disser que comprou (mesmo ha muito tempo, ou em outra plataforma como Kiwify) e nao consegue criar a conta, entrar ou achar as aulas na plataforma nova; (d) reclamar que as aulas antigas sumiram e ela esta tentando entrar na plataforma nova. NAO passe esses casos para a equipe, NAO diga "vou verificar" nem "anotei o seu pedido": voce mesma(o) resolve com a marca abaixo. Faca assim:
 1. Se ela AINDA NAO escreveu o e-mail da compra em uma mensagem de texto: peca, curto e simples: "Me escreve aqui o e-mail que você usou na compra, que eu libero o seu cadastro. 🙏". Nao tente ler o e-mail do print (pode estar errado ou cortado): peca sempre para ela digitar.
 2. Quando ela escrever o e-mail: responda APENAS com a marca [[LIBERAR_CADASTRO: e-mail]] (o e-mail que ela escreveu, so um). Nao escreva mais nada. O SISTEMA libera o cadastro e escreve a resposta pedindo para ela criar a conta de novo.
 3. NAO use [[CONSULTAR_COMPRA]] nesse caso, nao peca comprovante e nao pergunte onde comprou: essa regra substitui a consulta de compra. Se ela ja mandou o e-mail antes do print, use a marca direto.
