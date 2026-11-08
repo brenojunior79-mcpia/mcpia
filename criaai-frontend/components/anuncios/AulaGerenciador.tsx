@@ -26,14 +26,23 @@ export default function AulaGerenciador({ titulo, recolhivel }: { titulo?: strin
     <div style={{ position: 'relative', width: '100%', paddingTop: '56.25%', borderRadius: 14, overflow: 'hidden', background: '#1f1b4d' }}>
       {tocando ? (
         <iframe
-          src={'https://player.vimeo.com/video/' + VIDEO_ID + '?title=0&byline=0&portrait=0&dnt=1&autoplay=1'}
+          src={'https://player.vimeo.com/video/' + VIDEO_ID + '?title=0&byline=0&portrait=0&dnt=1&autoplay=1&muted=0'}
           title="Aula: conhecendo o Gerenciador de Anúncios"
           allow="autoplay; fullscreen; picture-in-picture"
           allowFullScreen
           onLoad={function(e) {
             // A aula comeca SEM legenda (o aluno ainda pode ligar no botao CC do player)
             const f = e.currentTarget
-            carregarPlayerJs().then(function(V) { const pl = new V.Player(f); pl.ready().then(function() { return pl.disableTextTrack() }).catch(function() {}) }).catch(function() {})
+            carregarPlayerJs().then(function(V) {
+              const pl = new V.Player(f)
+              pl.ready().then(function() {
+                pl.disableTextTrack().catch(function() {})
+                // O aluno acabou de tocar no play: liga o som e garante que o video esta tocando
+                pl.setMuted(false).catch(function() {})
+                pl.setVolume(1).catch(function() {})
+                pl.play().catch(function() {})
+              }).catch(function() {})
+            }).catch(function() {})
           }}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 }}
         />
