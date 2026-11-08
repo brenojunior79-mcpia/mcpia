@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import OpenAI from 'openai'
 import { bloqueioAnuncios } from '@/lib/acessoAnunciosServidor'
+import { RESUMO_TRAFEGO_ANALISE } from '@/lib/juniorTrafego'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
 
@@ -55,7 +56,7 @@ ${campaignsSummary}`
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
-        { role: 'system', content: 'Voce e um especialista em trafego pago e Facebook Ads, analisando dados reais de campanhas para dar recomendacoes praticas a um infoprodutor/afiliado brasileiro.' },
+        { role: 'system', content: RESUMO_TRAFEGO_ANALISE },
         { role: 'user', content: prompt },
       ],
       temperature: 0.6,
