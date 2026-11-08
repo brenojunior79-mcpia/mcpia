@@ -10,8 +10,8 @@ type Resumo = {
 }
 
 const AJUDA: Record<string, string> = {
-  faturamento: 'Soma de TODAS as vendas aprovadas de Mentoria e Estrutura Express (Hubla e Cakto) no período, sem os reembolsos. Inclui vendas que o Facebook não consegue ligar ao anúncio, por isso pode ser maior que o "Vendido" do quadro de cima.',
-  gasto: 'Quanto o Facebook cobrou de anúncios em TODAS as campanhas da conta no período (o quadro de cima soma só as campanhas ativas).',
+  faturamento: 'Soma de TODAS as vendas aprovadas de Mentoria e Estrutura Express (Hubla e Cakto) no período, sem os reembolsos. Inclui também vendas que o Facebook não consegue ligar ao anúncio.',
+  gasto: 'Quanto o Facebook cobrou de anúncios em TODAS as campanhas da conta no período.',
   lucro: 'O lucro de verdade: vendas já sem as taxas da plataforma de pagamento, menos o gasto em anúncios. É este número que sobra no seu bolso.',
 }
 
