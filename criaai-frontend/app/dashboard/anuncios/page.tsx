@@ -8,6 +8,9 @@ import ResumoFinanceiro from '@/components/anuncios/ResumoFinanceiro'
 import AnalisandoMetricas from '@/components/metricas/AnalisandoMetricas'
 import CampanhasTabela from '@/components/anuncios/CampanhasTabela'
 import CamilaAnuncios from '@/components/anuncios/CamilaAnuncios'
+
+// A Camila (assistente de voz) fica OCULTA por enquanto, para todos (inclusive admin). Para mostrar de novo (so admin), mude para true.
+const CAMILA_VISIVEL = false
 import CriativosAnuncios from '@/components/anuncios/CriativosAnuncios'
 import MetricasExplicadas from '@/components/anuncios/MetricasExplicadas'
 import { orcamentoDiario } from '@/components/anuncios/CampanhaCard'
@@ -259,7 +262,7 @@ export default function AnunciosPage() {
           </div>
         ) : (
           <>
-            {ehAdmin && <CamilaAnuncios onCriado={function() { loadCampaigns(periodo, true) }} />}
+            {CAMILA_VISIVEL && ehAdmin && <CamilaAnuncios onCriado={function() { loadCampaigns(periodo, true) }} />}
             <div style={{ ...cartao, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
               <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#1877f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <i className="ti ti-brand-facebook" style={{ color: '#fff', fontSize: 18 }} />
