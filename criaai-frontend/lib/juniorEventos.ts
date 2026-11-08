@@ -56,7 +56,7 @@ export async function eventosDaPessoa(db: any, p: { waId?: string; emails?: stri
 
     let perfil: any = null
     if (p.profileId) {
-      const r = await db.from('profiles').select('email, created_at, subscription_status').eq('id', p.profileId).maybeSingle()
+      const r = await db.from('profiles').select('email, created_at, subscription_status, plan_id').eq('id', p.profileId).maybeSingle()
       perfil = r.data || null
       if (perfil) addEmail(perfil.email)
     }
@@ -104,11 +104,22 @@ export async function eventosDaPessoa(db: any, p: { waId?: string; emails?: stri
 
     // 4) Conta na plataforma
     if (!perfil && emails.length) {
-      const r = await db.from('profiles').select('email, created_at, subscription_status').in('email', emails).limit(1)
+      const r = await db.from('profiles').select('email, created_at, subscription_status, plan_id').in('email', emails).limit(1)
       perfil = (r.data || [])[0] || null
     }
+    let planoTxt = ''
+    if (perfil && perfil.plan_id) {
+      try {
+        const pl = await db.from('plans').select('name').eq('id', perfil.plan_id).maybeSingle()
+        const nomePlano = String((pl.data as any)?.name || '')
+        if (nomePlano) {
+          const st = String(perfil.subscription_status || '')
+          planoTxt = ' Plano da conta: ' + nomePlano + ' (' + (st === 'active' ? 'ativo' : st === 'canceled' ? 'CANCELADO, nao esta ativo' : st === 'past_due' ? 'EM ATRASO, nao esta ativo' : st === 'trialing' ? 'em teste' : 'nao esta ativo') + '). Para renovar ou voltar, o link e o do plano ' + nomePlano + '.'
+        }
+      } catch (e) { /* so conforto */ }
+    }
     const contaTxt = perfil
-      ? 'JA TEM conta na plataforma (criada em ' + quando(perfil.created_at) + (perfil.subscription_status === 'active' ? ', plano ativo' : '') + ').'
+      ? 'JA TEM conta na plataforma (criada em ' + quando(perfil.created_at) + (perfil.subscription_status === 'active' ? ', plano ativo' : '') + ').' + planoTxt
       : 'AINDA NAO TEM conta criada na plataforma (nenhum cadastro encontrado com os e-mails e telefone conhecidos).'
 
     if (linhas.length === 0 && !perfil) return ''

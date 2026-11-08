@@ -4,8 +4,22 @@
 // Fonte do pagamento: hubla_compras (compras de plano, categoria 'p'), por e-mail ou pelo numero do WhatsApp da conversa.
 // Toda liberacao fica registrada em hubla_events (provider 'junior') para o admin conferir.
 
+import { LINKS_PLANOS } from '@/lib/junior'
+
 export const LINK_PLATAFORMA = 'https://www.mcpia.site/'
-const LINK_STARTER = 'https://pay.hub.la/0AueQQcwJxUeV9BE1ax7'
+const LINK_STARTER = LINKS_PLANOS.Starter
+
+// Link de checkout do plano que a pessoa tinha (Pro -> link do Pro). Sem plano conhecido: Starter.
+async function linkDoPlanoDela(db: any, perfil: any): Promise<{ nome: string; link: string }> {
+  try {
+    if (perfil && perfil.plan_id) {
+      const pl = await db.from('plans').select('name').eq('id', perfil.plan_id).maybeSingle()
+      const nome = String((pl.data as any)?.name || '')
+      if (nome && LINKS_PLANOS[nome]) return { nome, link: LINKS_PLANOS[nome] }
+    }
+  } catch (e) { /* cai no Starter */ }
+  return { nome: '', link: LINK_STARTER }
+}
 const DIAS_VALIDADE = 35 // assinatura mensal: pagamento de ate 35 dias vale
 
 const MARCA_RE = /\[\[\s*VERIFICAR_ASSINATURA[^\]]*\]\]/i
@@ -162,14 +176,16 @@ export async function verificarAssinaturaPeloJunior(db: any, p: { conta?: string
         return { status, humano: true, texto: 'Conferi com os dois e-mails e com o seu número e não achei o pagamento da plataforma. Me manda o comprovante da compra (um print ou o PDF) para eu deixar o seu caso registrado.' }
       }
       status = 'sem_pagamento'
-      return { status, humano: false, texto: 'Conferi aqui e não achei nenhum pagamento da plataforma com esse e-mail nem com o seu número. Se você pagou com outro e-mail, me diga qual foi (ele aparece no comprovante que a Hubla enviou). Se ainda não assinou, você pode assinar por aqui: ' + LINK_STARTER }
+      const lk = await linkDoPlanoDela(db, perfil)
+      return { status, humano: false, texto: 'Conferi aqui e não achei nenhum pagamento da plataforma com esse e-mail nem com o seu número. Se você pagou com outro e-mail, me diga qual foi (ele aparece no comprovante que a Hubla enviou). Se ainda não assinou' + (lk.nome ? ' o plano ' + lk.nome : '') + ', você pode assinar por aqui: ' + lk.link }
     }
 
     // 7) Pagamento antigo demais (assinatura mensal)
     const idadeDias = ultima ? (Date.now() - new Date(ultima).getTime()) / 86400000 : 9999
     if (idadeDias > DIAS_VALIDADE) {
       status = 'vencida'
-      return { status, humano: false, texto: 'Conferi aqui: o último pagamento que consta é de ' + dataBR(ultima as string) + ', e a assinatura é mensal. Não consta o pagamento do mês seguinte. Para voltar a usar as ferramentas, renove por aqui: ' + LINK_STARTER + ' . Se você já pagou depois dessa data, me manda o e-mail usado na compra que eu confiro de novo.' }
+      const lk = await linkDoPlanoDela(db, perfil)
+      return { status, humano: false, texto: 'Conferi aqui: o último pagamento que consta é de ' + dataBR(ultima as string) + ', e a assinatura é mensal. Não consta o pagamento do mês seguinte. Para voltar a usar as ferramentas' + (lk.nome ? ' do plano ' + lk.nome : '') + ', renove por aqui: ' + lk.link + ' . Se você já pagou depois dessa data, me manda o e-mail usado na compra que eu confiro de novo.' }
     }
 
     // 8) Atraso ou cancelamento depois do ultimo pagamento: nao reativa sozinho
@@ -181,7 +197,8 @@ export async function verificarAssinaturaPeloJunior(db: any, p: { conta?: string
     }
     if (perfil.subscription_status === 'canceled' && !pagouDepois) {
       status = 'cancelada'
-      return { status, humano: false, texto: 'Conferi aqui: a sua assinatura foi cancelada, por isso o plano não está ativo. Se quiser voltar, é só assinar de novo por aqui: ' + LINK_STARTER + ' . Depois que pagar, me avisa aqui que eu libero na hora.' }
+      const lk = await linkDoPlanoDela(db, perfil)
+      return { status, humano: false, texto: 'Conferi aqui: a sua assinatura' + (lk.nome ? ' do plano ' + lk.nome : '') + ' foi cancelada, por isso o plano não está ativo. Se quiser voltar, é só assinar de novo por aqui: ' + lk.link + ' . Depois que pagar, me avisa aqui que eu libero na hora.' }
     }
 
     // 9) Pagamento confirmado e conta existe: libera
