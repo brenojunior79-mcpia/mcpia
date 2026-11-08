@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
+import PlayerVimeo from '@/components/PlayerVimeo'
 
 const STORAGE_KEY = 'mcpia_ebook_form'
 
@@ -304,15 +305,7 @@ function VideoLesson({ videoId, title, color }: { videoId: string; title: string
 
   if (playing) {
     return (
-      <div style={{ position: 'relative', width: '100%', paddingBottom: '56.25%', height: 0, borderRadius: 12, overflow: 'hidden', background: '#000' }}>
-        <iframe
-          src={'https://player.vimeo.com/video/' + videoId + '?title=0&byline=0&portrait=0&dnt=1&autoplay=1'}
-          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
-          allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media"
-          allowFullScreen
-          title={title}
-        />
-      </div>
+      <PlayerVimeo videoId={videoId} title={title} radius={12} />
     )
   }
 

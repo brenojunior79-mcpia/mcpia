@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
+import PlayerVimeo from '@/components/PlayerVimeo'
 
 type Aula = { id: string; ordem: number; titulo: string; descricao: string | null; video_id: string; material_label: string | null; material_url: string | null; material_aviso: string | null }
 type Liberado = { email: string; nota: string | null; created_at: string; liberado_por?: string | null }
@@ -85,16 +86,16 @@ function Depoimentos() {
           const ratio = capa ? capa.ratio : 16 / 9
           const ativo = tocando === id
           return (
+            ativo ? (
+              <div key={id}><PlayerVimeo videoId={id} title={'Depoimento ' + id} radius={14} ratio={ratio} /></div>
+            ) : (
             <div key={id} style={{ position: 'relative', width: '100%', aspectRatio: String(ratio), maxHeight: 520, borderRadius: 14, overflow: 'hidden', background: '#0f172a', border: '1px solid var(--border)' }}>
-              {ativo ? (
-                <iframe src={'https://player.vimeo.com/video/' + id + '?title=0&byline=0&portrait=0&dnt=1&autoplay=1'} title={'Depoimento ' + id} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 }} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />
-              ) : (
                 <button type="button" className="ee-poster" onClick={function() { setTocando(id) }} aria-label="Assistir depoimento" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0, padding: 0, cursor: 'pointer', background: capa ? 'url(' + capa.img + ') center/cover no-repeat' : 'linear-gradient(135deg,#1e1b4b,#7c2d12)' }}>
                   <span className="ee-play" style={{ position: 'absolute', top: '50%', left: '50%', width: 62, height: 62, marginLeft: -31, marginTop: -31, borderRadius: '50%', background: 'rgba(249,115,22,0.95)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, boxShadow: '0 6px 22px rgba(0,0,0,0.4)' }}>▶</span>
                   {capa && capa.dur > 0 && <span style={{ position: 'absolute', right: 10, bottom: 10, background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: 12, fontWeight: 700, borderRadius: 8, padding: '2px 8px' }}>{fmtDur(capa.dur)}</span>}
                 </button>
-              )}
             </div>
+            )
           )
         })}
       </div>
@@ -341,17 +342,17 @@ export default function EstruturaExpressPage() {
           <div className="ee-grid">
             <div ref={playerRef} className="ee-up" style={{ animationDelay: '0.1s', minWidth: 0 }}>
               <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20, overflow: 'hidden' }}>
+                {tocando === aula.id ? (
+                  <PlayerVimeo key={aula.id} videoId={aula.video_id} title={aula.titulo} radius={0} />
+                ) : (
                 <div className="ee-poster" style={{ position: 'relative', width: '100%', paddingBottom: '56.25%', height: 0, background: 'linear-gradient(135deg,#1e1b4b,#7c2d12)' }}>
-                  {tocando === aula.id ? (
-                    <iframe key={aula.id} src={'https://player.vimeo.com/video/' + aula.video_id + '?title=0&byline=0&portrait=0&dnt=1&autoplay=1'} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 }} allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media" allowFullScreen title={aula.titulo} />
-                  ) : (
                     <div onClick={function() { setTocando(aula.id) }} role="button" aria-label={'Assistir ' + aula.titulo} style={{ position: 'absolute', inset: 0, cursor: 'pointer', backgroundImage: th ? 'url(' + th.img + ')' : undefined, backgroundSize: 'cover', backgroundPosition: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.55))' }} />
                       <div className="ee-play ee-cta" style={{ position: 'relative', width: 78, height: 78, borderRadius: '50%', background: 'linear-gradient(135deg,#f59e0b,#f97316)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, paddingLeft: 6 }}>▶</div>
                       <div style={{ position: 'absolute', left: 16, bottom: 12, right: 16, color: '#fff', fontWeight: 800, fontSize: 'clamp(14px, 2.4vw, 19px)', textShadow: '0 2px 8px rgba(0,0,0,0.6)' }}>Aula {atual + 1} · {aula.titulo}</div>
                     </div>
-                  )}
                 </div>
+                )}
 
                 <div key={aula.id} className="ee-up" style={{ padding: '18px 20px 20px' }}>
                   <div style={{ fontSize: 12, fontWeight: 800, color: '#f97316', letterSpacing: 0.5 }}>AULA {atual + 1} DE {total}</div>
