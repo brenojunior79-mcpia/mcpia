@@ -7,6 +7,7 @@ import { REGRA_EXPRESS_WHATSAPP, pediuLiberarExpress, removerMarcaExpress, liber
 import { eventosDaPessoa } from '@/lib/juniorEventos'
 import { falouEmReembolso, AVISO_REEMBOLSO } from '@/lib/juniorReembolso'
 import { REGRA_COMPRA_WHATSAPP, MENSAGEM_PRIMEIRO_ACESSO, pediuConsultarCompra, removerMarcaCompra, dadosDaMarcaCompra, consultarCompraPeloJunior } from '@/lib/juniorCompra'
+import { REGRA_CADASTRO_WHATSAPP, pediuLiberarCadastro, removerMarcaCadastro, emailDaMarcaCadastro, liberarCadastroPeloJunior } from '@/lib/juniorCadastro'
 import { REGRA_ASSINATURA_WHATSAPP, pediuVerificarAssinatura, removerMarcaAssinatura, emailsDaMarcaAssinatura, verificarAssinaturaPeloJunior } from '@/lib/juniorAssinatura'
 
 const MARCA_HUMANO = '[[HUMANO]]'
@@ -352,7 +353,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     const canal = conv.connection_id ? 'recuperacao' : 'suporte'
 
     const baseTexto = (await baseDoCanal(admin, canal)).split('{{firstName}}').join(primeiro)
-    let system = REGRA_RESPONSAVEL + '\n\n' + baseTexto + '\n\n' + FINAL_REMINDER + '\n\n' + REGRA_EXPRESS_WHATSAPP + '\n\n' + REGRA_ASSINATURA_WHATSAPP + '\n\n' + REGRA_COMPRA_WHATSAPP + '\n\nNome da pessoa: ' + (nome || 'desconhecido')
+    let system = REGRA_RESPONSAVEL + '\n\n' + baseTexto + '\n\n' + FINAL_REMINDER + '\n\n' + REGRA_EXPRESS_WHATSAPP + '\n\n' + REGRA_ASSINATURA_WHATSAPP + '\n\n' + REGRA_COMPRA_WHATSAPP + '\n\n' + REGRA_CADASTRO_WHATSAPP + '\n\nNome da pessoa: ' + (nome || 'desconhecido')
     if (esconderPlanos) system = NEW_STUDENT_RULE + '\n\n' + system + '\n\n' + NEW_STUDENT_RULE
     const sitPlano = situacaoPlanoAluno(temPlano, esconderPlanos)
     if (sitPlano) system = system + '\n\n' + sitPlano
@@ -466,7 +467,12 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     if (!ult.data || String((ult.data as any).id) !== String(msgId)) return true
 
     // O assistente pediu para conferir a assinatura (plano da plataforma): o sistema confere o pagamento, libera se estiver tudo certo e escreve a resposta
-    if (pediuConsultarCompra(texto)) {
+    if (pediuLiberarCadastro(texto)) {
+      // Print do erro de cadastro ("Nao encontramos uma compra com esse e-mail"): o sistema libera o e-mail e pede para criar a conta de novo
+      const resL = await liberarCadastroPeloJunior(admin, { email: emailDaMarcaCadastro(texto), waId, nome: nome || undefined })
+      texto = resL.texto
+      if (resL.humano) passaParaHumano = true
+    } else if (pediuConsultarCompra(texto)) {
       // Consulta nos relatorios de vendas (Hubla e Cakto) pelo e-mail/telefone informado e pelo numero desta conversa
       const dm = dadosDaMarcaCompra(texto)
       const resC = await consultarCompraPeloJunior(admin, { emails: dm.emails, telefones: dm.telefones, waId })
@@ -491,7 +497,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       texto = res.texto
       if (res.humano) passaParaHumano = true
     } else {
-      texto = removerMarcaCompra(removerMarcaAssinatura(removerMarcaExpress(texto)))
+      texto = removerMarcaCadastro(removerMarcaCompra(removerMarcaAssinatura(removerMarcaExpress(texto))))
       if (!texto) { await avisarFalha(admin, convId, 'texto vazio apos marca express'); return true }
     }
 

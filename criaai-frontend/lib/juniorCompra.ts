@@ -58,7 +58,7 @@ Voce consegue consultar os RELATORIOS DE VENDAS do Breno (todas as vendas do ano
 - NUNCA diga que a compra existe ou nao existe, nem o e-mail da compra, antes de o sistema responder. Depois que o sistema responder, siga a conversa a partir do resultado.
 - Se o sistema nao achou a compra: peca o comprovante (print ou PDF) para voce conferir. Se for um comprovante de pagamento, o sistema nao confirma sozinho: diga que anotou e vai conferir. Nao mande a pessoa para outra plataforma nem para atendente.`
 
-export const REGRA_COMPRA_WHATSAPP = `# CONSULTA DE COMPRA NOS RELATORIOS DE VENDAS (PRIORIDADE MAXIMA)\n${COMUM}`
+export const REGRA_COMPRA_WHATSAPP = `# CONSULTA DE COMPRA NOS RELATORIOS DE VENDAS (PRIORIDADE MAXIMA)\nEXCECAO: se a pessoa mandou o print da tela de cadastro com o aviso "Nao encontramos uma compra com esse e-mail", NAO consulte a compra: siga a regra LIBERAR CADASTRO (mais abaixo), que tem prioridade.\n${COMUM}`
 export const REGRA_COMPRA_CHAT = `# CONSULTA DE COMPRA NOS RELATORIOS DE VENDAS (PRIORIDADE MAXIMA)\n${COMUM}`
 
 function mascarar(email: string): string {

@@ -50,6 +50,8 @@ com um assistente de IA chamado **Júnior**.
 
 **Consulta de compra pelo Júnior:** marca `[[CONSULTAR_COMPRA: e-mail ou telefone]]` (`lib/juniorCompra.ts`) procura em `compras_externas` e `hubla_compras` por e-mail e telefone e devolve a resposta pronta; no WhatsApp o número da conversa também é consultado.
 
+**Liberar cadastro pelo Júnior (WhatsApp):** quando o aluno manda o print do erro "Não encontramos uma compra com esse e-mail", o Júnior pede o e-mail digitado e emite `[[LIBERAR_CADASTRO: e-mail]]` (`lib/juniorCadastro.ts`). O sistema grava em `cadastro_liberados` (nota "Liberado pelo Júnior (WhatsApp)" com data e telefone), responde pedindo para criar a conta de novo e, após 3 liberações para o mesmo número, passa para a equipe. Não vale para o chat do site.
+
 **Reembolso:** o Júnior nunca promete prazo nem diz que o dinheiro foi devolvido. Primeiro pergunta o motivo e tenta ajudar; só passa para a equipe se o aluno mantiver o pedido. A equipe executa.
 
 ## Júnior (assistente de IA)
