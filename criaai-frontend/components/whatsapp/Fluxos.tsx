@@ -277,7 +277,11 @@ export default function Fluxos() {
           const g = f.trigger
           const gat = g.tipo === 'palavra' ? 'Palavra: ' + (g.palavras.length ? g.palavras.join(', ') : '…') : 'Evento: ' + nomeEvento(g.evento) + (g.metodo ? ' · ' + g.metodo : '')
           // Relatorio: quantos fluxos ja foram enviados (pessoas que passaram por todos os blocos)
-          const enviados = ((seqStats[f.id] || { runs: [] }).runs || []).filter(function(r) { return r.status === 'concluido' }).reduce(function(a, r) { return a + r.n }, 0)
+          // Conta quem JA RECEBEU o fluxo: o maior numero de pessoas que receberam algum bloco de mensagem (nao so quem terminou todos os blocos)
+          const porBloco: Record<string, number> = {}
+          const sendsF = (seqStats[f.id] || { sends: [] }).sends || []
+          sendsF.forEach(function(x) { if (['falhou', 'erro', 'failed'].indexOf(String(x.status)) < 0) porBloco[x.step_id] = (porBloco[x.step_id] || 0) + x.n })
+          const enviados = Object.keys(porBloco).reduce(function(a, k) { return Math.max(a, porBloco[k]) }, 0)
           return (
             <div key={f.id} onClick={function() { setEditSeq(f); setTela('construtor') }} style={{ cursor: 'pointer', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 14, marginBottom: 10, opacity: f.enabled ? 1 : 0.75 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
