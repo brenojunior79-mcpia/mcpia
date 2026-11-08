@@ -1,6 +1,7 @@
 'use client'
 import RankingCard from '@/components/RankingCard'
 import JornadaMapa from '@/components/JornadaMapa'
+import CarrosselResultados from '@/components/CarrosselResultados'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import Link from 'next/link'
@@ -49,39 +50,10 @@ const NEWS_PRODUCTS = [
   { name: '700 Receitas de Bolos e Tortas', image: 'https://vida-nova-oficial.com/wp-content/uploads/2024/04/Design_sem_nome__41_-removebg.png', color: '#f97316', fit: 'contain' },
 ]
 
-// Prints de resultados de alunos: coloque as imagens em public/resultados/ com os nomes resultado-1, resultado-2 e resultado-3
-// (aceita .png, .jpg, .jpeg ou .webp). Se uma imagem nao existir, ela simplesmente nao aparece.
-const RESULT_IDS = [1, 2, 3]
-const RESULT_EXTS = ['png', 'jpg', 'jpeg', 'webp']
-
-function ResultImage({ id, onOpen, onLoaded, delay }: { id: number; onOpen: (src: string) => void; onLoaded: () => void; delay: number }) {
-  const [extIdx, setExtIdx] = useState(0)
-  const [loaded, setLoaded] = useState(false)
-  const failed = extIdx >= RESULT_EXTS.length
-  if (failed) return null
-  const src = '/resultados/resultado-' + id + '.' + RESULT_EXTS[extIdx]
-  return (
-    <div
-      className="result-card"
-      onClick={function() { if (loaded) onOpen(src) }}
-      style={{ display: loaded ? 'block' : 'none', animation: 'fadeUp 0.6s ease both ' + delay + 's', borderRadius: 16, overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'zoom-in', position: 'relative' }}
-    >
-      <img
-        src={src}
-        alt={'Resultado de aluno ' + id}
-        onLoad={function() { setLoaded(true); onLoaded() }}
-        onError={function() { setExtIdx(extIdx + 1) }}
-        style={{ width: '100%', height: 'auto', display: 'block' }}
-      />
-    </div>
-  )
-}
-
 export default function DashboardPage() {
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [zoomSrc, setZoomSrc] = useState<string | null>(null)
-  const [resultsLoaded, setResultsLoaded] = useState(0)
   const supabase = createClient()
 
   useEffect(function() {
@@ -213,15 +185,11 @@ export default function DashboardPage() {
 
         {/* RESULTADOS RECENTES DE ALUNOS */}
         <div className="anim-fadeUp-2" style={{ marginBottom: 28 }}>
-          <div style={{ display: resultsLoaded > 0 ? 'flex' : 'none', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
             <span style={{ fontSize: 22, display: 'inline-block', animation: 'newsPop 1.8s ease-in-out infinite' }}>💰</span>
             <div style={{ fontSize: 18, fontWeight: 800, fontFamily: 'Syne, sans-serif', color: 'var(--text)' }}>Resultados recentes de alunos</div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14, alignItems: 'start' }}>
-            {RESULT_IDS.map(function(id, idx) {
-              return <ResultImage key={id} id={id} delay={0.1 + idx * 0.15} onOpen={setZoomSrc} onLoaded={function() { setResultsLoaded(function(n) { return n + 1 }) }} />
-            })}
-          </div>
+          <CarrosselResultados onOpen={setZoomSrc} />
         </div>
 
 
