@@ -161,8 +161,8 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
     { href: '/dashboard/criativos-manuais', icon: 'ti-video', label: 'Criativos Manuais', locked: false },
     { href: '/dashboard/indique', icon: 'ti-gift', label: 'Indique e ganhe', locked: false, highlight: true },
     { href: '/dashboard/vendas', icon: 'ti-rocket', label: 'Vendendo no Automatico', locked: false },
-    { href: '/dashboard/estrutura-express', icon: 'ti-bolt', label: 'Estrutura Express', locked: false, badge: 'NOVO' },
-    { href: '/dashboard/anuncios', icon: 'ti-brand-meta', label: 'Gerenciando seus anúncios', locked: anunciosSemClique, lockStatus: 'Em atualizacao', lockHint: statusAnu === 'plano' },
+    { href: '/dashboard/estrutura-express', icon: 'ti-bolt', label: 'Estrutura Express', locked: false },
+    { href: '/dashboard/anuncios', icon: 'ti-brand-meta', label: 'Gerenciando seus anúncios', locked: anunciosSemClique, lockStatus: 'Em atualizacao', lockHint: statusAnu === 'plano', badge: 'NOVO' },
     { href: '/dashboard/suporte', icon: 'ti-brand-whatsapp', label: 'WhatsApp de Suporte', locked: false },
     { href: '/dashboard/aulas', icon: 'ti-device-tv', label: 'Aulas ao Vivo', locked: false },
     { href: '/dashboard/planos', icon: 'ti-credit-card', label: 'Planos', locked: false },
@@ -276,7 +276,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
                 <i className={'ti ' + item.icon} />
                 {item.label}
                 {(item as any).lockHint && <i className="ti ti-lock" title="Exige plano" style={{ marginLeft: 'auto', width: 'auto', fontSize: 14, opacity: 0.6 }} />}
-                {(item as any).badge && <span style={{ marginLeft: 'auto', background: '#fff', color: (item as any).tone === 'green' ? '#15803d' : '#ea580c', fontSize: 9.5, fontWeight: 800, letterSpacing: 0.4, borderRadius: 999, padding: '2px 7px' }}>{(item as any).badge}</span>}
+                {(item as any).badge && <span style={{ marginLeft: (item as any).lockHint ? 6 : 'auto', background: '#fff', color: (item as any).tone === 'green' ? '#15803d' : '#ea580c', fontSize: 9.5, fontWeight: 800, letterSpacing: 0.4, borderRadius: 999, padding: '2px 7px' }}>{(item as any).badge}</span>}
               </Link>
             )
           })}
