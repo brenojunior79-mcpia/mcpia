@@ -333,7 +333,7 @@ export default function ConversasAdminPage() {
         .from('chat_messages')
         .select('id, role, content, created_at, image_path')
         .eq('user_id', userId)
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: false })
         .limit(300)
       const loaded = (result.data || []).slice().sort(sortMessages)
       setMessages(loaded)

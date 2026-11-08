@@ -216,26 +216,31 @@ export default function PaginasPage() {
     }
     setLoading(true)
     setResult(null)
-    const sessionResult = await supabase.auth.getSession()
-    const session = sessionResult.data.session
-    const res = await fetch('/api/generate-page', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session ? session.access_token : '') },
-      body: JSON.stringify(Object.assign({}, form, {
-        benefits: benefits,
-        pains: form.pains.filter(function(p) { return p.trim() }),
-        howto: form.howto.split('\n').filter(function(l) { return l.trim() }),
-        testimonials: form.testimonials.filter(function(t) { return t.name.trim() && t.text.trim() }),
-      })),
-    })
-    const data = await res.json()
-    setLoading(false)
-    if (data.requiresPlan) {
-      window.location.href = '/dashboard/planos'
-    } else if (data.url) {
-      setResult(data)
-    } else {
-      alert('Erro: ' + (data.error || 'Tente novamente'))
+    try {
+      const sessionResult = await supabase.auth.getSession()
+      const session = sessionResult.data.session
+      const res = await fetch('/api/generate-page', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session ? session.access_token : '') },
+        body: JSON.stringify(Object.assign({}, form, {
+          benefits: benefits,
+          pains: form.pains.filter(function(p) { return p.trim() }),
+          howto: form.howto.split('\n').filter(function(l) { return l.trim() }),
+          testimonials: form.testimonials.filter(function(t) { return t.name.trim() && t.text.trim() }),
+        })),
+      })
+      const data = await res.json()
+      if (data.requiresPlan) {
+        window.location.href = '/dashboard/planos'
+      } else if (data.url) {
+        setResult(data)
+      } else {
+        alert('Erro: ' + (data.error || 'Tente novamente'))
+      }
+    } catch (e) {
+      alert('Nao foi possivel criar o site agora. Verifique sua internet e tente novamente.')
+    } finally {
+      setLoading(false)
     }
   }
 

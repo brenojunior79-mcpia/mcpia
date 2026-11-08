@@ -13,6 +13,7 @@ const STATUS: Record<string, { t: string; cor: string }> = {
   concluido: { t: '✅ Mensagem enviada', cor: '#15803d' },
   cancelado: { t: '🚫 Cancelado (a pessoa comprou)', cor: '#6b7280' },
   erro: { t: '⚠️ Erro no envio', cor: '#b91c1c' },
+  falhou: { t: '⚠️ Erro no envio', cor: '#b91c1c' },
 }
 
 function quando(iso: string): string {
