@@ -149,9 +149,30 @@ export async function retomarPorResposta(admin: any, p: { waId: string; connecti
   return 0
 }
 
+// A pessoa ja respondeu e o fluxo esta nos ultimos passos (ex.: espera de 1 minuto, textos de boas-vindas) e depois passa para o Junior.
+// Nesse meio tempo o Junior NAO responde (senao a boas-vindas sai repetida: uma dele e outra do fluxo).
+async function fluxoVaiPassarParaIA(admin: any, p: { waId: string; connectionId: string | null }): Promise<boolean> {
+  try {
+    if (!p.connectionId) return false
+    const sq = await admin.from('wa_sequencias').select('id, steps').eq('connection_id', p.connectionId).limit(100)
+    const lista: any[] = sq.data || []
+    if (lista.length === 0) return false
+    const porId: Record<string, any[]> = {}
+    for (const x of lista) porId[x.id] = Array.isArray(x.steps) ? x.steps : []
+    const q = await admin.from('wa_seq_runs').select('seq_id, step_index, data').in('seq_id', Object.keys(porId)).in('wa_id', variantes(p.waId)).eq('status', 'ativo').eq('is_test', false).limit(20)
+    for (const r of (q.data || []) as any[]) {
+      if (!r.data || r.data.respondeu !== true) continue
+      const passos = porId[r.seq_id] || []
+      if (passos.slice(Number(r.step_index) || 0).some(function(s: any) { return s && s.tipo === 'ia' })) return true
+    }
+  } catch (e) { console.error('[wa-seq] fluxo ate a IA:', e) }
+  return false
+}
+
 // Mensagem recebida: primeiro retoma quem esperava a resposta; senao, ve se a palavra inicia um fluxo. true = o fluxo cuida desta mensagem (o assistente nao responde).
 export async function tratarMensagemSequencias(admin: any, p: { convId: string; waId: string; msgId: string; tipo: string; texto: string; nome: string | null; connectionId: string | null }): Promise<boolean> {
   if ((await retomarPorResposta(admin, { waId: p.waId, connectionId: p.connectionId })) > 0) return true
+  if (await fluxoVaiPassarParaIA(admin, { waId: p.waId, connectionId: p.connectionId })) return true
   if (p.tipo !== 'text') return false
   return iniciarPorPalavra(admin, { convId: p.convId, waId: p.waId, msgId: p.msgId, texto: p.texto, nome: p.nome, connectionId: p.connectionId })
 }

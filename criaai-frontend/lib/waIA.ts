@@ -575,3 +575,54 @@ export async function responderPendentesGeral(admin: any): Promise<number> {
     return 0
   }
 }
+
+
+// Depois que um fluxo passa a conversa para o Junior: se a pessoa NAO falar nada por 15 minutos, ele pergunta se ela conseguiu acessar as aulas.
+// Pergunta uma vez so por conversa. Nao pergunta se a pessoa ja respondeu, se um atendente assumiu, se o assistente foi desligado
+// ou se a janela de 24h do WhatsApp ja fechou. Roda no agendador de 1 minuto (/api/whatsapp/auto/run).
+const ESPERA_ACOMPANHAMENTO_MS = 15 * 60 * 1000
+export async function acompanharSilencioFluxo(admin: any): Promise<number> {
+  let enviadas = 0
+  try {
+    const agora = Date.now()
+    const m = await admin.from('wa_messages').select('conversation_id, created_at')
+      .eq('type', 'system').eq('direction', 'out').eq('body', MARCA_FLUXO_IA)
+      .gte('created_at', new Date(agora - 6 * 3600 * 1000).toISOString())
+      .lte('created_at', new Date(agora - ESPERA_ACOMPANHAMENTO_MS).toISOString())
+      .order('created_at', { ascending: false }).limit(40)
+    const vistos: Record<string, boolean> = {}
+    for (const marca of (m.data || []) as any[]) {
+      const convId = String(marca.conversation_id)
+      if (vistos[convId]) continue
+      vistos[convId] = true
+      try {
+        const [depois, cv, ultIn] = await Promise.all([
+          admin.from('wa_messages').select('direction, type, body, sent_by').eq('conversation_id', convId).gt('created_at', marca.created_at).order('created_at', { ascending: true }).limit(60),
+          admin.from('wa_conversations').select('id, wa_id, name, connection_id, ia_ativa, ia_humano').eq('id', convId).maybeSingle(),
+          admin.from('wa_messages').select('created_at').eq('conversation_id', convId).eq('direction', 'in').order('created_at', { ascending: false }).limit(1).maybeSingle(),
+        ])
+        const c: any = cv.data
+        if (!c || !c.wa_id || !c.ia_ativa || c.ia_humano) continue
+        const lista: any[] = depois.data || []
+        if (lista.some(function(x) { return x.direction === 'in' })) continue // a pessoa respondeu
+        if (lista.some(function(x) { return x.direction === 'out' && x.type !== 'system' && x.sent_by })) continue // um atendente assumiu
+        if (lista.some(function(x) { return x.direction === 'out' && /conseguiu acessar/i.test(String(x.body || '')) })) continue // ja perguntou
+        const ui: any = ultIn.data
+        if (!ui || agora - new Date(ui.created_at).getTime() > 23.5 * 3600 * 1000) continue // janela de 24h fechada
+        // Nome: o mesmo que o fluxo usou (vem da compra); se nao achar, pergunta sem nome
+        let nome = ''
+        const rn = await admin.from('wa_seq_runs').select('name').eq('wa_id', c.wa_id).not('name', 'is', null).order('created_at', { ascending: false }).limit(1).maybeSingle()
+        nome = String((rn.data as any)?.name || '').trim().split(/\s+/)[0] || ''
+        const texto = (nome ? nome + ', v' : 'V') + 'ocê já conseguiu acessar as aulas? 😊'
+        const phoneId = await phoneIdDaConversa(admin, c.connection_id || null)
+        const r = await postMessage({ messaging_product: 'whatsapp', to: String(c.wa_id), type: 'text', text: { body: texto } }, phoneId || undefined)
+        if (!r.ok) { console.error('[wa-ia] acompanhamento:', JSON.stringify(r.data?.error || r.data)); continue }
+        const ts = new Date().toISOString()
+        await admin.from('wa_messages').insert({ conversation_id: convId, wa_message_id: r.data?.messages?.[0]?.id || null, direction: 'out', type: 'text', body: texto, status: 'sent', sent_by: null, created_at: ts })
+        await admin.from('wa_conversations').update({ last_message_at: ts, last_text: '🤖 ' + texto.slice(0, 120) }).eq('id', convId)
+        enviadas++
+      } catch (e) { console.error('[wa-ia] acompanhamento (conversa):', e) }
+    }
+  } catch (e) { console.error('[wa-ia] acompanhamento:', e) }
+  return enviadas
+}

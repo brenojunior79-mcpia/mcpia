@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { timingSafeEqual } from 'crypto'
 import { adminClient, requireAdmin, waConfig } from '@/lib/whatsapp'
 import { processarFluxos } from '@/lib/waAuto'
-import { estadoAgendaIA, responderPendentesGeral } from '@/lib/waIA'
+import { estadoAgendaIA, responderPendentesGeral, acompanharSilencioFluxo } from '@/lib/waIA'
 
 export const maxDuration = 60
 export const dynamic = 'force-dynamic'
@@ -38,5 +38,8 @@ export async function POST(req: NextRequest) {
       if (!claim.error && claim.data && claim.data.length > 0) abertura = await responderPendentesGeral(admin)
     }
   } catch (e) { console.error('[wa-ia] abertura da agenda:', e) }
-  return NextResponse.json({ ok: true, ...r, abertura })
+  // Depois do fluxo: se a pessoa ficou 15 min em silencio, o Junior pergunta se ela conseguiu acessar as aulas
+  let acompanhamento = 0
+  try { acompanhamento = await acompanharSilencioFluxo(admin) } catch (e) { console.error('[wa-ia] acompanhamento:', e) }
+  return NextResponse.json({ ok: true, ...r, abertura, acompanhamento })
 }
