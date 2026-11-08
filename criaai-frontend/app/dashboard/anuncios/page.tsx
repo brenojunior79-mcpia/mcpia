@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { calcular, relatorioDoFunil } from '@/lib/anuncios'
 import Funil from '@/components/anuncios/Funil'
+import AulaGerenciador from '@/components/anuncios/AulaGerenciador'
 import ResumoFinanceiro from '@/components/anuncios/ResumoFinanceiro'
 import AnalisandoMetricas from '@/components/metricas/AnalisandoMetricas'
 import CampanhasTabela from '@/components/anuncios/CampanhasTabela'
@@ -209,6 +210,7 @@ export default function AnunciosPage() {
     ]
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', padding: '40px 20px 60px' }}>
+        <div style={{ maxWidth: 580, margin: '0 auto 18px' }}><AulaGerenciador /></div>
         <div style={{ maxWidth: 580, margin: '0 auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 22, padding: '34px 26px', textAlign: 'center', boxShadow: 'var(--shadow-sm)' }}>
           <div style={{ width: 68, height: 68, borderRadius: 20, margin: '0 auto 14px', background: 'linear-gradient(135deg,#4b3fe8,#5b4ef8,#8b6dfa)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 34, boxShadow: '0 10px 26px rgba(91,78,248,0.35)' }}><i className="ti ti-robot" /></div>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(124,92,252,0.10)', border: '1px solid rgba(124,92,252,0.3)', color: 'var(--accent)', fontSize: 11.5, fontWeight: 800, borderRadius: 999, padding: '4px 12px', marginBottom: 12 }}><i className="ti ti-lock" /> EXCLUSIVO DOS PLANOS PRO E PREMIUM</div>
@@ -240,6 +242,8 @@ export default function AnunciosPage() {
             <p style={{ fontSize: 13.5, color: 'var(--muted2)', margin: '4px 0 0', lineHeight: 1.45 }}>Veja como suas campanhas estão e ajuste sem sair daqui. Criar a campanha continua sendo no Gerenciador de Anúncios do Facebook.</p>
           </div>
         </div>
+
+        {!loading && <AulaGerenciador recolhivel={!!connection?.connected} />}
 
         {error && <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '12px 16px', fontSize: 13, color: '#ef4444' }}>Erro ao conectar: {error}</div>}
 
