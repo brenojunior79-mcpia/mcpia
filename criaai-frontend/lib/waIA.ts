@@ -280,6 +280,11 @@ async function descobrirTemExpressPorTelefone(admin: any, waId: string): Promise
   } catch (er) { return null }
 }
 
+// Trecho do texto (sem o nome da pessoa) usado para saber se o Junior ja mandou aquela mensagem
+function chaveDisparo(t: string): string {
+  const partes = String(t || '').split('{nome}').sort(function(a, b) { return b.length - a.length })
+  return normalizarDisparo(partes[0] || '').slice(0, 25)
+}
 function normalizarDisparo(t: string): string { return t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim() }
 
 // Devolve true quando o assistente esta LIGADO nessa conversa (o webhook entao nao manda o aviso de horario nem os fluxos).
@@ -412,9 +417,9 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     // Disparo em massa: se a pessoa recebeu um disparo com instrucao do Breno nos ultimos 4 dias, o Junior sabe o motivo da conversa.
     // Quem NAO esta na lista do disparo segue a conversa normal.
     let instrucaoDisparo = ''
-    let msgExataDisparo = ''
-    let forcarNovidade = false
-    let precisaNovidade = false
+    let etapaDisparo: '' | 'abrir' | 'novidade' = ''
+    let textoAbertura = ''
+    let textoNovidade = ''
     let perfilDisparo: string | null = null
     try {
       const fim8 = String(waId).replace(/\D/g, '').slice(-8)
@@ -433,18 +438,27 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
             if (statusAnuncios(!!d.is_admin, d.email, d.created_at, d.subscription_status, plano) === 'oculto') podeFalar = false
           }
           if (podeFalar) {
-            msgExataDisparo = String(b0.instrucao_ia).trim()
-            const chave = normalizarDisparo(msgExataDisparo).slice(0, 30)
-            const jaContou = linhas.some(function(m: any) { return m.direction === 'out' && m.type === 'text' && normalizarDisparo(String(m.body || '')).indexOf(chave) >= 0 })
-            // Conversa que ja estava rolando ANTES do disparo: responde o que ela disse e depois conta a novidade
+            // A instrucao tem dois passos: abertura (como ela esta indo) e novidade. Instrucao antiga (so um texto) = so a novidade.
+            let abertura = ''
+            let novidade = String(b0.instrucao_ia).trim()
+            try { const j = JSON.parse(novidade); if (j && typeof j === 'object') { abertura = String(j.abertura || '').trim(); novidade = String(j.novidade || '').trim() } } catch (e) { /* texto simples */ }
+            const desdeODisparo = linhas.filter(function(m: any) { return new Date(m.created_at).getTime() >= new Date(r0.sent_at).getTime() - 5000 })
+            const jaDisse = function(txt: string) { const k = chaveDisparo(txt); return !!k && desdeODisparo.some(function(m: any) { return m.direction === 'out' && m.type === 'text' && normalizarDisparo(String(m.body || '')).indexOf(k) >= 0 }) }
+            const jaContou = !novidade || jaDisse(novidade)
+            const jaAbriu = !abertura || jaDisse(abertura)
+            // Conversa que ja estava rolando ANTES do disparo: pula a abertura
             const antes = linhas.filter(function(m: any) { return m.type !== 'system' && new Date(m.created_at).getTime() >= new Date(r0.sent_at).getTime() - 12 * 3600000 && new Date(m.created_at).getTime() < new Date(r0.sent_at).getTime() }).length
-            const emAndamento = antes > 0 && b0.segment !== 'teste' // o teste do formulario sempre mostra a resposta limpa
-            forcarNovidade = !jaContou && !emAndamento
-            precisaNovidade = !jaContou
+            const emAndamento = antes > 0 && b0.segment !== 'teste' // o teste do formulario sempre mostra o passo a passo limpo
             const cabeca = 'DISPARO QUE ESTA PESSOA RECEBEU (REGRA DO BRENO, PRIORIDADE MAXIMA): ela recebeu uma mensagem em massa ("' + String(b0.preview || '').replace(/\s+/g, ' ').slice(0, 200) + '") e esta respondendo a ela. A resposta pode ser qualquer coisa (oi, estou, sim, quem e).\n'
-            if (jaContou) instrucaoDisparo = cabeca + 'Voce JA contou a novidade nesta conversa; NAO repita. Siga a conversa respondendo o que ela disse, com as regras de plano e integracao deste prompt (se ela nao sabia, explique com carinho; se nao tem plano, guie para o plano Pro; so mande o link do plano Pro depois que ela disser que quer; depois do pagamento, oriente a integrar o Facebook).\nNOVIDADE QUE VOCE JA CONTOU: ' + msgExataDisparo
-            else if (emAndamento) instrucaoDisparo = cabeca + 'Ela ja estava conversando com voce antes do disparo. Responda primeiro o que ela perguntou e, no fim da mesma mensagem, conte a novidade com estas palavras: ' + msgExataDisparo
-            else instrucaoDisparo = cabeca + 'Sua PRIMEIRA resposta desta conversa deve ser EXATAMENTE a mensagem abaixo, sem mudar o sentido e sem acrescentar outro assunto, MESMO que a pessoa tenha escrito outra coisa. Depois que ela responder a esta mensagem, voce segue a conversa: se ela nao sabia, explique com carinho; se nao tem plano, guie para o plano Pro (so mande o link depois que ela disser que quer; depois do pagamento, oriente a integrar o Facebook), com as regras de plano e integracao deste prompt.\nMENSAGEM EXATA: ' + msgExataDisparo
+            if (jaContou) {
+              instrucaoDisparo = cabeca + 'Voce JA contou a novidade nesta conversa; NAO repita. Siga a conversa respondendo o que ela disse, com as regras de plano e integracao deste prompt (se ela nao sabia, explique com carinho; se nao tem plano, guie para o plano Pro; so mande o link do plano Pro depois que ela disser que quer; depois do pagamento, oriente a integrar o Facebook).' + (novidade ? '\nNOVIDADE QUE VOCE JA CONTOU: ' + novidade : '')
+            } else if (!jaAbriu && !emAndamento) {
+              etapaDisparo = 'abrir'; textoAbertura = abertura
+              instrucaoDisparo = cabeca + 'PASSO 1 DE 2: sua PRIMEIRA resposta desta conversa deve ser EXATAMENTE a mensagem abaixo, sem mudar o sentido e sem acrescentar outro assunto, MESMO que a pessoa tenha escrito outra coisa. A novidade so vem DEPOIS que ela responder a esta mensagem.\nMENSAGEM EXATA: ' + abertura
+            } else {
+              etapaDisparo = 'novidade'; textoNovidade = novidade
+              instrucaoDisparo = cabeca + 'PASSO 2 DE 2: agora que ela respondeu, acolha em UMA frase curta o que ela disse (sem fazer outra pergunta) e em seguida conte a novidade com estas palavras: ' + novidade + '\nSe ela vier com um problema (acesso, pagamento, duvida), resolva primeiro e coloque a novidade no fim.'
+            }
           }
         }
       }
@@ -523,11 +537,14 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
         if (!texto) texto = passaParaHumano ? 'Anotei o seu pedido aqui, ' + primeiro + '.' : 'Me conta um pouquinho melhor o que você precisa, ' + primeiro + '? Se puder, manda um print da tela.'
       }
     }
-    // Trava do disparo (ordem do Breno): ate o Junior contar a novidade, a resposta SEMPRE leva a novidade.
-    // Pessoa sem conversa anterior: a primeira resposta e exatamente a novidade. Pessoa que ja conversava: responde o que ela disse e a novidade vai no fim.
-    if (precisaNovidade && msgExataDisparo && normalizarDisparo(texto).indexOf(normalizarDisparo(msgExataDisparo).slice(0, 30)) < 0) {
-      const novidade = msgExataDisparo.split('{nome}').join(((nomeContato || '').split(' ')[0]) || 'tudo bem')
-      texto = forcarNovidade ? novidade : (texto.trim() + '\n\n' + novidade).trim()
+    // Trava do disparo (ordem do Breno): passo 1 = so a abertura; passo 2 = a resposta SEMPRE leva a novidade
+    if (etapaDisparo === 'abrir' && textoAbertura && normalizarDisparo(texto).indexOf(chaveDisparo(textoAbertura)) < 0) {
+      texto = textoAbertura.split('{nome}').join(primeiro || '').replace(/\s+([,!?])/g, '$1')
+    } else if (etapaDisparo === 'novidade' && textoNovidade && normalizarDisparo(texto).indexOf(chaveDisparo(textoNovidade)) < 0) {
+      const dela = String((ultimaIn as any).body || '')
+      const resposta = dela.length <= 60 && dela.indexOf('?') < 0 && !/(acess|erro|problema|n[aã]o consigo|senha|pagamento|reembolso)/i.test(dela)
+      const nov = textoNovidade.split('{nome}').join(primeiro || '')
+      texto = resposta ? nov : (texto.trim() + '\n\n' + nov).trim()
     }
     // Trava do desconto (ordem do Breno): o link de R$ 197 so sai depois de DUAS confirmacoes da pessoa
     // (1: "ajudaria?" sim; 2: "fica R$ 197, posso mandar o link?" sim). Se o modelo adiantar o link, o sistema tira e faz a pergunta certa.

@@ -6,6 +6,7 @@ type Publico = { restantes?: number; lote?: number; total: number; podem: number
 type Cont = Record<string, number>
 type Camp = { id: string; created_at: string; template_name: string; preview: string | null; segment: string; status: string; pause_reason: string | null; total: number; contagem: Cont; detalhe?: Detalhe | null }
 type Detalhe = { responderam: number; erros: { erro: string; qtd: number }[]; falhas: { nome: string | null; wa: string; erro: string | null }[] }
+const ABERTURA_PADRAO = 'Oi! Tudo bem? Como você está indo lá na plataforma? Como estão indo as aulas? 🙏'
 const NOVIDADE_PADRAO = 'Você viu a novidade que lançamos lá na plataforma? Agora você pode integrar o seu Facebook com a plataforma e eu analiso essas campanhas para você vender no automático. Eu vou te orientar e ver as suas campanhas pela plataforma.'
 type Cfg = { mode: 'nome' | 'texto'; value: string }
 
@@ -97,7 +98,9 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
   const [key, setKey] = useState('')
   const [cfg, setCfg] = useState<Cfg[]>([])
   const [teste, setTeste] = useState('')
-  const [instrucaoIA, setInstrucaoIA] = useState(NOVIDADE_PADRAO)
+  const [abertura, setAbertura] = useState(ABERTURA_PADRAO)
+  const [novidade, setNovidade] = useState(NOVIDADE_PADRAO)
+  const instrucaoIA = novidade.trim() || abertura.trim() ? JSON.stringify({ abertura: abertura.trim(), novidade: novidade.trim() }) : ''
   const [msg, setMsg] = useState('')
   const [ok, setOk] = useState('')
   const [ocupado, setOcupado] = useState(false)
@@ -317,9 +320,11 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
 
           {t && (
             <>
-              <label style={lab}>3. Resposta do Júnior para quem responder o disparo (opcional)</label>
-              <textarea className="at-input" rows={4} value={instrucaoIA} onChange={function(e) { setInstrucaoIA(e.target.value) }} style={{ width: '100%', resize: 'vertical', marginBottom: 4 }} />
-              <div style={{ fontSize: 11.5, opacity: 0.65, marginBottom: 12 }}>Vale só para quem receber ESTE disparo (por 4 dias). Quando a pessoa responder (oi, estou, etc.), o Júnior envia esta mensagem como primeira resposta. Depois ele conduz a conversa: se ela não tiver plano, oferece o Pro de R$ 49,90 e, após o pagamento, orienta a integrar o Facebook. Quem não recebeu o disparo continua conversando normal. Deixe vazio para o Júnior não fazer nada especial.</div>
+              <label style={lab}>3a. 1ª resposta do Júnior (quando a pessoa responder o disparo)</label>
+              <textarea className="at-input" rows={2} value={abertura} onChange={function(e) { setAbertura(e.target.value) }} style={{ width: '100%', resize: 'vertical', marginBottom: 8 }} />
+              <label style={lab}>3b. Depois que ela responder a 1ª, o Júnior manda a novidade</label>
+              <textarea className="at-input" rows={4} value={novidade} onChange={function(e) { setNovidade(e.target.value) }} style={{ width: '100%', resize: 'vertical', marginBottom: 4 }} />
+              <div style={{ fontSize: 11.5, opacity: 0.65, marginBottom: 12 }}>Vale só para quem receber ESTE disparo (por 4 dias). Passo 1: a pessoa responde o disparo (oi, estou) e o Júnior manda a 1ª resposta. Passo 2: ela responde e o Júnior manda a novidade. Depois ele conduz: se ela não tiver plano, oferece o Pro de R$ 49,90 e, após o pagamento, orienta a integrar o Facebook. Quem não recebeu o disparo continua normal. Deixe os dois campos vazios para o Júnior não fazer nada especial.</div>
               <label style={lab}>4. Teste primeiro (recomendado)</label>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
                 <input className="at-input" placeholder="Seu WhatsApp com DDD, ex: 37 99999-9999" value={teste} onChange={function(e) { setTeste(e.target.value) }} style={{ flex: '1 1 220px', width: 'auto' }} />
