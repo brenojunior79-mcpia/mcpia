@@ -414,6 +414,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     let instrucaoDisparo = ''
     let msgExataDisparo = ''
     let forcarNovidade = false
+    let precisaNovidade = false
     let perfilDisparo: string | null = null
     try {
       const fim8 = String(waId).replace(/\D/g, '').slice(-8)
@@ -439,6 +440,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
             const antes = linhas.filter(function(m: any) { return m.type !== 'system' && new Date(m.created_at).getTime() >= new Date(r0.sent_at).getTime() - 12 * 3600000 && new Date(m.created_at).getTime() < new Date(r0.sent_at).getTime() }).length
             const emAndamento = antes > 0
             forcarNovidade = !jaContou && !emAndamento
+            precisaNovidade = !jaContou
             const cabeca = 'DISPARO QUE ESTA PESSOA RECEBEU (REGRA DO BRENO, PRIORIDADE MAXIMA): ela recebeu uma mensagem em massa ("' + String(b0.preview || '').replace(/\s+/g, ' ').slice(0, 200) + '") e esta respondendo a ela. A resposta pode ser qualquer coisa (oi, estou, sim, quem e).\n'
             if (jaContou) instrucaoDisparo = cabeca + 'Voce JA contou a novidade nesta conversa; NAO repita. Siga a conversa respondendo o que ela disse, com as regras de plano e integracao deste prompt (se ela nao sabia, explique com carinho; se nao tem plano, guie para o plano Pro; so mande o link do plano Pro depois que ela disser que quer; depois do pagamento, oriente a integrar o Facebook).\nNOVIDADE QUE VOCE JA CONTOU: ' + msgExataDisparo
             else if (emAndamento) instrucaoDisparo = cabeca + 'Ela ja estava conversando com voce antes do disparo. Responda primeiro o que ela perguntou e, no fim da mesma mensagem, conte a novidade com estas palavras: ' + msgExataDisparo
@@ -521,9 +523,11 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
         if (!texto) texto = passaParaHumano ? 'Anotei o seu pedido aqui, ' + primeiro + '.' : 'Me conta um pouquinho melhor o que você precisa, ' + primeiro + '? Se puder, manda um print da tela.'
       }
     }
-    // Trava do disparo (ordem do Breno): a PRIMEIRA resposta ao disparo e exatamente a novidade, nao outro assunto
-    if (forcarNovidade && msgExataDisparo && normalizarDisparo(texto).indexOf(normalizarDisparo(msgExataDisparo).slice(0, 30)) < 0) {
-      texto = msgExataDisparo.split('{nome}').join(((nomeContato || '').split(' ')[0]) || 'tudo bem')
+    // Trava do disparo (ordem do Breno): ate o Junior contar a novidade, a resposta SEMPRE leva a novidade.
+    // Pessoa sem conversa anterior: a primeira resposta e exatamente a novidade. Pessoa que ja conversava: responde o que ela disse e a novidade vai no fim.
+    if (precisaNovidade && msgExataDisparo && normalizarDisparo(texto).indexOf(normalizarDisparo(msgExataDisparo).slice(0, 30)) < 0) {
+      const novidade = msgExataDisparo.split('{nome}').join(((nomeContato || '').split(' ')[0]) || 'tudo bem')
+      texto = forcarNovidade ? novidade : (texto.trim() + '\n\n' + novidade).trim()
     }
     // Trava do desconto (ordem do Breno): o link de R$ 197 so sai depois de DUAS confirmacoes da pessoa
     // (1: "ajudaria?" sim; 2: "fica R$ 197, posso mandar o link?" sim). Se o modelo adiantar o link, o sistema tira e faz a pergunta certa.
