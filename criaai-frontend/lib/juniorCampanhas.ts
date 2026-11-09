@@ -90,7 +90,7 @@ async function lerCampanhas(token: string, conta: string): Promise<string | null
 }
 
 // Monta o bloco do Junior (regra + campanhas reais). textosRecentes = ultimas falas da pessoa. Nunca lanca erro.
-export async function blocoAnunciosDoAluno(admin: any, userId: string | null | undefined, emailFallback: string | null, textosRecentes: string[]): Promise<string> {
+export async function blocoAnunciosDoAluno(admin: any, userId: string | null | undefined, emailFallback: string | null, textosRecentes: string[], forcarAssunto = false): Promise<string> {
   try {
     if (!userId) return ''
     const pr = await admin.from('profiles').select('is_admin, email, created_at, subscription_status, plans(name)').eq('id', userId).maybeSingle()
@@ -98,7 +98,7 @@ export async function blocoAnunciosDoAluno(admin: any, userId: string | null | u
     const plano = Array.isArray(d.plans) ? (d.plans[0] && d.plans[0].name) : (d.plans && d.plans.name)
     const acesso = statusAnuncios(!!d.is_admin, d.email || emailFallback, d.created_at, d.subscription_status, plano)
     if (acesso === 'oculto') return ''
-    const falou = falouDeAnuncio(textosRecentes)
+    const falou = forcarAssunto || falouDeAnuncio(textosRecentes)
     if (!falou && acesso !== 'liberado') return ''
     let status: StatusFacebook = 'nao'
     let token = ''

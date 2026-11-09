@@ -45,6 +45,7 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
   const [key, setKey] = useState('')
   const [cfg, setCfg] = useState<Cfg[]>([])
   const [teste, setTeste] = useState('')
+  const [instrucaoIA, setInstrucaoIA] = useState('')
   const [msg, setMsg] = useState('')
   const [ok, setOk] = useState('')
   const [ocupado, setOcupado] = useState(false)
@@ -116,7 +117,7 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
     if (!window.confirm('Enviar o modelo "' + t.name + '" para ' + quantos + ' pessoa' + (quantos === 1 ? '' : 's') + ' (' + SEG_NOME[seg] + ')?\n\nIsso não pode ser desfeito depois de enviado.')) return
     setOcupado(true); setMsg(''); setOk('')
     try {
-      const r = await post('/api/whatsapp/broadcast', { action: 'criar', ...corpoBase(), segmento: seg, esperado: quantos })
+      const r = await post('/api/whatsapp/broadcast', { action: 'criar', ...corpoBase(), segmento: seg, esperado: quantos, instrucaoIA: instrucaoIA })
       if (!r.ok) { setMsg(r.j.error || 'Não foi possível criar o disparo.'); if (r.j.total) carregarPub() }
       else { await carregarCamps(); rodar(r.j.id) }
     } catch (e) { setMsg('Sem conexão.') }
@@ -262,7 +263,10 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
 
           {t && (
             <>
-              <label style={lab}>3. Teste primeiro (recomendado)</label>
+              <label style={lab}>3. O que o Júnior faz quando a pessoa responder (opcional)</label>
+              <textarea className="at-input" rows={4} placeholder={'Ex.: Quando a pessoa responder, pergunte: "Você já viu a novidade? Você pode integrar sua conta com o Facebook e eu analiso suas campanhas para você otimizar e vender no automático todos os dias." Depois siga a conversa e tire as dúvidas.'} value={instrucaoIA} onChange={function(e) { setInstrucaoIA(e.target.value) }} style={{ width: '100%', resize: 'vertical', marginBottom: 4 }} />
+              <div style={{ fontSize: 11.5, opacity: 0.65, marginBottom: 12 }}>Vale por 4 dias para quem receber este disparo. O Júnior responde sozinho entre 8h e 20h (a agenda que você já configurou); fora desse horário a resposta fica esperando.</div>
+              <label style={lab}>4. Teste primeiro (recomendado)</label>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
                 <input className="at-input" placeholder="Seu WhatsApp com DDD, ex: 37 99999-9999" value={teste} onChange={function(e) { setTeste(e.target.value) }} style={{ flex: '1 1 220px', width: 'auto' }} />
                 <button disabled={ocupado || !preenchido || !teste.trim()} onClick={enviarTeste} style={{ cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 10, padding: '10px 14px', fontWeight: 800, fontSize: 13.5, opacity: ocupado || !preenchido || !teste.trim() ? 0.55 : 1 }}>Enviar teste</button>
