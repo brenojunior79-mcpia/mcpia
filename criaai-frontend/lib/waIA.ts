@@ -244,6 +244,29 @@ async function descobrirTemExpress(admin: any, email: string, admin_: boolean): 
   } catch (er) { return null }
 }
 
+// Conversa SEM conta ligada (a maioria no WhatsApp): descobre pelo telefone se a pessoa comprou e se tem a Estrutura Express.
+// true = tem; false = comprou outra coisa e NAO tem a Express (pode receber a pergunta da Express); null = nao sabe (nao achou compra).
+async function descobrirTemExpressPorTelefone(admin: any, waId: string): Promise<boolean | null> {
+  try {
+    const tail = String(waId || '').replace(/\D/g, '').slice(-8)
+    if (tail.length < 8) return null
+    const h = await admin.from('hubla_compras').select('cat, email').eq('reembolsado', false).like('wa', '%' + tail).limit(20)
+    if (h.error) return null
+    const compras: any[] = h.data || []
+    const ex = await admin.from('compras_externas').select('produtos, email, reembolsada').like('tel', '%' + tail).limit(10)
+    const externas: any[] = ex.error ? [] : (ex.data || []).filter(function(x: any) { return x.reembolsada !== true })
+    if (compras.length === 0 && externas.length === 0) return null
+    if (compras.some(function(c) { return c.cat === 'e' }) || externas.some(function(x) { return String(x.produtos || '').indexOf('e') >= 0 })) return true
+    const emails = compras.map(function(c) { return String(c.email || '').toLowerCase() }).concat(externas.map(function(x) { return String(x.email || '').toLowerCase() })).filter(Boolean)
+    if (emails.length) {
+      const l = await admin.from('estrutura_liberados').select('email', { head: true, count: 'exact' }).in('email', emails)
+      if (!l.error && (l.count || 0) > 0) return true
+      if (l.error) return null
+    }
+    return false
+  } catch (er) { return null }
+}
+
 // Devolve true quando o assistente esta LIGADO nessa conversa (o webhook entao nao manda o aviso de horario nem os fluxos).
 export async function tratarIA(admin: any, convId: string, waId: string, msgId: string, tipo: string, nomeContato: string | null): Promise<boolean> {
   try {
@@ -349,6 +372,8 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
         // Sem cadastro conhecido ou aluno novo: esconde planos. Aluno antigo: segue o comportamento normal do Junior.
       }
     }
+    // Sem conta ligada a conversa: acha pelo telefone (senao a pergunta da Estrutura Express nunca era feita para essas pessoas)
+    if (temExpress === null && !conv.profile_id) temExpress = await descobrirTemExpressPorTelefone(admin, waId)
     const primeiro = nome.split(' ')[0] || 'voce'
     const canal = conv.connection_id ? 'recuperacao' : 'suporte'
 
