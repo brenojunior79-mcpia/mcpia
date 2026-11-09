@@ -121,6 +121,14 @@ export async function POST(req: NextRequest) {
     if (!to) return NextResponse.json({ error: 'Numero invalido. Use DDD + numero, ex: 37 99999-9999.' }, { status: 400 })
     const r = await postMessage(payloadModelo(to, name, language, montarParams(params, 'Teste')))
     if (!r.ok) return NextResponse.json({ error: graphError(r.data) }, { status: 400 })
+    // O teste tambem vale como disparo de 1 pessoa: assim o Junior responde a sua resposta como responderia a quem recebeu o disparo
+    try {
+      const instr = String(input?.instrucaoIA || '').trim().slice(0, 1500)
+      if (instr) {
+        const nb = await admin.from('wa_broadcasts').insert({ created_by: staff, template_name: name, template_language: language, preview, params, segment: 'teste', status: 'concluido', total: 1, instrucao_ia: instr }).select('id').single()
+        if (nb.data) await admin.from('wa_broadcast_recipients').insert({ broadcast_id: nb.data.id, name: 'Teste', wa_id: to, status: 'sent', wa_message_id: r.data?.messages?.[0]?.id || null, sent_at: new Date().toISOString() })
+      }
+    } catch (e) { /* o teste foi enviado; o registro e so para testar a resposta do Junior */ }
     return NextResponse.json({ ok: true })
   }
 

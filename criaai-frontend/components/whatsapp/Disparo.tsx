@@ -11,7 +11,7 @@ type Cfg = { mode: 'nome' | 'texto'; value: string }
 
 const card: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 16, marginBottom: 14 }
 const lab: React.CSSProperties = { fontSize: 12.5, fontWeight: 700, color: 'var(--text)', marginBottom: 4, display: 'block' }
-const SEG_NOME: Record<string, string> = { todos: 'Todos os alunos', plano: 'Alunos com plano', sem_plano: 'Alunos sem plano', contatos: 'Contatos importados' }
+const SEG_NOME: Record<string, string> = { todos: 'Todos os alunos', plano: 'Alunos com plano', sem_plano: 'Alunos sem plano', contatos: 'Contatos importados', teste: 'Teste' }
 
 function enviadas(c: Cont) { return (c.sent || 0) + (c.delivered || 0) + (c.read || 0) }
 function faltam(c: Cont) { return (c.pending || 0) + (c.sending || 0) }
@@ -159,7 +159,7 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
     if (!t || !preenchido) return
     setOcupado(true); setMsg(''); setOk('')
     try {
-      const r = await post('/api/whatsapp/broadcast', { action: 'teste', ...corpoBase(), numero: teste })
+      const r = await post('/api/whatsapp/broadcast', { action: 'teste', ...corpoBase(), numero: teste, instrucaoIA: instrucaoIA })
       if (r.ok) setOk('Teste enviado para ' + teste + '. Confira no celular.'); else setMsg(r.j.error || 'Não foi possível enviar o teste.')
     } catch (e) { setMsg('Sem conexão.') }
     setOcupado(false)
