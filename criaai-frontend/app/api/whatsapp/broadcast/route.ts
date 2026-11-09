@@ -14,7 +14,7 @@ function maxVar(text: string): number {
 }
 
 function segmento(v: any): Segmento {
-  return v === 'plano' || v === 'sem_plano' || v === 'contatos' ? v : 'todos'
+  return v === 'plano' || v === 'sem_plano' || v === 'sem_plano_250' || v === 'contatos' ? v : 'todos'
 }
 
 function lerParams(v: any): ParamCfg[] {
@@ -52,8 +52,8 @@ export async function GET(req: NextRequest) {
   const admin = adminClient()
   if (view === 'publico') {
     try {
-      const p = await montarPublico('todos')
-      return NextResponse.json({ total: p.total, podem: p.podem, comPlano: p.comPlano, semPlano: p.semPlano, semNumero: p.semNumero, contatos: p.contatos, reembolsados: p.reembolsados, repetidos: p.repetidos })
+      const p = await montarPublico('todos', req.nextUrl.searchParams.get('template') || undefined)
+      return NextResponse.json({ restantes: p.restantes, lote: p.lote, total: p.total, podem: p.podem, comPlano: p.comPlano, semPlano: p.semPlano, semNumero: p.semNumero, contatos: p.contatos, reembolsados: p.reembolsados, repetidos: p.repetidos })
     } catch (e: any) { return NextResponse.json({ error: e?.message || 'Erro.' }, { status: 500 }) }
   }
   if (view === 'campanha') {
@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
     const ativa = await admin.from('wa_broadcasts').select('id').in('status', ['rodando', 'pausado']).limit(1)
     if (ativa.data && ativa.data.length > 0) return NextResponse.json({ error: 'Ja existe um disparo em andamento. Termine ou cancele ele antes de criar outro.' }, { status: 409 })
     let pub
-    try { pub = await montarPublico(seg) } catch (e: any) { return NextResponse.json({ error: e?.message || 'Erro.' }, { status: 500 }) }
+    try { pub = await montarPublico(seg, name) } catch (e: any) { return NextResponse.json({ error: e?.message || 'Erro.' }, { status: 500 }) }
     if (pub.lista.length === 0) return NextResponse.json({ error: 'Nenhum aluno com WhatsApp nesse grupo.' }, { status: 400 })
     // O que a pessoa viu na tela precisa bater com o que vai ser enviado
     if (Number(input?.esperado) !== pub.lista.length) return NextResponse.json({ error: 'O numero de alunos mudou (agora sao ' + pub.lista.length + '). Confira e confirme de novo.', total: pub.lista.length }, { status: 409 })

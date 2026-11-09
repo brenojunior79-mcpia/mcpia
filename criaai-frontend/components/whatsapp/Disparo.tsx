@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { renderTpl, type Tpl } from './Modelos'
 
-type Publico = { total: number; podem: number; comPlano: number; semPlano: number; semNumero: number; contatos: number; reembolsados: number; repetidos: number }
+type Publico = { restantes?: number; lote?: number; total: number; podem: number; comPlano: number; semPlano: number; semNumero: number; contatos: number; reembolsados: number; repetidos: number }
 type Cont = Record<string, number>
 type Camp = { id: string; created_at: string; template_name: string; preview: string | null; segment: string; status: string; pause_reason: string | null; total: number; contagem: Cont; detalhe?: Detalhe | null }
 type Detalhe = { responderam: number; erros: { erro: string; qtd: number }[]; falhas: { nome: string | null; wa: string; erro: string | null }[] }
@@ -11,7 +11,7 @@ type Cfg = { mode: 'nome' | 'texto'; value: string }
 
 const card: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 16, marginBottom: 14 }
 const lab: React.CSSProperties = { fontSize: 12.5, fontWeight: 700, color: 'var(--text)', marginBottom: 4, display: 'block' }
-const SEG_NOME: Record<string, string> = { todos: 'Todos os alunos', plano: 'Alunos com plano', sem_plano: 'Alunos sem plano', contatos: 'Contatos importados', teste: 'Teste' }
+const SEG_NOME: Record<string, string> = { todos: 'Todos os alunos', plano: 'Alunos com plano', sem_plano: 'Alunos sem plano', sem_plano_250: 'Sem plano · lote de 250', contatos: 'Contatos importados', teste: 'Teste' }
 
 function enviadas(c: Cont) { return (c.sent || 0) + (c.delivered || 0) + (c.read || 0) }
 function faltam(c: Cont) { return (c.pending || 0) + (c.sending || 0) }
@@ -108,9 +108,9 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
   const paraRef = useRef(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  async function carregarPub() {
+  async function carregarPub(modelo?: string) {
     try {
-      const r = await fetch('/api/whatsapp/broadcast?view=publico', { cache: 'no-store' })
+      const r = await fetch('/api/whatsapp/broadcast?view=publico' + (modelo ? '&template=' + encodeURIComponent(modelo) : ''), { cache: 'no-store' })
       const j = await r.json()
       if (!r.ok) setPubErro(j.error || 'Não foi possível carregar.')
       else { setPub(j); setPubErro('') }
@@ -134,11 +134,11 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
   const aprovados = (tpls || []).filter(function(t) { return t.status === 'APPROVED' })
   const t = aprovados.find(function(x) { return x.name + '|' + x.language === key }) || null
   const semMidia = function(x: Tpl) { return !x.header || x.header.charAt(0) !== '[' }
-  const quantos = pub ? (seg === 'plano' ? pub.comPlano : seg === 'sem_plano' ? pub.semPlano : seg === 'contatos' ? pub.contatos : pub.podem) : 0
+  const quantos = pub ? (seg === 'sem_plano_250' ? (pub.lote || 0) : seg === 'plano' ? pub.comPlano : seg === 'sem_plano' ? pub.semPlano : seg === 'contatos' ? pub.contatos : pub.podem) : 0
   const ativa = camps.find(function(c) { return c.status === 'rodando' || c.status === 'pausado' }) || null
 
   function escolher(k: string) {
-    setKey(k); setOk(''); setMsg('')
+    setKey(k); setOk(''); setMsg(''); carregarPub(k.split('|')[0])
     const x = aprovados.find(function(y) { return y.name + '|' + y.language === k })
     setCfg(x ? Array.from({ length: x.vars }).map(function(_a, i) { return { mode: i === 0 ? 'nome' : 'texto', value: '' } as Cfg }) : [])
   }
@@ -171,7 +171,7 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
     setOcupado(true); setMsg(''); setOk('')
     try {
       const r = await post('/api/whatsapp/broadcast', { action: 'criar', ...corpoBase(), segmento: seg, esperado: quantos, instrucaoIA: instrucaoIA })
-      if (!r.ok) { setMsg(r.j.error || 'Não foi possível criar o disparo.'); if (r.j.total) carregarPub() }
+      if (!r.ok) { setMsg(r.j.error || 'Não foi possível criar o disparo.'); if (r.j.total) carregarPub(t ? t.name : undefined) }
       else { await carregarCamps(); rodar(r.j.id) }
     } catch (e) { setMsg('Sem conexão.') }
     setOcupado(false)
@@ -190,7 +190,7 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
       }
     } catch (e) { setMsg('A conexão caiu. Clique em Continuar para seguir de onde parou.') }
     rodRef.current = false; setRodando(false)
-    carregarCamps()
+    carregarCamps(); carregarPub(key ? key.split('|')[0] : undefined)
   }
 
   async function cancelar(id: string) {
@@ -277,6 +277,7 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
             <option value="todos">Todos os alunos ({num(pub?.podem)})</option>
             <option value="plano">Só quem tem plano ativo ({num(pub?.comPlano)})</option>
             <option value="sem_plano">Só quem não tem plano ({num(pub?.semPlano)})</option>
+            <option value="sem_plano_250">Sem plano · próximos 250 que ainda não receberam este modelo ({t ? num(pub?.lote) + ' agora, restam ' + num(pub?.restantes) : 'escolha o modelo'})</option>
             <option value="contatos">Contatos importados que não são alunos ({num(pub?.contatos)})</option>
           </select>
 

@@ -1,11 +1,13 @@
 // Disparo em massa: quem recebe, e como o numero e' ajustado para o WhatsApp
 import { adminClient } from '@/lib/whatsapp'
 
-export type Segmento = 'todos' | 'plano' | 'sem_plano' | 'contatos'
+export type Segmento = 'todos' | 'plano' | 'sem_plano' | 'sem_plano_250' | 'contatos'
+export const TAMANHO_LOTE = 250
 export const SEGMENTOS: { k: Segmento; nome: string }[] = [
   { k: 'todos', nome: 'Todos os alunos' },
   { k: 'plano', nome: 'Só quem tem plano ativo' },
   { k: 'sem_plano', nome: 'Só quem não tem plano' },
+  { k: 'sem_plano_250', nome: 'Sem plano: próximos 250 que ainda não receberam este modelo' },
   { k: 'contatos', nome: 'Contatos importados (que não são alunos)' },
 ]
 
@@ -41,11 +43,13 @@ export type Publico = {
   semPlano: number
   podem: number          // numeros unicos que recebem em "Todos"
   contatos: number       // contatos importados que nao sao alunos
+  restantes: number      // sem plano que ainda NAO receberam o modelo escolhido (so quando o modelo e informado)
+  lote: number           // quantos entram no proximo lote de 250
   lista: Aluno[]         // quem recebe, ja filtrado pelo segmento
 }
 
 // Le todos os alunos (a leitura vem em paginas de 1000) e monta o publico
-export async function montarPublico(seg: Segmento): Promise<Publico> {
+export async function montarPublico(seg: Segmento, template?: string): Promise<Publico> {
   const admin = adminClient()
   const rows: any[] = []
   for (let from = 0; from < 50000; from += 1000) {
@@ -80,8 +84,25 @@ export async function montarPublico(seg: Segmento): Promise<Publico> {
     if (!r.data || r.data.length < 1000) break
   }
   const comPlano = todos.filter(function(a) { return a.plano }).length
-  const lista = seg === 'contatos' ? contatos : seg === 'plano' ? todos.filter(function(a) { return a.plano }) : seg === 'sem_plano' ? todos.filter(function(a) { return !a.plano }) : todos
-  return { total: alunos.length, semNumero, reembolsados, repetidos, comPlano, semPlano: todos.length - comPlano, podem: todos.length, contatos: contatos.length, lista }
+  const semPlanoLista = todos.filter(function(a) { return !a.plano })
+  // Quem ja recebeu (ou esta na fila de) este mesmo modelo em disparos anteriores nao entra no proximo lote
+  let jaRecebeu = new Set<string>()
+  if (template) {
+    const bs = await admin.from('wa_broadcasts').select('id').eq('template_name', template).neq('segment', 'teste')
+    const ids = (bs.data || []).map(function(b: any) { return b.id })
+    for (let i = 0; i < ids.length; i += 20) {
+      for (let from = 0; from < 50000; from += 1000) {
+        const r = await admin.from('wa_broadcast_recipients').select('wa_id').in('broadcast_id', ids.slice(i, i + 20)).in('status', ['sent', 'delivered', 'read', 'pending', 'sending']).range(from, from + 999)
+        if (r.error) break
+        for (const x of (r.data || [])) jaRecebeu.add(String((x as any).wa_id).replace(/\D/g, '').slice(-8))
+        if (!r.data || r.data.length < 1000) break
+      }
+    }
+  }
+  const restantesLista = semPlanoLista.filter(function(a) { return !jaRecebeu.has(a.wa.slice(-8)) })
+  const lote = restantesLista.slice(0, TAMANHO_LOTE)
+  const lista = seg === 'contatos' ? contatos : seg === 'plano' ? todos.filter(function(a) { return a.plano }) : seg === 'sem_plano' ? semPlanoLista : seg === 'sem_plano_250' ? lote : todos
+  return { total: alunos.length, semNumero, reembolsados, repetidos, comPlano, semPlano: todos.length - comPlano, podem: todos.length, contatos: contatos.length, restantes: restantesLista.length, lote: lote.length, lista }
 }
 
 // Monta o corpo do modelo: cada variavel pode ser o primeiro nome do aluno ou um texto fixo
