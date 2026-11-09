@@ -1,7 +1,6 @@
 // Assistente de IA (Junior) dentro das conversas do WhatsApp (suporte e recuperacao).
 // So responde nas conversas em que o ADMIN ligou o assistente (wa_conversations.ia_ativa) ou quando ele ligou para todas (wa_ia_config.geral).
 import { blocoAnunciosDoAluno } from '@/lib/juniorCampanhas'
-import { statusAnuncios } from '@/lib/acessoAnuncios'
 import { REGRA_RESPONSAVEL, JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno, soUmPasso, tirarLinkMarkdown, linkClicavel, tirarFrasesDeAjuda, tipoFinalConversa, situacaoFinalConversa } from '@/lib/junior'
 import { phoneIdDaConversa, postMessage } from '@/lib/whatsapp'
 import { agoraNoFuso } from '@/lib/waHours'
@@ -407,34 +406,10 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     system = system + '\n\nEstrutura Express desta pessoa: ' + (temExpress === true ? 'JA TEM acesso liberado no sistema.' : temExpress === false ? 'o sistema NAO achou compra nem liberacao da Estrutura Express nesta conta.' : 'o sistema NAO sabe (conta nao identificada).')
     system = system + '\n\nConta identificada: ' + (conv.profile_id ? 'SIM (o sistema ja sabe quem e a pessoa; nao peca e-mail).' : ehAluna ? 'NAO (peca o e-mail da plataforma antes de liberar).' : 'NAO, e ela ainda nao e aluna (nao peca e-mail para liberar nada; so pergunte o e-mail da compra se ela disser que ja comprou).')
 
-    // Disparo em massa: se a pessoa recebeu um disparo com instrucao para o Junior nos ultimos 4 dias, ele sabe o motivo da conversa
-    let instrucaoDisparo = ''
-    let perfilDisparo: string | null = null
-    try {
-      const rc = await admin.from('wa_broadcast_recipients').select('broadcast_id, sent_at, user_id').eq('wa_id', waId).in('status', ['sent', 'delivered', 'read']).order('sent_at', { ascending: false }).limit(1).maybeSingle()
-      const r0: any = rc.data
-      if (r0 && r0.sent_at && Date.now() - new Date(r0.sent_at).getTime() < 4 * 86400000) {
-        const bc = await admin.from('wa_broadcasts').select('instrucao_ia, preview').eq('id', r0.broadcast_id).maybeSingle()
-        const b0: any = bc.data
-        if (b0 && b0.instrucao_ia) {
-          let podeFalar = true
-          perfilDisparo = conv.profile_id || r0.user_id || null
-          if (perfilDisparo) {
-            const pf = await admin.from('profiles').select('is_admin, email, created_at, subscription_status, plans(name)').eq('id', perfilDisparo).maybeSingle()
-            const d: any = pf.data || {}
-            const plano = Array.isArray(d.plans) ? (d.plans[0] && d.plans[0].name) : (d.plans && d.plans.name)
-            if (statusAnuncios(!!d.is_admin, d.email, d.created_at, d.subscription_status, plano) === 'oculto') podeFalar = false
-          }
-          if (podeFalar) instrucaoDisparo = 'DISPARO QUE ESTA PESSOA RECEBEU (REGRA DO BRENO): ela recebeu uma mensagem em massa ("' + String(b0.preview || '').replace(/\s+/g, ' ').slice(0, 200) + '") e esta respondendo a ela. A resposta dela pode ser curta (oi, sim, quem e). Siga esta instrucao do Breno na SUA PRIMEIRA resposta desta conversa, adaptando ao que a pessoa escreveu e as regras desta pessoa (plano, integracao, aluna) que estao neste prompt:\n' + String(b0.instrucao_ia) + '\nSe ela vier com outro problema (acesso, pagamento, duvida de aula), resolva primeiro e so depois conte a novidade. Se o historico mostra que voce JA contou a novidade, nao repita.'
-        }
-      }
-    } catch (e) { /* sem instrucao: segue normal */ }
-    if (instrucaoDisparo) system = system + '\n\n' + instrucaoDisparo
-
     // Anuncios (so aluna com conta ligada): pergunta da integracao com o Facebook e, com plano + integracao, le as campanhas reais dela
-    if (ehAluna && (conv.profile_id || perfilDisparo)) {
+    if (ehAluna && conv.profile_id) {
       const falasIn = linhas.filter(function(m: any) { return m.direction === 'in' }).slice(-3).map(function(m: any) { return String(m.body || '') })
-      const blocoAn = await blocoAnunciosDoAluno(admin, conv.profile_id || perfilDisparo, null, falasIn, !!instrucaoDisparo)
+      const blocoAn = await blocoAnunciosDoAluno(admin, conv.profile_id, null, falasIn)
       if (blocoAn) system = system + '\n\n' + blocoAn
     }
 

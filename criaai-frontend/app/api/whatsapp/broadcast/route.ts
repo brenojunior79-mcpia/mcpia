@@ -68,7 +68,8 @@ export async function GET(req: NextRequest) {
   const out: any[] = []
   for (const b of (l.data || [])) {
     const c = await admin.rpc('wa_broadcast_counts', { p_id: b.id })
-    out.push({ ...b, contagem: c.data || {} })
+    const d = await admin.rpc('wa_broadcast_detalhe', { p_id: b.id })
+    out.push({ ...b, contagem: c.data || {}, detalhe: d.data || null })
   }
   return NextResponse.json({ campanhas: out })
 }
@@ -133,7 +134,7 @@ export async function POST(req: NextRequest) {
     // O que a pessoa viu na tela precisa bater com o que vai ser enviado
     if (Number(input?.esperado) !== pub.lista.length) return NextResponse.json({ error: 'O numero de alunos mudou (agora sao ' + pub.lista.length + '). Confira e confirme de novo.', total: pub.lista.length }, { status: 409 })
 
-    const b = await admin.from('wa_broadcasts').insert({ created_by: staff, template_name: name, template_language: language, preview, params, segment: seg, status: 'rodando', total: pub.lista.length, instrucao_ia: String(input?.instrucaoIA || '').trim().slice(0, 1500) || null }).select('id').single()
+    const b = await admin.from('wa_broadcasts').insert({ created_by: staff, template_name: name, template_language: language, preview, params, segment: seg, status: 'rodando', total: pub.lista.length }).select('id').single()
     if (b.error || !b.data) return NextResponse.json({ error: 'Nao foi possivel criar o disparo.' }, { status: 500 })
     for (let i = 0; i < pub.lista.length; i += 500) {
       const chunk = pub.lista.slice(i, i + 500).map(function(a) { return { broadcast_id: b.data!.id, user_id: a.id, name: a.nome, wa_id: a.wa, status: 'pending' } })

@@ -4,7 +4,8 @@ import { renderTpl, type Tpl } from './Modelos'
 
 type Publico = { total: number; podem: number; comPlano: number; semPlano: number; semNumero: number; contatos: number; reembolsados: number; repetidos: number }
 type Cont = Record<string, number>
-type Camp = { id: string; created_at: string; template_name: string; preview: string | null; segment: string; status: string; pause_reason: string | null; total: number; contagem: Cont }
+type Camp = { id: string; created_at: string; template_name: string; preview: string | null; segment: string; status: string; pause_reason: string | null; total: number; contagem: Cont; detalhe?: Detalhe | null }
+type Detalhe = { responderam: number; erros: { erro: string; qtd: number }[]; falhas: { nome: string | null; wa: string; erro: string | null }[] }
 type Cfg = { mode: 'nome' | 'texto'; value: string }
 
 const card: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 16, marginBottom: 14 }
@@ -37,6 +38,56 @@ function lerCsv(texto: string): { nome: string; wa: string }[] {
   return linhas.slice(1).map(function(l) { return { nome: inome >= 0 ? (l[inome] || '') : '', wa: l[iw] || '' } }).filter(function(x) { return x.wa.trim() })
 }
 
+function num(n: number | undefined) { return (n || 0).toLocaleString('pt-BR') }
+function pct(a: number, b: number) { return b > 0 ? Math.round((a / b) * 100) + '%' : '0%' }
+
+// Resultado do disparo: enviadas, entregues, lidas, responderam, falharam (com o motivo) e quem falhou
+function Resultados({ c }: { c: Camp }) {
+  const [verFalhas, setVerFalhas] = useState(false)
+  const ct = c.contagem || {}
+  const env = enviadas(ct)
+  const entregues = (ct.delivered || 0) + (ct.read || 0)
+  const lidas = ct.read || 0
+  const falhas = ct.failed || 0
+  const resp = c.detalhe ? c.detalhe.responderam : 0
+  const itens: { n: number; rot: string; sub: string; cor: string }[] = [
+    { n: env, rot: 'Enviadas', sub: 'de ' + num(c.total), cor: 'var(--text)' },
+    { n: entregues, rot: 'Receberam', sub: pct(entregues, env) + ' das enviadas', cor: '#15803d' },
+    { n: lidas, rot: 'Visualizaram', sub: pct(lidas, env) + ' das enviadas', cor: '#1d4ed8' },
+    { n: resp, rot: 'Responderam', sub: pct(resp, env) + ' das enviadas', cor: '#7c3aed' },
+    { n: falhas, rot: 'Deram erro', sub: pct(falhas, c.total) + ' do total', cor: falhas > 0 ? '#b91c1c' : 'var(--muted2)' },
+    { n: faltam(ct) + (ct.cancelled || 0), rot: c.status === 'cancelado' ? 'Canceladas' : 'Faltam enviar', sub: '', cor: 'var(--muted2)' },
+  ]
+  return (
+    <div style={{ marginTop: 8 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(105px, 1fr))', gap: 8 }}>
+        {itens.map(function(i) {
+          return (
+            <div key={i.rot} style={{ background: 'var(--surface2)', borderRadius: 10, padding: '8px 10px' }}>
+              <div style={{ fontSize: 20, fontWeight: 800, color: i.cor, lineHeight: 1.1 }}>{num(i.n)}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{i.rot}</div>
+              {i.sub && <div style={{ fontSize: 11, color: 'var(--muted2)' }}>{i.sub}</div>}
+            </div>
+          )
+        })}
+      </div>
+      {falhas > 0 && c.detalhe && (
+        <div style={{ marginTop: 8, fontSize: 12.5, color: 'var(--text)' }}>
+          <div style={{ fontWeight: 700, color: '#b91c1c' }}>Por que deu erro:</div>
+          {c.detalhe.erros.map(function(e, k) { return <div key={k} style={{ color: 'var(--muted2)' }}>• {num(e.qtd)}× {e.erro}</div> })}
+          <button onClick={function() { setVerFalhas(!verFalhas) }} style={{ cursor: 'pointer', marginTop: 4, border: 0, background: 'transparent', color: '#2563eb', fontWeight: 700, fontSize: 12.5, padding: 0 }}>{verFalhas ? 'Esconder quem falhou' : 'Ver quem falhou'}</button>
+          {verFalhas && (
+            <div style={{ marginTop: 4, maxHeight: 200, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8, padding: 8 }}>
+              {c.detalhe.falhas.map(function(f, k) { return <div key={k} style={{ color: 'var(--muted2)' }}>{f.nome || 'Sem nome'} · {f.wa} · {f.erro || 'Sem detalhe'}</div> })}
+              {falhas > c.detalhe.falhas.length && <div style={{ color: 'var(--muted2)' }}>… e mais {num(falhas - c.detalhe.falhas.length)}</div>}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Admin: total de alunos + disparo em massa de um modelo aprovado
 export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLoadTpls: () => void }) {
   const [pub, setPub] = useState<Publico | null>(null)
@@ -45,7 +96,6 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
   const [key, setKey] = useState('')
   const [cfg, setCfg] = useState<Cfg[]>([])
   const [teste, setTeste] = useState('')
-  const [instrucaoIA, setInstrucaoIA] = useState('')
   const [msg, setMsg] = useState('')
   const [ok, setOk] = useState('')
   const [ocupado, setOcupado] = useState(false)
@@ -73,9 +123,10 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
   }
   useEffect(function() {
     carregarPub(); carregarCamps(); onLoadTpls()
+    const timer = setInterval(function() { if (!rodRef.current) carregarCamps() }, 30000)
     function aviso(e: BeforeUnloadEvent) { if (rodRef.current) { e.preventDefault(); e.returnValue = '' } }
     window.addEventListener('beforeunload', aviso)
-    return function() { window.removeEventListener('beforeunload', aviso); paraRef.current = true }
+    return function() { clearInterval(timer); window.removeEventListener('beforeunload', aviso); paraRef.current = true }
   }, [])
 
   const aprovados = (tpls || []).filter(function(t) { return t.status === 'APPROVED' })
@@ -117,7 +168,7 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
     if (!window.confirm('Enviar o modelo "' + t.name + '" para ' + quantos + ' pessoa' + (quantos === 1 ? '' : 's') + ' (' + SEG_NOME[seg] + ')?\n\nIsso não pode ser desfeito depois de enviado.')) return
     setOcupado(true); setMsg(''); setOk('')
     try {
-      const r = await post('/api/whatsapp/broadcast', { action: 'criar', ...corpoBase(), segmento: seg, esperado: quantos, instrucaoIA: instrucaoIA })
+      const r = await post('/api/whatsapp/broadcast', { action: 'criar', ...corpoBase(), segmento: seg, esperado: quantos })
       if (!r.ok) { setMsg(r.j.error || 'Não foi possível criar o disparo.'); if (r.j.total) carregarPub() }
       else { await carregarCamps(); rodar(r.j.id) }
     } catch (e) { setMsg('Sem conexão.') }
@@ -165,7 +216,6 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
     if (fileRef.current) fileRef.current.value = ''
   }
 
-  const num = function(n: number | undefined) { return (n || 0).toLocaleString('pt-BR') }
 
   return (
     <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 16 }}>
@@ -205,6 +255,7 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
             <div style={{ fontSize: 13, color: 'var(--text)', marginTop: 8 }}>
               Enviadas <b>{num(enviadas(ativa.contagem))}</b> · Falharam <b>{num(ativa.contagem.failed)}</b> · Faltam <b>{num(faltam(ativa.contagem))}</b>
             </div>
+            <Resultados c={ativa} />
             {ativa.pause_reason && <div style={{ fontSize: 13, color: '#b91c1c', fontWeight: 700, marginTop: 6 }}>{ativa.pause_reason}</div>}
             <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
               {!rodando && <button onClick={function() { rodar(ativa.id) }} style={{ cursor: 'pointer', border: 0, background: '#16a34a', color: '#fff', borderRadius: 10, padding: '9px 16px', fontWeight: 800, fontSize: 13.5 }}>▶ Continuar envio</button>}
@@ -263,10 +314,7 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
 
           {t && (
             <>
-              <label style={lab}>3. O que o Júnior faz quando a pessoa responder (opcional)</label>
-              <textarea className="at-input" rows={4} placeholder={'Ex.: Quando a pessoa responder, pergunte: "Você já viu a novidade? Você pode integrar sua conta com o Facebook e eu analiso suas campanhas para você otimizar e vender no automático todos os dias." Depois siga a conversa e tire as dúvidas.'} value={instrucaoIA} onChange={function(e) { setInstrucaoIA(e.target.value) }} style={{ width: '100%', resize: 'vertical', marginBottom: 4 }} />
-              <div style={{ fontSize: 11.5, opacity: 0.65, marginBottom: 12 }}>Vale por 4 dias para quem receber este disparo. O Júnior responde sozinho entre 8h e 20h (a agenda que você já configurou); fora desse horário a resposta fica esperando.</div>
-              <label style={lab}>4. Teste primeiro (recomendado)</label>
+              <label style={lab}>3. Teste primeiro (recomendado)</label>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
                 <input className="at-input" placeholder="Seu WhatsApp com DDD, ex: 37 99999-9999" value={teste} onChange={function(e) { setTeste(e.target.value) }} style={{ flex: '1 1 220px', width: 'auto' }} />
                 <button disabled={ocupado || !preenchido || !teste.trim()} onClick={enviarTeste} style={{ cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 10, padding: '10px 14px', fontWeight: 800, fontSize: 13.5, opacity: ocupado || !preenchido || !teste.trim() ? 0.55 : 1 }}>Enviar teste</button>
@@ -287,15 +335,12 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
         {/* Histórico */}
         {camps.filter(function(c) { return c !== ativa }).length > 0 && (
           <div style={card}>
-            <div style={{ fontWeight: 800, fontSize: 14.5, color: 'var(--text)', marginBottom: 8 }}>Disparos anteriores</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}><div style={{ fontWeight: 800, fontSize: 14.5, color: 'var(--text)' }}>Resultado dos disparos</div><button onClick={carregarCamps} style={{ cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '5px 10px', fontWeight: 700, fontSize: 12 }}>↻ Atualizar</button></div>
             {camps.filter(function(c) { return c !== ativa }).map(function(c) {
-              const e = enviadas(c.contagem)
               return (
                 <div key={c.id} style={{ padding: '8px 0', borderTop: '1px solid var(--border)', fontSize: 13, color: 'var(--text)' }}>
                   <div style={{ fontWeight: 700 }}>{c.template_name} <span style={{ fontWeight: 400, color: 'var(--muted2)' }}>· {new Date(c.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })} · {SEG_NOME[c.segment] || c.segment}{c.status === 'cancelado' ? ' · cancelado' : ''}</span></div>
-                  <div style={{ color: 'var(--muted2)', marginTop: 2 }}>
-                    Enviadas {num(e)} de {num(c.total)} · Entregues {num((c.contagem.delivered || 0) + (c.contagem.read || 0))} · Lidas {num(c.contagem.read)} · Falharam {num(c.contagem.failed)}
-                  </div>
+                  <Resultados c={c} />
                 </div>
               )
             })}
