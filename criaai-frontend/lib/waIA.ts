@@ -7,7 +7,7 @@ import { REGRA_EXPRESS_WHATSAPP, pediuLiberarExpress, removerMarcaExpress, liber
 import { eventosDaPessoa } from '@/lib/juniorEventos'
 import { falouEmReembolso, AVISO_REEMBOLSO } from '@/lib/juniorReembolso'
 import { REGRA_COMPRA_WHATSAPP, MENSAGEM_PRIMEIRO_ACESSO, pediuConsultarCompra, removerMarcaCompra, dadosDaMarcaCompra, consultarCompraPeloJunior } from '@/lib/juniorCompra'
-import { REGRA_CADASTRO_WHATSAPP, pediuLiberarCadastro, removerMarcaCadastro, emailDaMarcaCadastro, liberarCadastroPeloJunior } from '@/lib/juniorCadastro'
+import { REGRA_CADASTRO_WHATSAPP, pediuLiberarCadastro, removerMarcaCadastro, emailDaMarcaCadastro, liberarCadastroPeloJunior, conversaDeProblemaDeAcesso, ultimoEmailDaPessoa } from '@/lib/juniorCadastro'
 import { REGRA_ASSINATURA_WHATSAPP, pediuVerificarAssinatura, removerMarcaAssinatura, emailsDaMarcaAssinatura, verificarAssinaturaPeloJunior } from '@/lib/juniorAssinatura'
 
 const MARCA_HUMANO = '[[HUMANO]]'
@@ -467,6 +467,12 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     if (!ult.data || String((ult.data as any).id) !== String(msgId)) return true
 
     // O assistente pediu para conferir a assinatura (plano da plataforma): o sistema confere o pagamento, libera se estiver tudo certo e escreve a resposta
+    // Trava do sistema (ordem do Breno): conversa de problema de acesso (area de membros antiga, nao consigo entrar...) NUNCA vira
+    // conferencia de plano/assinatura nem pedido de comprovante e NUNCA recebe link de pagamento. Se o modelo errar, o sistema libera o cadastro.
+    if (!pediuLiberarCadastro(texto) && (pediuVerificarAssinatura(texto) || pediuConsultarCompra(texto)) && conversaDeProblemaDeAcesso(linhas)) {
+      const emailAcesso = (pediuVerificarAssinatura(texto) ? emailsDaMarcaAssinatura(texto)[0] : (dadosDaMarcaCompra(texto).emails[0] || '')) || ultimoEmailDaPessoa(linhas)
+      if (emailAcesso) texto = '[[LIBERAR_CADASTRO: ' + emailAcesso + ']]'
+    }
     if (pediuLiberarCadastro(texto)) {
       // Print do erro de cadastro ("Nao encontramos uma compra com esse e-mail"): o sistema libera o e-mail e pede para criar a conta de novo
       const resL = await liberarCadastroPeloJunior(admin, { email: emailDaMarcaCadastro(texto), waId, nome: nome || undefined })

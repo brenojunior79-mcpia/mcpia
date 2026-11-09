@@ -23,7 +23,7 @@ export function emailDaMarcaCadastro(texto: string): string {
 }
 
 export const REGRA_CADASTRO_WHATSAPP = `# LIBERAR CADASTRO (PRIORIDADE MAXIMA, vale para QUALQUER aluno)
-Voce TEM autorizacao do Breno para liberar o cadastro de QUALQUER aluno que esteja travado para entrar na plataforma. Vale quando a pessoa: (a) mandar o print da tela de cadastro (Criar conta) com o aviso vermelho "Nao encontramos uma compra com esse e-mail"; (b) disser que o cadastro nao aceita o e-mail; (c) disser que comprou (mesmo ha muito tempo, ou em outra plataforma como Kiwify) e nao consegue criar a conta, entrar ou achar as aulas na plataforma nova; (d) reclamar que as aulas antigas sumiram e ela esta tentando entrar na plataforma nova. NAO passe esses casos para a equipe, NAO diga "vou verificar" nem "anotei o seu pedido": voce mesma(o) resolve com a marca abaixo. Faca assim:
+Voce TEM autorizacao do Breno para liberar o cadastro de QUALQUER aluno que esteja travado para entrar na plataforma. Vale quando a pessoa: (a) mandar o print da tela de cadastro (Criar conta) com o aviso vermelho "Nao encontramos uma compra com esse e-mail"; (b) disser que o cadastro nao aceita o e-mail; (c) disser que comprou (mesmo ha muito tempo, ou em outra plataforma como Kiwify) e nao consegue criar a conta, entrar ou achar as aulas na plataforma nova; (d) reclamar que as aulas antigas sumiram e ela esta tentando entrar na plataforma nova; (e) mandar print ou falar da AREA DE MEMBROS ANTIGA (tela "Faca seu login", Astro Members, "o acesso a area de membros esta temporariamente indisponivel", erro de login de outra plataforma): essa area antiga NAO existe mais, foi substituida pela plataforma Cristao Prospero (mcpia.site). Nesse caso diga em UMA frase que a area antiga foi substituida pela plataforma Cristao Prospero e peca o e-mail da compra. NUNCA diga que a area esta "indisponivel" ou "em manutencao". NUNCA use [[VERIFICAR_ASSINATURA]] nem [[CONSULTAR_COMPRA]] nesses casos e NUNCA mande link de assinatura, de checkout ou de pagamento (pay.hub.la) para quem diz que JA comprou ou esta travado para entrar: quem compra so precisa criar a conta ou entrar na plataforma. NAO passe esses casos para a equipe, NAO diga "vou verificar" nem "anotei o seu pedido": voce mesma(o) resolve com a marca abaixo. Faca assim:
 1. Se ela AINDA NAO escreveu o e-mail da compra em uma mensagem de texto: peca, curto e simples: "Me escreve aqui o e-mail que você usou na compra, que eu libero o seu cadastro. 🙏". Nao tente ler o e-mail do print (pode estar errado ou cortado): peca sempre para ela digitar.
 2. Quando ela escrever o e-mail: responda APENAS com a marca [[LIBERAR_CADASTRO: e-mail]] (o e-mail que ela escreveu, so um). Nao escreva mais nada. O SISTEMA libera o cadastro e escreve a resposta pedindo para ela criar a conta de novo.
 3. NAO use [[CONSULTAR_COMPRA]] nesse caso, nao peca comprovante e nao pergunte onde comprou: essa regra substitui a consulta de compra. Se ela ja mandou o e-mail antes do print, use a marca direto.
@@ -64,11 +64,36 @@ export async function liberarCadastroPeloJunior(db: any, p: { email: string; waI
       }
     }
     return {
-      texto: 'Pronto, liberei o cadastro com o e-mail ' + email + ' ✅\n\nAgora volta neste link, clica em "Criar conta" e preenche de novo com esse MESMO e-mail:\nhttps://www.mcpia.site/login\n\nQuando você conseguir, me avisa aqui! 🙏',
+      texto: 'Pronto, liberei o seu cadastro na plataforma Cristão Próspero com o e-mail ' + email + ' ✅\n\nAgora entra neste link, clica em "Criar conta" e faz o cadastro com esse MESMO e-mail:\nhttps://www.mcpia.site/login\n\nQuando você conseguir, me avisa aqui! 🙏',
       liberou: true,
     }
   } catch (e) {
     console.error('[junior-cadastro]', e)
     return { texto: 'Tive um probleminha para liberar agora. Vou pedir para a equipe conferir e já te respondo por aqui, tá bom? 🙏', liberou: false, humano: true }
   }
+}
+
+
+// Conversa de problema de acesso (area de membros antiga, nao consigo entrar, erro de cadastro...)? Serve de trava no sistema:
+// se o modelo errar e pedir a conferencia do PLANO ou a consulta de compra, o sistema troca pela liberacao de cadastro.
+const CONTEXTO_ACESSO_RE = /[aá]rea de membros|astro members|astro|fa[cç]a seu login|acesso.{0,40}indispon|n[aã]o consigo (entrar|acessar|logar|fazer login)|sem acesso|n[aã]o tenho acesso|aulas? (antigas|sumiram|sumiu)|n[aã]o encontramos uma compra|n[aã]o aceita o e-?mail|criar (a )?conta/i
+const CONTEXTO_PLANO_RE = /\b(plano|planos|pro|premium|starter|assinatura|assinar|cr[eé]ditos?|renova[cç][aã]o|cart[aã]o|fatura)\b/i
+
+export function conversaDeProblemaDeAcesso(linhas: any[]): boolean {
+  const ult = (linhas || []).slice(-14)
+  const temAcesso = ult.some(function(m) { return CONTEXTO_ACESSO_RE.test(String(m.body || '')) })
+  if (!temAcesso) return false
+  // se a PESSOA esta falando de plano/assinatura/creditos nas ultimas mensagens, nao e problema de acesso
+  const dela = ult.filter(function(m) { return m.direction === 'in' && m.type === 'text' }).slice(-4)
+  return !dela.some(function(m) { return CONTEXTO_PLANO_RE.test(String(m.body || '')) })
+}
+
+// ultimo e-mail que a PESSOA escreveu na conversa
+export function ultimoEmailDaPessoa(linhas: any[]): string {
+  const ins = (linhas || []).filter(function(m) { return m.direction === 'in' }).reverse()
+  for (const m of ins) {
+    const e = String(m.body || '').replace(/\s+/g, '').match(EMAIL_RE)
+    if (e) return e[0].toLowerCase()
+  }
+  return ''
 }
