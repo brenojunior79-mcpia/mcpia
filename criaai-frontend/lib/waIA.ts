@@ -1,6 +1,7 @@
 // Assistente de IA (Junior) dentro das conversas do WhatsApp (suporte e recuperacao).
 // So responde nas conversas em que o ADMIN ligou o assistente (wa_conversations.ia_ativa) ou quando ele ligou para todas (wa_ia_config.geral).
 import { blocoAnunciosDoAluno } from '@/lib/juniorCampanhas'
+import { statusAnuncios } from '@/lib/acessoAnuncios'
 import { REGRA_RESPONSAVEL, JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno, soUmPasso, tirarLinkMarkdown, linkClicavel, tirarFrasesDeAjuda, tipoFinalConversa, situacaoFinalConversa } from '@/lib/junior'
 import { phoneIdDaConversa, postMessage } from '@/lib/whatsapp'
 import { agoraNoFuso } from '@/lib/waHours'
@@ -279,6 +280,8 @@ async function descobrirTemExpressPorTelefone(admin: any, waId: string): Promise
   } catch (er) { return null }
 }
 
+function normalizarDisparo(t: string): string { return t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim() }
+
 // Devolve true quando o assistente esta LIGADO nessa conversa (o webhook entao nao manda o aviso de horario nem os fluxos).
 export async function tratarIA(admin: any, convId: string, waId: string, msgId: string, tipo: string, nomeContato: string | null): Promise<boolean> {
   try {
@@ -406,10 +409,50 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     system = system + '\n\nEstrutura Express desta pessoa: ' + (temExpress === true ? 'JA TEM acesso liberado no sistema.' : temExpress === false ? 'o sistema NAO achou compra nem liberacao da Estrutura Express nesta conta.' : 'o sistema NAO sabe (conta nao identificada).')
     system = system + '\n\nConta identificada: ' + (conv.profile_id ? 'SIM (o sistema ja sabe quem e a pessoa; nao peca e-mail).' : ehAluna ? 'NAO (peca o e-mail da plataforma antes de liberar).' : 'NAO, e ela ainda nao e aluna (nao peca e-mail para liberar nada; so pergunte o e-mail da compra se ela disser que ja comprou).')
 
+    // Disparo em massa: se a pessoa recebeu um disparo com instrucao do Breno nos ultimos 4 dias, o Junior sabe o motivo da conversa.
+    // Quem NAO esta na lista do disparo segue a conversa normal.
+    let instrucaoDisparo = ''
+    let msgExataDisparo = ''
+    let forcarNovidade = false
+    let perfilDisparo: string | null = null
+    try {
+      const fim8 = String(waId).replace(/\D/g, '').slice(-8)
+      const rc = fim8.length === 8 ? await admin.from('wa_broadcast_recipients').select('broadcast_id, sent_at, user_id').like('wa_id', '%' + fim8).in('status', ['sent', 'delivered', 'read']).order('sent_at', { ascending: false }).limit(1).maybeSingle() : { data: null }
+      const r0: any = rc.data
+      if (r0 && r0.sent_at && Date.now() - new Date(r0.sent_at).getTime() < 4 * 86400000) {
+        const bc = await admin.from('wa_broadcasts').select('instrucao_ia, preview').eq('id', r0.broadcast_id).maybeSingle()
+        const b0: any = bc.data
+        if (b0 && b0.instrucao_ia) {
+          let podeFalar = true
+          perfilDisparo = conv.profile_id || r0.user_id || null
+          if (perfilDisparo) {
+            const pf = await admin.from('profiles').select('is_admin, email, created_at, subscription_status, plans(name)').eq('id', perfilDisparo).maybeSingle()
+            const d: any = pf.data || {}
+            const plano = Array.isArray(d.plans) ? (d.plans[0] && d.plans[0].name) : (d.plans && d.plans.name)
+            if (statusAnuncios(!!d.is_admin, d.email, d.created_at, d.subscription_status, plano) === 'oculto') podeFalar = false
+          }
+          if (podeFalar) {
+            msgExataDisparo = String(b0.instrucao_ia).trim()
+            const chave = normalizarDisparo(msgExataDisparo).slice(0, 30)
+            const jaContou = linhas.some(function(m: any) { return m.direction === 'out' && m.type === 'text' && normalizarDisparo(String(m.body || '')).indexOf(chave) >= 0 })
+            // Conversa que ja estava rolando ANTES do disparo: responde o que ela disse e depois conta a novidade
+            const antes = linhas.filter(function(m: any) { return m.type !== 'system' && new Date(m.created_at).getTime() >= new Date(r0.sent_at).getTime() - 12 * 3600000 && new Date(m.created_at).getTime() < new Date(r0.sent_at).getTime() }).length
+            const emAndamento = antes > 0
+            forcarNovidade = !jaContou && !emAndamento
+            const cabeca = 'DISPARO QUE ESTA PESSOA RECEBEU (REGRA DO BRENO, PRIORIDADE MAXIMA): ela recebeu uma mensagem em massa ("' + String(b0.preview || '').replace(/\s+/g, ' ').slice(0, 200) + '") e esta respondendo a ela. A resposta pode ser qualquer coisa (oi, estou, sim, quem e).\n'
+            if (jaContou) instrucaoDisparo = cabeca + 'Voce JA contou a novidade nesta conversa; NAO repita. Siga a conversa respondendo o que ela disse, com as regras de plano e integracao deste prompt (se ela nao sabia, explique com carinho; se nao tem plano, guie para o plano Pro; so mande o link do plano Pro depois que ela disser que quer; depois do pagamento, oriente a integrar o Facebook).\nNOVIDADE QUE VOCE JA CONTOU: ' + msgExataDisparo
+            else if (emAndamento) instrucaoDisparo = cabeca + 'Ela ja estava conversando com voce antes do disparo. Responda primeiro o que ela perguntou e, no fim da mesma mensagem, conte a novidade com estas palavras: ' + msgExataDisparo
+            else instrucaoDisparo = cabeca + 'Sua PRIMEIRA resposta desta conversa deve ser EXATAMENTE a mensagem abaixo, sem mudar o sentido e sem acrescentar outro assunto, MESMO que a pessoa tenha escrito outra coisa. Depois que ela responder a esta mensagem, voce segue a conversa: se ela nao sabia, explique com carinho; se nao tem plano, guie para o plano Pro (so mande o link depois que ela disser que quer; depois do pagamento, oriente a integrar o Facebook), com as regras de plano e integracao deste prompt.\nMENSAGEM EXATA: ' + msgExataDisparo
+          }
+        }
+      }
+    } catch (e) { /* sem instrucao: segue normal */ }
+    if (instrucaoDisparo) system = system + '\n\n' + instrucaoDisparo
+
     // Anuncios (so aluna com conta ligada): pergunta da integracao com o Facebook e, com plano + integracao, le as campanhas reais dela
-    if (ehAluna && conv.profile_id) {
+    if (ehAluna && (conv.profile_id || perfilDisparo)) {
       const falasIn = linhas.filter(function(m: any) { return m.direction === 'in' }).slice(-3).map(function(m: any) { return String(m.body || '') })
-      const blocoAn = await blocoAnunciosDoAluno(admin, conv.profile_id, null, falasIn)
+      const blocoAn = await blocoAnunciosDoAluno(admin, conv.profile_id || perfilDisparo, null, falasIn, !!instrucaoDisparo)
       if (blocoAn) system = system + '\n\n' + blocoAn
     }
 
@@ -477,6 +520,10 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
         texto = ok.join('\n\n').trim()
         if (!texto) texto = passaParaHumano ? 'Anotei o seu pedido aqui, ' + primeiro + '.' : 'Me conta um pouquinho melhor o que você precisa, ' + primeiro + '? Se puder, manda um print da tela.'
       }
+    }
+    // Trava do disparo (ordem do Breno): a PRIMEIRA resposta ao disparo e exatamente a novidade, nao outro assunto
+    if (forcarNovidade && msgExataDisparo && normalizarDisparo(texto).indexOf(normalizarDisparo(msgExataDisparo).slice(0, 30)) < 0) {
+      texto = msgExataDisparo.split('{nome}').join(((nomeContato || '').split(' ')[0]) || 'tudo bem')
     }
     // Trava do desconto (ordem do Breno): o link de R$ 197 so sai depois de DUAS confirmacoes da pessoa
     // (1: "ajudaria?" sim; 2: "fica R$ 197, posso mandar o link?" sim). Se o modelo adiantar o link, o sistema tira e faz a pergunta certa.

@@ -6,6 +6,7 @@ type Publico = { total: number; podem: number; comPlano: number; semPlano: numbe
 type Cont = Record<string, number>
 type Camp = { id: string; created_at: string; template_name: string; preview: string | null; segment: string; status: string; pause_reason: string | null; total: number; contagem: Cont; detalhe?: Detalhe | null }
 type Detalhe = { responderam: number; erros: { erro: string; qtd: number }[]; falhas: { nome: string | null; wa: string; erro: string | null }[] }
+const NOVIDADE_PADRAO = 'Você viu a novidade que lançamos lá na plataforma? Agora você pode integrar o seu Facebook com a plataforma e eu analiso essas campanhas para você vender no automático. Eu vou te orientar e ver as suas campanhas pela plataforma.'
 type Cfg = { mode: 'nome' | 'texto'; value: string }
 
 const card: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 16, marginBottom: 14 }
@@ -96,6 +97,7 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
   const [key, setKey] = useState('')
   const [cfg, setCfg] = useState<Cfg[]>([])
   const [teste, setTeste] = useState('')
+  const [instrucaoIA, setInstrucaoIA] = useState(NOVIDADE_PADRAO)
   const [msg, setMsg] = useState('')
   const [ok, setOk] = useState('')
   const [ocupado, setOcupado] = useState(false)
@@ -168,7 +170,7 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
     if (!window.confirm('Enviar o modelo "' + t.name + '" para ' + quantos + ' pessoa' + (quantos === 1 ? '' : 's') + ' (' + SEG_NOME[seg] + ')?\n\nIsso não pode ser desfeito depois de enviado.')) return
     setOcupado(true); setMsg(''); setOk('')
     try {
-      const r = await post('/api/whatsapp/broadcast', { action: 'criar', ...corpoBase(), segmento: seg, esperado: quantos })
+      const r = await post('/api/whatsapp/broadcast', { action: 'criar', ...corpoBase(), segmento: seg, esperado: quantos, instrucaoIA: instrucaoIA })
       if (!r.ok) { setMsg(r.j.error || 'Não foi possível criar o disparo.'); if (r.j.total) carregarPub() }
       else { await carregarCamps(); rodar(r.j.id) }
     } catch (e) { setMsg('Sem conexão.') }
@@ -314,7 +316,10 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
 
           {t && (
             <>
-              <label style={lab}>3. Teste primeiro (recomendado)</label>
+              <label style={lab}>3. Resposta do Júnior para quem responder o disparo (opcional)</label>
+              <textarea className="at-input" rows={4} value={instrucaoIA} onChange={function(e) { setInstrucaoIA(e.target.value) }} style={{ width: '100%', resize: 'vertical', marginBottom: 4 }} />
+              <div style={{ fontSize: 11.5, opacity: 0.65, marginBottom: 12 }}>Vale só para quem receber ESTE disparo (por 4 dias). Quando a pessoa responder (oi, estou, etc.), o Júnior envia esta mensagem como primeira resposta. Depois ele conduz a conversa: se ela não tiver plano, oferece o Pro de R$ 49,90 e, após o pagamento, orienta a integrar o Facebook. Quem não recebeu o disparo continua conversando normal. Deixe vazio para o Júnior não fazer nada especial.</div>
+              <label style={lab}>4. Teste primeiro (recomendado)</label>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
                 <input className="at-input" placeholder="Seu WhatsApp com DDD, ex: 37 99999-9999" value={teste} onChange={function(e) { setTeste(e.target.value) }} style={{ flex: '1 1 220px', width: 'auto' }} />
                 <button disabled={ocupado || !preenchido || !teste.trim()} onClick={enviarTeste} style={{ cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 10, padding: '10px 14px', fontWeight: 800, fontSize: 13.5, opacity: ocupado || !preenchido || !teste.trim() ? 0.55 : 1 }}>Enviar teste</button>

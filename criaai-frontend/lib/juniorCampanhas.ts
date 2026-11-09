@@ -1,6 +1,7 @@
 // Junior + campanhas do aluno: pergunta da integracao com o Facebook e, quando o aluno tem plano Pro/Premium e ja integrou,
 // le as campanhas dele direto no Facebook (so leitura) para analisar de forma individual. Usado no chat do app e no WhatsApp.
 import { statusAnuncios } from '@/lib/acessoAnuncios'
+import { LINKS_PLANOS } from '@/lib/junior'
 
 const GRAPH = 'https://graph.facebook.com/v26.0/'
 const LINK_GERENCIADOR = 'https://www.mcpia.site/dashboard/anuncios'
@@ -15,7 +16,7 @@ export function falouDeAnuncio(textos: string[]): boolean {
 
 function regraAnuncios(acesso: string, status: StatusFacebook, temDados: boolean): string {
   if (acesso === 'plano') {
-    return 'ANALISE DAS CAMPANHAS PELO JUNIOR (REGRA DO BRENO): esta pessoa AINDA NAO tem o plano que libera o menu Gerenciando seus anuncios (planos Pro e Premium). Toda vez que ela vier falar de ANUNCIO, CAMPANHA, TRAFEGO PAGO ou METRICAS, depois de responder a duvida dela, explique com carinho: "Se você tiver um plano Pro ou Premium e fizer a integração com o Facebook no menu Gerenciando seus anúncios, eu consigo ir lá nas suas campanhas e analisar para você 🙏" e pergunte se ela quer saber como fazer. Se ela quiser, siga as regras de ASSINATURA que ja existem (link do plano so como la esta escrito). Nao insista se ela disser que nao. Fale disso uma vez por conversa.'
+    return 'ANALISE DAS CAMPANHAS PELO JUNIOR (REGRA DO BRENO): esta pessoa AINDA NAO tem o plano que libera o menu Gerenciando seus anuncios (Pro ou Premium). Com o plano Pro e a integracao com o Facebook (menu Gerenciando seus anuncios), VOCE consegue ver as campanhas dela e analisar para ela vender no automatico. Quando o assunto for anuncio/campanha/novidade da integracao: (1) explique em poucas palavras isso, sem pressionar; (2) guie para o plano e pergunte se ela quer fazer o plano Pro de R$ 49,90; (3) SO depois que ela disser que quer, mande o link do plano Pro ' + LINKS_PLANOS.Pro + ' (so o link, sozinho, em texto puro; esta regra do Breno autoriza mandar esse link); (4) depois que ela disser que pagou, oriente a integrar o Facebook (abrir ' + LINK_GERENCIADOR + ', tocar em "Conectar com Facebook", aceitar as permissoes, escolher a conta de anuncio, um passo por mensagem) e diga que quando ela integrar voce analisa as campanhas dela. Se ela disser que nao quer, aceite com carinho e nao insista. Nunca prometa ganho.'
   }
   if (acesso !== 'liberado') return ''
   if (status === 'conectado') {
