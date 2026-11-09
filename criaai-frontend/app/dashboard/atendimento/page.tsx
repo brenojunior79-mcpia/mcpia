@@ -30,7 +30,7 @@ const RAPIDAS_SUPORTE: { titulo: string; texto: string }[] = [
 
 const RAPIDAS: { titulo: string; texto: string }[] = [
   { titulo: 'Link da plataforma', texto: 'Só acessar!\n\nhttps://www.mcpia.site/login' },
-  { titulo: 'Acesso Hubla', texto: 'Agora você vai receber um e-mail da Hubla:\n\nAbre o e-mail e você vai conseguir acessar Área de membros pra começar.\n\nAssim que acessar me confirma aqui se deu certinho.\n\nAproveita e já entro no nosso grupo:' },
+  { titulo: 'Acesso Hubla', texto: 'Agora você vai receber um e-mail da Hubla com a confirmação.\n\nO acesso às aulas é pela plataforma Cristão Próspero: https://www.mcpia.site/login\n\nCria a conta com o mesmo e-mail da compra e assim que acessar me confirma aqui se deu certinho.\n\nAproveita e já entra no nosso grupo:' },
   { titulo: 'Grupo de avisos e suporte', texto: 'Grupo de avisos\n\nhttps://chat.whatsapp.com/EQOJkJWilLjES81OIl6UWg\n\nSuporte\n\nhttps://wa.me/553791348869' },
   { titulo: 'Pagamento', texto: 'Ele expira daqui a pouco\n\nAssim que você finalizar o pagamento me avisa aqui' },
 ]

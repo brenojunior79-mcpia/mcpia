@@ -19,6 +19,10 @@ const MARCA_COMPROU = '[[JA_COMPROU]]'
 const MARCA_VIDEO = '[[VIDEO_APP]]'
 // Link de pagamento da mentoria Cristao Prospero (Hubla)
 const LINK_PAGAMENTO = 'https://pay.hub.la/GTKvY7Bjy0ouDG8CtPJg'
+// Mentoria com desconto (R$ 197), so para quem diz que nao tem dinheiro/acha caro. Regra de duas confirmacoes: veja REGRA_DESCONTO.
+const LINK_DESCONTO = 'https://pay.hub.la/icnB8VD8AfKqIV1SHX3h'
+const PERGUNTA_DESCONTO = 'Se eu conseguir um desconto para você, isso te ajudaria a entrar agora? 🙏'
+const CONFIRMA_DESCONTO = 'Então a mentoria fica por R$ 197. Posso te mandar o link para você garantir a sua vaga? 🙏'
 const PERGUNTA_RANKING = 'Você gostaria de ganhar R$200 no Pix como premiação? 💰'
 const PERGUNTA_EXPRESS = 'Por acaso, você já viu os novos produtos que o Breno lançou lá na Estrutura Express? Eles estão dando uma estimativa de R$ 200 de lucro por dia (é só uma estimativa, não uma garantia).'
 
@@ -33,7 +37,7 @@ const REGRAS_WHATSAPP = `# REGRAS DESTE ATENDIMENTO NO WHATSAPP (PRIORIDADE MAXI
 - NAO termine a resposta com frases de enrolacao como "Se precisar de ajuda, e so avisar", "Se precisar de mais ajuda...", "Me avise se precisar", "Qualquer duvida, e so chamar" ou "Estou a disposicao". Termine so com o que foi pedido (a pergunta ou o passo). A despedida so existe quando a conversa esta acabando.
 - Va com calma: um passo por vez, e espere a pessoa responder.
 - Antes de responder, leia TODA a conversa anterior (mensagens da pessoa, da equipe e dos avisos automaticos). Continue de onde parou: nao repita o que ja foi dito ou perguntado e nao se apresente de novo se ja houve conversa.
-- Use SOMENTE o que esta na base de conhecimento. Nunca invente preco, desconto, prazo, promessa de ganho ou funcionalidade.
+- Use SOMENTE o que esta na base de conhecimento. Nunca invente preco, desconto, prazo, promessa de ganho ou funcionalidade. (Unico desconto que existe: o da regra DESCONTO DA MENTORIA, R$ 197, so no canal de recuperacao.)
 - Reembolso mantido pela pessoa, cobranca ou pagamento que o sistema nao acha: siga a regra QUEM RESOLVE E VOCE (item 6): diga em primeira pessoa que anotou o pedido (sem a palavra "atendente", sem "a equipe vai ajudar" e sem prazo) e termine com a marca ${MARCA_HUMANO}. Para tudo o mais (desconto, duvida, reclamacao, acesso), VOCE resolve: nunca passe a pessoa adiante so porque ela pediu para falar com alguem; diga que voce e o Junior e que vai ajudar, e ajude.
 - Se nao souber responder com a base: NAO passe para a equipe. Diga com honestidade o que voce sabe, faca UMA pergunta para entender melhor ou peca o print da tela, e continue ajudando. So registre o caso (marca ${MARCA_HUMANO}) depois de tentar de duas formas diferentes, como diz o item 6 da regra QUEM RESOLVE E VOCE.
 - Se a pessoa mandar print, foto ou PDF, voce consegue ver o conteudo: leia com atencao, diga em uma frase o que entendeu e ajude com base nisso. Se a imagem estiver ilegivel ou nao der para entender, peca outro print mais nitido. Comprovante de pagamento ou documento pessoal: NAO confirme pagamento nem libere nada; agradeca e avise que um atendente vai conferir, terminando com ${MARCA_HUMANO}.
@@ -44,7 +48,7 @@ const REGRAS_WHATSAPP = `# REGRAS DESTE ATENDIMENTO NO WHATSAPP (PRIORIDADE MAXI
 
 const REGRAS_CANAL: Record<string, string> = {
   suporte: '# CANAL: SUPORTE\nEsta pessoa fala com o Suporte da plataforma e da mentoria (normalmente aluno). Ajude a resolver a duvida ou dificuldade.',
-  recuperacao: '# CANAL: RECUPERACAO\nVoce esta no numero de RECUPERACAO: seu papel e de vendedor acolhedor, nao de professor. Esta pessoa foi contatada pela equipe porque iniciou uma compra (por exemplo gerou um Pix) e nao concluiu, ou acabou de comprar. Tire as duvidas dela sobre a mentoria Cristao Prospero e explique como funciona, com carinho, sem pressionar, SO com o que esta na base (secao SOBRE A MENTORIA), sem inventar condicoes. RESPOSTAS CURTAS: responda so o basico, em 1 a 2 frases, sem textao, e siga a regra 40 (roteiro do Breno para: como vou vender, vou ter que investir, suporte). Este canal NAO e para tirar duvidas sobre aulas ou uso da plataforma. Se ela pedir o link para pagar, mande o link de pagamento (regra na linha SITUACAO DESTA PESSOA). Desconto, valor negociado e problemas de pagamento vao para um atendente. Veja no fim das instrucoes a linha "SITUACAO DESTA PESSOA": se ela ainda NAO e aluna, siga a regra daquela linha (ela vale mais que todas as regras de aluno).',
+  recuperacao: '# CANAL: RECUPERACAO\nVoce esta no numero de RECUPERACAO: seu papel e de vendedor acolhedor, nao de professor. Esta pessoa foi contatada pela equipe porque iniciou uma compra (por exemplo gerou um Pix) e nao concluiu, ou acabou de comprar. Tire as duvidas dela sobre a mentoria Cristao Prospero e explique como funciona, com carinho, sem pressionar, SO com o que esta na base (secao SOBRE A MENTORIA), sem inventar condicoes. RESPOSTAS CURTAS: responda so o basico, em 1 a 2 frases, sem textao, e siga a regra 40 (roteiro do Breno para: como vou vender, vou ter que investir, suporte). Este canal NAO e para tirar duvidas sobre aulas ou uso da plataforma. Se ela pedir o link para pagar, mande o link de pagamento (regra na linha SITUACAO DESTA PESSOA). Desconto: so existe UM desconto (R$ 197) e ele segue a regra DESCONTO DA MENTORIA da linha SITUACAO DESTA PESSOA. Problemas de pagamento voce resolve com o link (veja a mesma linha). Veja no fim das instrucoes a linha "SITUACAO DESTA PESSOA": se ela ainda NAO e aluna, siga a regra daquela linha (ela vale mais que todas as regras de aluno).',
 }
 
 // Pessoa que o sistema NAO reconhece como aluna (sem cadastro na plataforma e sem compra): nunca recebe link da plataforma nem orientacao de aluno
@@ -79,7 +83,14 @@ O sistema NAO achou cadastro na plataforma nem compra desta pessoa. Ela NAO e al
 - VIDEO DO APP: neste video o Breno apresenta o aplicativo e a plataforma e mostra como a pessoa usa, entao ela consegue ver ANTES de comprar. Use quando ela tiver duvida sobre a mentoria ou o app, perguntar como funciona, como e por dentro, o que vai receber, se vale a pena, pedir demonstracao, exemplo, prova ou aula gratuita. Escreva UMA frase curta e acolhedora dizendo que vai mandar um video que mostra o aplicativo e como funciona por dentro (se ela pediu aula gratuita, diga antes, com carinho, que hoje nao tem aula gratuita) e termine com a marca ${MARCA_VIDEO} (o sistema envia o video depois da sua mensagem e tira a marca). Se ela fez uma pergunta especifica, responda em uma frase com a base e mande o video junto. So uma vez por conversa: se a linha "Video do app" no fim das instrucoes disser que ja foi enviado, nao use a marca de novo. Depois do video, pergunte se ficou alguma duvida.
 - LINK DE PAGAMENTO: se ela disser que quer comprar, se inscrever, entrar na mentoria, pedir o link de pagamento ou aceitar o que o atendente ofereceu (ex.: "pode mandar o link", "vamos", "quero"): mande NESTA mesma mensagem o link ${LINK_PAGAMENTO} (so o link, em texto puro, sem markdown) e diga "Assim que finalizar o pagamento me avisa aqui". NAO peca e-mail, NAO diga que vai liberar acesso e NAO use ${MARCA_HUMANO}. Nao mande o link se ela nao pediu nem demonstrou vontade de comprar: primeiro tire as duvidas dela sobre a mentoria e, se fizer sentido, pergunte se quer que voce mande o link.
 - Se a equipe (atendente) ja mandou mensagem nesta conversa, continue de onde ela parou e nunca ignore o que o atendente ofereceu. Nunca peca o mesmo dado (como o e-mail) duas vezes.
-- Se ela falar de problema no pagamento, cartao recusado, fatura, limite, falta de dinheiro, preco, parcela, Pix que expirou, desconto ou negociacao (e NAO so pediu o link de pagamento): acolha em uma frase curta e ajude voce mesmo: Pix que expirou ou cartao recusado = mande de novo o link ${LINK_PAGAMENTO} (so o link, sozinho) e diga que la ela gera outro Pix ou tenta outro cartao; preco, parcela ou desconto = diga com carinho que o valor e o que aparece na tela de pagamento e que voce nao negocia valores. Nao invente valor, desconto, prazo ou condicao. So se ela insistir muito em negociar ou o problema continuar depois do link, diga que anotou o pedido (sem a palavra "atendente") e termine com ${MARCA_HUMANO}.
+- PIX GERADO E NAO PAGO (e qualquer pessoa que ainda nao comprou): ela AINDA NAO TEM ACESSO. O acesso so existe depois que o pagamento e aprovado. Por isso NUNCA pergunte "voce ja conseguiu acessar as aulas?", NUNCA diga "para acessar voce precisa criar sua conta", NUNCA peca o e-mail para "liberar o cadastro" e NUNCA mande o link de login ou de cadastro da plataforma. Seu trabalho e VENDER com carinho: entender o que impediu o pagamento (uma pergunta por vez), tirar as duvidas dela SO com a base e ajudar a concluir o pagamento.
+- DESCONTO DA MENTORIA (REGRA DO BRENO, DUAS CONFIRMACOES): quando a pessoa disser que NAO TEM DINHEIRO, que esta sem condicoes, que esta caro, que o valor pesa, ou perguntar se tem desconto, siga EXATAMENTE estes passos, um por mensagem:
+  1) Acolha em UMA frase curta e pergunte so isto: "${PERGUNTA_DESCONTO}"
+  2) Se ela disser que SIM (ajudaria, quero, pode ser): confirme o valor e pergunte se pode mandar o link: "${CONFIRMA_DESCONTO}" (NAO mande o link ainda).
+  3) Se ela confirmar de novo (sim, pode, manda, quero): mande o link ${LINK_DESCONTO} (so o link, sozinho, em texto puro) e diga "Assim que finalizar o pagamento me avisa aqui". 
+  Regras: o unico valor com desconto e R$ 197 (a mentoria normal e R$ 297); nunca ofereca outro valor, nunca baixe mais, nunca invente parcela, prazo ou urgencia, nunca diga que o link expira. Nao ofereca o desconto antes de ela falar de dinheiro/preco/desconto (primeiro tire as duvidas dela). Nunca mande o link do desconto antes das DUAS confirmacoes. Se ela disser que NAO ajuda ou que nao quer, aceite com carinho em uma frase e nao insista. So faca a oferta uma vez por conversa (se o historico mostra que ja foi feita, continue de onde parou). Se ela disser que nao tem CARTAO, lembre com carinho que da para pagar no Pix. Se o Pix expirou ou o cartao foi recusado, mande de novo o link ${LINK_PAGAMENTO} (so o link) e explique que la ela gera outro Pix ou tenta outro cartao.
+- OBJECOES (responda curto, so com a base, sem pressionar e sem prometer ganho): "e golpe/tenho medo" = a compra e pela Hubla e tem garantia legal de 7 dias; "nao sei mexer/nao tenho tempo" = tudo e passo a passo no aplicativo e o suporte e individual no WhatsApp; "vou pensar" = pergunte com carinho qual duvida ficou; "nao tenho dinheiro para anuncio" = pode comecar com R$10 (regra 40); "sera que da certo" = e uma previsao, o resultado depende de cada um (nunca garanta). Depois de responder, pergunte se pode ajudar a concluir o pagamento.
+- Se ela falar de problema no pagamento que NAO e dinheiro (fatura, limite, erro na tela): acolha em uma frase e ajude voce mesmo com o link ${LINK_PAGAMENTO} (so o link, sozinho). So se o problema continuar depois do link, diga que anotou o pedido (sem a palavra "atendente") e termine com ${MARCA_HUMANO}.
 - JA COMPROU (a pessoa disse que ja comprou, que comprou faz tempo e so agora vai comecar, que nao recebeu o acesso, ou perguntou "ainda vale?"): ela e uma aluna que ainda nao tem conta na plataforma. Comece a resposta com a marca ${MARCA_COMPROU} (o sistema tira a marca). Se ela perguntou se ainda vale, diga antes "Sim, vale sim! A mentoria é vitalícia.". Depois envie EXATAMENTE a mensagem padrao do primeiro acesso, sem pedir e-mail e sem dizer que vai conferir:\n\n${MENSAGEM_PRIMEIRO_ACESSO}\n\nO acesso nao e enviado por e-mail: a pessoa cria a propria conta. Nunca diga "se ja tem conta, clique em Entrar" nem sugira "Esqueci minha senha" para quem disse que nao recebeu nada (ela nao tem conta). Nao use ${MARCA_HUMANO} nessa primeira resposta. Se for sobre a Estrutura Express, siga a regra de liberacao da Estrutura Express.
 - NAO CONSEGUE ACESSAR A PLATAFORMA (ela disse que nao consegue acessar/entrar/logar na plataforma, no site ou nas aulas, mas NAO disse que comprou): NAO mande o link e NAO passe para a equipe ainda. Responda so, em uma frase curta e acolhedora: "Oi! Você já comprou a mentoria? Se sim, me conta que eu te ajudo a entrar." (sem marca de atendente). Se ela responder que SIM (ou "comprei", "sim"), trate como JA COMPROU (regra abaixo): comece com a marca ${MARCA_COMPROU}, mande o link https://www.mcpia.site/ e so o primeiro passo. Se responder que NAO comprou, diga com carinho que a plataforma e so para quem entra na mentoria e pergunte se quer saber como funciona.
 - Se ela disser que JA tentou entrar e nao conseguiu (ou depois de seguir o passo do link ainda nao consegue): pergunte so "Qual e-mail voce usou na compra?" e, quando ela responder, diga que anotou o e-mail e o caso (sem a palavra "atendente" e sem prazo) e termine com ${MARCA_HUMANO}.
@@ -378,7 +389,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     const canal = conv.connection_id ? 'recuperacao' : 'suporte'
 
     const baseTexto = (await baseDoCanal(admin, canal)).split('{{firstName}}').join(primeiro)
-    let system = REGRA_RESPONSAVEL + '\n\n' + baseTexto + '\n\n' + FINAL_REMINDER + '\n\n' + REGRA_EXPRESS_WHATSAPP + '\n\n' + REGRA_ASSINATURA_WHATSAPP + '\n\n' + REGRA_COMPRA_WHATSAPP + '\n\n' + REGRA_CADASTRO_WHATSAPP + '\n\nNome da pessoa: ' + (nome || 'desconhecido')
+    let system = REGRA_RESPONSAVEL + '\n\n' + baseTexto + '\n\n' + FINAL_REMINDER + '\n\n' + REGRA_EXPRESS_WHATSAPP + '\n\n' + REGRA_ASSINATURA_WHATSAPP + '\n\n' + REGRA_COMPRA_WHATSAPP + '\n\nNome da pessoa: ' + (nome || 'desconhecido')
     if (esconderPlanos) system = NEW_STUDENT_RULE + '\n\n' + system + '\n\n' + NEW_STUDENT_RULE
     const sitPlano = situacaoPlanoAluno(temPlano, esconderPlanos)
     if (sitPlano) system = system + '\n\n' + sitPlano
@@ -389,6 +400,8 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     // No numero de SUPORTE a pessoa e tratada como aluna (muitos alunos compraram com outro telefone e o sistema nao os reconhece). A trava de "nao aluna" vale so no numero de recuperacao.
     const ehAluna = canal === 'suporte' ? true : await pessoaEhAluna(admin, waId, conv.profile_id || null)
     if (!ehAluna) system = REGRA_NAO_ALUNA + '\n\n' + system + '\n\n' + REGRA_NAO_ALUNA
+    // Liberar cadastro e SO para aluno (quem ja pagou). Quem gerou Pix e nao pagou e lead: nunca recebe acesso nem liberacao.
+    if (ehAluna) system = system + '\n\n' + REGRA_CADASTRO_WHATSAPP
     system = system + '\n\nEstrutura Express desta pessoa: ' + (temExpress === true ? 'JA TEM acesso liberado no sistema.' : temExpress === false ? 'o sistema NAO achou compra nem liberacao da Estrutura Express nesta conta.' : 'o sistema NAO sabe (conta nao identificada).')
     system = system + '\n\nConta identificada: ' + (conv.profile_id ? 'SIM (o sistema ja sabe quem e a pessoa; nao peca e-mail).' : ehAluna ? 'NAO (peca o e-mail da plataforma antes de liberar).' : 'NAO, e ela ainda nao e aluna (nao peca e-mail para liberar nada; so pergunte o e-mail da compra se ela disser que ja comprou).')
 
@@ -457,6 +470,21 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
         if (!texto) texto = passaParaHumano ? 'Anotei o seu pedido aqui, ' + primeiro + '.' : 'Me conta um pouquinho melhor o que você precisa, ' + primeiro + '? Se puder, manda um print da tela.'
       }
     }
+    // Trava do desconto (ordem do Breno): o link de R$ 197 so sai depois de DUAS confirmacoes da pessoa
+    // (1: "ajudaria?" sim; 2: "fica R$ 197, posso mandar o link?" sim). Se o modelo adiantar o link, o sistema tira e faz a pergunta certa.
+    if (texto.indexOf('icnB8VD8AfKqIV1SHX3h') >= 0) {
+      const l = linhas.filter(function(m) { return String(m.id) !== String(msgId) })
+      const iDesc = l.findIndex(function(m) { return m.direction === 'out' && /desconto/i.test(String(m.body || '')) })
+      let iVal = -1
+      if (iDesc >= 0) {
+        for (let k = l.length - 1; k > iDesc; k--) { if (l[k].direction === 'out' && /197/.test(String(l[k].body || ''))) { iVal = k; break } }
+      }
+      const confirmouValor = iVal >= 0 && l.slice(iVal + 1).some(function(m) { return m.direction === 'in' })
+      const confirmouDesconto = iDesc >= 0 && l.slice(iDesc + 1).some(function(m) { return m.direction === 'in' })
+      if (!(iVal >= 0 && confirmouValor && confirmouDesconto)) {
+        texto = iDesc >= 0 && confirmouDesconto ? CONFIRMA_DESCONTO : PERGUNTA_DESCONTO
+      }
+    }
     // Fim da conversa: pergunta (uma vez so por conversa) se a pessoa quer ganhar R$200 no Pix (leva ao ranking)
     let acabou = texto.indexOf(MARCA_FIM) >= 0
     texto = texto.split(MARCA_FIM).join('').trim()
@@ -494,9 +522,13 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     // O assistente pediu para conferir a assinatura (plano da plataforma): o sistema confere o pagamento, libera se estiver tudo certo e escreve a resposta
     // Trava do sistema (ordem do Breno): conversa de problema de acesso (area de membros antiga, nao consigo entrar...) NUNCA vira
     // conferencia de plano/assinatura nem pedido de comprovante e NUNCA recebe link de pagamento. Se o modelo errar, o sistema libera o cadastro.
-    if (!pediuLiberarCadastro(texto) && (pediuVerificarAssinatura(texto) || pediuConsultarCompra(texto)) && conversaDeProblemaDeAcesso(linhas)) {
+    if (ehAluna && !pediuLiberarCadastro(texto) && (pediuVerificarAssinatura(texto) || pediuConsultarCompra(texto)) && conversaDeProblemaDeAcesso(linhas)) {
       const emailAcesso = (pediuVerificarAssinatura(texto) ? emailsDaMarcaAssinatura(texto)[0] : (dadosDaMarcaCompra(texto).emails[0] || '')) || ultimoEmailDaPessoa(linhas)
       if (emailAcesso) texto = '[[LIBERAR_CADASTRO: ' + emailAcesso + ']]'
+    }
+    // Lead (nao aluna) nunca tem cadastro liberado pelo Junior: tira a marca e segue como vendedor
+    if (!ehAluna && pediuLiberarCadastro(texto)) {
+      texto = removerMarcaCadastro(texto).trim() || 'Me conta, ficou alguma dúvida sobre a mentoria? 🙏'
     }
     if (pediuLiberarCadastro(texto)) {
       // Print do erro de cadastro ("Nao encontramos uma compra com esse e-mail"): o sistema libera o e-mail e pede para criar a conta de novo
@@ -647,6 +679,14 @@ export async function acompanharSilencioFluxo(admin: any): Promise<number> {
         if (lista.some(function(x) { return x.direction === 'out' && /conseguiu acessar/i.test(String(x.body || '')) })) continue // ja perguntou
         const ui: any = ultIn.data
         if (!ui || agora - new Date(ui.created_at).getTime() > 23.5 * 3600 * 1000) continue // janela de 24h fechada
+        // So para quem JA PAGOU (fluxo de compra aprovada). Quem gerou Pix e nao pagou ainda nao tem acesso: nunca pergunta das aulas.
+        const ultRun = await admin.from('wa_seq_runs').select('seq_id').eq('wa_id', c.wa_id).order('created_at', { ascending: false }).limit(1).maybeSingle()
+        let fluxoDePagamento = false
+        if (ultRun.data && (ultRun.data as any).seq_id) {
+          const sq = await admin.from('wa_sequencias').select('trigger').eq('id', (ultRun.data as any).seq_id).maybeSingle()
+          fluxoDePagamento = String(((sq.data as any)?.trigger || {}).evento || '') === 'invoice.payment_succeeded'
+        }
+        if (!fluxoDePagamento || !(await pessoaEhAluna(admin, String(c.wa_id), null))) continue
         // Nome: o mesmo que o fluxo usou (vem da compra); se nao achar, pergunta sem nome
         let nome = ''
         const rn = await admin.from('wa_seq_runs').select('name').eq('wa_id', c.wa_id).not('name', 'is', null).order('created_at', { ascending: false }).limit(1).maybeSingle()
