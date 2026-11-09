@@ -1,12 +1,12 @@
 'use client'
 // Pop-up "Automatize suas vendas por meio do anuncio": mostra a capa da aula do Gerenciador de Anuncios e o botao "Assistir aula",
 // que leva para a tela "Gerenciando seus anuncios" (a aula fica no topo). So aparece para quem ja tem mais de 7 dias de cadastro.
-// Aparece no primeiro acesso, depois so volta a cada 3 dias (por aluno, neste navegador) e para de aparecer quando a pessoa toca em "Assistir aula".
+// Aparece todos os dias, no primeiro acesso do dia (por aluno, neste navegador) e para de aparecer quando a pessoa toca em "Assistir aula".
 import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 
 const DIAS_DEPOIS_DO_CADASTRO = 7
-const VOLTA_A_CADA_DIAS = 3
+const VOLTA_A_CADA_DIAS = 1
 const VIDEO_URL = 'https://vimeo.com/1244797172'
 const DESTINO = '/dashboard/anuncios'
 
