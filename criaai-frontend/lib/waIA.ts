@@ -232,7 +232,8 @@ export async function conversaEmAndamento(admin: any, convId: string): Promise<b
 function soAgradecimento(txt: string): boolean {
   const t = String(txt || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
   const palavras = t.replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(Boolean)
-  if (palavras.length === 0) return t.trim().length > 0 && t.trim().length <= 12 // so emoji/pontuacao (ex.: 🙏 👍)
+  // So emoji (ex.: 🙏 👍) conta como agradecimento. Pontuacao ("?", "...") e a pessoa chamando: precisa de resposta.
+  if (palavras.length === 0) return t.trim().length > 0 && t.trim().length <= 12 && /[\u2190-\u2BFF\uD83C-\uDBFF\uFE0F]/.test(String(txt || '')) && t.indexOf('?') < 0
   if (palavras.length > 6) return false
   const agradece = ['obrigado', 'obrigada', 'obg', 'brigado', 'brigada', 'valeu', 'vlw', 'blz', 'beleza', 'show', 'top', 'joia', 'amem', 'gratidao', 'grato', 'grata', 'tmj', 'tchau', 'abraco', 'abracos', 'fui']
   const neutras = ['muito', 'ok', 'certo', 'ta', 'tudo', 'bem', 'entendi', 'perfeito', 'combinado', 'deus', 'abencoe', 'aben', 'fica', 'com', 'voce', 'vc', 'ate', 'mais', 'paz', 'senhor', 'de', 'nada', 'a', 'o', 'e', 'tá']
@@ -412,7 +413,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     // So agradeceu/se despediu e o assistente ja tinha encerrado (a ultima mensagem dele nao era uma pergunta): nao responde de novo
     if (tipo === 'text' && soAgradecimento(String((ultimaIn as any).body || ''))) {
       // (avisos do sistema, como "O fluxo passou a conversa para o Junior", nao contam como fala do assistente)
-      const ultimaOut = [...linhas].reverse().find(function(m) { return m.direction === 'out' && m.type !== 'system' && String(m.body || '').trim() })
+      const ultimaOut = [...linhas].reverse().find(function(m) { return m.direction === 'out' && m.type !== 'system' && m.type !== 'template' && String(m.body || '').trim() })
       if (ultimaOut && !/\?\s*$/.test(String(ultimaOut.body || '').trim())) return true
     }
     // O assistente le a conversa toda (inclusive o que a equipe e os fluxos automaticos ja mandaram) para saber o contexto.
