@@ -37,18 +37,7 @@ const animations = `
 .step-line { position: absolute; top: 28px; left: calc(50% + 28px); width: calc(100% - 56px); height: 2px; background: linear-gradient(90deg, rgba(124,92,252,0.5), rgba(124,92,252,0.1)); }
 `
 
-const NEWS_PLATFORM = {
-  name: 'Kaiross',
-  tag: 'Produtos fisicos com entrega gerenciada',
-  image: 'https://app.kaiross.com.br/_next/image?url=%2FLOGO-MENU.png&w=256&q=75',
-  color: '#f97316',
-  href: '/dashboard/plataformas',
-}
 
-const NEWS_PRODUCTS = [
-  { name: 'Manual Biblico Digital', image: 'https://excelenciacrista.com.br/wp-content/uploads/2026/01/5-1-1024x1024.png', color: '#3b82f6', fit: 'cover' },
-  { name: '700 Receitas de Bolos e Tortas', image: 'https://vida-nova-oficial.com/wp-content/uploads/2024/04/Design_sem_nome__41_-removebg.png', color: '#f97316', fit: 'contain' },
-]
 
 export default function DashboardPage() {
   const [profile, setProfile] = useState<any>(null)
@@ -112,75 +101,6 @@ export default function DashboardPage() {
 
         {/* RANKING DO MES — top 3 com premios no Pix */}
         <RankingCard />
-
-
-        {/* NOVIDADES DA SEMANA */}
-        <div className="anim-fadeUp-1" style={{ marginBottom: 28 }}>
-          <div style={{
-            borderRadius: 22, padding: 2,
-            background: 'linear-gradient(90deg, #7c5cfc, #f97316, #22c55e, #7c5cfc)',
-            backgroundSize: '200% 100%', animation: 'newsBorder 5s linear infinite',
-          }}>
-            <div style={{ position: 'relative', overflow: 'hidden', background: 'var(--surface)', borderRadius: 20, padding: '22px 22px 24px' }}>
-              <div style={{ position: 'absolute', top: -60, right: -40, width: 220, height: 220, background: 'radial-gradient(circle, rgba(124,92,252,0.14) 0%, transparent 70%)', pointerEvents: 'none' }} />
-
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-                <span style={{ fontSize: 22, display: 'inline-block', animation: 'newsPop 1.6s ease-in-out infinite' }}>🔥</span>
-                <div style={{ fontSize: 18, fontWeight: 800, fontFamily: 'Syne, sans-serif', color: 'var(--text)' }}>Novidades da semana</div>
-                <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', color: '#fff', background: 'linear-gradient(135deg, #ef4444, #f97316)', padding: '4px 10px', borderRadius: 99, animation: 'newsPop 1.6s ease-in-out infinite' }}>NOVO</span>
-              </div>
-
-              <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14 }}>
-
-                {/* Nova plataforma */}
-                <Link href={NEWS_PLATFORM.href} style={{ textDecoration: 'none' }}>
-                  <div className="news-card" style={{ position: 'relative', overflow: 'hidden', height: '100%', minHeight: 200, borderRadius: 16, padding: '20px 20px 18px', background: 'linear-gradient(145deg, ' + NEWS_PLATFORM.color + '22, ' + NEWS_PLATFORM.color + '08)', border: '1px solid ' + NEWS_PLATFORM.color + '55', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', cursor: 'pointer' }}>
-                    <div style={{ position: 'absolute', top: 0, bottom: 0, width: 60, left: 0, background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)', animation: 'newsShine 4s ease-in-out infinite', pointerEvents: 'none' }} />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                      <div style={{ position: 'relative', width: 78, height: 78, flexShrink: 0 }}>
-                        <div style={{ position: 'absolute', inset: 0, borderRadius: 20, border: '2px solid ' + NEWS_PLATFORM.color, animation: 'newsRing 2.2s ease-out infinite' }} />
-                        <div style={{ position: 'relative', width: 78, height: 78, borderRadius: 20, background: '#fff', border: '2px solid ' + NEWS_PLATFORM.color, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', animation: 'float 4s ease-in-out infinite', boxShadow: '0 10px 24px ' + NEWS_PLATFORM.color + '55' }}>
-                          <img src={NEWS_PLATFORM.image} alt={NEWS_PLATFORM.name} style={{ width: '82%', height: '82%', objectFit: 'contain' }} />
-                        </div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: NEWS_PLATFORM.color, marginBottom: 4 }}>Nova plataforma liberada</div>
-                        <div style={{ fontSize: 20, fontWeight: 800, fontFamily: 'Syne, sans-serif', color: 'var(--text)' }}>{NEWS_PLATFORM.name}</div>
-                        <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 2 }}>{NEWS_PLATFORM.tag}</div>
-                      </div>
-                    </div>
-                    <div style={{ marginTop: 16, fontSize: 13, fontWeight: 700, color: NEWS_PLATFORM.color }}>Conferir plataforma →</div>
-                  </div>
-                </Link>
-
-                {/* Novos produtos */}
-                <Link href="/dashboard/produtos" style={{ textDecoration: 'none' }}>
-                  <div className="news-card" style={{ position: 'relative', overflow: 'hidden', height: '100%', minHeight: 200, borderRadius: 16, padding: '20px 20px 18px', background: 'linear-gradient(145deg, rgba(34,197,94,0.14), rgba(34,197,94,0.04))', border: '1px solid rgba(34,197,94,0.4)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', cursor: 'pointer' }}>
-                    <div style={{ position: 'absolute', top: 0, bottom: 0, width: 60, left: 0, background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)', animation: 'newsShine 4s ease-in-out 1.5s infinite', pointerEvents: 'none' }} />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                      <div style={{ position: 'relative', width: 120, height: 84, flexShrink: 0 }}>
-                        {NEWS_PRODUCTS.map(function(prod, idx) {
-                          return (
-                            <div key={prod.name} style={{ position: 'absolute', top: idx === 0 ? 0 : 6, left: idx === 0 ? 0 : 44, width: 74, height: 74, borderRadius: 16, background: '#fff', border: '2px solid ' + prod.color, overflow: 'hidden', boxShadow: '0 10px 22px rgba(0,0,0,0.22)', animation: (idx === 0 ? 'newsFloatA 3.6s' : 'newsFloatB 4.2s') + ' ease-in-out infinite', zIndex: idx + 1 }}>
-                              <img src={prod.image} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: prod.fit as any }} />
-                            </div>
-                          )
-                        })}
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#16a34a', marginBottom: 4 }}>Novos produtos</div>
-                        <div style={{ fontSize: 20, fontWeight: 800, fontFamily: 'Syne, sans-serif', color: 'var(--text)', lineHeight: 1.15 }}>2 novos produtos liberados</div>
-                        <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 2 }}>Confira!</div>
-                      </div>
-                    </div>
-                    <div style={{ marginTop: 16, fontSize: 13, fontWeight: 700, color: '#16a34a' }}>Ver produtos →</div>
-                  </div>
-                </Link>
-
-              </div>
-            </div>
-          </div>
-        </div>
 
 
         {/* RESULTADOS RECENTES DE ALUNOS */}

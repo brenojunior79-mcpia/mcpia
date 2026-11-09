@@ -1083,7 +1083,6 @@ Status atual dos menus:
 ## 1) PAINEL DO ALUNO (tela inicial)
 - Mostra "Ola, (nome)!".
 - Cartao "Sua jornada em 3 passos": Passo 1 "Plataformas e Produtos" (cadastre-se nas plataformas parceiras e escolha o produto que vai vender; leva ao menu Plataformas), Passo 2 "Prepare o material" (assista as aulas de criativos manuais; o material do produto tambem pode estar na descricao dele, em Produtos em Alta; leva ao menu Criativos Manuais), Passo 3 "Venda no automatico" (crie anuncios e venda; leva ao menu Vendendo no Automatico). Cada passo tem o botao "Acessar".
-- "Novidades da semana": nova plataforma liberada (Kaiross, produtos fisicos com entrega gerenciada) e 2 novos produtos liberados (Manual Biblico Digital e 700 Receitas de Bolos e Tortas).
 - "Resultados recentes de alunos": prints de resultados de alunos (clicar amplia a imagem).
 - Tres atalhos: Grupo de avisos (WhatsApp), Grupo de depoimentos (WhatsApp, para ver os resultados dos alunos) e Suporte (WhatsApp).
 Grupo de depoimentos: https://chat.whatsapp.com/FMK11OpmjIPIO24ByPNME6
