@@ -7,6 +7,7 @@ import { falouEmReembolso } from '@/lib/juniorReembolso'
 import { REGRA_COMPRA_CHAT, pediuConsultarCompra, removerMarcaCompra, dadosDaMarcaCompra, consultarCompraPeloJunior } from '@/lib/juniorCompra'
 import { REGRA_ASSINATURA_CHAT, pediuVerificarAssinatura, removerMarcaAssinatura, emailsDaMarcaAssinatura, verificarAssinaturaPeloJunior } from '@/lib/juniorAssinatura'
 
+import { regraIntegracaoFacebook, StatusFacebook } from '@/lib/juniorTrafego'
 import { JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno, REGRAS_ESTILO_CHAT, limparRespostaChat, tipoFinalConversa, situacaoFinalConversa } from '@/lib/junior'
 
 export async function POST(req: NextRequest) {
@@ -51,6 +52,15 @@ export async function POST(req: NextRequest) {
       const dbEv: any = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } })
       const blocoEventos = await eventosDaPessoa(dbEv, { emails: [user.email || ''], profileId: user.id })
       if (blocoEventos) systemContent = systemContent + '\n\n' + blocoEventos
+    } catch (e) {}
+
+    // Integracao com o Facebook: o Junior pergunta toda vez que o assunto for anuncio e a pessoa ainda nao integrou
+    try {
+      const dbFb: any = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } })
+      const fb = await dbFb.from('facebook_connections').select('access_token, token_expires_at').eq('user_id', user.id).maybeSingle()
+      let stFb: StatusFacebook = 'nao'
+      if (fb.data && fb.data.access_token) stFb = fb.data.token_expires_at && new Date(fb.data.token_expires_at).getTime() < Date.now() ? 'expirado' : 'conectado'
+      systemContent = systemContent + '\n\n' + regraIntegracaoFacebook(stFb)
     } catch (e) {}
 
     // Salva a mensagem do aluno (e a resposta do Junior, se houver) para o monitoramento
