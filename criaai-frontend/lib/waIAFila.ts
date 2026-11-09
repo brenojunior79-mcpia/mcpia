@@ -3,7 +3,7 @@
 // "digitando...", para um instante, volta a digitar e so entao a resposta chega (respostas longas saem em 2 ou 3 mensagens).
 // O agendador do banco chama /api/whatsapp/ia/fila a cada 15 segundos; cada resposta espera a hora de leitura (ler_em).
 import { GRAPH, graphFetch, phoneIdDaConversa, postMessage, waConfig } from '@/lib/whatsapp'
-import { modoIA } from '@/lib/waIA'
+import { modoIA, responderQuemAguardou } from '@/lib/waIA'
 import { classificar } from '@/lib/waMedia'
 
 const LIMITE_MS = 56000 // a funcao da Vercel vive no maximo 60s
@@ -161,6 +161,8 @@ async function executar(admin: any, it: any, inicio: number, escala: number): Pr
 export async function processarFilaIA(admin: any, escala = 1): Promise<{ itens: number; resultado: Record<string, number> }> {
   const inicio = Date.now()
   const agora = new Date()
+  // Abriu o atendimento: o Junior responde quem escreveu fora do horario e ficou esperando
+  await responderQuemAguardou(admin)
   await admin.from('wa_ia_fila').update({ estado: 'falhou', erro: 'travou', finalizado_em: agora.toISOString() }).eq('estado', 'enviando').lt('iniciado_em', new Date(agora.getTime() - 5 * 60000).toISOString())
   await admin.from('wa_ia_fila').update({ estado: 'cancelado', erro: 'vencida', finalizado_em: agora.toISOString() }).eq('estado', 'pendente').lt('criado_em', new Date(agora.getTime() - 15 * 60000).toISOString())
   // So pega o que ja esta na hora de ser lido (ler_em); o agendador passa a cada 15s

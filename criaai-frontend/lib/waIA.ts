@@ -313,6 +313,44 @@ export async function registrarDisparoNaConversa(admin: any, convId: string, waI
   } catch (e) { /* so conforto: a conversa segue sem a mensagem do disparo */ }
 }
 
+// Quem escreveu FORA do horario (e so recebeu o aviso de horario) fica esperando: quando o atendimento abre, o Junior responde.
+// Cada mensagem so e tratada uma vez (tabela wa_ia_reprocessados). So vale para mensagens das ultimas 22h (janela de 24h do WhatsApp).
+export async function responderQuemAguardou(admin: any): Promise<number> {
+  try {
+    const a = await estadoAgendaIA(admin)
+    if (!(a.agendaAtiva && a.dentro)) return 0
+    const desde = new Date(Date.now() - 22 * 3600000).toISOString()
+    const cs = await admin.from('wa_conversations').select('id, wa_id, name, ia_humano, last_inbound_at').gte('last_inbound_at', desde).lte('last_inbound_at', new Date(Date.now() - 2 * 60000).toISOString()).order('last_inbound_at', { ascending: true }).limit(200)
+    let feitos = 0
+    for (const c of (cs.data || []) as any[]) {
+      if (feitos >= 6) break
+      if (c.ia_humano === true) continue
+      // A mensagem chegou com o atendimento fechado? (se chegou dentro do horario, o fluxo normal ja cuidou dela)
+      const hm = agoraNoFuso('America/Sao_Paulo', new Date(c.last_inbound_at)).hm
+      const dentroQuandoChegou = a.inicio < a.fim ? (hm >= a.inicio && hm < a.fim) : (hm >= a.inicio || hm < a.fim)
+      if (dentroQuandoChegou) continue
+      const ms = await admin.from('wa_messages').select('id, direction, type, body, sent_by, created_at').eq('conversation_id', c.id).order('created_at', { ascending: false }).limit(8)
+      const linhas: any[] = ms.data || []
+      const ultimaIn = linhas.find(function(m) { return m.direction === 'in' })
+      if (!ultimaIn) continue
+      // Respondida por gente ou pelo assistente depois dela? (o aviso de horario nao conta)
+      const respondida = linhas.some(function(m) {
+        return m.direction === 'out' && new Date(m.created_at).getTime() > new Date(ultimaIn.created_at).getTime() && !String(m.body || '').startsWith('Olá! 👋 Nosso atendimento')
+      })
+      if (respondida) continue
+      // Marca antes (se outra execucao ja pegou, pula)
+      const claim = await admin.from('wa_ia_reprocessados').insert({ message_id: ultimaIn.id, conversation_id: c.id })
+      if (claim.error) continue
+      feitos++
+      await tratarIA(admin, c.id, String(c.wa_id), String(ultimaIn.id), String(ultimaIn.type), c.name || null)
+    }
+    return feitos
+  } catch (e) {
+    console.error('[wa-ia] responderQuemAguardou:', e)
+    return 0
+  }
+}
+
 // Devolve true quando o assistente esta LIGADO nessa conversa (o webhook entao nao manda o aviso de horario nem os fluxos).
 export async function tratarIA(admin: any, convId: string, waId: string, msgId: string, tipo: string, nomeContato: string | null): Promise<boolean> {
   try {
