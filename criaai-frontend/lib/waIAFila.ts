@@ -14,6 +14,11 @@ function entre(a: number, b: number): number { return a + Math.random() * (b - a
 // Uma resposta = uma mensagem (antes quebrava em ate 3 e o aluno recebia muitas mensagens do assistente).
 export function dividirEmPartes(texto: string): string[] {
   const limpo = String(texto || '').trim()
+  // Marca interna: a chave Pix vai sozinha em outra mensagem (para a pessoa copiar)
+  if (limpo.indexOf('[[PARTE]]') >= 0) {
+    const ps = limpo.split('[[PARTE]]').map(function(x) { return x.trim() }).filter(Boolean)
+    if (ps.length > 0) return ps
+  }
   return [limpo]
 }
 

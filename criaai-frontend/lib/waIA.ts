@@ -11,6 +11,7 @@ import { eventosDaPessoa } from '@/lib/juniorEventos'
 import { falouEmReembolso, AVISO_REEMBOLSO } from '@/lib/juniorReembolso'
 import { REGRA_COMPRA_WHATSAPP, MENSAGEM_PRIMEIRO_ACESSO, pediuConsultarCompra, removerMarcaCompra, dadosDaMarcaCompra, consultarCompraPeloJunior } from '@/lib/juniorCompra'
 import { REGRA_CADASTRO_WHATSAPP, pediuLiberarCadastro, removerMarcaCadastro, emailDaMarcaCadastro, liberarCadastroPeloJunior, conversaDeProblemaDeAcesso, ultimoEmailDaPessoa } from '@/lib/juniorCadastro'
+import { REGRA_PIX, prepararRespostaPix, processarPixDaConversa, SEPARADOR_PARTE } from '@/lib/juniorPix'
 import { REGRA_ASSINATURA_WHATSAPP, pediuVerificarAssinatura, removerMarcaAssinatura, emailsDaMarcaAssinatura, verificarAssinaturaPeloJunior } from '@/lib/juniorAssinatura'
 
 const MARCA_HUMANO = '[[HUMANO]]'
@@ -362,6 +363,41 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       }
     }
 
+    const enfileirar = async function(texto: string, passaParaHumano: boolean, querVideo: boolean): Promise<boolean> {
+      // A resposta nao sai na hora: vai para a fila e o Junior "digita" como uma pessoa (lib/waIAFila.ts).
+      // Respostas antigas ainda nao enviadas desta conversa saem da fila (vale a mais nova).
+      const agoraIso = new Date().toISOString()
+      await admin.from('wa_ia_fila').update({ estado: 'cancelado', erro: 'substituida', finalizado_em: agoraIso }).eq('conversation_id', convId).eq('estado', 'pendente')
+      // Primeira mensagem (conversa parada ha mais de 3h): leva cerca de 1 minuto para ser lida e respondida.
+      // No meio de uma conversa em andamento a leitura e mais rapida.
+      const jaConversavam = linhas.some(function(m) { return String(m.id) !== String(msgId) && Date.now() - new Date(m.created_at).getTime() < 3 * 3600 * 1000 })
+      const esperaLeituraS = jaConversavam ? 8 + Math.random() * 10 : 46 + Math.random() * 10
+      const lerEm = new Date(Date.now() + esperaLeituraS * 1000).toISOString()
+      const ins = await admin.from('wa_ia_fila').insert({ ler_em: lerEm, conversation_id: convId, inbound_msg_id: String(msgId), inbound_wa_id: (ultimaIn as any).wa_message_id || null, wa_id: waId, connection_id: conv.connection_id || null, texto, passa_humano: passaParaHumano, enviar_video: querVideo && !passaParaHumano })
+      if (!ins.error) return true
+      console.error('[wa-ia] fila indisponivel, enviando na hora:', ins.error.message)
+
+      // Plano B (so se a fila falhar): envia na hora, como antes
+      const phoneId = await phoneIdDaConversa(admin, conv.connection_id || null)
+      const r = await postMessage({ messaging_product: 'whatsapp', to: waId, type: 'text', text: { body: texto.split(SEPARADOR_PARTE).join('\n\n') } }, phoneId || undefined)
+      if (!r.ok) { console.error('[wa-ia] envio:', JSON.stringify(r.data?.error || r.data)); return true }
+      const agora = new Date().toISOString()
+      await admin.from('wa_messages').insert({ conversation_id: convId, wa_message_id: r.data?.messages?.[0]?.id || null, direction: 'out', type: 'text', body: texto.split(SEPARADOR_PARTE).join('\n\n'), status: 'sent', sent_by: null, created_at: agora })
+      const upd: any = { last_message_at: agora, last_text: '🤖 ' + texto.slice(0, 120) }
+      if (passaParaHumano) {
+        upd.ia_ativa = false; upd.ia_humano = true
+        try {
+          const atual = await admin.from('wa_conversations').select('assigned_to').eq('id', convId).maybeSingle()
+          if (atual.data && !(atual.data as any).assigned_to) {
+            const dono = await admin.from('profiles').select('id').eq('is_admin', true).order('created_at', { ascending: true }).limit(1).maybeSingle()
+            if (dono.data?.id) upd.assigned_to = (dono.data as any).id
+          }
+        } catch (e) {}
+      }
+      await admin.from('wa_conversations').update(upd).eq('id', convId)
+      return true
+    }
+
     const msgs: { role: 'user' | 'assistant'; content: any }[] = []
     for (const m of linhas) {
       if (m.type === 'system' && String(m.body || '') === MARCA_FLUXO_IA) continue
@@ -447,8 +483,28 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     // Liberar cadastro e SO para aluno (quem ja pagou). Quem gerou Pix e nao pagou e lead: nunca recebe acesso nem liberacao.
     if (ehAluna) system = system + '\n\n' + REGRA_CADASTRO_WHATSAPP
     { const bc = blocoContasDoNumero(contasNumero); if (bc) system = system + '\n\n' + bc }
+    if (ehAluna) system = system + '\n\n' + REGRA_PIX
     system = system + '\n\nEstrutura Express desta pessoa: ' + (temExpress === true ? 'JA TEM acesso liberado no sistema.' : temExpress === false ? 'o sistema NAO achou compra nem liberacao da Estrutura Express nesta conta.' : 'o sistema NAO sabe (conta nao identificada).')
     system = system + '\n\nConta identificada: ' + (conv.profile_id ? 'SIM (o sistema ja sabe quem e a pessoa; nao peca e-mail).' : ehAluna ? 'NAO (peca o e-mail da plataforma antes de liberar).' : 'NAO, e ela ainda nao e aluna (nao peca e-mail para liberar nada; so pergunte o e-mail da compra se ela disser que ja comprou).')
+
+    // Pagamento do plano no Pix: comprovante (foto/PDF) depois que a chave foi enviada. Quem confere e libera e o sistema (lib/juniorPix.ts), nao o modelo.
+    {
+      const rp = await processarPixDaConversa(admin, {
+        convId, waId, perfilId: conv.profile_id || null,
+        contasAtivas: contasNumero.filter(function(c) { return c.ativa }).map(function(c) { return { id: c.id, email: c.email } }),
+        contasTodas: contasNumero.map(function(c) { return { id: c.id, email: c.email } }),
+        linhas, partes, ultimaEntrada: ultimaIn,
+      })
+      if (rp) {
+        const [cvP, ultP] = await Promise.all([
+          admin.from('wa_conversations').select('id, ia_ativa, ia_humano').eq('id', convId).maybeSingle(),
+          admin.from('wa_messages').select('id').eq('conversation_id', convId).eq('direction', 'in').order('created_at', { ascending: false }).limit(1).maybeSingle(),
+        ])
+        if (!cvP.data || !(await modoIA(admin, cvP.data, new Date(Date.now() - 3 * 60000)))) return true
+        if (!ultP.data || String((ultP.data as any).id) !== String(msgId)) return true
+        return await enfileirar(rp.texto, rp.humano, false)
+      }
+    }
 
     // Disparo em massa: se a pessoa recebeu um disparo com instrucao do Breno nos ultimos 4 dias, o Junior sabe o motivo da conversa.
     // Quem NAO esta na lista do disparo segue a conversa normal.
@@ -687,38 +743,8 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       if (!texto) { await avisarFalha(admin, convId, 'texto vazio apos marca express'); return true }
     }
 
-    // A resposta nao sai na hora: vai para a fila e o Junior "digita" como uma pessoa (lib/waIAFila.ts).
-    // Respostas antigas ainda nao enviadas desta conversa saem da fila (vale a mais nova).
-    const agoraIso = new Date().toISOString()
-    await admin.from('wa_ia_fila').update({ estado: 'cancelado', erro: 'substituida', finalizado_em: agoraIso }).eq('conversation_id', convId).eq('estado', 'pendente')
-    // Primeira mensagem (conversa parada ha mais de 3h): leva cerca de 1 minuto para ser lida e respondida.
-    // No meio de uma conversa em andamento a leitura e mais rapida.
-    const jaConversavam = linhas.some(function(m) { return String(m.id) !== String(msgId) && Date.now() - new Date(m.created_at).getTime() < 3 * 3600 * 1000 })
-    const esperaLeituraS = jaConversavam ? 8 + Math.random() * 10 : 46 + Math.random() * 10
-    const lerEm = new Date(Date.now() + esperaLeituraS * 1000).toISOString()
-    const ins = await admin.from('wa_ia_fila').insert({ ler_em: lerEm, conversation_id: convId, inbound_msg_id: String(msgId), inbound_wa_id: (ultimaIn as any).wa_message_id || null, wa_id: waId, connection_id: conv.connection_id || null, texto, passa_humano: passaParaHumano, enviar_video: querVideo && !passaParaHumano })
-    if (!ins.error) return true
-    console.error('[wa-ia] fila indisponivel, enviando na hora:', ins.error.message)
-
-    // Plano B (so se a fila falhar): envia na hora, como antes
-    const phoneId = await phoneIdDaConversa(admin, conv.connection_id || null)
-    const r = await postMessage({ messaging_product: 'whatsapp', to: waId, type: 'text', text: { body: texto } }, phoneId || undefined)
-    if (!r.ok) { console.error('[wa-ia] envio:', JSON.stringify(r.data?.error || r.data)); return true }
-    const agora = new Date().toISOString()
-    await admin.from('wa_messages').insert({ conversation_id: convId, wa_message_id: r.data?.messages?.[0]?.id || null, direction: 'out', type: 'text', body: texto, status: 'sent', sent_by: null, created_at: agora })
-    const upd: any = { last_message_at: agora, last_text: '🤖 ' + texto.slice(0, 120) }
-    if (passaParaHumano) {
-      upd.ia_ativa = false; upd.ia_humano = true
-      try {
-        const atual = await admin.from('wa_conversations').select('assigned_to').eq('id', convId).maybeSingle()
-        if (atual.data && !(atual.data as any).assigned_to) {
-          const dono = await admin.from('profiles').select('id').eq('is_admin', true).order('created_at', { ascending: true }).limit(1).maybeSingle()
-          if (dono.data?.id) upd.assigned_to = (dono.data as any).id
-        }
-      } catch (e) {}
-    }
-    await admin.from('wa_conversations').update(upd).eq('id', convId)
-    return true
+    texto = prepararRespostaPix(texto, ehAluna)
+    return await enfileirar(texto, passaParaHumano, querVideo)
   } catch (e) {
     console.error('[wa-ia] erro:', e)
     await avisarFalha(admin, convId, 'erro: ' + String((e as any)?.message || e).slice(0, 150))
