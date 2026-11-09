@@ -1,6 +1,6 @@
 // Assistente de IA (Junior) dentro das conversas do WhatsApp (suporte e recuperacao).
 // So responde nas conversas em que o ADMIN ligou o assistente (wa_conversations.ia_ativa) ou quando ele ligou para todas (wa_ia_config.geral).
-import { regraIntegracaoFacebook, StatusFacebook } from '@/lib/juniorTrafego'
+import { blocoAnunciosDoAluno } from '@/lib/juniorCampanhas'
 import { REGRA_RESPONSAVEL, JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno, soUmPasso, tirarLinkMarkdown, linkClicavel, tirarFrasesDeAjuda, tipoFinalConversa, situacaoFinalConversa } from '@/lib/junior'
 import { phoneIdDaConversa, postMessage } from '@/lib/whatsapp'
 import { agoraNoFuso } from '@/lib/waHours'
@@ -406,14 +406,11 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     system = system + '\n\nEstrutura Express desta pessoa: ' + (temExpress === true ? 'JA TEM acesso liberado no sistema.' : temExpress === false ? 'o sistema NAO achou compra nem liberacao da Estrutura Express nesta conta.' : 'o sistema NAO sabe (conta nao identificada).')
     system = system + '\n\nConta identificada: ' + (conv.profile_id ? 'SIM (o sistema ja sabe quem e a pessoa; nao peca e-mail).' : ehAluna ? 'NAO (peca o e-mail da plataforma antes de liberar).' : 'NAO, e ela ainda nao e aluna (nao peca e-mail para liberar nada; so pergunte o e-mail da compra se ela disser que ja comprou).')
 
-    // Integracao com o Facebook (so para aluna): pergunta toda vez que o assunto for anuncio e ela ainda nao integrou
-    if (ehAluna) {
-      let stFb: StatusFacebook = 'desconhecido'
-      if (conv.profile_id) {
-        const fb = await admin.from('facebook_connections').select('access_token, token_expires_at').eq('user_id', conv.profile_id).maybeSingle()
-        stFb = fb.data && (fb.data as any).access_token ? ((fb.data as any).token_expires_at && new Date((fb.data as any).token_expires_at).getTime() < Date.now() ? 'expirado' : 'conectado') : 'nao'
-      }
-      system = system + '\n\n' + regraIntegracaoFacebook(stFb)
+    // Anuncios (so aluna com conta ligada): pergunta da integracao com o Facebook e, com plano + integracao, le as campanhas reais dela
+    if (ehAluna && conv.profile_id) {
+      const falasIn = linhas.filter(function(m: any) { return m.direction === 'in' }).slice(-3).map(function(m: any) { return String(m.body || '') })
+      const blocoAn = await blocoAnunciosDoAluno(admin, conv.profile_id, null, falasIn)
+      if (blocoAn) system = system + '\n\n' + blocoAn
     }
 
     // Eventos reais da pessoa (Hubla e plataforma): o Junior entende o momento dela antes de responder
