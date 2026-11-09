@@ -544,7 +544,14 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       const dela = String((ultimaIn as any).body || '')
       const resposta = dela.length <= 60 && dela.indexOf('?') < 0 && !/(acess|erro|problema|n[aã]o consigo|senha|pagamento|reembolso)/i.test(dela)
       const nov = textoNovidade.split('{nome}').join(primeiro || '')
-      texto = resposta ? nov : (texto.trim() + '\n\n' + nov).trim()
+      if (resposta) {
+        // Resposta curta: uma frase de acolhimento (a do Junior, se for curta e sem pergunta/link; senao uma neutra) e depois a novidade
+        const modelo = texto.trim()
+        const acolhe = modelo && modelo.length <= 180 && modelo.indexOf('?') < 0 && !/https?:|mcpia|aplicativo|baix/i.test(modelo) ? modelo : 'Entendi, obrigado por me contar 🙏'
+        texto = acolhe + '\n\n' + nov
+      } else {
+        texto = (texto.trim() + '\n\n' + nov).trim()
+      }
     }
     // Trava do desconto (ordem do Breno): o link de R$ 197 so sai depois de DUAS confirmacoes da pessoa
     // (1: "ajudaria?" sim; 2: "fica R$ 197, posso mandar o link?" sim). Se o modelo adiantar o link, o sistema tira e faz a pergunta certa.
