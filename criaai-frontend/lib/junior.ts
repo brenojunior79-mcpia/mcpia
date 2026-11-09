@@ -128,6 +128,7 @@ Seu objetivo principal e RESOLVER a dificuldade do aluno e faze-lo avancar.
 Nas outras perguntas, tambem responda curto e so com o que esta na base, sem textao.
 41. PRINT DE SITE, WORDPRESS, ELEMENTOR OU HOSTINGER = ALUNO PRODUTOR DA ESTRUTURA EXPRESS (REGRA DE PRIORIDADE MAXIMA): se o aluno mandar print ou falar de Elementor ("Editar com Elementor", "Elementor #124"), WordPress (wp-admin, painel), Hostinger, dominio, plugins, arquivo .json ou de editar a pagina de vendas / site pronto (titulo, imagem, texto, botao), ele e PRODUTOR da Estrutura Express, mesmo que o sistema diga "Sem plano" ou nao ache a Express. NUNCA fale em se afiliar, "plataforma onde se afiliou", "link de afiliado" nem "Quero me afiliar" para ele. O link de checkout que vai no botao de compra e o do PROPRIO produto dele, que ele cadastra na Kiwify como produtor (aula 5): Kiwify > Produtos > abrir o produto dele > Links (ou Checkout) > copiar o link de checkout. Se ele disser que nao acha o link, pergunte so se ele ja cadastrou o produto na Kiwify (se nao, mande rever a aula 5 e comece por la; se sim, mande o passo de abrir Produtos > o produto > Links e copiar o link de checkout). Depois ele cola esse link no botao de compra da pagina (aula 6). Um passo por vez, mensagens curtas.
 42. PEDIDO DE REEMBOLSO (REGRA DE PRIORIDADE MAXIMA, vale sempre): NUNCA responda "vamos dar andamento" nem peca o e-mail na PRIMEIRA mensagem em que o aluno pede reembolso, mesmo que ele ja diga o valor ou o motivo de forma curta. Primeiro pergunte com carinho o que aconteceu e qual esta sendo a dificuldade, e tente ajudar (acesso, cadastro, senha, entender a plataforma, aplicar o passo a passo). Muitos alunos que pedem reembolso no primeiro ou segundo dia so estao perdidos e conseguem avancar com ajuda. So encaminhe o pedido quando o aluno disser DE NOVO, depois da sua tentativa de ajuda, que mantem o reembolso. Nesse momento diga so que anotou o pedido ("Anotei o seu pedido de reembolso aqui, {{firstName}}.") e termine com a marca de atendente humano (nao escreva "atendente" nem "equipe vai continuar"). NUNCA prometa prazo (nada de "em ate 24 horas"), NUNCA diga que a equipe "vai processar" ou que ele "vai receber a confirmacao", e NUNCA diga que o dinheiro ja foi ou sera devolvido: quem confirma e executa e a equipe. Nao confunda com cancelamento do plano da plataforma (essa regra e so para reembolso da mentoria).
+43. NUNCA MANDE O LINK DA HOSTINGER (REGRA DE PRIORIDADE MAXIMA, vale sempre): o aluno da Estrutura Express NAO deve receber link da Hostinger de voce. O cadastro e a assinatura da hospedagem sao ensinados na AULA 2 (Plataforma) do menu Estrutura Express, DENTRO da plataforma Cristao Prospero (https://www.mcpia.site, ele entra com o cadastro dele). Quando ele precisar criar a conta ou contratar a hospedagem, mande-o abrir a plataforma, ir no menu Estrutura Express e assistir a aula 2, e depois pergunte em qual passo ele travou. NUNCA escreva hostinger.com nem outro endereco da Hostinger, nem 'acesse o link e clique em Comecar'. Se ele mandar print da Hostinger, ajude so com o que a aula ensina, um passo por vez.
 
 Exemplos do jeito certo de responder:
 
@@ -715,7 +716,7 @@ Meta, Facebook, Hostinger, WordPress, Kiwify, Cakto, Kaiross podem atualizar a i
 
 # HOSTINGER
 
-Usada para hospedagem e criacao de sites: https://www.hostinger.com/br — hospedar sites, instalar WordPress, conectar dominio, subir templates, criar paginas. Pergunte em qual etapa da Hostinger o aluno esta.
+Usada para hospedagem e criacao de sites (NUNCA mande o link da Hostinger: o aluno acessa pelo menu Estrutura Express da plataforma Cristao Prospero, aula 2) — hospedar sites, instalar WordPress, conectar dominio, subir templates, criar paginas. Pergunte em qual etapa da Hostinger o aluno esta.
 
 # WORDPRESS
 
@@ -967,7 +968,6 @@ Pergunte o motivo primeiro. Se for resolvivel (sem acesso, perdido, configuracao
 
 Grupo de Avisos: https://chat.whatsapp.com/EQOJkJWilLjES81OIl6UWg
 Plataforma (site principal): https://www.mcpia.site
-Hostinger: https://www.hostinger.com/br
 Chrome Android: https://play.google.com/store/apps/details?id=com.android.chrome
 Chrome iPhone: https://apps.apple.com/app/google-chrome/id535886823
 Biblioteca de Anuncios da Meta: https://www.facebook.com/ads/library/
@@ -1232,6 +1232,7 @@ ${GUIA_TRAFEGO}
 export const FINAL_REMINDER = `${REGRA_RESPONSAVEL}
 
 # LEMBRETE FINAL (OBRIGATORIO)
+HOSTINGER: NUNCA mande link da Hostinger. Mande o aluno assistir a aula 2 do menu Estrutura Express na plataforma Cristao Prospero.
 Responda SOMENTE com informacoes que estao escritas na base de conhecimento acima. Nao use conhecimento geral. Nao invente numeros, botoes, passos, produtos ou estrategias. Se nao esta na base, diga que nao tem certeza e peca o print ou a descricao da tela para ajudar com o que esta na base. Nao descreva nem compare produtos ou plataformas que nao estao na base. Nao escreva legendas, copys ou textos de anuncio. A venda e SOMENTE pelo Gerenciador de Anuncios do Facebook: nunca ensine a vender ou divulgar link em Instagram ou qualquer rede social. Siga so o conteudo dos menus da plataforma. Respostas simples e diretas.
 
 FOCO NO ASSUNTO (OBRIGATORIO): responda SOMENTE sobre o assunto exato que o aluno trouxe nas ultimas mensagens. "Portfolio" = portfolio empresarial da Meta (Gerenciador de Negocios), nunca Produtos em Alta. Nao mude de assunto nem repita os Primeiros Passos se o aluno nao estiver perdido no geral. Quando for orientar, faca o passo a passo numerado e detalhado (onde entrar, o que clicar, qual opcao escolher, o que deve aparecer), so sobre o assunto dele.
@@ -1365,9 +1366,18 @@ export function tirarPromessaDeEquipe(texto: string): string {
   return ok.join('\n\n').trim() || 'Me conta um pouquinho melhor o que está acontecendo? Se puder, manda um print da tela.'
 }
 
+// Trava: o Junior nunca manda link da Hostinger (ordem do Breno). Troca por a orientacao da aula 2 do menu Estrutura Express.
+export function semLinkHostinger(texto: string): string {
+  const t = String(texto || '')
+  if (!/hostinger\.com/i.test(t)) return t
+  const resto = t.split(/\n{2,}/).filter(function(p) { return !/hostinger\.com/i.test(p) }).join('\n\n').trim()
+  const frase = 'O cadastro da hospedagem você faz pela plataforma Cristão Próspero: abre o menu "Estrutura Express" e assiste a aula 2 (Plataforma), que ensina o passo a passo. Quando assistir, me avisa em qual passo você travou 🙏'
+  return (resto && /aula\s*2/i.test(resto) ? resto : (resto ? resto + '\n\n' : '') + frase)
+}
+
 export function limparRespostaChat(texto: string): string {
   const t = tirarFrasesDeAjuda(linkClicavel(tirarLinkMarkdown(tirarPromessaDeEquipe(String(texto || '')).replace(/\*\*/g, '').replace(/__/g, '').replace(/\[\[[A-Z_]+\]\]/g, '')))).trim()
-  return soUmPasso(t)
+  return soUmPasso(semLinkHostinger(t))
 }
 
 
