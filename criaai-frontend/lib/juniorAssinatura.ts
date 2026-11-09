@@ -53,6 +53,7 @@ const COMUM = `Voce consegue conferir a assinatura do plano da plataforma (Start
 
 export const REGRA_ASSINATURA_WHATSAPP = `# VERIFICACAO DA ASSINATURA NO WHATSAPP (PRIORIDADE MAXIMA - SOBREPOE A BASE, inclusive "Plano pago e acesso nao liberado" e "Se ele diz que ja pagou... encaminhe para a equipe")
 ${COMUM}
+- PERGUNTA SOBRE O PLANO ("qual plano eu fiz?", "lembra qual eu assinei?", "da uma olhada no sistema", print da tela de planos): se existir a secao CONTAS DESTE NUMERO, responda com ela (sem marca); se nao existir, pergunte o e-mail e use a marca. NUNCA responda que nao consegue ver o sistema.
 - Se a conta dela AINDA NAO esta identificada (veja a linha "Conta identificada" no fim das instrucoes) e ela ainda nao disse o e-mail na conversa: pergunte so isto, curto: "Qual e-mail você usa na plataforma?" (sem marca).
 - Assim que ela disser o e-mail (ou se a conta ja esta identificada), responda APENAS com a marca [[VERIFICAR_ASSINATURA: e-mail]]. Se ela disser dois e-mails (o da plataforma e o da compra), coloque os dois separados por espaco. Se a conta ja esta identificada e ela nao disse e-mail, use [[VERIFICAR_ASSINATURA]]. Nao escreva mais nada junto: o sistema confere, libera se estiver tudo certo e responde a pessoa.
 - Se o sistema respondeu que nao achou o pagamento e pediu o e-mail usado na compra, e ela mandar esse e-mail, emita a marca de novo com os dois e-mails (o da plataforma e o da compra).`

@@ -2,6 +2,7 @@
 // So responde nas conversas em que o ADMIN ligou o assistente (wa_conversations.ia_ativa) ou quando ele ligou para todas (wa_ia_config.geral).
 import { blocoAnunciosDoAluno } from '@/lib/juniorCampanhas'
 import { statusAnuncios } from '@/lib/acessoAnuncios'
+import { contasDoTelefone, blocoContasDoNumero, resumoContasDoNumero, type ContaDoNumero } from '@/lib/juniorContas'
 import { semLinkHostinger, REGRA_RESPONSAVEL, JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno, soUmPasso, tirarLinkMarkdown, linkClicavel, tirarFrasesDeAjuda, tipoFinalConversa, situacaoFinalConversa } from '@/lib/junior'
 import { phoneIdDaConversa, postMessage } from '@/lib/whatsapp'
 import { agoraNoFuso } from '@/lib/waHours'
@@ -403,6 +404,15 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     let esconderPlanos = true
     let temPlano = false
     let temExpress: boolean | null = null
+    // Contas ligadas a este numero (a pessoa pode ter varios cadastros). Se a conversa nao esta ligada a nenhum, liga a que tem plano ativo (ou a unica).
+    const contasNumero: ContaDoNumero[] = await contasDoTelefone(admin, waId)
+    if (!conv.profile_id && contasNumero.length > 0) {
+      const alvo = contasNumero.find(function(c) { return c.ativa }) || (contasNumero.length === 1 ? contasNumero[0] : null)
+      if (alvo) {
+        conv.profile_id = alvo.id
+        try { await admin.from('wa_conversations').update({ profile_id: alvo.id }).eq('id', convId).is('profile_id', null) } catch (e) { /* so conforto */ }
+      }
+    }
     if (conv.profile_id) {
       const pr = await admin.from('profiles').select('full_name, created_at, subscription_status, is_admin, email').eq('id', conv.profile_id).maybeSingle()
       const p: any = pr.data
@@ -416,6 +426,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
         // Sem cadastro conhecido ou aluno novo: esconde planos. Aluno antigo: segue o comportamento normal do Junior.
       }
     }
+    if (!conv.profile_id && contasNumero.length > 0 && contasNumero.some(function(c) { return Date.now() - new Date(c.criada).getTime() >= 7 * 86400000 })) esconderPlanos = false
     // Sem conta ligada a conversa: acha pelo telefone (senao a pergunta da Estrutura Express nunca era feita para essas pessoas)
     if (temExpress === null && !conv.profile_id) temExpress = await descobrirTemExpressPorTelefone(admin, waId)
     const primeiro = nome.split(' ')[0] || 'voce'
@@ -431,10 +442,11 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     system = system + '\n\n' + situacaoFinalConversa(tipoFinal)
     // Quem nao e aluna (sem cadastro e sem compra) nunca recebe orientacao nem link de aluno
     // No numero de SUPORTE a pessoa e tratada como aluna (muitos alunos compraram com outro telefone e o sistema nao os reconhece). A trava de "nao aluna" vale so no numero de recuperacao.
-    const ehAluna = canal === 'suporte' ? true : await pessoaEhAluna(admin, waId, conv.profile_id || null)
+    const ehAluna = canal === 'suporte' ? true : (contasNumero.length > 0 || await pessoaEhAluna(admin, waId, conv.profile_id || null))
     if (!ehAluna) system = REGRA_NAO_ALUNA + '\n\n' + system + '\n\n' + REGRA_NAO_ALUNA
     // Liberar cadastro e SO para aluno (quem ja pagou). Quem gerou Pix e nao pagou e lead: nunca recebe acesso nem liberacao.
     if (ehAluna) system = system + '\n\n' + REGRA_CADASTRO_WHATSAPP
+    { const bc = blocoContasDoNumero(contasNumero); if (bc) system = system + '\n\n' + bc }
     system = system + '\n\nEstrutura Express desta pessoa: ' + (temExpress === true ? 'JA TEM acesso liberado no sistema.' : temExpress === false ? 'o sistema NAO achou compra nem liberacao da Estrutura Express nesta conta.' : 'o sistema NAO sabe (conta nao identificada).')
     system = system + '\n\nConta identificada: ' + (conv.profile_id ? 'SIM (o sistema ja sabe quem e a pessoa; nao peca e-mail).' : ehAluna ? 'NAO (peca o e-mail da plataforma antes de liberar).' : 'NAO, e ela ainda nao e aluna (nao peca e-mail para liberar nada; so pergunte o e-mail da compra se ela disser que ja comprou).')
 
@@ -576,6 +588,10 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       } else {
         texto = (texto.trim() + '\n\n' + nov).trim()
       }
+    }
+    // Trava: o Junior nunca diz que nao consegue ver o sistema quando as contas do numero ja foram conferidas
+    if (contasNumero.length > 0 && /n[aã]o\s+(consigo|tenho\s+acesso).{0,60}(sistema|conta|verificar|informa)/i.test(texto) && !pediuVerificarAssinatura(texto) && !pediuLiberarCadastro(texto)) {
+      texto = resumoContasDoNumero(contasNumero)
     }
     // Trava do desconto (ordem do Breno): o link de R$ 197 so sai depois de DUAS confirmacoes da pessoa
     // (1: "ajudaria?" sim; 2: "fica R$ 197, posso mandar o link?" sim). Se o modelo adiantar o link, o sistema tira e faz a pergunta certa.
