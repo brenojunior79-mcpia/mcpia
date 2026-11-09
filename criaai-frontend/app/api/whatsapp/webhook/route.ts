@@ -3,7 +3,7 @@ import { adminClient, graphFetch, postMessage, validSignature, waConfig } from '
 import { abertoAgora, normalizar } from '@/lib/waHours'
 import { aplicaNome, casaPalavra } from '@/lib/waFlows'
 import { primeiroNome } from '@/lib/waBroadcast'
-import { tratarIA, estadoAgendaIA } from '@/lib/waIA'
+import { tratarIA, estadoAgendaIA, registrarDisparoNaConversa } from '@/lib/waIA'
 import { tratarMensagemSequencias } from '@/lib/waSeq'
 
 export const maxDuration = 30
@@ -211,6 +211,7 @@ export async function POST(req: NextRequest) {
           // So responde sozinho a mensagem nova (nao a reenvios da Meta)
           if (out?.conversation_id && out?.message_id) {
             // Assistente de IA ligado pelo admin nesta conversa: ele responde e substitui o aviso de horario e os fluxos
+            await registrarDisparoNaConversa(admin, out.conversation_id, String(m.from))
             const iaLigada = await tratarIA(admin, out.conversation_id, String(m.from), out.message_id, d.type, name)
             const respondeu = iaLigada ? true : await respostaAutomatica(admin, out.conversation_id, String(m.from))
             if (!respondeu) await fluxosPersonalizados(admin, out.conversation_id, String(m.from), d.type === 'text' ? String(d.body || '') : '', name)

@@ -287,6 +287,29 @@ function chaveDisparo(t: string): string {
 }
 function normalizarDisparo(t: string): string { return t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim() }
 
+// O disparo em massa sai direto pela Meta e nao fica no historico da conversa. Quando a pessoa responde, grava a mensagem do disparo
+// (com o nome dela) na conversa, na hora em que foi enviada, para a equipe ver o que ela recebeu e o Junior ter o contexto. Nao duplica.
+export async function registrarDisparoNaConversa(admin: any, convId: string, waId: string): Promise<void> {
+  try {
+    const fim8 = String(waId).replace(/\D/g, '').slice(-8)
+    if (fim8.length !== 8) return
+    const rc = await admin.from('wa_broadcast_recipients').select('broadcast_id, sent_at, name, wa_message_id, status').like('wa_id', '%' + fim8).in('status', ['sent', 'delivered', 'read']).not('wa_message_id', 'is', null).order('sent_at', { ascending: false }).limit(1).maybeSingle()
+    const r0: any = rc.data
+    if (!r0 || !r0.sent_at || !r0.wa_message_id || Date.now() - new Date(r0.sent_at).getTime() > 4 * 86400000) return
+    const ja = await admin.from('wa_messages').select('id').eq('conversation_id', convId).eq('wa_message_id', r0.wa_message_id).limit(1).maybeSingle()
+    if (ja.data) return
+    const bc = await admin.from('wa_broadcasts').select('template_name, template_language, preview').eq('id', r0.broadcast_id).maybeSingle()
+    const b0: any = bc.data
+    if (!b0) return
+    const nome = String(r0.name || '').trim() || 'amigo(a)'
+    await admin.from('wa_messages').insert({
+      conversation_id: convId, wa_message_id: r0.wa_message_id, direction: 'out', type: 'template',
+      body: String(b0.preview || '').replace(/\bMaria\b/, nome), status: r0.status === 'read' ? 'read' : r0.status === 'delivered' ? 'delivered' : 'sent',
+      sent_by: null, created_at: r0.sent_at, template: { name: b0.template_name, language: b0.template_language, params: [nome] },
+    })
+  } catch (e) { /* so conforto: a conversa segue sem a mensagem do disparo */ }
+}
+
 // Devolve true quando o assistente esta LIGADO nessa conversa (o webhook entao nao manda o aviso de horario nem os fluxos).
 export async function tratarIA(admin: any, convId: string, waId: string, msgId: string, tipo: string, nomeContato: string | null): Promise<boolean> {
   try {
@@ -307,6 +330,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       if (!fala) { await avisarFalha(admin, convId, 'audio nao transcrito'); return true }
     }
 
+    await registrarDisparoNaConversa(admin, convId, waId)
     const hist = await admin.from('wa_messages').select('id, wa_message_id, direction, type, body, created_at, media_path, mime').eq('conversation_id', convId).order('created_at', { ascending: false }).limit(300)
     const linhas: any[] = (hist.data || []).slice().reverse()
     if (linhas.length === 0) return true
