@@ -421,7 +421,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       const rc = fim8.length === 8 ? await admin.from('wa_broadcast_recipients').select('broadcast_id, sent_at, user_id').like('wa_id', '%' + fim8).in('status', ['sent', 'delivered', 'read']).order('sent_at', { ascending: false }).limit(1).maybeSingle() : { data: null }
       const r0: any = rc.data
       if (r0 && r0.sent_at && Date.now() - new Date(r0.sent_at).getTime() < 4 * 86400000) {
-        const bc = await admin.from('wa_broadcasts').select('instrucao_ia, preview').eq('id', r0.broadcast_id).maybeSingle()
+        const bc = await admin.from('wa_broadcasts').select('instrucao_ia, preview, segment').eq('id', r0.broadcast_id).maybeSingle()
         const b0: any = bc.data
         if (b0 && b0.instrucao_ia) {
           let podeFalar = true
@@ -438,7 +438,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
             const jaContou = linhas.some(function(m: any) { return m.direction === 'out' && m.type === 'text' && normalizarDisparo(String(m.body || '')).indexOf(chave) >= 0 })
             // Conversa que ja estava rolando ANTES do disparo: responde o que ela disse e depois conta a novidade
             const antes = linhas.filter(function(m: any) { return m.type !== 'system' && new Date(m.created_at).getTime() >= new Date(r0.sent_at).getTime() - 12 * 3600000 && new Date(m.created_at).getTime() < new Date(r0.sent_at).getTime() }).length
-            const emAndamento = antes > 0
+            const emAndamento = antes > 0 && b0.segment !== 'teste' // o teste do formulario sempre mostra a resposta limpa
             forcarNovidade = !jaContou && !emAndamento
             precisaNovidade = !jaContou
             const cabeca = 'DISPARO QUE ESTA PESSOA RECEBEU (REGRA DO BRENO, PRIORIDADE MAXIMA): ela recebeu uma mensagem em massa ("' + String(b0.preview || '').replace(/\s+/g, ' ').slice(0, 200) + '") e esta respondendo a ela. A resposta pode ser qualquer coisa (oi, estou, sim, quem e).\n'
