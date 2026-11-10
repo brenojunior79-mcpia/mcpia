@@ -11,6 +11,13 @@ const LIMITE_MS = 56000 // a funcao da Vercel vive no maximo 60s
 function esperar(ms: number): Promise<void> { return new Promise(function(r) { setTimeout(r, Math.max(0, ms)) }) }
 function entre(a: number, b: number): number { return a + Math.random() * (b - a) }
 
+// A resposta do assistente foi uma despedida (encerrou a conversa)? Curta, sem pergunta e com "Deus abencoe", "ate mais", "e so chamar"...
+const DESPEDIDA_FIM_RE = /(aben[cç]oe|at[eé] mais|qualquer (coisa|d[uú]vida)|[eé] s[oó] (me )?chamar|bons estudos|boa sorte|tamo junto|por nada|de nada|fique com deus|bora prosperar|fico [àa] disposi[cç][aã]o|estou aqui para ajudar|quando voc[eê] (voltar|chegar))/i
+export function ehDespedida(texto: string): boolean {
+  const t = String(texto || '').replace(/\[\[PARTE\]\]/g, ' ').trim()
+  return t.length > 0 && t.length <= 220 && t.indexOf('?') < 0 && DESPEDIDA_FIM_RE.test(t)
+}
+
 // Uma resposta = uma mensagem (antes quebrava em ate 3 e o aluno recebia muitas mensagens do assistente).
 export function dividirEmPartes(texto: string): string[] {
   const limpo = String(texto || '').trim()
@@ -147,7 +154,12 @@ async function executar(admin: any, it: any, inicio: number, escala: number): Pr
       // Quando passa para a equipe, continua como nao lida para a equipe ver.
       try {
         const ult = await admin.from('wa_messages').select('id').eq('conversation_id', it.conversation_id).eq('direction', 'in').order('created_at', { ascending: false }).limit(1).maybeSingle()
-        if (ult.data && String((ult.data as any).id) === String(it.inbound_msg_id)) await admin.from('wa_conversations').update({ unread: 0 }).eq('id', it.conversation_id)
+        if (ult.data && String((ult.data as any).id) === String(it.inbound_msg_id)) {
+          // Se a resposta foi uma despedida (conversa encerrada), alem de lida a conversa e finalizada. Se a pessoa escrever de novo, ela reabre sozinha.
+          const upd: any = { unread: 0 }
+          if (ehDespedida(String(it.texto || ''))) upd.status = 'resolvida'
+          await admin.from('wa_conversations').update(upd).eq('id', it.conversation_id)
+        }
       } catch (e) { /* marcar como lida e so conforto */ }
     }
     return await fim('enviado')
