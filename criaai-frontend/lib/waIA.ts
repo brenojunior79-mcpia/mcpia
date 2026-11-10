@@ -539,7 +539,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
           admin.from('wa_conversations').select('id, ia_ativa, ia_humano').eq('id', convId).maybeSingle(),
           admin.from('wa_messages').select('id').eq('conversation_id', convId).eq('direction', 'in').order('created_at', { ascending: false }).limit(1).maybeSingle(),
         ])
-        if (!cvP.data || !(await modoIA(admin, cvP.data, new Date(Date.now() - 3 * 60000)))) return true
+        if (!cvP.data || !((await modoIA(admin, cvP.data)) || (await modoIA(admin, cvP.data, new Date(Date.now() - 3 * 60000))))) return true
         if (!ultP.data || String((ultP.data as any).id) !== String(msgId)) return true
         return await enfileirar(rp.texto, rp.humano, false)
       }
@@ -734,7 +734,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       admin.from('wa_conversations').select('id, ia_ativa, ia_humano').eq('id', convId).maybeSingle(),
       admin.from('wa_messages').select('id').eq('conversation_id', convId).eq('direction', 'in').order('created_at', { ascending: false }).limit(1).maybeSingle(),
     ])
-    if (!cv2.data || !(await modoIA(admin, cv2.data, new Date(Date.now() - 3 * 60000)))) return true
+    if (!cv2.data || !((await modoIA(admin, cv2.data)) || (await modoIA(admin, cv2.data, new Date(Date.now() - 3 * 60000))))) return true
     if (!ult.data || String((ult.data as any).id) !== String(msgId)) return true
 
     // O assistente pediu para conferir a assinatura (plano da plataforma): o sistema confere o pagamento, libera se estiver tudo certo e escreve a resposta
