@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { timingSafeEqual } from 'crypto'
 import { adminClient, requireAdmin, waConfig } from '@/lib/whatsapp'
 import { processarFluxos } from '@/lib/waAuto'
+import { fecharDia } from '@/lib/waFechamento'
 import { estadoAgendaIA, responderPendentesGeral, acompanharSilencioFluxo } from '@/lib/waIA'
 
 export const maxDuration = 60
@@ -41,5 +42,8 @@ export async function POST(req: NextRequest) {
   // Depois do fluxo: se a pessoa ficou 15 min em silencio, o Junior pergunta se ela conseguiu acessar as aulas
   let acompanhamento = 0
   try { acompanhamento = await acompanharSilencioFluxo(admin) } catch (e) { console.error('[wa-ia] acompanhamento:', e) }
-  return NextResponse.json({ ok: true, ...r, abertura, acompanhamento })
+  // Fim do horario de atendimento: ultima resposta para quem esperava e depois marca tudo como lido e finaliza as conversas
+  let fechamento = 'fora'
+  try { fechamento = await fecharDia(admin) } catch (e) { console.error('[wa-fechamento]', e) }
+  return NextResponse.json({ ok: true, ...r, abertura, acompanhamento, fechamento })
 }
