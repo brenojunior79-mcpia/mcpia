@@ -111,14 +111,15 @@ export async function verificarAssinaturaPeloJunior(db: any, p: { conta?: string
         if (!vistos.has(k)) { vistos.add(k); compras.push(c) }
       }
     }
-    const cols = 'id, produto, paid_at, reembolsado, email, wa'
+    const cols = 'id, produto, paid_at, reembolsado, email, wa, plano'
     if (emailsCompra.length) juntar((await db.from('hubla_compras').select(cols).eq('cat', 'p').in('email', emailsCompra)).data)
     if (tail.length === 8) juntar((await db.from('hubla_compras').select(cols).eq('cat', 'p').like('wa', '%' + tail)).data)
     const validas = compras.filter(function(c) { return c.reembolsado !== true })
     const reembolsadas = compras.filter(function(c) { return c.reembolsado === true })
     let ultima: string | null = null
+    let planoPago = ''
     for (const c of validas) {
-      if (c.paid_at && (!ultima || new Date(c.paid_at).getTime() > new Date(ultima).getTime())) ultima = c.paid_at
+      if (c.paid_at && (!ultima || new Date(c.paid_at).getTime() > new Date(ultima).getTime())) { ultima = c.paid_at; planoPago = String(c.plano || '') }
     }
 
     const linkVer = zap
@@ -203,7 +204,16 @@ export async function verificarAssinaturaPeloJunior(db: any, p: { conta?: string
     }
 
     // 9) Pagamento confirmado e conta existe: libera
-    const pl = await db.from('plans').select('id, name').eq('name', 'Starter').maybeSingle()
+    // Libera o plano que consta na compra (Starter, Pro ou Premium). Compra antiga sem plano registrado: Starter, o menor.
+    let nomePlano = ['Starter', 'Pro', 'Premium'].indexOf(planoPago) >= 0 ? planoPago : ''
+    if (!nomePlano && perfil.plan_id) {
+      // Compra sem plano registrado: mantem o plano que ela ja tem (para nao rebaixar quem e Pro/Premium)
+      const atual = await db.from('plans').select('name').eq('id', perfil.plan_id).maybeSingle()
+      const n = String((atual.data as any)?.name || '')
+      if (['Starter', 'Pro', 'Premium'].indexOf(n) >= 0) nomePlano = n
+    }
+    if (!nomePlano) nomePlano = 'Starter'
+    const pl = await db.from('plans').select('id, name').eq('name', nomePlano).maybeSingle()
     const planoId = (pl.data as any)?.id
     if (!planoId) { status = 'erro'; return { status, humano: true, texto: 'Não consegui liberar agora, mas deixei o seu caso registrado aqui.' } }
     const up = await db.from('profiles').update({
@@ -222,10 +232,10 @@ export async function verificarAssinaturaPeloJunior(db: any, p: { conta?: string
       return { status, humano: true, texto: 'Não consegui liberar agora, mas deixei o seu caso registrado aqui.' }
     }
     try {
-      await db.from('hubla_events').insert({ provider: 'junior', event_type: 'junior.assinatura_liberada', email: conta, user_id: perfil.id, action: 'liberado', note: ('Junior liberou o plano Starter (pagamento de ' + dataBR(ultima as string) + ', origem ' + p.origem + ')').slice(0, 300) })
+      await db.from('hubla_events').insert({ provider: 'junior', event_type: 'junior.assinatura_liberada', email: conta, user_id: perfil.id, action: 'liberado', note: ('Junior liberou o plano ' + nomePlano + ' (pagamento de ' + dataBR(ultima as string) + ', origem ' + p.origem + ')').slice(0, 300) })
     } catch (e) { /* historico e so conforto */ }
     status = 'liberado'
-    return { status, humano: false, texto: 'Pronto! Conferi aqui e o seu pagamento da plataforma está confirmado. 🙏 Liberei o seu plano Starter. ' + linkVer + ' Depois é só abrir o Gerador de Criativos. Se você assinou outro plano (Pro ou Premium), me avise aqui.' }
+    return { status, humano: false, texto: 'Pronto! Conferi aqui e o seu pagamento da plataforma está confirmado. 🙏 Liberei o seu plano ' + nomePlano + '. ' + linkVer + ' Depois é só abrir o Gerador de Criativos.' + (planoPago ? '' : ' Se você assinou outro plano (Pro ou Premium), me avise aqui.') }
   } catch (e) {
     console.error('[junior-assinatura] erro:', e)
     return { status: 'erro', humano: true, texto: 'Não consegui conferir agora, mas deixei o seu caso registrado aqui. Pode me mandar uma mensagem daqui a pouco?' }

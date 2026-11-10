@@ -169,7 +169,7 @@ export async function POST(req: NextRequest) {
         const nomeNorm = nomeCompleto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
         const prodTxt = String(info.produto || '').toLowerCase()
         const cat = prodTxt.startsWith('mentoria') ? 'm' : prodTxt.includes('express') ? 'e' : 'p'
-        await admin.from('hubla_compras').upsert({ email: info.email || null, wa: info.wa || null, produto: info.produto || null, chave, paid_at: new Date().toISOString(), cat, nome_norm: nomeNorm || null, tokens: nomeNorm ? nomeNorm.split(' ') : null, origem: 'webhook' }, { onConflict: 'chave', ignoreDuplicates: true })
+        await admin.from('hubla_compras').upsert({ email: info.email || null, wa: info.wa || null, produto: info.produto || null, chave, paid_at: new Date().toISOString(), cat, nome_norm: nomeNorm || null, tokens: nomeNorm ? nomeNorm.split(' ') : null, origem: 'webhook', plano: cat === 'p' ? resolvePlanName(payload) : null }, { onConflict: 'chave', ignoreDuplicates: true })
       } catch (e) { console.error('[hubla-webhook] compra:', e) }
     }
 

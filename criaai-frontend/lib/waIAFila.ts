@@ -74,7 +74,7 @@ async function enviarVideoApp(admin: any, it: any, phoneId: string): Promise<boo
     const fd = new FormData()
     fd.append('messaging_product', 'whatsapp')
     fd.append('type', cl.mime)
-    fd.append('file', new Blob([await dl.data.arrayBuffer()], { type: cl.mime }), filename)
+    fd.append('file', dl.data.slice(0, dl.data.size, cl.mime), filename)
     const res = await fetch(GRAPH + '/' + (phoneId || cfg.phoneId) + '/media', { method: 'POST', headers: { Authorization: 'Bearer ' + cfg.token }, body: fd })
     const up: any = await res.json().catch(function() { return null })
     if (!res.ok || !up?.id) { console.error('[wa-ia-fila] video App upload:', JSON.stringify(up?.error || up)); return false }
