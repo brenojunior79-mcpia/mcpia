@@ -451,7 +451,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     // So agradeceu/se despediu e o assistente ja tinha encerrado (a ultima mensagem dele nao era uma pergunta): nao responde de novo
     if (tipo === 'text' && soAgradecimento(String((ultimaIn as any).body || ''))) {
       // (avisos do sistema, como "O fluxo passou a conversa para o Junior", nao contam como fala do assistente)
-      const ultimaOut = [...linhas].reverse().find(function(m) { return m.direction === 'out' && m.type !== 'system' && m.type !== 'template' && String(m.body || '').trim() })
+      const ultimaOut = [...linhas].reverse().find(function(m) { return m.direction === 'out' && m.type !== 'system' && m.type !== 'template' && !String(m.body || '').startsWith('Olá! 👋 Nosso atendimento') && String(m.body || '').trim() })
       if (ultimaOut && !/\?\s*$/.test(String(ultimaOut.body || '').trim())) return true
     }
     // O assistente le a conversa toda (inclusive o que a equipe e os fluxos automaticos ja mandaram) para saber o contexto.
