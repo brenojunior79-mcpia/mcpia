@@ -33,11 +33,15 @@ async function getPlanIdByName(planName: string): Promise<string | null> {
 
 function resolvePlanName(payload: any): string | null {
   const products = payload.event?.products || []
+  // A OFERTA vem primeiro: os 3 planos sao ofertas do mesmo produto na Hubla, e o id do produto e o do Starter.
+  // Se olhar o produto antes, quem compra Pro ou Premium e liberado como Starter.
   for (const product of products) {
-    if (product?.id && HUBLA_ID_TO_PLAN[product.id]) return HUBLA_ID_TO_PLAN[product.id]
     for (const offer of product?.offers || []) {
       if (offer?.id && HUBLA_ID_TO_PLAN[offer.id]) return HUBLA_ID_TO_PLAN[offer.id]
     }
+  }
+  for (const product of products) {
+    if (product?.id && HUBLA_ID_TO_PLAN[product.id]) return HUBLA_ID_TO_PLAN[product.id]
   }
   const singleProduct = payload.event?.product
   if (singleProduct?.id && HUBLA_ID_TO_PLAN[singleProduct.id]) return HUBLA_ID_TO_PLAN[singleProduct.id]
