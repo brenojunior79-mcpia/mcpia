@@ -27,7 +27,7 @@ function MiniVideo({ clipe }: { clipe: Clipe }) {
   )
 }
 
-export type Gerado = { id: string; url: string; mb: number; duracao: number; nVideos: number; criadoEm: number }
+export type Gerado = { id: string; url: string; mb: number; duracao: number; nVideos: number; criadoEm: number; blob?: Blob; path?: string; salvo?: 'salvando' | 'ok' | 'erro' }
 
 // Descreve o volume com palavras (a porcentagem sozinha nao diz como vai soar)
 function rotuloVolume(v: number): string {
@@ -186,7 +186,7 @@ export default function CardEdicao({ clipes, narracao, onIrVideos, onIrNarracao,
       const url = URL.createObjectURL(blob)
       fetch('/api/criativo/saldo', { method: 'POST' }).then(function() { window.dispatchEvent(new Event('criativo-saldo')) }).catch(function() {})
       setResultado({ url, mb: blob.size / 1048576 })
-      onGerado({ id: 'g-' + Date.now(), url, mb: blob.size / 1048576, duracao: Math.max(3, duracao + 0.5), nVideos: clipes.length, criadoEm: Date.now() })
+      onGerado({ id: 'g-' + Date.now(), url, mb: blob.size / 1048576, duracao: Math.max(3, duracao + 0.5), nVideos: clipes.length, criadoEm: Date.now(), blob })
     } catch (e: any) {
       setMsg(e && e.message ? String(e.message) : 'Algo deu errado na montagem. Tente de novo.')
     } finally { setOcupado(false); setEtapa('') }
