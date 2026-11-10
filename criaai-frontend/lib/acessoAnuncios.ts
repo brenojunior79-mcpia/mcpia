@@ -5,7 +5,7 @@
 //  - Aluno sem plano nos primeiros 7 dias NAO ve o menu (nao pode saber que existem planos).
 export const ANUNCIOS_LIBERADO_PARA_TODOS = false
 // Contas liberadas à mão, mesmo sem plano Pro/Premium (revisor da Meta e contas que o Breno autorizou).
-export const ANUNCIOS_EMAILS_LIBERADOS: string[] = ['revisor.meta@mcpia.site', 'thaissilvaa409@gmail.com']
+export const ANUNCIOS_EMAILS_LIBERADOS: string[] = ['revisor.meta@mcpia.site', 'thaissilvaa409@gmail.com', 'stematval@gmail.com']
 export const ANUNCIOS_DIAS_APOS_CADASTRO = 7
 // Enquanto o Facebook (Meta) nao liberar o login para todos, o menu fica OCULTO para os alunos (so admin e conta do revisor da Meta).
 // Quando o Meta aprovar, mude para true: ai vale a regra de 7 dias + plano descrita acima.
