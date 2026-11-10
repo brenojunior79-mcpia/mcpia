@@ -813,10 +813,11 @@ export async function responderUltimaPendente(admin: any, convId: string): Promi
   try {
     const [cv, ult] = await Promise.all([
       admin.from('wa_conversations').select('id, wa_id, name').eq('id', convId).maybeSingle(),
-      admin.from('wa_messages').select('id, direction, type, created_at').eq('conversation_id', convId).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+      admin.from('wa_messages').select('id, direction, type, created_at').eq('conversation_id', convId).neq('type', 'system').order('created_at', { ascending: false }).limit(1).maybeSingle(),
     ])
     const c: any = cv.data
     const m: any = ult.data
+    // (avisos do sistema, como "O fluxo passou a conversa para o Junior", nao contam: a ultima mensagem de verdade e que importa)
     if (!c || !c.wa_id || !m || m.direction !== 'in') return false
     // Fora da janela de 24h o WhatsApp nao deixa mandar texto livre
     if (Date.now() - new Date(m.created_at).getTime() > 23.5 * 3600 * 1000) return false
