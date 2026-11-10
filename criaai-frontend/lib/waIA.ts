@@ -11,6 +11,7 @@ import { eventosDaPessoa } from '@/lib/juniorEventos'
 import { falouEmReembolso, AVISO_REEMBOLSO } from '@/lib/juniorReembolso'
 import { REGRA_COMPRA_WHATSAPP, MENSAGEM_PRIMEIRO_ACESSO, pediuConsultarCompra, removerMarcaCompra, dadosDaMarcaCompra, consultarCompraPeloJunior } from '@/lib/juniorCompra'
 import { REGRA_CADASTRO_WHATSAPP, pediuLiberarCadastro, removerMarcaCadastro, emailDaMarcaCadastro, liberarCadastroPeloJunior, conversaDeProblemaDeAcesso, ultimoEmailDaPessoa } from '@/lib/juniorCadastro'
+import { ehDespedida } from '@/lib/waDespedida'
 import { REGRA_PIX, prepararRespostaPix, processarPixDaConversa, SEPARADOR_PARTE } from '@/lib/juniorPix'
 import { REGRA_ASSINATURA_WHATSAPP, pediuVerificarAssinatura, removerMarcaAssinatura, emailsDaMarcaAssinatura, verificarAssinaturaPeloJunior } from '@/lib/juniorAssinatura'
 
@@ -352,13 +353,28 @@ export async function responderQuemAguardou(admin: any): Promise<number> {
 }
 
 // Devolve true quando o assistente esta LIGADO nessa conversa (o webhook entao nao manda o aviso de horario nem os fluxos).
+// A pessoa so agradeceu/mandou figurinha depois de o assistente ja ter se despedido: marca como lida e finaliza (se ela escrever de novo, reabre).
+async function finalizarSeEncerrada(admin: any, convId: string, msgId: string): Promise<void> {
+  try {
+    const u = await admin.from('wa_messages').select('id').eq('conversation_id', convId).eq('direction', 'in').order('created_at', { ascending: false }).limit(1).maybeSingle()
+    if (!u.data || String((u.data as any).id) !== String(msgId)) return
+    const o = await admin.from('wa_messages').select('body, type').eq('conversation_id', convId).eq('direction', 'out').neq('type', 'system').neq('type', 'template').not('body', 'like', 'Olá! 👋 Nosso atendimento%').order('created_at', { ascending: false }).limit(1).maybeSingle()
+    if (!o.data || !ehDespedida(String((o.data as any).body || ''))) return
+    await admin.from('wa_conversations').update({ unread: 0, status: 'resolvida' }).eq('id', convId)
+  } catch (e) { /* encerrar e so conforto */ }
+}
+
 export async function tratarIA(admin: any, convId: string, waId: string, msgId: string, tipo: string, nomeContato: string | null): Promise<boolean> {
   try {
     const cv = await admin.from('wa_conversations').select('id, ia_ativa, ia_humano, connection_id, profile_id, name').eq('id', convId).maybeSingle()
     const conv: any = cv.data
     if (!conv || !(await modoIA(admin, conv))) return false
     // Responde a texto, audio (transcrito antes), imagem/print e PDF (a IA olha o arquivo). Video, figurinha etc. ficam para a equipe ver
-    if (tipo !== 'text' && tipo !== 'audio' && tipo !== 'image' && tipo !== 'document') return true
+    if (tipo !== 'text' && tipo !== 'audio' && tipo !== 'image' && tipo !== 'document') {
+      // Figurinha/reacao depois da despedida do assistente (ex.: "Amem" 🙏): nao precisa de resposta, a conversa e lida e finalizada
+      if (tipo === 'sticker' || tipo === 'reaction') await finalizarSeEncerrada(admin, convId, msgId)
+      return true
+    }
     if (!process.env.OPENAI_API_KEY) { console.error('[wa-ia] OPENAI_API_KEY ausente'); return true }
     if (tipo === 'image' || tipo === 'document') {
       // Outros tipos de arquivo (Word, planilha...) ou arquivo que nao deu para abrir: fica para a equipe
@@ -452,7 +468,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     if (tipo === 'text' && soAgradecimento(String((ultimaIn as any).body || ''))) {
       // (avisos do sistema, como "O fluxo passou a conversa para o Junior", nao contam como fala do assistente)
       const ultimaOut = [...linhas].reverse().find(function(m) { return m.direction === 'out' && m.type !== 'system' && m.type !== 'template' && !String(m.body || '').startsWith('Olá! 👋 Nosso atendimento') && String(m.body || '').trim() })
-      if (ultimaOut && !/\?\s*$/.test(String(ultimaOut.body || '').trim())) return true
+      if (ultimaOut && !/\?\s*$/.test(String(ultimaOut.body || '').trim())) { await finalizarSeEncerrada(admin, convId, msgId); return true }
     }
     // O assistente le a conversa toda (inclusive o que a equipe e os fluxos automaticos ja mandaram) para saber o contexto.
     // Se for muito longa, descarta so as mensagens mais antigas.
