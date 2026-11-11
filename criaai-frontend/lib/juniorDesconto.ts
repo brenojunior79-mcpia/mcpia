@@ -13,7 +13,9 @@ const PERGUNTOU_DESCONTO = /promo|desconto|quanto|valor|como seria|qual o pre|qu
 
 function corpo(m: any): string { return String(m?.body || '').trim() }
 
-function aceitou(txt: string): boolean {
+export function recusou(txt: string): boolean { return !!txt && NAO.test(txt) }
+
+export function aceitou(txt: string): boolean {
   return !!txt && SIM.test(txt) && !NAO.test(txt)
 }
 

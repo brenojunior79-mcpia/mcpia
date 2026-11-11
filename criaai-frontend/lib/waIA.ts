@@ -2,6 +2,7 @@
 // So responde nas conversas em que o ADMIN ligou o assistente (wa_conversations.ia_ativa) ou quando ele ligou para todas (wa_ia_config.geral).
 import { blocoAnunciosDoAluno } from '@/lib/juniorCampanhas'
 import { blocoPerfilPessoa } from '@/lib/juniorPerfil'
+import { decidirCupomExpress } from '@/lib/juniorCupomExpress'
 import { decidirDesconto, PERGUNTA_DESCONTO, CONFIRMA_DESCONTO } from '@/lib/juniorDesconto'
 import { humanizarResposta, REGRA_ESTILO_HUMANO, tirarRepetido } from '@/lib/juniorHumano'
 import { MARCA_PRINT_RE, printPorSlug, printsJaEnviados, regraDePrints } from '@/lib/juniorPrints'
@@ -433,6 +434,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       }
     }
 
+    let lerEmUltimo = 0
     const enfileirar = async function(texto: string, passaParaHumano: boolean, querVideo: boolean, printSlug?: string | null): Promise<boolean> {
       // A resposta nao sai na hora: vai para a fila e o Junior "digita" como uma pessoa (lib/waIAFila.ts).
       // Respostas antigas ainda nao enviadas desta conversa saem da fila (vale a mais nova).
@@ -443,6 +445,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       const jaConversavam = linhas.some(function(m) { return String(m.id) !== String(msgId) && Date.now() - new Date(m.created_at).getTime() < 3 * 3600 * 1000 })
       const esperaLeituraS = (jaConversavam ? 120 : 180) - 30 + Math.random() * 8
       const lerEm = new Date(Date.now() + esperaLeituraS * 1000).toISOString()
+      lerEmUltimo = Date.now() + esperaLeituraS * 1000
       const ins = await admin.from('wa_ia_fila').insert({ ler_em: lerEm, conversation_id: convId, inbound_msg_id: String(msgId), inbound_wa_id: (ultimaIn as any).wa_message_id || null, wa_id: waId, connection_id: conv.connection_id || null, texto, passa_humano: passaParaHumano, enviar_video: querVideo && !passaParaHumano, print_slug: (!passaParaHumano && printSlug) ? printSlug : null })
       if (!ins.error) return true
       console.error('[wa-ia] fila indisponivel, enviando na hora:', ins.error.message)
@@ -763,6 +766,9 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     }
     // Trava do desconto (ordem do Breno): o link de R$ 197 so sai depois de DUAS confirmacoes da pessoa (veja lib/juniorDesconto.ts)
     texto = decidirDesconto(texto, linhas, primeiro)
+    // Cupom da Estrutura Express (roteiro do Breno): avisa que vai mandar o link, e o link sai 1 minuto depois (veja lib/juniorCupomExpress.ts)
+    let cupomDepois: string | null = null
+    if (ehAluna && !passaParaHumano) { const dc = decidirCupomExpress(texto, linhas, primeiro); texto = dc.texto; cupomDepois = dc.depois }
     // Fim da conversa: pergunta (uma vez so por conversa) se a pessoa quer ganhar R$200 no Pix (leva ao ranking)
     let acabou = texto.indexOf(MARCA_FIM) >= 0
     texto = texto.split(MARCA_FIM).join('').trim()
@@ -844,7 +850,13 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
 
     texto = prepararRespostaPix(texto, ehAluna)
     if (jaFalou) texto = tirarNomeDaResposta(texto, primeiro)
-    return await enfileirar(texto, passaParaHumano, querVideo, printSlug)
+    const okEnf = await enfileirar(texto, passaParaHumano, querVideo, printSlug)
+    // Segunda mensagem do cupom (link + aviso), 1 minuto depois da primeira; se a pessoa escrever antes, ela e trocada pela resposta nova
+    if (okEnf && cupomDepois && lerEmUltimo > 0) {
+      const ins2 = await admin.from('wa_ia_fila').insert({ ler_em: new Date(lerEmUltimo + 80000 + Math.random() * 10000).toISOString(), conversation_id: convId, inbound_msg_id: String(msgId), inbound_wa_id: (ultimaIn as any).wa_message_id || null, wa_id: waId, connection_id: conv.connection_id || null, texto: cupomDepois, passa_humano: false, enviar_video: false, print_slug: null })
+      if (ins2.error) console.error('[wa-ia] cupom express: fila do link falhou:', ins2.error.message)
+    }
+    return okEnf
   } catch (e) {
     console.error('[wa-ia] erro:', e)
     await avisarFalha(admin, convId, 'erro: ' + String((e as any)?.message || e).slice(0, 150))
