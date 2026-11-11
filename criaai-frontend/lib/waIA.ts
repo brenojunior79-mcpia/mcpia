@@ -2,6 +2,7 @@
 // So responde nas conversas em que o ADMIN ligou o assistente (wa_conversations.ia_ativa) ou quando ele ligou para todas (wa_ia_config.geral).
 import { blocoAnunciosDoAluno } from '@/lib/juniorCampanhas'
 import { blocoPerfilPessoa } from '@/lib/juniorPerfil'
+import { carregarHostinger, blocoHostinger } from '@/lib/juniorHostinger'
 import { decidirCupomExpress } from '@/lib/juniorCupomExpress'
 import { decidirDesconto, PERGUNTA_DESCONTO, CONFIRMA_DESCONTO } from '@/lib/juniorDesconto'
 import { humanizarResposta, REGRA_ESTILO_HUMANO, tirarRepetido } from '@/lib/juniorHumano'
@@ -660,7 +661,9 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
 
     // Prints das telas da plataforma (so para aluna)
     const printsJa = printsJaEnviados(linhas)
+    const hostInfo = await carregarHostinger(admin)
     if (ehAluna) system = system + '\n\n' + regraDePrints(printsJa)
+    system = system + '\n\n' + blocoHostinger(hostInfo)
 
     system = system + '\n\n' + REGRA_ESTILO_HUMANO
     // Espelhamento: fala do jeito da pessoa (tom, palavras, tamanho, emojis)
@@ -708,7 +711,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     }
     texto = linkClicavel(tirarLinkMarkdown(texto.replace(/\*\*/g, '').replace(/__/g, '')))
     // Trava: nunca mandar varios passos de uma vez. Fica so o passo 1 e pergunta se pode mandar o proximo.
-    texto = soUmPasso(semLinkHostinger(texto))
+    texto = soUmPasso(semLinkHostinger(texto, hostInfo.link))
     let passaParaHumano = texto.indexOf(MARCA_HUMANO) >= 0
     const jaComprou = texto.indexOf(MARCA_COMPROU) >= 0
     const querVideo = texto.indexOf(MARCA_VIDEO) >= 0 && canal === 'recuperacao' && !jaVideo

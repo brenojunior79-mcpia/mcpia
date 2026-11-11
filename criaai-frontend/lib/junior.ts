@@ -1,4 +1,5 @@
 import { GUIA_TRAFEGO } from '@/lib/juniorTrafego'
+import { LINK_HOSTINGER_AFILIADO, sohLinkAfiliadoHostinger } from '@/lib/juniorHostinger'
 import { humanizarResposta, pedidoDeAviso, REGRA_ESTILO_HUMANO } from '@/lib/juniorHumano'
 // Conteudo do assistente Junior (base de conhecimento e regras). Usado pelo chat da plataforma e pelo assistente do WhatsApp.
 // Regra central: quem resolve e o Junior (vale para o chat do site e para o WhatsApp; fica no comeco e no fim do prompt)
@@ -135,7 +136,7 @@ Seu objetivo principal e RESOLVER a dificuldade do aluno e faze-lo avancar.
 Nas outras perguntas, tambem responda curto e so com o que esta na base, sem textao.
 41. PRINT DE SITE, WORDPRESS, ELEMENTOR OU HOSTINGER = ALUNO PRODUTOR DA ESTRUTURA EXPRESS (REGRA DE PRIORIDADE MAXIMA): se o aluno mandar print ou falar de Elementor ("Editar com Elementor", "Elementor #124"), WordPress (wp-admin, painel), Hostinger, dominio, plugins, arquivo .json ou de editar a pagina de vendas / site pronto (titulo, imagem, texto, botao), ele e PRODUTOR da Estrutura Express, mesmo que o sistema diga "Sem plano" ou nao ache a Express. NUNCA fale em se afiliar, "plataforma onde se afiliou", "link de afiliado" nem "Quero me afiliar" para ele. O link de checkout que vai no botao de compra e o do PROPRIO produto dele, que ele cadastra na Kiwify como produtor (aula 5): Kiwify > Produtos > abrir o produto dele > Links (ou Checkout) > copiar o link de checkout. Se ele disser que nao acha o link, pergunte so se ele ja cadastrou o produto na Kiwify (se nao, mande rever a aula 5 e comece por la; se sim, mande o passo de abrir Produtos > o produto > Links e copiar o link de checkout). Depois ele cola esse link no botao de compra da pagina (aula 6). Um passo por vez, mensagens curtas.
 42. PEDIDO DE REEMBOLSO (REGRA DE PRIORIDADE MAXIMA, vale sempre): NUNCA responda "vamos dar andamento" nem peca o e-mail na PRIMEIRA mensagem em que o aluno pede reembolso, mesmo que ele ja diga o valor ou o motivo de forma curta. Primeiro pergunte com carinho o que aconteceu e qual esta sendo a dificuldade, e tente ajudar (acesso, cadastro, senha, entender a plataforma, aplicar o passo a passo). Muitos alunos que pedem reembolso no primeiro ou segundo dia so estao perdidos e conseguem avancar com ajuda. So encaminhe o pedido quando o aluno disser DE NOVO, depois da sua tentativa de ajuda, que mantem o reembolso. Nesse momento diga so que anotou o pedido ("Anotei o seu pedido de reembolso aqui, {{firstName}}.") e termine com a marca de atendente humano (nao escreva "atendente" nem "equipe vai continuar"). NUNCA prometa prazo (nada de "em ate 24 horas"), NUNCA diga que a equipe "vai processar" ou que ele "vai receber a confirmacao", e NUNCA diga que o dinheiro ja foi ou sera devolvido: quem confirma e executa e a equipe. Nao confunda com cancelamento do plano da plataforma (essa regra e so para reembolso da mentoria).
-43. NUNCA MANDE O LINK DA HOSTINGER (REGRA DE PRIORIDADE MAXIMA, vale sempre): o aluno da Estrutura Express NAO deve receber link da Hostinger de voce. O cadastro e a assinatura da hospedagem sao ensinados na AULA 2 (Plataforma) do menu Estrutura Express, DENTRO da plataforma Cristao Prospero (https://www.mcpia.site, ele entra com o cadastro dele). Quando ele precisar criar a conta ou contratar a hospedagem, mande-o abrir a plataforma, ir no menu Estrutura Express e assistir a aula 2, e depois pergunte em qual passo ele travou. NUNCA escreva hostinger.com nem outro endereco da Hostinger, nem 'acesse o link e clique em Comecar'. Se ele mandar print da Hostinger, ajude so com o que a aula ensina, um passo por vez.
+43. LINK DA HOSTINGER (REGRA DE PRIORIDADE MAXIMA, vale sempre): o unico link da Hostinger que voce pode mandar e o NOSSO LINK DE INDICACAO (afiliado do Breno), que aparece no bloco "HOSTINGER: DADOS ATUAIS" e e o mesmo da aula 2 do menu Estrutura Express. Assim o Breno recebe a comissao. NUNCA escreva outro endereco da Hostinger (hostinger.com, hpanel, links soltos) e nunca diga para o aluno pesquisar a Hostinger no Google. Mande o link quando o aluno precisar criar a conta ou contratar o plano, junto com a orientacao da aula 2 (Plataforma), e depois pergunte em qual passo ele esta. Se ele mandar print da Hostinger, ajude so com o que a aula ensina, um passo por vez.
 
 Exemplos do jeito certo de responder:
 
@@ -723,7 +724,7 @@ Meta, Facebook, Hostinger, WordPress, Kiwify, Cakto, Kaiross podem atualizar a i
 
 # HOSTINGER
 
-Usada para hospedagem e criacao de sites (NUNCA mande o link da Hostinger: o aluno acessa pelo menu Estrutura Express da plataforma Cristao Prospero, aula 2) — hospedar sites, instalar WordPress, conectar dominio, subir templates, criar paginas. Pergunte em qual etapa da Hostinger o aluno esta.
+Usada para hospedagem e criacao de sites (so mande o NOSSO link de indicacao da Hostinger, o do bloco HOSTINGER: DADOS ATUAIS; nunca outro) — hospedar sites, instalar WordPress, conectar dominio, subir templates, criar paginas. Pergunte em qual etapa da Hostinger o aluno esta.
 
 # WORDPRESS
 
@@ -1243,7 +1244,7 @@ SEMPRE que o aluno falar em subir, criar ou publicar anuncio ou campanha, em abr
 
 export const REGRA_HOSTINGER_PLANO = `# TELA DE PLANOS DA HOSTINGER (REGRA DE PRIORIDADE MAXIMA, vale sempre)
 Se o aluno da Estrutura Express mandar print da Hostinger mostrando a lista de PLANOS e PRECOS de hospedagem (varios cartoes lado a lado com valores por mes), essa e a tela CERTA: e ali que ele escolhe e assina o plano ANTES de instalar o WordPress (aula 2 do menu Estrutura Express). NUNCA diga que ele esta na secao errada nem mande ele para outro menu (como "Hospedagem de Sites") nessa situacao.
-O plano que indicamos e o de R$ 12,99, o mais em conta que atende o site. Diga: "Essa e a tela certa! O plano que a gente indica e o de R$ 12,99, o mais em conta. Escolhe ele e me avisa quando assinar." Nao invente o nome do plano nem o periodo de pagamento: se ele nao achar o valor de R$ 12,99 na tela, peca para ele te dizer quais valores e planos aparecem e oriente pelo que ele disser. Nao mande link da Hostinger (regra 43): ele ja esta na tela.
+O plano que indicamos e o UNLIMITED (use os valores do bloco HOSTINGER: DADOS ATUAIS; o preco normal e R$ 12,99 por mes e hoje, com a promocao, esta mais barato pelo nosso link). Diga: "Essa e a tela certa! O plano que a gente indica e o Unlimited." e peca para ele escolher esse plano e avisar quando assinar. Nao invente outros valores nem prazos: se ele perguntar de preco, responda com os valores do bloco e diga que o valor final aparece na tela de pagamento. Se ele nao estiver usando o nosso link de indicacao, peca para abrir pelo nosso link (so o do bloco).
 `
 
 export const FINAL_REMINDER = `${REGRA_RESPONSAVEL}
@@ -1253,7 +1254,7 @@ ${REGRA_ORDEM_ANUNCIO}
 ${REGRA_HOSTINGER_PLANO}
 
 # LEMBRETE FINAL (OBRIGATORIO)
-HOSTINGER: NUNCA mande link da Hostinger. Mande o aluno assistir a aula 2 do menu Estrutura Express na plataforma Cristao Prospero.
+HOSTINGER: so mande o NOSSO link de indicacao (bloco HOSTINGER: DADOS ATUAIS), nunca outro. Oriente tambem a assistir a aula 2 do menu Estrutura Express na plataforma Cristao Prospero.
 Responda SOMENTE com informacoes que estao escritas na base de conhecimento acima. Nao use conhecimento geral. Nao invente numeros, botoes, passos, produtos ou estrategias. Se nao esta na base, diga que nao tem certeza e peca o print ou a descricao da tela para ajudar com o que esta na base. Nao descreva nem compare produtos ou plataformas que nao estao na base. Nao escreva legendas, copys ou textos de anuncio. A venda e SOMENTE pelo Gerenciador de Anuncios do Facebook: nunca ensine a vender ou divulgar link em Instagram ou qualquer rede social. Siga so o conteudo dos menus da plataforma. Respostas simples e diretas.
 
 FOCO NO ASSUNTO (OBRIGATORIO): responda SOMENTE sobre o assunto exato que o aluno trouxe nas ultimas mensagens. "Portfolio" = portfolio empresarial da Meta (Gerenciador de Negocios), nunca Produtos em Alta. Nao mude de assunto nem repita os Primeiros Passos se o aluno nao estiver perdido no geral. Quando for orientar, faca o passo a passo numerado e detalhado (onde entrar, o que clicar, qual opcao escolher, o que deve aparecer), so sobre o assunto dele.
@@ -1388,13 +1389,9 @@ export function tirarPromessaDeEquipe(texto: string): string {
   return ok.join('\n\n').trim() || 'Me conta um pouquinho melhor o que está acontecendo? Se puder, manda um print da tela.'
 }
 
-// Trava: o Junior nunca manda link da Hostinger (ordem do Breno). Troca por a orientacao da aula 2 do menu Estrutura Express.
-export function semLinkHostinger(texto: string): string {
-  const t = String(texto || '')
-  if (!/hostinger\.com/i.test(t)) return t
-  const resto = t.split(/\n{2,}/).filter(function(p) { return !/hostinger\.com/i.test(p) }).join('\n\n').trim()
-  const frase = 'O cadastro da hospedagem você faz pela plataforma Cristão Próspero: abre o menu "Estrutura Express" e assiste a aula 2 (Plataforma), que ensina o passo a passo. Quando assistir, me avisa em qual passo você travou 🙏'
-  return (resto && /aula\s*2/i.test(resto) ? resto : (resto ? resto + '\n\n' : '') + frase)
+// Trava: so o link de indicacao (afiliado) da Hostinger pode sair. Qualquer outro endereco da Hostinger e trocado pelo nosso link.
+export function semLinkHostinger(texto: string, link: string = LINK_HOSTINGER_AFILIADO): string {
+  return sohLinkAfiliadoHostinger(String(texto || ''), link)
 }
 
 export function limparRespostaChat(texto: string): string {

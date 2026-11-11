@@ -4,6 +4,7 @@ import { adminClient, requireAdmin, waConfig } from '@/lib/whatsapp'
 import { processarFluxos } from '@/lib/waAuto'
 import { fecharDia } from '@/lib/waFechamento'
 import { retomarFalhas } from '@/lib/waRetomada'
+import { atualizarPrecosHostinger } from '@/lib/juniorHostinger'
 import { estadoAgendaIA, responderPendentesGeral, acompanharSilencioFluxo } from '@/lib/waIA'
 
 export const maxDuration = 60
@@ -46,6 +47,8 @@ export async function POST(req: NextRequest) {
   // Falhas passageiras do assistente (ex.: acabou o credito da OpenAI): tenta responder de novo, ate 3 vezes por mensagem
   let retomadas = 0
   try { retomadas = await retomarFalhas(admin) } catch (e) { console.error('[wa-retomada]', e) }
+  // Preco da Hostinger (1x por dia)
+  try { await atualizarPrecosHostinger(admin) } catch (e) { /* segue */ }
   // Fim do horario de atendimento: ultima resposta para quem esperava e depois marca tudo como lido e finaliza as conversas
   let fechamento = 'fora'
   try { fechamento = await fecharDia(admin) } catch (e) { console.error('[wa-fechamento]', e) }
