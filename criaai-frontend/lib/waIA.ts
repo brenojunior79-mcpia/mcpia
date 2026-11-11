@@ -1,6 +1,7 @@
 // Assistente de IA (Junior) dentro das conversas do WhatsApp (suporte e recuperacao).
 // So responde nas conversas em que o ADMIN ligou o assistente (wa_conversations.ia_ativa) ou quando ele ligou para todas (wa_ia_config.geral).
 import { blocoAnunciosDoAluno } from '@/lib/juniorCampanhas'
+import { blocoPerfilPessoa } from '@/lib/juniorPerfil'
 import { statusAnuncios } from '@/lib/acessoAnuncios'
 import { contasDoTelefone, blocoContasDoNumero, resumoContasDoNumero, type ContaDoNumero } from '@/lib/juniorContas'
 import { semLinkHostinger, REGRA_RESPONSAVEL, JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno, soUmPasso, tirarLinkMarkdown, linkClicavel, tirarFrasesDeAjuda, tipoFinalConversa, situacaoFinalConversa } from '@/lib/junior'
@@ -650,6 +651,9 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     // Video "App" (resposta rapida salva no canal de recuperacao): so uma vez por conversa
     const jaVideo = linhas.some(function(m) { return m.direction === 'out' && m.type === 'video' })
     system = system + '\n\nVideo do app: ' + (canal !== 'recuperacao' ? 'nao se aplica a este canal (nao use a marca ' + MARCA_VIDEO + ').' : jaVideo ? 'JA foi enviado nesta conversa (nao use a marca ' + MARCA_VIDEO + ' de novo; se ela quiser ver de novo, diga que o video esta logo acima na conversa).' : 'ainda NAO foi enviado nesta conversa.')
+
+    // Espelhamento: fala do jeito da pessoa (tom, palavras, tamanho, emojis)
+    { const perfil = blocoPerfilPessoa(linhas); if (perfil) system = system + '\n\n' + perfil }
 
     const resp = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
