@@ -473,7 +473,8 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
 
     const msgs: { role: 'user' | 'assistant'; content: any }[] = []
     for (const m of linhas) {
-      if (m.type === 'system' && String(m.body || '') === MARCA_FLUXO_IA) continue
+      // Avisos internos do sistema (ex.: "O assistente nao conseguiu responder", "Conversa atribuida a...") nao sao fala de ninguem: ficam fora da conversa que o assistente le
+      if (m.type === 'system') continue
       const txt = m.type === 'audio' && String(m.body || '').trim() ? '[audio transcrito] ' + String(m.body).trim() : (String(m.body || '').trim() || rotuloTipo(String(m.type || '')))
       if (!txt) continue
       const role = m.direction === 'in' ? 'user' : 'assistant'
