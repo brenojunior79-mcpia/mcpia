@@ -3,6 +3,7 @@ import { timingSafeEqual } from 'crypto'
 import { adminClient, requireAdmin, waConfig } from '@/lib/whatsapp'
 import { processarFluxos } from '@/lib/waAuto'
 import { fecharDia } from '@/lib/waFechamento'
+import { retomarFalhas } from '@/lib/waRetomada'
 import { estadoAgendaIA, responderPendentesGeral, acompanharSilencioFluxo } from '@/lib/waIA'
 
 export const maxDuration = 60
@@ -42,8 +43,11 @@ export async function POST(req: NextRequest) {
   // Depois do fluxo: se a pessoa ficou 15 min em silencio, o Junior pergunta se ela conseguiu acessar as aulas
   let acompanhamento = 0
   try { acompanhamento = await acompanharSilencioFluxo(admin) } catch (e) { console.error('[wa-ia] acompanhamento:', e) }
+  // Falhas passageiras do assistente (ex.: acabou o credito da OpenAI): tenta responder de novo, ate 3 vezes por mensagem
+  let retomadas = 0
+  try { retomadas = await retomarFalhas(admin) } catch (e) { console.error('[wa-retomada]', e) }
   // Fim do horario de atendimento: ultima resposta para quem esperava e depois marca tudo como lido e finaliza as conversas
   let fechamento = 'fora'
   try { fechamento = await fecharDia(admin) } catch (e) { console.error('[wa-fechamento]', e) }
-  return NextResponse.json({ ok: true, ...r, abertura, acompanhamento, fechamento })
+  return NextResponse.json({ ok: true, ...r, abertura, acompanhamento, retomadas, fechamento })
 }
