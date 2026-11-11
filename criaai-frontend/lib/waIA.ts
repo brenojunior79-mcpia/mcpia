@@ -32,7 +32,7 @@ const LINK_DESCONTO = 'https://pay.hub.la/icnB8VD8AfKqIV1SHX3h'
 const PERGUNTA_DESCONTO = 'Se eu conseguir um desconto para você, isso te ajudaria a entrar agora? 🙏'
 const CONFIRMA_DESCONTO = 'Então a mentoria fica por R$ 197. Posso te mandar o link para você garantir a sua vaga? 🙏'
 const PERGUNTA_RANKING = 'Você gostaria de ganhar R$200 no Pix como premiação? 💰'
-const PERGUNTA_EXPRESS = 'Por acaso, você já viu os novos produtos que o Breno lançou lá na Estrutura Express? Eles estão dando uma estimativa de R$ 200 de lucro por dia (é só uma estimativa, não uma garantia).'
+const PERGUNTA_EXPRESS = 'Por sinal, você já viu os produtos que o Breno já liberou lá na Estrutura Express? Os novos produtos?'
 
 const REGRAS_WHATSAPP = `# REGRAS DESTE ATENDIMENTO NO WHATSAPP (PRIORIDADE MAXIMA)
 - Voce esta conversando com uma pessoa pelo WhatsApp. Se perguntarem, diga que e o Junior, assistente virtual da equipe. Nunca diga que e uma pessoa.
@@ -788,13 +788,13 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     // So alunas recebem a pergunta final (quem ainda nao e aluna nao tem ranking nem Estrutura Express)
     if (acabou && !passaParaHumano && ehAluna) {
       const jaRank = linhas.some(function(m) { return m.direction === 'out' && /ganhar R\$\s?200 no Pix/i.test(String(m.body || '')) })
-      const jaExp = linhas.some(function(m) { return m.direction === 'out' && /novos produtos que o Breno/i.test(String(m.body || '')) })
+      const jaExp = linhas.some(function(m) { return m.direction === 'out' && /(novos produtos que o Breno|produtos que o Breno j[aá] liberou)/i.test(String(m.body || '')) })
       // alterna: usa o tipo definido; se esse ja foi perguntado antes, tenta o outro (a Express so para quem nao tem); se os dois ja foram, nao pergunta mais
       let escolha: 'ranking' | 'express' | null = tipoFinal
-      if (escolha === 'ranking' && jaRank) escolha = (temExpress === false && !jaExp) ? 'express' : null
-      else if (escolha === 'express' && jaExp) escolha = !jaRank ? 'ranking' : null
+      if (escolha === 'ranking' && jaRank) escolha = null
+      else if (escolha === 'express' && jaExp) escolha = null
       if (escolha === 'ranking' && texto.indexOf('ganhar R$200 no Pix') < 0) texto = (texto ? texto + '\n\n' : '') + PERGUNTA_RANKING
-      if (escolha === 'express' && texto.indexOf('novos produtos que o Breno') < 0) texto = (texto ? texto + '\n\n' : '') + PERGUNTA_EXPRESS
+      if (escolha === 'express' && !/produtos que o Breno/i.test(texto)) texto = (texto ? texto + '\n\n' : '') + PERGUNTA_EXPRESS
     }
     // Frases de enrolacao no fim ("Se precisar de ajuda, e so avisar") saem, a nao ser que seja a despedida final da conversa
     if (!acabou) texto = tirarFrasesDeAjuda(texto)
