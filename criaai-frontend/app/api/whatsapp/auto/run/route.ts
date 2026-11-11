@@ -3,7 +3,7 @@ import { timingSafeEqual } from 'crypto'
 import { adminClient, requireAdmin, waConfig } from '@/lib/whatsapp'
 import { processarFluxos } from '@/lib/waAuto'
 import { fecharDia } from '@/lib/waFechamento'
-import { retomarFalhas } from '@/lib/waRetomada'
+import { retomarFalhas, responderForaDoHorario } from '@/lib/waRetomada'
 import { atualizarPrecosHostinger } from '@/lib/juniorHostinger'
 import { estadoAgendaIA, responderPendentesGeral, acompanharSilencioFluxo } from '@/lib/waIA'
 
@@ -41,6 +41,9 @@ export async function POST(req: NextRequest) {
       if (!claim.error && claim.data && claim.data.length > 0) abertura = await responderPendentesGeral(admin)
     }
   } catch (e) { console.error('[wa-ia] abertura da agenda:', e) }
+  // Quem escreveu fora do horario (e so recebeu o aviso de horario): responde todas, a cada minuto, ate acabar
+  let foraHorario = 0
+  try { const ag2 = await estadoAgendaIA(admin); if (ag2.agendaAtiva && ag2.dentro) foraHorario = await responderForaDoHorario(admin) } catch (e) { console.error('[wa-fora-horario]', e) }
   // Depois do fluxo: se a pessoa ficou 15 min em silencio, o Junior pergunta se ela conseguiu acessar as aulas
   let acompanhamento = 0
   try { acompanhamento = await acompanharSilencioFluxo(admin) } catch (e) { console.error('[wa-ia] acompanhamento:', e) }
@@ -52,5 +55,5 @@ export async function POST(req: NextRequest) {
   // Fim do horario de atendimento: ultima resposta para quem esperava e depois marca tudo como lido e finaliza as conversas
   let fechamento = 'fora'
   try { fechamento = await fecharDia(admin) } catch (e) { console.error('[wa-fechamento]', e) }
-  return NextResponse.json({ ok: true, ...r, abertura, acompanhamento, retomadas, fechamento })
+  return NextResponse.json({ ok: true, ...r, abertura, foraHorario, acompanhamento, retomadas, fechamento })
 }

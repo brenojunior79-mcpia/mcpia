@@ -476,6 +476,8 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     for (const m of linhas) {
       // Avisos internos do sistema (ex.: "O assistente nao conseguiu responder", "Conversa atribuida a...") nao sao fala de ninguem: ficam fora da conversa que o assistente le
       if (m.type === 'system') continue
+      // O aviso automatico de horario de atendimento ("Nosso atendimento funciona todos os dias...") tambem nao conta como resposta
+      if (m.direction === 'out' && String(m.body || '').startsWith('Olá! 👋 Nosso atendimento')) continue
       const txt = m.type === 'audio' && String(m.body || '').trim() ? '[audio transcrito] ' + String(m.body).trim() : (String(m.body || '').trim() || rotuloTipo(String(m.type || '')))
       if (!txt) continue
       const role = m.direction === 'in' ? 'user' : 'assistant'
@@ -874,10 +876,10 @@ export async function responderUltimaPendente(admin: any, convId: string): Promi
   try {
     const [cv, ult] = await Promise.all([
       admin.from('wa_conversations').select('id, wa_id, name').eq('id', convId).maybeSingle(),
-      admin.from('wa_messages').select('id, direction, type, created_at').eq('conversation_id', convId).neq('type', 'system').order('created_at', { ascending: false }).limit(1).maybeSingle(),
+      admin.from('wa_messages').select('id, direction, type, body, created_at').eq('conversation_id', convId).neq('type', 'system').order('created_at', { ascending: false }).limit(6),
     ])
     const c: any = cv.data
-    const m: any = ult.data
+    const m: any = ((ult.data || []) as any[]).filter(function(x: any) { return !(x.direction === 'out' && String(x.body || '').startsWith('Olá! 👋 Nosso atendimento')) })[0]
     // (avisos do sistema, como "O fluxo passou a conversa para o Junior", nao contam: a ultima mensagem de verdade e que importa)
     if (!c || !c.wa_id || !m || m.direction !== 'in') return false
     // Fora da janela de 24h o WhatsApp nao deixa mandar texto livre
