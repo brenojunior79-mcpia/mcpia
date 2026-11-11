@@ -364,6 +364,18 @@ async function finalizarSeEncerrada(admin: any, convId: string, msgId: string): 
   } catch (e) { /* encerrar e so conforto */ }
 }
 
+// Depois da primeira mensagem o nome da pessoa nao aparece mais: tira "Maria," no comeco, ", Maria" antes da pontuacao e "Maria," no inicio de frase
+function tirarNomeDaResposta(texto: string, primeiro: string): string {
+  const n = String(primeiro || '').trim()
+  if (n.length < 2 || n.toLowerCase() === 'voce') return texto
+  const e = n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  let t = texto
+  t = t.replace(new RegExp('(^|[\\n.!?]\\s*)' + e + '\\s*[,:]\\s*(\\S)', 'giu'), function(_m, pre: string, c: string) { return pre + c.toUpperCase() })
+  t = t.replace(new RegExp('\\s*,\\s*' + e + '(?=\\s*[.!?…]|\\s*$|\\s*\\n)', 'giu'), '')
+  t = t.replace(new RegExp('\\s+' + e + '(?=\\s*[!?])', 'giu'), '')
+  return t.trim() || texto
+}
+
 export async function tratarIA(admin: any, convId: string, waId: string, msgId: string, tipo: string, nomeContato: string | null): Promise<boolean> {
   try {
     const cv = await admin.from('wa_conversations').select('id, ia_ativa, ia_humano, connection_id, profile_id, name').eq('id', convId).maybeSingle()
@@ -423,10 +435,10 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       // Respostas antigas ainda nao enviadas desta conversa saem da fila (vale a mais nova).
       const agoraIso = new Date().toISOString()
       await admin.from('wa_ia_fila').update({ estado: 'cancelado', erro: 'substituida', finalizado_em: agoraIso }).eq('conversation_id', convId).eq('estado', 'pendente')
-      // Primeira mensagem (conversa parada ha mais de 3h): leva cerca de 1 minuto para ser lida e respondida.
-      // No meio de uma conversa em andamento a leitura e mais rapida.
+      // Ordem do Breno (para nao parecer IA): a primeira mensagem da conversa (parada ha mais de 3h) e respondida em cerca de 3 minutos;
+      // cada mensagem seguinte, em cerca de 2 minutos. O tempo conta ate a resposta sair, entao desconta ~30s do "digitando" (lib/waIAFila.ts).
       const jaConversavam = linhas.some(function(m) { return String(m.id) !== String(msgId) && Date.now() - new Date(m.created_at).getTime() < 3 * 3600 * 1000 })
-      const esperaLeituraS = jaConversavam ? 8 + Math.random() * 10 : 46 + Math.random() * 10
+      const esperaLeituraS = (jaConversavam ? 120 : 180) - 30 + Math.random() * 8
       const lerEm = new Date(Date.now() + esperaLeituraS * 1000).toISOString()
       const ins = await admin.from('wa_ia_fila').insert({ ler_em: lerEm, conversation_id: convId, inbound_msg_id: String(msgId), inbound_wa_id: (ultimaIn as any).wa_message_id || null, wa_id: waId, connection_id: conv.connection_id || null, texto, passa_humano: passaParaHumano, enviar_video: querVideo && !passaParaHumano })
       if (!ins.error) return true
@@ -524,7 +536,12 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     const canal = conv.connection_id ? 'recuperacao' : 'suporte'
 
     const baseTexto = (await baseDoCanal(admin, canal)).split('{{firstName}}').join(primeiro)
-    let system = REGRA_RESPONSAVEL + '\n\n' + baseTexto + '\n\n' + FINAL_REMINDER + '\n\n' + REGRA_EXPRESS_WHATSAPP + '\n\n' + REGRA_ASSINATURA_WHATSAPP + '\n\n' + REGRA_COMPRA_WHATSAPP + '\n\nNome da pessoa: ' + (nome || 'desconhecido')
+    // Nome da pessoa: so na primeira mensagem do assistente na conversa (ordem do Breno); depois nao cita mais
+    const jaFalou = linhas.some(function(m) { return m.direction === 'out' && m.type !== 'system' && m.type !== 'template' && String(m.body || '').trim() !== '' && !String(m.body || '').startsWith('Olá! 👋 Nosso atendimento') })
+    const REGRA_NOME = jaFalou
+      ? 'REGRA DO NOME (PRIORIDADE MAXIMA): voce ja falou com esta pessoa nesta conversa. NAO cite o nome dela em NENHUMA mensagem daqui para frente (nada de "Entendi, Maria.", "Perfeito, Maria.", "Maria, ..."). Responda direto, sem nome. Isso vale mais que qualquer exemplo com {{firstName}} da base.'
+      : 'REGRA DO NOME (PRIORIDADE MAXIMA): esta e a PRIMEIRA mensagem sua nesta conversa: pode citar o primeiro nome da pessoa UMA vez, de forma natural. Depois desta mensagem o nome nao e mais citado.'
+    let system = REGRA_RESPONSAVEL + '\n\n' + baseTexto + '\n\n' + FINAL_REMINDER + '\n\n' + REGRA_EXPRESS_WHATSAPP + '\n\n' + REGRA_ASSINATURA_WHATSAPP + '\n\n' + REGRA_COMPRA_WHATSAPP + '\n\n' + REGRA_NOME + (jaFalou ? '' : '\n\nNome da pessoa: ' + (nome || 'desconhecido'))
     if (esconderPlanos) system = NEW_STUDENT_RULE + '\n\n' + system + '\n\n' + NEW_STUDENT_RULE
     const sitPlano = situacaoPlanoAluno(temPlano, esconderPlanos)
     if (sitPlano) system = system + '\n\n' + sitPlano
@@ -799,6 +816,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     }
 
     texto = prepararRespostaPix(texto, ehAluna)
+    if (jaFalou) texto = tirarNomeDaResposta(texto, primeiro)
     return await enfileirar(texto, passaParaHumano, querVideo)
   } catch (e) {
     console.error('[wa-ia] erro:', e)
