@@ -52,7 +52,9 @@ export async function retomarFalhas(admin: any): Promise<number> {
       estado[msgId] = { n: (ja?.n || 0) + 1, em: new Date().toISOString() }
       mudou = true
       feitas++
-      await tratarIA(admin, convId, String(conv.wa_id), msgId, String(ultima.type), conv.name || null).catch(function(e: any) { console.error('[wa-retomada]', e) })
+      const t0 = Date.now()
+      const ret = await tratarIA(admin, convId, String(conv.wa_id), msgId, String(ultima.type), conv.name || null).catch(function(e: any) { console.error('[wa-retomada]', e); return 'erro' })
+      console.log('[wa-retomada] conv=' + convId + ' tipo=' + ultima.type + ' retorno=' + String(ret) + ' ms=' + (Date.now() - t0))
     }
     if (mudou) {
       // guarda so as tentativas recentes
