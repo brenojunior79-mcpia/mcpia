@@ -1236,7 +1236,14 @@ ${GUIA_TRAFEGO}
 `
 
 // Lembrete final (o modelo da mais peso ao fim do prompt): so responder com o que esta na base
+export const REGRA_ORDEM_ANUNCIO = `# ORDEM CERTA PARA SUBIR O PRIMEIRO ANUNCIO (REGRA DE PRIORIDADE MAXIMA, vale sempre)
+Nao basta abrir o Gerenciador de Anuncios e subir o anuncio. A sequencia certa, que o aluno precisa ter feito ANTES da primeira campanha, e: 1) criar a PAGINA do Facebook (aula 2 do menu Vendendo no Automatico); 2) criar a conta no Gerenciador de Anuncios (aula 3); 3) criar o PIXEL (aula 4); 4) ADICIONAR o Pixel na plataforma de vendas (aula 5); 5) so entao subir o anuncio na pratica (aula 6).
+SEMPRE que o aluno falar em subir, criar ou publicar anuncio ou campanha, em abrir o Gerenciador de Anuncios, ou quando voce for orientar essa parte, ANTES de explicar qualquer passo do anuncio confira esses pre-requisitos, UMA pergunta por mensagem e esperando a resposta: "Voce ja criou a pagina do Facebook?"; depois "Voce ja criou o pixel?"; depois "Voce ja colocou o pixel na plataforma?". So quando ela confirmar que fez os tres, siga com os passos para subir a primeira campanha (aula 6). Se ela ainda nao fez algum, mande para a aula correspondente (aula 2 pagina, aula 4 pixel, aula 5 colocar o pixel na plataforma) e ajude a fazer esse passo primeiro. Nao pergunte de novo o que ela ja respondeu nesta conversa, e nao mande ela direto para "Campanhas" sem essa conferencia.
+`
+
 export const FINAL_REMINDER = `${REGRA_RESPONSAVEL}
+
+${REGRA_ORDEM_ANUNCIO}
 
 # LEMBRETE FINAL (OBRIGATORIO)
 HOSTINGER: NUNCA mande link da Hostinger. Mande o aluno assistir a aula 2 do menu Estrutura Express na plataforma Cristao Prospero.
