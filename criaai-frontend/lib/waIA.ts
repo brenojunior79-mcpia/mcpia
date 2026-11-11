@@ -2,6 +2,7 @@
 // So responde nas conversas em que o ADMIN ligou o assistente (wa_conversations.ia_ativa) ou quando ele ligou para todas (wa_ia_config.geral).
 import { blocoAnunciosDoAluno } from '@/lib/juniorCampanhas'
 import { blocoPerfilPessoa } from '@/lib/juniorPerfil'
+import { humanizarResposta, REGRA_ESTILO_HUMANO } from '@/lib/juniorHumano'
 import { MARCA_PRINT_RE, printPorSlug, printsJaEnviados, regraDePrints } from '@/lib/juniorPrints'
 import { statusAnuncios } from '@/lib/acessoAnuncios'
 import { contasDoTelefone, blocoContasDoNumero, resumoContasDoNumero, type ContaDoNumero } from '@/lib/juniorContas'
@@ -657,6 +658,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     const printsJa = printsJaEnviados(linhas)
     if (ehAluna) system = system + '\n\n' + regraDePrints(printsJa)
 
+    system = system + '\n\n' + REGRA_ESTILO_HUMANO
     // Espelhamento: fala do jeito da pessoa (tom, palavras, tamanho, emojis)
     { const perfil = blocoPerfilPessoa(linhas); if (perfil) system = system + '\n\n' + perfil }
 
@@ -674,6 +676,11 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     // Print de tela: so para aluna, no maximo um, e nunca repetido na conversa
     let printSlug: string | null = null
     { const mp = texto.match(MARCA_PRINT_RE); if (mp) { const pt = printPorSlug(mp[1]); if (pt && ehAluna && printsJa.indexOf(pt.slug) < 0) printSlug = pt.slug; texto = texto.replace(new RegExp(MARCA_PRINT_RE.source, 'gi'), '').trim() } }
+    // Tira o jeito de IA ("Fico feliz em saber...", "Perfeito!", "Qualquer duvida...")
+    {
+      const jaPerguntou = linhas.some(function(m) { return m.direction === 'out' && m.type !== 'system' && /(como\s+(est[aã]o|est[aá]|vai)\s+(indo\s+)?(as\s+aulas|a\s+plataforma)|conseguiu\s+acessar|est[aá]\s+indo\s+(l[aá]\s+)?na\s+plataforma)/i.test(String(m.body || '')) })
+      texto = humanizarResposta(texto, { jaFalou: jaFalou, jaPerguntouDasAulas: jaPerguntou })
+    }
     texto = linkClicavel(tirarLinkMarkdown(texto.replace(/\*\*/g, '').replace(/__/g, '')))
     // Trava: nunca mandar varios passos de uma vez. Fica so o passo 1 e pergunta se pode mandar o proximo.
     texto = soUmPasso(semLinkHostinger(texto))
