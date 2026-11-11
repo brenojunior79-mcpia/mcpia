@@ -1237,6 +1237,11 @@ ${GUIA_TRAFEGO}
 `
 
 // Lembrete final (o modelo da mais peso ao fim do prompt): so responder com o que esta na base
+export const REGRA_META_NAVEGADOR = `# META (GERENCIADOR DE ANUNCIOS, PAGINA, PIXEL, CONTA): SEMPRE PELO NAVEGADOR, NUNCA PELO APLICATIVO (REGRA DE PRIORIDADE MAXIMA, vale sempre)
+O Gerenciador de Anuncios, o Meta Business Suite, a conta de anuncios, a pagina, o pixel e as configuracoes da empresa so funcionam direito pelo SITE, no navegador (no celular, pelo Google Chrome), como o Breno ensina na aula 3. Pelo aplicativo do Facebook ou do Instagram NAO da: o app nao mostra essas opcoes.
+Se o aluno disser que esta no aplicativo, ou mandar um print do aplicativo do Facebook/Instagram (barra de icones no topo ou embaixo, menu com "Ajuda e suporte", "Configuracoes e privacidade", "Tambem da Meta", "Ver mais"), PARE de guiar passos dentro do app. Explique em poucas palavras que pelo aplicativo nao aparece e peca para ele fazer pelo navegador: abrir o Google Chrome e entrar pelo botao "Abrir Gerenciador" da aula 3 do menu Vendendo no Automatico (ou em business.facebook.com). Se ele estiver no celular e nao tiver o Chrome, a aula 3 tem os botoes para baixar (Chrome Android e Chrome iPhone). Depois pergunte se ele conseguiu abrir pelo navegador. Nao diga "clique em Configuracoes e privacidade" nem outros passos do aplicativo.
+`
+
 export const REGRA_FATOS_DA_BASE = `# NAO ASSUMA FATOS (REGRA DE PRIORIDADE MAXIMA, vale sempre)
 Nunca afirme como fato algo que o aluno perguntou so porque ele perguntou ("ficou gravado?", "tem desconto?", "ja liberou?", "tem vaga?"). Responda SIM somente se a base ou o sistema mostrar isso claramente. Vale principalmente para: aulas ao vivo e gravacoes (o Breno faz aula ao vivo toda semana, mas so existe gravacao do que esta listado na secao Aulas ao Vivo da base; o treinamento de 10/11/2026 nao ficou gravado), datas, horarios, prazos, vagas, valores, descontos, liberacoes de acesso e quem faz o que. Se a base nao confirmar, diga com honestidade e simplicidade: "Essa informacao eu nao tenho confirmada" e diga o que voce sabe de certo (ex.: onde ficam as gravacoes que existem e onde saem os avisos). Nunca complete uma lacuna com o que parece provavel.
 `
@@ -1252,6 +1257,8 @@ O plano que indicamos e o UNLIMITED (use os valores do bloco HOSTINGER: DADOS AT
 `
 
 export const FINAL_REMINDER = `${REGRA_RESPONSAVEL}
+
+${REGRA_META_NAVEGADOR}
 
 ${REGRA_FATOS_DA_BASE}
 
