@@ -2,13 +2,8 @@
 // "Estou aqui para ajudar", "Qualquer duvida...", "Parece que voce esta compartilhando...", despedidas repetidas e emojis demais.
 // Funciona frase por frase; se sobrar nada, devolve o texto original (nunca deixa a resposta vazia).
 
-const AVISOS = [
-  'Me avisa quando fizer.',
-  'Fez? Me conta.',
-  'Quando fizer, me fala.',
-  'Consegue fazer? Me avisa.',
-  'Me conta quando terminar.',
-]
+// (ordem do Breno: o passo a passo termina no proprio passo, sem pedir para a pessoa avisar)
+const AVISOS: string[] = ['']
 
 function hash(s: string): number { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h }
 
@@ -47,6 +42,21 @@ const ABERTURA = /^(?:[Pp]erfeito|[ÓóOo]timo|[Ee]xcelente|[Mm]aravilha|[Cc]ert
 const EMOJIS_ENFEITE = /\u2728|\uD83C\uDF89|\uD83C\uDF8A|\uD83C\uDF1F|\uD83D\uDCAB|\uD83E\uDD73|\uD83D\uDE80|\uD83D\uDCAA|\uD83C\uDF08|\uD83D\uDD25|\uD83D\uDC4F/g
 const EMOJI_QUALQUER = /[☀-➿]|[\uD83C-\uD83E][\uDC00-\uDFFF]/g
 
+const PAGAMENTO = /pagament|pagar|pagou|assin(ar|atura|ou)|e-?mail|compra|link/i
+const PEDIDO_AVISO: RegExp[] = [
+  /\bme\s+(avis[ae]|conta|fala|diz|chama)\b[^.!?\n]{0,50}\b(quando|assim\s+que|depois\s+que|se\s+(deu|funcionou|conseguiu|der|abriu|apareceu)|que\s+(fez|fizer|terminou|conseguiu|conseguir))/i,
+  /\b(quando|assim\s+que|depois\s+que)\b[^.!?\n]{0,50}\b(fizer|terminar|concluir|abrir|clicar|chegar|entrar|conseguir|fez|terminou|estiver\s+l[aá])\b[^.!?\n]{0,50}\bme\s+(avis|conta|fala|diz)/i,
+  /^(consegue|conseguiu|conseguem)\s+fazer\s*\??$/i,
+  /^(fez|conseguiu|deu\s+certo)\s*\?\s*(me\s+(conta|avisa|diz|fala))?\.?$/i,
+  /^me\s+(avis[ae]|conta|fala|diz)\.?$/i,
+  /\bque\s+eu\s+te\s+(ajudo|ajudar|mando|passo|oriento)\b[^.!?\n]{0,50}\b(continuar|pr[oó]ximo|confirmar|seguir)/i,
+]
+export function ehPedidoDeAviso(frase: string): boolean {
+  const f = String(frase || '').trim()
+  if (!f || PAGAMENTO.test(f)) return false
+  return PEDIDO_AVISO.some(function(r) { return r.test(f) })
+}
+
 function frases(linha: string): string[] {
   return linha.split(/(?<=[.!?…])\s+/).filter(function(f) { return f.trim() })
 }
@@ -58,7 +68,7 @@ export function humanizarResposta(texto: string, opts?: { jaFalou?: boolean; jaP
     const jaPerg = !!(opts && opts.jaPerguntouDasAulas)
     let t = original
     // 1) "Quando fizer isso, me avise aqui que eu te mando o proximo passo": varia as palavras
-    t = t.replace(/(?:Quando|Assim que)\s+(?:voc[eê]\s+)?fizer\s+isso,?\s+me\s+avis[ae]\s+(?:aqui\s+)?que\s+eu\s+te\s+mando\s+o\s+pr[oó]ximo\s+passo\.?/gi, pedidoDeAviso(t))
+    t = t.replace(/(?:Quando|Assim que)\s+(?:voc[eê]\s+)?fizer\s+isso,?\s+me\s+avis[ae]\s+(?:aqui\s+)?que\s+eu\s+te\s+mando\s+o\s+pr[oó]ximo\s+passo\.?/gi, '')
     // 2) frase por frase
     const linhas = t.split('\n')
     let primeira = true
@@ -72,6 +82,7 @@ export function humanizarResposta(texto: string, opts?: { jaFalou?: boolean; jaP
         const solto = x.replace(EMOJI_QUALQUER, '').trim()
         if (!solto) { if (!tirou) mantidas.push(x); continue }
         if (REMOVER_SEMPRE.some(function(r) { return r.test(solto) })) { tirou = true; continue }
+        if (ehPedidoDeAviso(solto)) { tirou = true; continue }
         if (jaFalou && REMOVER_SE_JA_FALOU.some(function(r) { return r.test(solto) })) { tirou = true; continue }
         if (jaPerg && /(como\s+(est[aã]o|est[aá])\s+(indo\s+)?(as\s+aulas|a\s+plataforma)|(como\s+)?voc[eê]\s+est[aá]\s+indo\s+(l[aá]\s+)?na\s+plataforma|j[aá]\s+conseguiu\s+acessar)/i.test(solto)) continue
         if (/^no\s+entanto,?\s+posso\s+ajudar\s+apenas/i.test(solto)) { mantidas.push('Isso foge do que eu consigo te ajudar por aqui. Se for sobre a mentoria, pode falar.'); continue }
