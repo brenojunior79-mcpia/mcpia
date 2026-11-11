@@ -771,7 +771,15 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       const confirmouValor = iVal >= 0 && l.slice(iVal + 1).some(function(m) { return m.direction === 'in' })
       const confirmouDesconto = iDesc >= 0 && l.slice(iDesc + 1).some(function(m) { return m.direction === 'in' })
       if (!(iVal >= 0 && confirmouValor && confirmouDesconto)) {
-        texto = iDesc >= 0 && confirmouDesconto ? CONFIRMA_DESCONTO : PERGUNTA_DESCONTO
+        const forcado = iDesc >= 0 && confirmouDesconto ? CONFIRMA_DESCONTO : PERGUNTA_DESCONTO
+        // Se essa mesma pergunta ja foi feita antes, nao repete (a pessoa respondeu outra coisa): tira o link e fica com o que o modelo escreveu sem ela
+        const jaFez = linhas.some(function(m) { return m.direction === 'out' && String(m.body || '').indexOf(forcado.slice(0, 30)) >= 0 || (m.direction === 'out' && /te ajudaria a entrar agora/i.test(String(m.body || '')) && forcado === PERGUNTA_DESCONTO) })
+        if (jaFez) {
+          const sobra = texto.replace(/https?:\/\/pay\.hub\.la\/icnB8VD8AfKqIV1SHX3h/g, '').split(/\n{2,}/).filter(function(x) { return x.trim() && !/desconto|R\$\s?197/i.test(x) }).join('\n\n').trim()
+          texto = sobra || ('Entendo' + (primeiro ? ', ' + primeiro : '') + '. Quando fizer sentido pra você, é só me chamar aqui 🙏')
+        } else {
+          texto = forcado
+        }
       }
     }
     // Fim da conversa: pergunta (uma vez so por conversa) se a pessoa quer ganhar R$200 no Pix (leva ao ranking)
