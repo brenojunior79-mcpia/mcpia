@@ -370,6 +370,14 @@ async function finalizarSeEncerrada(admin: any, convId: string, msgId: string): 
 }
 
 // Depois da primeira mensagem o nome da pessoa nao aparece mais: tira "Maria," no comeco, ", Maria" antes da pontuacao e "Maria," no inicio de frase
+// Primeira resposta da conversa: garante o primeiro nome na saudacao ("A paz do Senhor!" vira "A paz do Senhor, Maria!")
+function colocarNomeNaPrimeira(texto: string, primeiro: string): string {
+  const n = String(primeiro || '').trim()
+  if (n.length < 2 || n.toLowerCase() === 'voce' || n.toLowerCase() === 'você') return texto
+  if (new RegExp('\\b' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(texto)) return texto
+  return texto.replace(/^(\s*(?:A paz(?: do Senhor)?|Bom dia|Boa tarde|Boa noite|Ol[aá]|Oi))\s*([!,.])/i, function(_m, g: string, p: string) { return g + ', ' + n + (p === ',' ? ',' : p) })
+}
+
 function tirarNomeDaResposta(texto: string, primeiro: string): string {
   const n = String(primeiro || '').trim()
   if (n.length < 2 || n.toLowerCase() === 'voce') return texto
@@ -550,7 +558,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     const jaFalou = linhas.some(function(m) { return m.direction === 'out' && m.type !== 'system' && m.type !== 'template' && String(m.body || '').trim() !== '' && !String(m.body || '').startsWith('Olá! 👋 Nosso atendimento') })
     const REGRA_NOME = jaFalou
       ? 'REGRA DO NOME (PRIORIDADE MAXIMA): voce ja falou com esta pessoa nesta conversa. NAO cite o nome dela em NENHUMA mensagem daqui para frente (nada de "Entendi, Maria.", "Perfeito, Maria.", "Maria, ..."). Responda direto, sem nome. Isso vale mais que qualquer exemplo com {{firstName}} da base.'
-      : 'REGRA DO NOME (PRIORIDADE MAXIMA): esta e a PRIMEIRA mensagem sua nesta conversa: pode citar o primeiro nome da pessoa UMA vez, de forma natural. Depois desta mensagem o nome nao e mais citado.'
+      : 'REGRA DO NOME (PRIORIDADE MAXIMA): esta e a PRIMEIRA mensagem sua nesta conversa: cite o primeiro nome da pessoa UMA vez, na saudacao (ex.: "A paz do Senhor, Maria!", "Bom dia, Maria!"). Depois desta mensagem o nome nunca mais e citado.'
     let system = REGRA_RESPONSAVEL + '\n\n' + baseTexto + '\n\n' + FINAL_REMINDER + '\n\n' + REGRA_EXPRESS_WHATSAPP + '\n\n' + REGRA_ASSINATURA_WHATSAPP + '\n\n' + REGRA_COMPRA_WHATSAPP + '\n\n' + REGRA_NOME + (jaFalou ? '' : '\n\nNome da pessoa: ' + (nome || 'desconhecido'))
     if (esconderPlanos) system = NEW_STUDENT_RULE + '\n\n' + system + '\n\n' + NEW_STUDENT_RULE
     const sitPlano = situacaoPlanoAluno(temPlano, esconderPlanos)
@@ -856,6 +864,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
 
     texto = prepararRespostaPix(texto, ehAluna)
     if (jaFalou) texto = tirarNomeDaResposta(texto, primeiro)
+    else texto = colocarNomeNaPrimeira(texto, primeiro)
     const okEnf = await enfileirar(texto, passaParaHumano, querVideo, printSlug)
     // Segunda mensagem do cupom (link + aviso), 1 minuto depois da primeira; se a pessoa escrever antes, ela e trocada pela resposta nova
     if (okEnf && cupomDepois && lerEmUltimo > 0) {
