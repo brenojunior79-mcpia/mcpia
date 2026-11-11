@@ -2,6 +2,7 @@
 // So responde nas conversas em que o ADMIN ligou o assistente (wa_conversations.ia_ativa) ou quando ele ligou para todas (wa_ia_config.geral).
 import { blocoAnunciosDoAluno } from '@/lib/juniorCampanhas'
 import { blocoPerfilPessoa } from '@/lib/juniorPerfil'
+import { decidirDesconto, PERGUNTA_DESCONTO, CONFIRMA_DESCONTO } from '@/lib/juniorDesconto'
 import { humanizarResposta, REGRA_ESTILO_HUMANO, tirarRepetido } from '@/lib/juniorHumano'
 import { MARCA_PRINT_RE, printPorSlug, printsJaEnviados, regraDePrints } from '@/lib/juniorPrints'
 import { statusAnuncios } from '@/lib/acessoAnuncios'
@@ -29,8 +30,6 @@ const MARCA_VIDEO = '[[VIDEO_APP]]'
 const LINK_PAGAMENTO = 'https://pay.hub.la/GTKvY7Bjy0ouDG8CtPJg'
 // Mentoria com desconto (R$ 197), so para quem diz que nao tem dinheiro/acha caro. Regra de duas confirmacoes: veja REGRA_DESCONTO.
 const LINK_DESCONTO = 'https://pay.hub.la/icnB8VD8AfKqIV1SHX3h'
-const PERGUNTA_DESCONTO = 'Se eu conseguir um desconto para você, isso te ajudaria a entrar agora? 🙏'
-const CONFIRMA_DESCONTO = 'Então a mentoria fica por R$ 197. Posso te mandar o link para você garantir a sua vaga? 🙏'
 const PERGUNTA_RANKING = 'Você gostaria de ganhar R$200 no Pix como premiação? 💰'
 const PERGUNTA_EXPRESS = 'Por sinal, você já viu os produtos que o Breno já liberou lá na Estrutura Express? Os novos produtos?'
 
@@ -762,29 +761,8 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     if (contasNumero.length > 0 && /n[aã]o\s+(consigo|tenho\s+acesso).{0,60}(sistema|conta|verificar|informa)/i.test(texto) && !pediuVerificarAssinatura(texto) && !pediuLiberarCadastro(texto)) {
       texto = resumoContasDoNumero(contasNumero)
     }
-    // Trava do desconto (ordem do Breno): o link de R$ 197 so sai depois de DUAS confirmacoes da pessoa
-    // (1: "ajudaria?" sim; 2: "fica R$ 197, posso mandar o link?" sim). Se o modelo adiantar o link, o sistema tira e faz a pergunta certa.
-    if (texto.indexOf('icnB8VD8AfKqIV1SHX3h') >= 0) {
-      const l = linhas.filter(function(m) { return String(m.id) !== String(msgId) })
-      const iDesc = l.findIndex(function(m) { return m.direction === 'out' && /desconto/i.test(String(m.body || '')) })
-      let iVal = -1
-      if (iDesc >= 0) {
-        for (let k = l.length - 1; k > iDesc; k--) { if (l[k].direction === 'out' && /197/.test(String(l[k].body || ''))) { iVal = k; break } }
-      }
-      const confirmouValor = iVal >= 0 && l.slice(iVal + 1).some(function(m) { return m.direction === 'in' })
-      const confirmouDesconto = iDesc >= 0 && l.slice(iDesc + 1).some(function(m) { return m.direction === 'in' })
-      if (!(iVal >= 0 && confirmouValor && confirmouDesconto)) {
-        const forcado = iDesc >= 0 && confirmouDesconto ? CONFIRMA_DESCONTO : PERGUNTA_DESCONTO
-        // Se essa mesma pergunta ja foi feita antes, nao repete (a pessoa respondeu outra coisa): tira o link e fica com o que o modelo escreveu sem ela
-        const jaFez = linhas.some(function(m) { return m.direction === 'out' && String(m.body || '').indexOf(forcado.slice(0, 30)) >= 0 || (m.direction === 'out' && /te ajudaria a entrar agora/i.test(String(m.body || '')) && forcado === PERGUNTA_DESCONTO) })
-        if (jaFez) {
-          const sobra = texto.replace(/https?:\/\/pay\.hub\.la\/icnB8VD8AfKqIV1SHX3h/g, '').split(/\n{2,}/).filter(function(x) { return x.trim() && !/desconto|R\$\s?197/i.test(x) }).join('\n\n').trim()
-          texto = sobra || ('Entendo' + (primeiro ? ', ' + primeiro : '') + '. Quando fizer sentido pra você, é só me chamar aqui 🙏')
-        } else {
-          texto = forcado
-        }
-      }
-    }
+    // Trava do desconto (ordem do Breno): o link de R$ 197 so sai depois de DUAS confirmacoes da pessoa (veja lib/juniorDesconto.ts)
+    texto = decidirDesconto(texto, linhas, primeiro)
     // Fim da conversa: pergunta (uma vez so por conversa) se a pessoa quer ganhar R$200 no Pix (leva ao ranking)
     let acabou = texto.indexOf(MARCA_FIM) >= 0
     texto = texto.split(MARCA_FIM).join('').trim()
