@@ -2,6 +2,7 @@
 // So responde nas conversas em que o ADMIN ligou o assistente (wa_conversations.ia_ativa) ou quando ele ligou para todas (wa_ia_config.geral).
 import { blocoAnunciosDoAluno } from '@/lib/juniorCampanhas'
 import { blocoPerfilPessoa } from '@/lib/juniorPerfil'
+import { MARCA_PRINT_RE, printPorSlug, printsJaEnviados, regraDePrints } from '@/lib/juniorPrints'
 import { statusAnuncios } from '@/lib/acessoAnuncios'
 import { contasDoTelefone, blocoContasDoNumero, resumoContasDoNumero, type ContaDoNumero } from '@/lib/juniorContas'
 import { semLinkHostinger, REGRA_RESPONSAVEL, JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno, soUmPasso, tirarLinkMarkdown, linkClicavel, tirarFrasesDeAjuda, tipoFinalConversa, situacaoFinalConversa } from '@/lib/junior'
@@ -431,7 +432,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       }
     }
 
-    const enfileirar = async function(texto: string, passaParaHumano: boolean, querVideo: boolean): Promise<boolean> {
+    const enfileirar = async function(texto: string, passaParaHumano: boolean, querVideo: boolean, printSlug?: string | null): Promise<boolean> {
       // A resposta nao sai na hora: vai para a fila e o Junior "digita" como uma pessoa (lib/waIAFila.ts).
       // Respostas antigas ainda nao enviadas desta conversa saem da fila (vale a mais nova).
       const agoraIso = new Date().toISOString()
@@ -441,7 +442,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       const jaConversavam = linhas.some(function(m) { return String(m.id) !== String(msgId) && Date.now() - new Date(m.created_at).getTime() < 3 * 3600 * 1000 })
       const esperaLeituraS = (jaConversavam ? 120 : 180) - 30 + Math.random() * 8
       const lerEm = new Date(Date.now() + esperaLeituraS * 1000).toISOString()
-      const ins = await admin.from('wa_ia_fila').insert({ ler_em: lerEm, conversation_id: convId, inbound_msg_id: String(msgId), inbound_wa_id: (ultimaIn as any).wa_message_id || null, wa_id: waId, connection_id: conv.connection_id || null, texto, passa_humano: passaParaHumano, enviar_video: querVideo && !passaParaHumano })
+      const ins = await admin.from('wa_ia_fila').insert({ ler_em: lerEm, conversation_id: convId, inbound_msg_id: String(msgId), inbound_wa_id: (ultimaIn as any).wa_message_id || null, wa_id: waId, connection_id: conv.connection_id || null, texto, passa_humano: passaParaHumano, enviar_video: querVideo && !passaParaHumano, print_slug: (!passaParaHumano && printSlug) ? printSlug : null })
       if (!ins.error) return true
       console.error('[wa-ia] fila indisponivel, enviando na hora:', ins.error.message)
 
@@ -652,6 +653,10 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     const jaVideo = linhas.some(function(m) { return m.direction === 'out' && m.type === 'video' })
     system = system + '\n\nVideo do app: ' + (canal !== 'recuperacao' ? 'nao se aplica a este canal (nao use a marca ' + MARCA_VIDEO + ').' : jaVideo ? 'JA foi enviado nesta conversa (nao use a marca ' + MARCA_VIDEO + ' de novo; se ela quiser ver de novo, diga que o video esta logo acima na conversa).' : 'ainda NAO foi enviado nesta conversa.')
 
+    // Prints das telas da plataforma (so para aluna)
+    const printsJa = printsJaEnviados(linhas)
+    if (ehAluna) system = system + '\n\n' + regraDePrints(printsJa)
+
     // Espelhamento: fala do jeito da pessoa (tom, palavras, tamanho, emojis)
     { const perfil = blocoPerfilPessoa(linhas); if (perfil) system = system + '\n\n' + perfil }
 
@@ -666,6 +671,9 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     if (!resp.ok || !texto) { await avisarFalha(admin, convId, 'IA sem resposta ' + resp.status + ' ' + JSON.stringify(j?.error || '')); return true }
 
     // Sem markdown no WhatsApp: tira ** e __ que a IA as vezes coloca
+    // Print de tela: so para aluna, no maximo um, e nunca repetido na conversa
+    let printSlug: string | null = null
+    { const mp = texto.match(MARCA_PRINT_RE); if (mp) { const pt = printPorSlug(mp[1]); if (pt && ehAluna && printsJa.indexOf(pt.slug) < 0) printSlug = pt.slug; texto = texto.replace(new RegExp(MARCA_PRINT_RE.source, 'gi'), '').trim() } }
     texto = linkClicavel(tirarLinkMarkdown(texto.replace(/\*\*/g, '').replace(/__/g, '')))
     // Trava: nunca mandar varios passos de uma vez. Fica so o passo 1 e pergunta se pode mandar o proximo.
     texto = soUmPasso(semLinkHostinger(texto))
@@ -821,7 +829,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
 
     texto = prepararRespostaPix(texto, ehAluna)
     if (jaFalou) texto = tirarNomeDaResposta(texto, primeiro)
-    return await enfileirar(texto, passaParaHumano, querVideo)
+    return await enfileirar(texto, passaParaHumano, querVideo, printSlug)
   } catch (e) {
     console.error('[wa-ia] erro:', e)
     await avisarFalha(admin, convId, 'erro: ' + String((e as any)?.message || e).slice(0, 150))

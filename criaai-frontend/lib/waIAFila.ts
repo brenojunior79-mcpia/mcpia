@@ -6,6 +6,7 @@ import { GRAPH, graphFetch, phoneIdDaConversa, postMessage, waConfig } from '@/l
 import { modoIA, responderQuemAguardou } from '@/lib/waIA'
 import { ehDespedida } from '@/lib/waDespedida'
 import { classificar } from '@/lib/waMedia'
+import { legendaDoPrint, printPorSlug, urlDoPrint } from '@/lib/juniorPrints'
 
 const LIMITE_MS = 56000 // a funcao da Vercel vive no maximo 60s
 
@@ -93,6 +94,36 @@ async function enviarVideoApp(admin: any, it: any, phoneId: string): Promise<boo
   }
 }
 
+// Manda o print de uma tela da plataforma (public/prints-junior) logo depois do texto. Se algo falhar, so nao manda (o texto ja foi).
+async function enviarPrint(admin: any, it: any, phoneId: string): Promise<boolean> {
+  try {
+    const pt = printPorSlug(String(it.print_slug || ''))
+    if (!pt) return false
+    const url = urlDoPrint(pt.slug)
+    const legenda = legendaDoPrint(pt)
+    const env = await postMessage({ messaging_product: 'whatsapp', to: it.wa_id, type: 'image', image: { link: url, caption: legenda } }, phoneId || undefined)
+    if (!env.ok) { console.error('[wa-ia-fila] print envio:', JSON.stringify(env.data?.error || env.data)); return false }
+    // Guarda uma copia para a equipe ver o que foi mandado no painel de atendimento
+    let mediaPath: string | null = null
+    try {
+      const img = await fetch(url, { signal: AbortSignal.timeout(8000) })
+      if (img.ok) {
+        const buf = new Uint8Array(await img.arrayBuffer())
+        const destino = 'out/' + it.conversation_id + '/print-' + pt.slug + '-' + Date.now() + '.jpg'
+        const up = await admin.storage.from('wa-media').upload(destino, buf, { contentType: 'image/jpeg' })
+        if (!up.error) mediaPath = destino
+      }
+    } catch (e) { /* so conforto */ }
+    const agora = new Date().toISOString()
+    await admin.from('wa_messages').insert({ conversation_id: it.conversation_id, wa_message_id: env.data?.messages?.[0]?.id || null, direction: 'out', type: 'image', body: legenda, media_path: mediaPath, mime: mediaPath ? 'image/jpeg' : null, status: 'sent', sent_by: null, created_at: agora })
+    await admin.from('wa_conversations').update({ last_message_at: agora, last_text: '🤖 🖼️ ' + legenda }).eq('id', it.conversation_id)
+    return true
+  } catch (e) {
+    console.error('[wa-ia-fila] print erro:', e)
+    return false
+  }
+}
+
 async function executar(admin: any, it: any, inicio: number, escala: number): Promise<string> {
   const claim = await admin.from('wa_ia_fila').update({ estado: 'enviando', iniciado_em: new Date().toISOString() }).eq('id', it.id).eq('estado', 'pendente').select('id')
   if (!claim.data || claim.data.length === 0) return 'ja_pego'
@@ -110,7 +141,7 @@ async function executar(admin: any, it: any, inicio: number, escala: number): Pr
       // Sem tempo para as proximas: manda o que falta de uma vez
       if (i > 0 && restante() < (tempoDigitando(parte) + 5000) * escala) { parte = partes.slice(i).join('\n\n'); partes = partes.slice(0, i + 1) }
       // (quando vai video junto, digita mais curto para sobrar tempo de enviar o video dentro dos 60s da funcao)
-      if (i === 0 && partes.length === 1 && parte.length >= 90 && !it.enviar_video) {
+      if (i === 0 && partes.length === 1 && parte.length >= 90 && !it.enviar_video && !it.print_slug) {
         // Resposta longa numa mensagem so: digita, para um instante e volta a digitar
         await digitando(phoneId, it.inbound_wa_id)
         await esperar(25500 * escala)
@@ -130,6 +161,11 @@ async function executar(admin: any, it: any, inicio: number, escala: number): Pr
     if (it.enviar_video && enviadas > 0) {
       await esperar(entre(2500, 4500) * escala)
       if (await aindaPodeResponder(admin, it)) await enviarVideoApp(admin, it, phoneId)
+    }
+    // Print da tela da plataforma (so quando o assistente escolheu um): logo depois do texto
+    if (it.print_slug && enviadas > 0) {
+      await esperar(entre(1500, 3000) * escala)
+      if (await aindaPodeResponder(admin, it)) await enviarPrint(admin, it, phoneId)
     }
     // Pediu ajuda humana: o assistente se desliga sozinho nessa conversa para a equipe assumir
     // e a conversa vai para o dono (admin), se ainda nao tiver atendente
