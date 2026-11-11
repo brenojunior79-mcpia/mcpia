@@ -2,7 +2,7 @@
 // So responde nas conversas em que o ADMIN ligou o assistente (wa_conversations.ia_ativa) ou quando ele ligou para todas (wa_ia_config.geral).
 import { blocoAnunciosDoAluno } from '@/lib/juniorCampanhas'
 import { blocoPerfilPessoa } from '@/lib/juniorPerfil'
-import { humanizarResposta, REGRA_ESTILO_HUMANO } from '@/lib/juniorHumano'
+import { humanizarResposta, REGRA_ESTILO_HUMANO, tirarRepetido } from '@/lib/juniorHumano'
 import { MARCA_PRINT_RE, printPorSlug, printsJaEnviados, regraDePrints } from '@/lib/juniorPrints'
 import { statusAnuncios } from '@/lib/acessoAnuncios'
 import { contasDoTelefone, blocoContasDoNumero, resumoContasDoNumero, type ContaDoNumero } from '@/lib/juniorContas'
@@ -662,15 +662,34 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     // Espelhamento: fala do jeito da pessoa (tom, palavras, tamanho, emojis)
     { const perfil = blocoPerfilPessoa(linhas); if (perfil) system = system + '\n\n' + perfil }
 
-    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + process.env.OPENAI_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: system }, ...msgs], max_tokens: 700, temperature: 0.2 }),
-      signal: AbortSignal.timeout(22000),
-    })
-    const j: any = await resp.json().catch(function() { return null })
-    let texto = String(j?.choices?.[0]?.message?.content || '').trim()
+    const chamarModelo = async function(sys: string, temp: number) {
+      const rr = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + process.env.OPENAI_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: sys }, ...msgs], max_tokens: 700, temperature: temp }),
+        signal: AbortSignal.timeout(22000),
+      })
+      const jj: any = await rr.json().catch(function() { return null })
+      return { ok: rr.ok, status: rr.status, j: jj, texto: String(jj?.choices?.[0]?.message?.content || '').trim() }
+    }
+    const r1 = await chamarModelo(system, 0.2)
+    const resp = { ok: r1.ok, status: r1.status }
+    const j: any = r1.j
+    let texto = r1.texto
     if (!resp.ok || !texto) { await avisarFalha(admin, convId, 'IA sem resposta ' + resp.status + ' ' + JSON.stringify(j?.error || '')); return true }
+
+    // Anti-repeticao: nao manda de novo o que ja foi dito na conversa (ex.: a mesma oferta de desconto duas vezes)
+    {
+      const anteriores = linhas.filter(function(m) { return m.direction === 'out' && m.type === 'text' && String(m.body || '').trim() && !String(m.body || '').startsWith('Olá! 👋 Nosso atendimento') }).map(function(m) { return String(m.body || '') })
+      let rep = tirarRepetido(texto, anteriores)
+      if (rep.todoRepetido) {
+        const extra = system + '\n\nATENCAO (PRIORIDADE MAXIMA): a sua resposta ficou igual a uma mensagem que voce JA mandou nesta conversa. NAO repita. Releia a ULTIMA mensagem da pessoa e responda especificamente a ela, com outras palavras. Se ela contou um problema (doenca, cirurgia, sem dinheiro, sem condicoes), acolha em uma frase curta e humana (desejando melhoras, por exemplo) e diga que quando ela puder e so chamar, sem insistir em oferta ou desconto.'
+        const r2 = await chamarModelo(extra, 0.7)
+        if (r2.ok && r2.texto) { texto = r2.texto; rep = tirarRepetido(texto, anteriores) }
+        if (rep.todoRepetido) { console.error('[wa-ia] resposta repetida, nao enviada', convId); return true }
+      }
+      if (rep.repetiu && rep.texto) texto = rep.texto
+    }
 
     // Sem markdown no WhatsApp: tira ** e __ que a IA as vezes coloca
     // Print de tela: so para aluna, no maximo um, e nunca repetido na conversa

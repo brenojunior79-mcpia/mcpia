@@ -99,4 +99,40 @@ export function humanizarResposta(texto: string, opts?: { jaFalou?: boolean; jaP
 }
 
 // Regra de estilo para o prompt do modelo (o filtro acima e a rede de seguranca)
-export const REGRA_ESTILO_HUMANO = `JEITO DE PESSOA, NAO DE ROBO (PRIORIDADE MAXIMA): escreva como uma pessoa de verdade no WhatsApp. NUNCA use estas frases de IA nem parecidas: "Fico feliz em saber...", "Que bom que...", "Que bom!", "Estou aqui para ajudar", "Estarei aqui para te ajudar", "Qualquer duvida, estou a disposicao", "Pode me chamar quando quiser", "Espero ter ajudado", "Conte comigo", "Vamos juntos", "Vamos resolver isso", "Vamos la", "Sem problemas", "Claro, vou te ajudar", "Com certeza!", "Otima pergunta", "Compreendo", "Entendi, obrigado por me contar", "Parece que voce esta compartilhando...", "Como posso te ajudar com...", "Um momento, por favor", "Ate mais", "Aqui estao algumas sugestoes". Nao abra a resposta com "Perfeito!", "Otimo!", "Entendi!", "Certo!" nem com o nome da pessoa. Va direto ao assunto (responda o que ela disse e mande o proximo passo ou a pergunta). Nao se despeca em toda mensagem e nao repita "Deus abencoe" nem "A paz do Senhor" depois da primeira mensagem. Nao repita uma pergunta que ja fez (ex.: "como estao indo as aulas?"). No maximo 1 emoji por mensagem e nunca emoji de festa (✨🎉🚀💪). Para pedir que a pessoa avise que fez o passo, use poucas palavras e varie ("Me avisa quando fizer.", "Fez? Me conta.", "Consegue fazer? Me fala."), nunca sempre a mesma frase.`
+export const REGRA_ESTILO_HUMANO = `JEITO DE PESSOA, NAO DE ROBO (PRIORIDADE MAXIMA): escreva como uma pessoa de verdade no WhatsApp. NUNCA use estas frases de IA nem parecidas: "Fico feliz em saber...", "Que bom que...", "Que bom!", "Estou aqui para ajudar", "Estarei aqui para te ajudar", "Qualquer duvida, estou a disposicao", "Pode me chamar quando quiser", "Espero ter ajudado", "Conte comigo", "Vamos juntos", "Vamos resolver isso", "Vamos la", "Sem problemas", "Claro, vou te ajudar", "Com certeza!", "Otima pergunta", "Compreendo", "Entendi, obrigado por me contar", "Parece que voce esta compartilhando...", "Como posso te ajudar com...", "Um momento, por favor", "Ate mais", "Aqui estao algumas sugestoes". Nao abra a resposta com "Perfeito!", "Otimo!", "Entendi!", "Certo!" nem com o nome da pessoa. Va direto ao assunto (responda o que ela disse e mande o proximo passo ou a pergunta). Nao se despeca em toda mensagem e nao repita "Deus abencoe" nem "A paz do Senhor" depois da primeira mensagem. Nao repita uma pergunta que ja fez (ex.: "como estao indo as aulas?"). No maximo 1 emoji por mensagem e nunca emoji de festa (✨🎉🚀💪). Para pedir que a pessoa avise que fez o passo, use poucas palavras e varie ("Me avisa quando fizer.", "Fez? Me conta.", "Consegue fazer? Me fala."), nunca sempre a mesma frase. NAO REPITA: nunca mande de novo uma pergunta, oferta ou frase que voce ja mandou nesta conversa (por exemplo a mesma oferta de desconto). Releia o que a pessoa acabou de dizer e responda a ISSO. Se ela contou um problema (doenca, cirurgia, sem dinheiro, sem condicoes, afastada do trabalho, familia doente), acolha em uma frase humana (por exemplo desejando melhoras) e deixe a porta aberta ("quando voce estiver melhor, e so me chamar"), sem insistir na oferta.`
+
+// ---- Anti-repeticao: o Junior nao manda de novo o que ja mandou na conversa ----
+function tokens(s: string): string[] {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\[\[[^\]]*\]\]/g, ' ').replace(/https?:\/\/\S+/g, ' ').replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(function(w) { return w.length > 2 })
+}
+function parecidos(a: string[], b: string[]): boolean {
+  if (a.length < 3 || b.length < 3) return false
+  const A: Record<string, boolean> = {}; const B: Record<string, boolean> = {}
+  a.forEach(function(w) { A[w] = true }); b.forEach(function(w) { B[w] = true })
+  let inter = 0; const ka = Object.keys(A); const kb = Object.keys(B)
+  ka.forEach(function(w) { if (B[w]) inter++ })
+  const uniao = ka.length + kb.length - inter
+  return uniao > 0 && inter / uniao >= 0.75
+}
+
+// Tira do texto os paragrafos que repetem algo que o assistente ja disse. todoRepetido = nada novo sobrou.
+export function tirarRepetido(texto: string, anteriores: string[]): { texto: string; todoRepetido: boolean; repetiu: boolean } {
+  try {
+    const marcas = (String(texto || '').match(/\[\[[^\]]*\]\]/g) || [])
+    const prev = anteriores.map(tokens).filter(function(t) { return t.length >= 3 })
+    const paragrafos = String(texto || '').split(/\n{2,}/)
+    const novos: string[] = []
+    let repetiu = false
+    for (const p of paragrafos) {
+      const tp = tokens(p)
+      if (tp.length >= 3 && prev.some(function(t) { return parecidos(tp, t) })) { repetiu = true; continue }
+      novos.push(p.replace(/\[\[[^\]]*\]\]/g, '').trim())
+    }
+    const sobra = novos.filter(function(p) { return p }).join('\n\n').trim()
+    if (!repetiu) return { texto: texto, todoRepetido: false, repetiu: false }
+    if (!sobra) return { texto: '', todoRepetido: true, repetiu: true }
+    return { texto: (sobra + (marcas.length ? ' ' + marcas.join(' ') : '')).trim(), todoRepetido: false, repetiu: true }
+  } catch (e) {
+    return { texto: texto, todoRepetido: false, repetiu: false }
+  }
+}
