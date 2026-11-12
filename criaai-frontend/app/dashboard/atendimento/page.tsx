@@ -200,6 +200,10 @@ export default function AtendimentoPage() {
   const [msgs, setMsgs] = useState<Msg[]>([])
   const [aba, setAba] = useState<'abertas' | 'naolidas' | 'resolvidas'>('abertas')
   const [busca, setBusca] = useState('')
+  // Busca em TODAS as conversas (nome, numero e frases das mensagens enviadas ou recebidas), alem das 600 mais recentes da lista
+  const [achadas, setAchadas] = useState<Conv[]>([])
+  const [trechos, setTrechos] = useState<Record<string, string>>({})
+  const [buscando, setBuscando] = useState(false)
   const [texto, setTexto] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState('')
@@ -798,7 +802,56 @@ export default function AtendimentoPage() {
     return p ? (p.nome.split(' ')[0] || p.email) : 'Atendente'
   }
 
-  const lista = convs.filter(function(c) {
+  const termo = busca.trim()
+  const buscaAtiva = termo.length >= 2
+  useEffect(function() {
+    if (!buscaAtiva || !staff) { setAchadas([]); setTrechos({}); setBuscando(false); return }
+    let vivo = true
+    setBuscando(true)
+    const t = setTimeout(async function() {
+      try {
+        const limpo = termo.replace(/[%_\\,()]/g, ' ').replace(/\s+/g, ' ').trim()
+        if (!limpo) { if (vivo) { setAchadas([]); setTrechos({}); setBuscando(false) } return }
+        const digitos = termo.replace(/\D/g, '')
+        const q1 = supabase.from('wa_conversations').select('*').or('name.ilike.%' + limpo + '%,profile_label.ilike.%' + limpo + '%').order('last_message_at', { ascending: false }).limit(40)
+        const q2 = digitos.length >= 4 ? supabase.from('wa_conversations').select('*').ilike('wa_id', '%' + digitos + '%').order('last_message_at', { ascending: false }).limit(40) : Promise.resolve({ data: [] as any[], error: null })
+        const q3 = supabase.from('wa_messages').select('conversation_id, body, created_at').ilike('body', '%' + limpo + '%').order('created_at', { ascending: false }).limit(80)
+        const [r1, r2, r3] = await Promise.all([q1, q2, q3])
+        const porId: Record<string, Conv> = {}
+        const ordem: string[] = []
+        const add = function(c: Conv) { if (!porId[c.id]) { porId[c.id] = c; ordem.push(c.id) } }
+        ;((r1.data || []) as Conv[]).forEach(add)
+        ;((r2.data || []) as Conv[]).forEach(add)
+        const tr: Record<string, string> = {}
+        const idsMsg: string[] = []
+        ;((r3.data || []) as any[]).forEach(function(m) {
+          if (!tr[m.conversation_id]) {
+            const corpo = String(m.body || '').replace(/\s+/g, ' ')
+            const i = corpo.toLowerCase().indexOf(limpo.toLowerCase())
+            const ini = Math.max(0, i - 25)
+            tr[m.conversation_id] = (ini > 0 ? '…' : '') + corpo.slice(ini, ini + 90) + (corpo.length > ini + 90 ? '…' : '')
+            idsMsg.push(m.conversation_id)
+          }
+        })
+        const faltam = idsMsg.filter(function(id) { return !porId[id] })
+        if (faltam.length) {
+          const r4 = await supabase.from('wa_conversations').select('*').in('id', faltam.slice(0, 60))
+          ;((r4.data || []) as Conv[]).forEach(add)
+        }
+        if (!vivo) return
+        const todas = ordem.map(function(id) { return porId[id] })
+        // conversas achadas pelo nome/numero primeiro; depois as achadas pela frase (da mais recente para a mais antiga)
+        setAchadas(todas)
+        setTrechos(tr)
+        // deixa as achadas disponiveis para abrir o chat (mesmo as mais antigas que a lista)
+        setConvs(function(l) { const tem: Record<string, boolean> = {}; l.forEach(function(x) { tem[x.id] = true }); const novas = todas.filter(function(x) { return !tem[x.id] }); return novas.length ? l.concat(novas) : l })
+        setBuscando(false)
+      } catch (e) { if (vivo) setBuscando(false) }
+    }, 350)
+    return function() { vivo = false; clearTimeout(t) }
+  }, [termo, staff])
+
+  const lista = buscaAtiva ? achadas.map(function(a) { return convs.find(function(c) { return c.id === a.id }) || a }) : convs.filter(function(c) {
     if (canalDaConv(c) !== canal) return false
     if (aba === 'naolidas') {
       // Nao lidas: todas as conversas abertas com mensagem nova, de qualquer atendente (que voce pode ver)
@@ -951,7 +1004,7 @@ export default function AtendimentoPage() {
             )}
             {canal === 'assistente' && <div style={{ fontSize: 12, color: '#6d28d9', background: 'rgba(124,58,237,0.10)', borderRadius: 10, padding: '8px 10px', lineHeight: 1.5 }}>🤖 Conversas que o assistente está atendendo agora. Quando ele passa para a equipe, a conversa volta para o chat de Suporte ou Recuperação.</div>}
             {escopo === 'recuperacao' && <div style={{ fontWeight: 800, fontSize: 13.5, color: '#c2410c', background: 'rgba(234,88,12,0.12)', borderRadius: 10, padding: '8px 10px' }}>🛒 Chat de recuperação</div>}
-            <input className="at-input" placeholder="Buscar nome ou número" value={busca} onChange={function(e) { setBusca(e.target.value) }} />
+            <input className="at-input" placeholder="Buscar nome, número ou frase da conversa" value={busca} onChange={function(e) { setBusca(e.target.value) }} />
             {isAdmin && (
               <button onClick={alternarIAGeral} title="Liga ou desliga o assistente de IA em todas as conversas de uma vez (inclusive as novas)" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, border: '1px solid ' + (iaGeral ? '#7c3aed' : 'var(--border2)'), background: iaGeral ? 'rgba(124,58,237,0.12)' : 'var(--surface2)', color: iaGeral ? '#7c3aed' : 'var(--text)', borderRadius: 10, padding: '8px 10px', fontWeight: 800, fontSize: 12.5 }}>
                 <span>🤖 Assistente em todas as conversas</span>
@@ -1055,11 +1108,11 @@ export default function AtendimentoPage() {
             })()}
           </div>
           <div style={{ flex: 1, overflowY: 'auto' }}>
-            {lista.length === 0 && <div style={{ padding: 20, fontSize: 13.5, color: 'var(--muted2)', textAlign: 'center' }}>{aba === 'abertas' ? 'Nenhuma conversa aberta.' : aba === 'naolidas' ? 'Nenhuma mensagem não lida. 🎉' : 'Nenhuma conversa finalizada.'}</div>}
+            {lista.length === 0 && <div style={{ padding: 20, fontSize: 13.5, color: 'var(--muted2)', textAlign: 'center' }}>{buscaAtiva ? (buscando ? 'Buscando…' : 'Nenhuma conversa encontrada para “' + termo + '”.') : aba === 'abertas' ? 'Nenhuma conversa aberta.' : aba === 'naolidas' ? 'Nenhuma mensagem não lida. 🎉' : 'Nenhuma conversa finalizada.'}</div>}
             {lista.map(function(c) {
               const on = c.id === sel
               return (
-                <div key={c.id} className={'at-item' + (on ? ' at-on' : '')} onClick={function() { if (modoSel) setMarcadas(function(m) { const n = { ...m }; if (n[c.id]) delete n[c.id]; else n[c.id] = true; return n }); else abrir(c) }} style={{ display: 'flex', gap: 10, padding: '11px 12px', cursor: 'pointer', borderBottom: '1px solid var(--border)', background: modoSel && marcadas[c.id] ? 'rgba(37,99,235,0.10)' : undefined, alignItems: modoSel ? 'center' : undefined }}>
+                <div key={c.id} className={'at-item' + (on ? ' at-on' : '')} onClick={function() { if (modoSel) setMarcadas(function(m) { const n = { ...m }; if (n[c.id]) delete n[c.id]; else n[c.id] = true; return n }); else { if (buscaAtiva && canalDaConv(c) !== canal) setCanal(canalDaConv(c)); abrir(c) } }} style={{ display: 'flex', gap: 10, padding: '11px 12px', cursor: 'pointer', borderBottom: '1px solid var(--border)', background: modoSel && marcadas[c.id] ? 'rgba(37,99,235,0.10)' : undefined, alignItems: modoSel ? 'center' : undefined }}>
                   {modoSel && <input type="checkbox" readOnly checked={!!marcadas[c.id]} style={{ width: 18, height: 18, flexShrink: 0, pointerEvents: 'none' }} />}
                   <Avatar c={c} size={44} />
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -1071,7 +1124,7 @@ export default function AtendimentoPage() {
                       </div>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
-                      <div style={{ fontSize: 12.5, color: 'var(--muted2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.last_text}</div>
+                      <div style={{ fontSize: 12.5, color: buscaAtiva && trechos[c.id] ? 'var(--text)' : 'var(--muted2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{buscaAtiva && trechos[c.id] ? '💬 ' + trechos[c.id] : c.last_text}</div>
                       {c.unread > 0 && <span style={{ background: '#16a34a', color: '#fff', borderRadius: 999, minWidth: 20, height: 20, padding: '0 6px', fontSize: 11.5, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' }}>{c.unread}</span>}
                     </div>
                     {(isAdmin || !c.assigned_to) && <div style={{ fontSize: 11, color: c.assigned_to ? 'var(--muted2)' : '#b45309', fontWeight: 700, marginTop: 2 }}>{c.assigned_to ? '👤 ' + primeiroNome(c.assigned_to) : '⏳ Em espera'}</div>}
