@@ -235,6 +235,19 @@ export async function conversaEmAndamento(admin: any, convId: string): Promise<b
   } catch (e) { return false }
 }
 
+// Ordem do Breno: a oferta final (Estrutura Express, ou R$200 no Pix para quem ja tem) sai para todos os alunos, TODOS OS DIAS.
+// Entao a conta e por dia (horario de Brasilia), nao por conversa: ja ofereceu HOJE?
+const RE_OFERTA_EXPRESS = /(novos produtos que o Breno|produtos que o Breno j[aá] liberou)/i
+const RE_OFERTA_RANKING = /ganhar R\$\s?200 no Pix/i
+function inicioDoDiaBR(): number {
+  const dia = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+  return new Date(dia + 'T00:00:00-03:00').getTime()
+}
+function ofereceuHoje(linhas: any[], re: RegExp): boolean {
+  const ini = inicioDoDiaBR()
+  return linhas.some(function(m) { return m.direction === 'out' && new Date(m.created_at).getTime() >= ini && re.test(String(m.body || '')) })
+}
+
 // Chamado pelo webhook a cada mensagem recebida.
 // Mensagem so de agradecimento/despedida ("valeu", "blz", "obrigado", "amem", "🙏"). Depois que o assistente ja se despediu,
 // responder de novo so repete a despedida: nao responde nada.
@@ -501,7 +514,9 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     if (tipo === 'text' && soAgradecimento(String((ultimaIn as any).body || ''))) {
       // (avisos do sistema, como "O fluxo passou a conversa para o Junior", nao contam como fala do assistente)
       const ultimaOut = [...linhas].reverse().find(function(m) { return m.direction === 'out' && m.type !== 'system' && m.type !== 'template' && !String(m.body || '').startsWith('Olá! 👋 Nosso atendimento') && String(m.body || '').trim() })
-      if (ultimaOut && !/\?\s*$/.test(String(ultimaOut.body || '').trim())) { await finalizarSeEncerrada(admin, convId, msgId); return true }
+      // Exceto quando a oferta final de hoje (Express / R$200 no Pix) ainda nao saiu: ai o assistente se despede e faz a oferta
+      const ofertaPendente = !ofereceuHoje(linhas, RE_OFERTA_EXPRESS) && !ofereceuHoje(linhas, RE_OFERTA_RANKING)
+      if (ultimaOut && !/\?\s*$/.test(String(ultimaOut.body || '').trim()) && !ofertaPendente) { await finalizarSeEncerrada(admin, convId, msgId); return true }
     }
     // O assistente le a conversa toda (inclusive o que a equipe e os fluxos automaticos ja mandaram) para saber o contexto.
     // Se for muito longa, descarta so as mensagens mais antigas.
@@ -795,12 +810,12 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       const corpoIn = String((ultimaIn as any).body || '').trim()
       const soAgradeceu = (ultimaIn as any).type === 'text' && corpoIn.length > 0 && corpoIn.length <= 45 && /^(?:\s|[^a-zA-Z0-9\u00C0-\u017F]|muito|obrigad[oa]s?|obg|brigad[oa]|valeu|vlw|ok|okay|certo|combinado|beleza|blz|show|perfeito|[oó]timo|am[eé]m|deus|te|aben[cç]o[ae]|t[aá]|bom|entendi|entendido|fechado|consegui|deu|certinho|certo|tchau|at[eé]|mais|logo|gra[cç]as|a|voc[eê]|pela|ajuda|tamb[eé]m|igualmente|para|voc[eê]s|paz|do|senhor)+$/i.test(corpoIn)
       const ehDespedida = /dispo[sz]i[cç][aã]o|qualquer\s+d[uú]vida|aben[cç]oe|bons\s+estudos|boa\s+sorte|at[eé]\s+mais|[eé]\s+s[oó]\s+(me\s+)?chamar|comecar a estudar|começar a estudar/i.test(texto)
-      if (soAgradeceu && ehDespedida) acabou = true
+      if (soAgradeceu && (ehDespedida || texto.length <= 160)) acabou = true
     }
     // So alunas recebem a pergunta final (quem ainda nao e aluna nao tem ranking nem Estrutura Express)
     if (acabou && !passaParaHumano && ehAluna) {
-      const jaRank = linhas.some(function(m) { return m.direction === 'out' && /ganhar R\$\s?200 no Pix/i.test(String(m.body || '')) })
-      const jaExp = linhas.some(function(m) { return m.direction === 'out' && /(novos produtos que o Breno|produtos que o Breno j[aá] liberou)/i.test(String(m.body || '')) })
+      const jaRank = ofereceuHoje(linhas, RE_OFERTA_RANKING)
+      const jaExp = ofereceuHoje(linhas, RE_OFERTA_EXPRESS)
       // alterna: usa o tipo definido; se esse ja foi perguntado antes, tenta o outro (a Express so para quem nao tem); se os dois ja foram, nao pergunta mais
       let escolha: 'ranking' | 'express' | null = tipoFinal
       if (escolha === 'ranking' && jaRank) escolha = null

@@ -1422,6 +1422,6 @@ export function tipoFinalConversa(temExpress: boolean | null, _semente?: string)
 
 export function situacaoFinalConversa(tipo: 'ranking' | 'express'): string {
   return tipo === 'express'
-    ? '# FINAL DESTA CONVERSA\nEste aluno NAO tem a Estrutura Express (ou o sistema nao sabe). No encerramento, comece o roteiro da Estrutura Express com cupom (regra 36, passo 1). Se voce ja fez o passo 1 antes nesta conversa, NAO recomece: continue do passo seguinte conforme a resposta dele. NAO faca a pergunta dos R$200 no Pix nesta conversa.'
+    ? '# FINAL DESTA CONVERSA\nEste aluno NAO tem a Estrutura Express (ou o sistema nao sabe). No encerramento, comece o roteiro da Estrutura Express com cupom (regra 36, passo 1). Se voce ja fez o passo 1 HOJE nesta conversa, NAO recomece: continue do passo seguinte conforme a resposta dele. Se o passo 1 foi em outro dia, faca de novo: a oferta sai para o aluno todos os dias. NAO faca a pergunta dos R$200 no Pix nesta conversa.'
     : '# FINAL DESTA CONVERSA\nNo encerramento, faca a pergunta dos R$200 no Pix (regra 35). NAO faca o roteiro da Estrutura Express nesta conversa (este aluno ja tem).'
 }
