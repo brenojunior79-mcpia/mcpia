@@ -209,6 +209,8 @@ export async function modoIA(admin: any, conv: any, quando?: Date): Promise<'man
   if (conv.ia_humano === true) return null
   const a = await estadoAgendaIA(admin, quando)
   if (assistenteAtendendoAgora(a)) return 'geral'
+  // Chat de RECUPERACAO (conversa ligada a uma conexao) atende todos os dias, 24h: o horario da agenda vale so para o suporte (alunos)
+  if (conv.connection_id && (a.agendaAtiva || a.geral)) return 'geral'
   // Fora do horario, mas a pessoa ainda esta conversando com o assistente: ele continua ate terminar a conversa
   if (a.agendaAtiva && !a.dentro && await conversaEmAndamento(admin, String(conv.id || ''))) return 'geral'
   return null
@@ -588,7 +590,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       })
       if (rp) {
         const [cvP, ultP] = await Promise.all([
-          admin.from('wa_conversations').select('id, ia_ativa, ia_humano').eq('id', convId).maybeSingle(),
+          admin.from('wa_conversations').select('id, ia_ativa, ia_humano, connection_id').eq('id', convId).maybeSingle(),
           admin.from('wa_messages').select('id').eq('conversation_id', convId).eq('direction', 'in').order('created_at', { ascending: false }).limit(1).maybeSingle(),
         ])
         if (!cvP.data || !((await modoIA(admin, cvP.data)) || (await modoIA(admin, cvP.data, new Date(Date.now() - 3 * 60000))))) return true
@@ -812,7 +814,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
 
     // Depois de pensar: conferir de novo se continua ligado e se nao chegou mensagem mais nova
     const [cv2, ult] = await Promise.all([
-      admin.from('wa_conversations').select('id, ia_ativa, ia_humano').eq('id', convId).maybeSingle(),
+      admin.from('wa_conversations').select('id, ia_ativa, ia_humano, connection_id').eq('id', convId).maybeSingle(),
       admin.from('wa_messages').select('id').eq('conversation_id', convId).eq('direction', 'in').order('created_at', { ascending: false }).limit(1).maybeSingle(),
     ])
     if (!cv2.data || !((await modoIA(admin, cv2.data)) || (await modoIA(admin, cv2.data, new Date(Date.now() - 3 * 60000))))) return true

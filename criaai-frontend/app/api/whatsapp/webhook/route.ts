@@ -64,6 +64,9 @@ async function respostaAutomatica(admin: any, convId: string, waId: string): Pro
     const st = await admin.from('wa_settings').select('value').eq('key', 'hours').maybeSingle()
     const h = normalizar(st.data?.value)
     if (!h.away_enabled || !h.away_message.trim()) return false
+    // Chat de recuperacao atende todos os dias, 24h: o aviso de horario e so do suporte (alunos)
+    const cvAway = await admin.from('wa_conversations').select('connection_id').eq('id', convId).maybeSingle()
+    if ((cvAway.data as any)?.connection_id) return false
     // Com a agenda do assistente ligada (ex.: 8h as 20h), "fora do horario" e fora dessa janela; senao vale o horario da equipe
     const ag = await estadoAgendaIA(admin)
     const aberto = ag.agendaAtiva ? ag.dentro : abertoAgora(h)
