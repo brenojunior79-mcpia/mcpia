@@ -1,3 +1,4 @@
+import { sugerirCorrecaoEmail, perguntaEmailSuspeito } from '@/lib/juniorEmail'
 // Liberacao de cadastro pelo Junior (WhatsApp).
 // Quando a pessoa manda o print da tela de cadastro com o aviso "Nao encontramos uma compra com esse e-mail", o Junior pede o e-mail da compra
 // e emite a marca [[LIBERAR_CADASTRO: e-mail]]. Quem libera e escreve a resposta e este arquivo (o sistema): coloca o e-mail em
@@ -34,11 +35,14 @@ function emailValido(e: string): boolean {
 }
 
 // Libera o e-mail para criar a conta. Devolve a resposta pronta para a pessoa.
-export async function liberarCadastroPeloJunior(db: any, p: { email: string; waId?: string; nome?: string }): Promise<{ texto: string; liberou: boolean; humano?: boolean }> {
+export async function liberarCadastroPeloJunior(db: any, p: { email: string; waId?: string; nome?: string; confirmado?: boolean }): Promise<{ texto: string; liberou: boolean; humano?: boolean }> {
   const email = String(p.email || '').trim().toLowerCase()
   if (!emailValido(email)) {
     return { texto: 'Não consegui ler esse e-mail direitinho. Me escreve ele de novo, completo, por favor? 🙏', liberou: false }
   }
+  // E-mail com cara de erro de digitacao (ex.: @gmai.com): pergunta antes de liberar (se a pessoa escrever o mesmo e-mail de novo, vale)
+  const sug = p.confirmado ? null : sugerirCorrecaoEmail(email)
+  if (sug) return { texto: perguntaEmailSuspeito(email, sug), liberou: false }
   try {
     const tel = String(p.waId || '').replace(/\D/g, '').slice(-11)
     // Ja existe conta com esse e-mail: nao precisa liberar, so entrar

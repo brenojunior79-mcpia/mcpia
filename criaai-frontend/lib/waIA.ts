@@ -2,6 +2,7 @@
 // So responde nas conversas em que o ADMIN ligou o assistente (wa_conversations.ia_ativa) ou quando ele ligou para todas (wa_ia_config.geral).
 import { blocoAnunciosDoAluno } from '@/lib/juniorCampanhas'
 import { blocoPerfilPessoa } from '@/lib/juniorPerfil'
+import { sugerirCorrecaoEmail, perguntaEmailSuspeito } from '@/lib/juniorEmail'
 import { carregarHostinger, blocoHostinger } from '@/lib/juniorHostinger'
 import { decidirCupomExpress } from '@/lib/juniorCupomExpress'
 import { decidirDesconto, PERGUNTA_DESCONTO, CONFIRMA_DESCONTO } from '@/lib/juniorDesconto'
@@ -830,7 +831,10 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     }
     if (pediuLiberarCadastro(texto)) {
       // Print do erro de cadastro ("Nao encontramos uma compra com esse e-mail"): o sistema libera o e-mail e pede para criar a conta de novo
-      const resL = await liberarCadastroPeloJunior(admin, { email: emailDaMarcaCadastro(texto), waId, nome: nome || undefined })
+      const emailC = emailDaMarcaCadastro(texto)
+      // A pessoa escreveu esse mesmo e-mail 2 vezes: e o e-mail dela mesmo (ex.: dominio proprio), vale
+      const vezesC = linhas.filter(function(m) { return m.direction === 'in' && String(m.body || '').replace(/\s+/g, '').toLowerCase().indexOf(emailC) >= 0 }).length
+      const resL = await liberarCadastroPeloJunior(admin, { email: emailC, waId, nome: nome || undefined, confirmado: vezesC >= 2 })
       texto = resL.texto
       if (resL.humano) passaParaHumano = true
     } else if (pediuConsultarCompra(texto)) {
@@ -854,9 +858,17 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
         const pe = await admin.from('profiles').select('email').eq('id', conv.profile_id).maybeSingle()
         contaEmail = String((pe.data as any)?.email || '')
       }
-      const res = await liberarExpressPeloJunior(admin, { conta: contaEmail, waId, origem: 'whatsapp', emailInformado: emailDaMarca(texto) })
-      texto = res.texto
-      if (res.humano) passaParaHumano = true
+      // E-mail digitado com cara de erro (ex.: @gmai.com): pergunta antes de liberar (se escrever o mesmo 2 vezes, vale)
+      const emailX = String(emailDaMarca(texto) || '').trim().toLowerCase()
+      const sugX = (!contaEmail && emailX) ? sugerirCorrecaoEmail(emailX) : null
+      const vezesX = sugX ? linhas.filter(function(m) { return m.direction === 'in' && String(m.body || '').replace(/\s+/g, '').toLowerCase().indexOf(emailX) >= 0 }).length : 0
+      if (sugX && vezesX < 2) {
+        texto = perguntaEmailSuspeito(emailX, sugX)
+      } else {
+        const res = await liberarExpressPeloJunior(admin, { conta: contaEmail, waId, origem: 'whatsapp', emailInformado: emailDaMarca(texto) })
+        texto = res.texto
+        if (res.humano) passaParaHumano = true
+      }
     } else {
       texto = removerMarcaCadastro(removerMarcaCompra(removerMarcaAssinatura(removerMarcaExpress(texto))))
       if (!texto) { await avisarFalha(admin, convId, 'texto vazio apos marca express'); return true }
