@@ -780,7 +780,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     }
     // Trava: o Junior e o responsavel, entao nao pode dizer que "um atendente / a equipe vai ajudar". Tira so a frase (a marca interna continua avisando o Breno em silencio).
     {
-      const promete = /(um|o|nosso)\s+atendente|(a\s+)?equipe\s+(da\s+equipe\s+)?(vai|ira|irá|vem|entra|continua|continuar[aá]|te\s+ajud|verific|confer|libera|assum)|vou\s+(pedir|passar|encaminhar|chamar)\b.{0,40}(atendente|equipe)|vou\s+(verificar|conferir)\s+(a\s+sua|o\s+seu|sua|seu)\s+(conta|cadastro|acesso)/i
+      const promete = /confirma[cç][aã]o\s+do\s+cancelamento|(chegar[aá]|vai\s+chegar|chega)\s+em\s+at[eé]\s+\d+\s*h|em\s+at[eé]\s+(24|48|72)\s*horas|(um|o|nosso)\s+atendente|(a\s+)?equipe\s+(da\s+equipe\s+)?(vai|ira|irá|vem|entra|continua|continuar[aá]|te\s+ajud|verific|confer|libera|assum)|vou\s+(pedir|passar|encaminhar|chamar)\b.{0,40}(atendente|equipe)|vou\s+(verificar|conferir)\s+(a\s+sua|o\s+seu|sua|seu)\s+(conta|cadastro|acesso)/i
       const fr = texto.split(/(?<=[.!?])\s+|\n+/).filter(function(f) { return f.trim() })
       const ok = fr.filter(function(f) { return !promete.test(f) })
       if (ok.length < fr.length) {

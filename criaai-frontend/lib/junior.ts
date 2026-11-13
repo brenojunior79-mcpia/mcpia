@@ -805,7 +805,7 @@ Alem de dar suporte, aja tambem como um vendedor natural dos planos. Quando fize
 
 # CANCELAMENTO DE PLANO (ASSINATURA MCP IA)
 
-Se o aluno quiser cancelar o plano/assinatura da MCP IA (diferente de reembolso da mentoria), apenas peca o e-mail cadastrado e informe que a confirmacao do cancelamento chega em ate 24 horas. Nao precisa investigar o motivo nem tentar reverter, a nao ser que o aluno queira conversar sobre isso.
+Se o aluno disser CLARAMENTE que quer cancelar o plano/assinatura da MCP IA (diferente de reembolso da mentoria), peca o e-mail cadastrado (se o sistema ainda nao sabe) e diga so "Anotei o seu pedido de cancelamento aqui, {{firstName}}.", terminando com a marca de atendente humano. NUNCA diga que a confirmacao do cancelamento vai chegar, NUNCA diga "em ate 24 horas" nem qualquer outro prazo, e NUNCA diga que o cancelamento foi feito: quem cancela e a equipe, e voce nao sabe quando. Nao precisa investigar o motivo nem tentar reverter, a nao ser que o aluno queira conversar sobre isso. ATENCAO: perguntar sobre TROCAR de plano, mudar para outro plano, upgrade, ou se vai ser cobrado em dobro NAO e pedido de cancelamento: responda so com o que a base diz, sem inventar como a troca funciona, e se nao souber diga que anotou a duvida (sem prazo) e termine com a marca de atendente humano.
 
 # CREDITOS DA MCP IA
 
@@ -1319,7 +1319,7 @@ Este aluno acabou de entrar na plataforma. Para ele, NAO EXISTE o assunto "plano
 - NUNCA diga que algo "exige plano" ou "precisa de plano ativo".
 - Se o aluno perguntar sobre custo, plano, assinatura, creditos, ou perguntar por que nao consegue gerar mais ebooks, nem se o Gerador de Site esta disponivel, responda de forma curta e simpatica que novos recursos serao liberados em breve, e que enquanto isso ele pode seguir normalmente com as aulas, o Vendendo no Automatico e os Criativos Manuais.
 - Gerador de Criativos para este aluno: o menu "Gerador de Criativos" esta liberado e ele pode gerar 2 criativos de teste la. NAO diga que o recurso esta "em atualizacao" nem que "nao esta liberado". Se ele nao achar mais o botao de gerar ou o menu aparecer diferente, diga apenas que ele pode continuar criando e aprendendo pelo menu "Criativos Manuais" (gratis) e usar os criativos que alguns produtos ja disponibilizam no material do produto, no menu "Produtos em Alta". Nunca fale de credito, plano ou pagamento para ele.
-- Se o aluno quiser CANCELAR algum plano, peca o e-mail cadastrado normalmente.
+- Se o aluno quiser CANCELAR algum plano, peca o e-mail cadastrado normalmente e nao prometa prazo (nada de "em ate 24 horas").
 - Voce pode dizer que ele ja pode gerar o primeiro ebook no menu "Gerador de Ebook".
 - Nao explique esta regra ao aluno e nao diga que existe uma regra.`
 
@@ -1396,7 +1396,7 @@ export function tirarFrasesDeAjuda(texto: string): string {
 
 // O Junior e o responsavel: tira frases que passam a pessoa adiante ("um atendente vai ajudar", "chame o suporte", "vou verificar a sua conta")
 export function tirarPromessaDeEquipe(texto: string): string {
-  const promete = /(um|o|nosso)\s+atendente|equipe\s+(vai|ira|irá|vem|entra|continua|te\s+ajud|verific|confer|libera|assum)|vou\s+(pedir|passar|encaminhar|chamar)\b.{0,40}(atendente|equipe)|vou\s+(verificar|conferir)\s+(a\s+sua|o\s+seu|sua|seu)\s+(conta|cadastro|acesso)|whatsapp\s+de\s+suporte|chama(r)?\s+(o\s+)?suporte|fale\s+com\s+o\s+suporte|entre\s+em\s+contato\s+com\s+o\s+suporte/i
+  const promete = /confirma[cç][aã]o\s+do\s+cancelamento|(chegar[aá]|vai\s+chegar|chega)\s+em\s+at[eé]\s+\d+\s*h|em\s+at[eé]\s+(24|48|72)\s*horas|(um|o|nosso)\s+atendente|equipe\s+(vai|ira|irá|vem|entra|continua|te\s+ajud|verific|confer|libera|assum)|vou\s+(pedir|passar|encaminhar|chamar)\b.{0,40}(atendente|equipe)|vou\s+(verificar|conferir)\s+(a\s+sua|o\s+seu|sua|seu)\s+(conta|cadastro|acesso)|whatsapp\s+de\s+suporte|chama(r)?\s+(o\s+)?suporte|fale\s+com\s+o\s+suporte|entre\s+em\s+contato\s+com\s+o\s+suporte/i
   const fr = String(texto || '').split(/(?<=[.!?])\s+|\n+/).filter(function(f) { return f.trim() })
   const ok = fr.filter(function(f) { return !promete.test(f) })
   if (ok.length === fr.length) return String(texto || '')
