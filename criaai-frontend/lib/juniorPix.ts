@@ -4,6 +4,7 @@
 
 import { createHash } from 'crypto'
 import { LINK_PLATAFORMA } from '@/lib/juniorAssinatura'
+import { avisarVendaAdmin } from '@/lib/pushAdmin'
 
 export const CHAVE_PIX = '37999521440'
 export const MARCA_PIX = '[[CHAVE_PIX]]'
@@ -131,6 +132,21 @@ function hashDasPartes(partes: any[]): string {
   return h.digest('hex')
 }
 
+// Notificacao no celular do Breno (admin) quando chega um comprovante de Pix de verdade: venda liberada, comprovante ok esperando o e-mail, ou comprovante para conferir.
+// Nunca derruba o fluxo do Pix: qualquer erro so e logado (avisarVendaAdmin ja trata). Cada comprovante avisa uma vez por tipo.
+async function avisarPix(db: any, p: { convId: string; hash: string | null; tipo: 'venda' | 'conta' | 'conferir'; produto: string; valor: number | null; leitura: Leitura | null }): Promise<void> {
+  try {
+    let nome = ''
+    const cv = await db.from('wa_conversations').select('name, wa_id').eq('id', p.convId).maybeSingle()
+    nome = String((cv.data as any)?.name || '').trim()
+    if (!nome) nome = String(p.leitura?.pagador_nome || '').trim()
+    if (!nome) nome = String((cv.data as any)?.wa_id || '').trim()
+    const titulo = p.tipo === 'venda' ? '💰 Venda no Pix!' : p.tipo === 'conta' ? '💰 Pix recebido!' : '⚠️ Pix para conferir'
+    const chave = 'pix:' + p.tipo + ':' + (p.hash || (p.convId + ':' + (p.leitura?.id_transacao || Date.now())))
+    await avisarVendaAdmin(db, { chave, renovacao: false, produto: p.produto, valor: p.valor, nome: nome || null, email: null, origem: 'Pix', titulo })
+  } catch (e) { console.error('[pix] aviso ao admin:', e) }
+}
+
 type Saida = { texto: string; humano: boolean } | null
 
 async function registrar(db: any, linha: any): Promise<{ ok: boolean; duplicado: boolean }> {
@@ -181,6 +197,7 @@ async function liberar(db: any, p: { perfilId: string; email: string; convId: st
   try {
     await db.from('hubla_events').insert({ provider: 'junior', event_type: 'junior.pix_liberado', email: p.email, user_id: p.perfilId, action: 'liberado', note: ('Junior liberou o plano ' + p.plano + ' por Pix manual (' + brl(p.valor) + ', valido ate ' + validoAte.toISOString().slice(0, 10) + ')').slice(0, 300) })
   } catch (e) { /* historico e so conforto */ }
+  await avisarPix(db, { convId: p.convId, hash: p.hash, tipo: 'venda', produto: 'Plano ' + p.plano, valor: p.valor, leitura: p.leitura })
   const ate = validoAte.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
   return {
     humano: false,
@@ -237,7 +254,8 @@ export async function processarPixDaConversa(db: any, p: {
     return await liberar(db, { perfilId: perfil.id, email, convId: p.convId, waId: p.waId, plano: linha.plano, valor: Number(linha.valor), leitura: linha.dados as Leitura, hash: linha.hash_arquivo, quando: linha.data_pagamento })
   }
 
-  if (!(tipo === 'image' || tipo === 'document') || p.partes.length === 0) return null
+  // O comprovante (foto/PDF) pode vir antes de uma mensagem de texto curta (ex.: "R$ 79,90"): vale o arquivo que chegou desde a ultima resposta, nao so a ultima mensagem
+  if (p.partes.length === 0) return null
 
   const hash = hashDasPartes(p.partes)
   const leitura = await lerComprovante(p.partes)
@@ -260,6 +278,7 @@ export async function processarPixDaConversa(db: any, p: {
   const quando = tsData && isFinite(tsData.getTime()) ? tsData.toISOString() : null
   if (rec) {
     await registrar(db, { conversation_id: p.convId, wa_id: p.waId, profile_id: p.perfilId, resultado: 'recusado', motivo: rec.motivo, valor: leitura.valor, id_transacao: null, hash_arquivo: null, data_pagamento: quando, dados: leitura as any })
+    if (rec.saida && rec.saida.humano && rec.motivo !== 'arquivo repetido' && leitura.eh_comprovante && leitura.concluido && leitura.valor != null) await avisarPix(db, { convId: p.convId, hash, tipo: 'conferir', produto: 'Comprovante para conferir (' + rec.motivo + ')', valor: leitura.valor, leitura })
     return rec.saida
   }
 
@@ -274,6 +293,7 @@ export async function processarPixDaConversa(db: any, p: {
   if (!alvo) alvo = p.contasTodas.length === 1 ? p.contasTodas[0] : null
   if (!alvo) {
     await registrar(db, { conversation_id: p.convId, wa_id: p.waId, profile_id: null, resultado: 'aguardando_conta', motivo: 'comprovante ok, falta o e-mail da conta', valor: leitura.valor, plano: plano.nome, id_transacao: null, hash_arquivo: hash, data_pagamento: quando, dados: leitura as any })
+    await avisarPix(db, { convId: p.convId, hash, tipo: 'conta', produto: 'Plano ' + plano.nome + ' (falta o e-mail da conta)', valor: plano.valor, leitura })
     return { humano: false, texto: 'Recebi o seu comprovante de ' + brl(plano.valor) + ' ✅ Só preciso saber: qual e-mail você usa na plataforma?' }
   }
 
@@ -282,6 +302,7 @@ export async function processarPixDaConversa(db: any, p: {
   const a: any = atual.data || {}
   if (a.is_admin !== true && a.subscription_status === 'active' && a.payment_provider && a.payment_provider !== 'pix_manual') {
     await registrar(db, { conversation_id: p.convId, wa_id: p.waId, profile_id: alvo.id, resultado: 'recusado', motivo: 'conta ja tem plano ativo por ' + a.payment_provider, valor: leitura.valor, id_transacao: null, hash_arquivo: null, data_pagamento: quando, dados: leitura as any })
+    await avisarPix(db, { convId: p.convId, hash, tipo: 'conferir', produto: 'Comprovante para conferir (conta ja tem plano ativo)', valor: leitura.valor, leitura })
     return { humano: true, texto: 'Recebi o seu comprovante, mas a sua conta já aparece com um plano ativo. Deixei registrado aqui para conferir o seu Pix.' }
   }
 

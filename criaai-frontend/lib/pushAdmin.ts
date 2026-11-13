@@ -10,16 +10,17 @@ export type AvisoVenda = {
   valor?: number | null
   email?: string | null
   nome?: string | null
-  origem: 'Hubla' | 'Cakto'
+  origem: 'Hubla' | 'Cakto' | 'Pix'
+  titulo?: string          // titulo da notificacao (padrao: Venda aprovada / Renovacao aprovada)
 }
 
 function brl(v: number) { return 'R$ ' + v.toFixed(2).replace('.', ',') }
 
-export function montarAviso(a: Pick<AvisoVenda, 'renovacao' | 'produto' | 'valor' | 'email' | 'nome' | 'origem'>) {
+export function montarAviso(a: Pick<AvisoVenda, 'renovacao' | 'produto' | 'valor' | 'email' | 'nome' | 'origem' | 'titulo'>) {
   const quem = (a.nome || '').trim() || (a.email || '').trim()
   const partes = [a.produto, a.valor && a.valor > 0 ? brl(a.valor) : '', quem].filter(Boolean)
   return {
-    title: a.renovacao ? '🔄 Renovação aprovada!' : '💰 Venda aprovada!',
+    title: a.titulo || (a.renovacao ? '🔄 Renovação aprovada!' : '💰 Venda aprovada!'),
     body: partes.join(' · ') + ' (' + a.origem + ')',
     url: '/dashboard/admin',
   }
