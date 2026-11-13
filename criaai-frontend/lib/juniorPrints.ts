@@ -3,10 +3,11 @@
 // O Junior escolhe pelo slug usando a marca [[PRINT: slug]] no fim da resposta; o sistema manda a imagem depois do texto
 // (lib/waIAFila.ts). Para atualizar uma tela: troque o arquivo da imagem.
 
-export type PrintTela = { slug: string; titulo: string; mostra: string }
+export type PrintTela = { slug: string; titulo: string; mostra: string; soLead?: boolean }
 
 export const PRINTS: PrintTela[] = [
   { slug: 'menu-lateral', titulo: 'Menu da plataforma', mostra: 'O menu lateral aberto com todos os menus: Painel do Aluno, Assistente IA, Plataformas, Produtos em Alta, Gerador de Ebook, Gerador de Site, Gerador de Criativos, Criativos Manuais, Vendendo no Automatico, Estrutura Express, Gerenciando seus anuncios, WhatsApp de Suporte, Aulas ao Vivo e Planos. No celular ele abre pelo botao roxo de tres tracinhos, no canto de cima, a esquerda. USE quando a pessoa nao acha um menu ou nao sabe por onde comecar.' },
+  { slug: 'app-menu', titulo: 'Menu do aplicativo', soLead: true, mostra: 'O menu do aplicativo SEM o menu Planos (so para quem ainda nao e aluno).' },
   { slug: 'painel', titulo: 'Painel do Aluno', mostra: 'A tela inicial (Painel do Aluno): "Ola" com o nome, a "Sua jornada em 3 passos" com o mapa do tesouro, o progresso e o botao "Ir para Plataformas". No alto: "Como baixar o app", sino de avisos e perfil. USE quando ela nao sabe qual e a tela inicial ou como voltar ao comeco.' },
   { slug: 'junior', titulo: 'Assistente IA (Junior)', mostra: 'A tela do Assistente IA (o chat com o Junior dentro da plataforma): campo para escrever a duvida e botao do clipe para anexar um print. USE quando ela quer falar com o Junior pela plataforma ou mandar print la.' },
   { slug: 'plataformas', titulo: 'Menu Plataformas', mostra: 'A tela "Plataformas Parceiras" com o passo a passo "Como comecar" e a Cakto, com os botoes Entrar, Criar conta gratis, App Android e App iPhone (e a aula de cadastro mais abaixo). USE quando ela precisa criar conta na Cakto/Kiwify/Kaiross ou nao acha onde se cadastrar.' },
@@ -23,6 +24,9 @@ export const PRINTS: PrintTela[] = [
 ]
 
 export const MARCA_PRINT_RE = /\[\[PRINT:\s*([a-z0-9-]+)\s*\]\]/i
+
+// Prints que quem AINDA NAO E ALUNO pode receber (ordem do Breno: um da plataforma e o menu, sem o menu Planos)
+export const PRINTS_LEAD = ['painel', 'app-menu']
 
 export function printPorSlug(slug: string): PrintTela | null {
   const s = String(slug || '').trim().toLowerCase()
@@ -50,12 +54,25 @@ export function printsJaEnviados(linhas: any[]): string[] {
 
 // Instrucoes para o modelo (so para quem e aluna)
 export function regraDePrints(jaEnviados: string[]): string {
-  const lista = PRINTS.map(function(p) { return '- ' + p.slug + ': ' + p.mostra + (jaEnviados.indexOf(p.slug) >= 0 ? ' [JA ENVIADO nesta conversa: NAO mande de novo]' : '') }).join('\n')
+  const lista = PRINTS.filter(function(p) { return !p.soLead }).map(function(p) { return '- ' + p.slug + ': ' + p.mostra + (jaEnviados.indexOf(p.slug) >= 0 ? ' [JA ENVIADO nesta conversa: NAO mande de novo]' : '') }).join('\n')
   return [
     'PRINTS DAS TELAS DA PLATAFORMA (PRIORIDADE ALTA): voce pode mandar a foto de uma tela da plataforma (print tirado no celular) para a aluna ver onde clicar. Para mandar, escreva sua explicacao normalmente e coloque no FINAL da resposta a marca [[PRINT: nome]] (so o nome da lista abaixo; o sistema envia a imagem depois do seu texto e tira a marca).',
     'QUANDO MANDAR: so quando a aluna estiver perdida e o print ajudar de verdade: nao acha um menu, nao sabe onde fica uma tela, pergunta "onde fica...?", "nao encontro...". NAO mande print toda hora, nem para duvida que se resolve so com texto, nem na primeira saudacao, nem quando ela ja mandou print da propria tela. No maximo UM print por resposta e nunca repita um print que ja foi enviado na conversa.',
     'COMO EXPLICAR: antes da marca, diga em uma ou duas frases curtas ONDE a aluna esta e o que tocar (use os nomes que aparecem no print: nome do menu, cor e lugar do botao), e que esta mandando um print para ela se guiar. Um passo por vez, como nas outras regras. Se a tela que ela precisa nao esta na lista, NAO invente: peca o print dela.',
     'Telas disponiveis (nome: o que mostra):',
     lista,
+  ].join('\n')
+}
+
+// Explicacao simples da mentoria para quem AINDA NAO E ALUNA (canal de recuperacao): texto curto + 2 prints
+export function regraExplicacaoLead(jaEnviados: string[]): string {
+  const faltam = PRINTS_LEAD.filter(function(s) { return jaEnviados.indexOf(s) < 0 })
+  const marcas = faltam.map(function(s) { return '[[PRINT: ' + s + ']]' }).join(' ')
+  return [
+    'EXPLICACAO SIMPLES DA MENTORIA (ORDEM DO BRENO, PRIORIDADE MAXIMA, vale so para quem ainda NAO e aluna): quando ela pedir informacao, explicacao ou perguntar como funciona / o que e / do que se trata / "+informacoes" / "quero saber mais" / "me explica", NAO faca lista, NAO fale de mercado digital, afiliacao, anuncios nem de produtos. Responda so esta explicacao, com estas ideias (pode ajustar so a abertura): "A plataforma tem um aplicativo, o Cristao Prospero, e voce faz tudo por ele. Nos vamos te passar produtos em alta e te ensinar a vender no automatico. Voce nao precisa postar nada no seu Instagram nem aparecer em rede social." Ponto. Nao acrescente mais nada de explicacao.',
+    faltam.length
+      ? 'Depois da explicacao escreva uma frase curta dizendo que esta mandando uns prints para ela ver como e o aplicativo, e coloque no FINAL da resposta as marcas ' + marcas + ' (o sistema envia as imagens depois do texto e tira as marcas). NAO escreva nada sobre planos, valores de assinatura ou menus do aplicativo alem disso. Se ela ja recebeu prints nesta conversa, nao repita.'
+      : 'Os prints do aplicativo JA foram enviados nesta conversa: NAO use as marcas [[PRINT: ...]] de novo; so repita a explicacao em palavras bem simples se ela pedir.',
+    'Essa explicacao NAO muda a regra de que voce nunca manda link da plataforma nem fala de login, criar conta ou aulas para quem ainda nao e aluna.',
   ].join('\n')
 }

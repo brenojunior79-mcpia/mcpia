@@ -7,7 +7,7 @@ import { carregarHostinger, blocoHostinger } from '@/lib/juniorHostinger'
 import { decidirCupomExpress } from '@/lib/juniorCupomExpress'
 import { decidirDesconto, PERGUNTA_DESCONTO, CONFIRMA_DESCONTO } from '@/lib/juniorDesconto'
 import { humanizarResposta, REGRA_ESTILO_HUMANO, tirarRepetido } from '@/lib/juniorHumano'
-import { MARCA_PRINT_RE, printPorSlug, printsJaEnviados, regraDePrints } from '@/lib/juniorPrints'
+import { MARCA_PRINT_RE, PRINTS_LEAD, printPorSlug, printsJaEnviados, regraDePrints, regraExplicacaoLead } from '@/lib/juniorPrints'
 import { statusAnuncios } from '@/lib/acessoAnuncios'
 import { contasDoTelefone, blocoContasDoNumero, resumoContasDoNumero, type ContaDoNumero } from '@/lib/juniorContas'
 import { semLinkHostinger, REGRA_RESPONSAVEL, JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno, soUmPasso, tirarLinkMarkdown, linkClicavel, tirarFrasesDeAjuda, tipoFinalConversa, situacaoFinalConversa } from '@/lib/junior'
@@ -91,7 +91,7 @@ O sistema NAO achou cadastro na plataforma nem compra desta pessoa. Ela NAO e al
 - RESPOSTAS CURTAS (PRIORIDADE): responda so o basico, em 1 a 2 frases curtas, e use o roteiro da regra 40 quando ela perguntar como vai vender, se precisa investir ou sobre o suporte.
 - Seu papel aqui e de recuperacao: entender com carinho, UMA pergunta por vez, o que impediu a compra, e tirar duvidas sobre a mentoria SO com o que esta na base (secao SOBRE A MENTORIA), sem pressionar e sem prometer ganho.
 - NAO EXISTE AULA GRATUITA. Ignore qualquer trecho da base que diga que as aulas sao gratis ou que ficam na plataforma: isso e so para aluno. Nunca diga que ela vai "acessar as aulas pelo site", nunca explique como usar a plataforma e nunca tire duvida sobre as aulas. Se ela perguntar como acessar as aulas (ou pedir aula gratuita), diga com carinho que hoje nao tem aula gratuita e que as aulas ficam liberadas para quem entra na mentoria; se ela ainda nao tem video, pergunte se quer saber como funciona.
-- VIDEO DO APP: neste video o Breno apresenta o aplicativo e a plataforma e mostra como a pessoa usa, entao ela consegue ver ANTES de comprar. Use quando ela tiver duvida sobre a mentoria ou o app, perguntar como funciona, como e por dentro, o que vai receber, se vale a pena, pedir demonstracao, exemplo, prova ou aula gratuita. Escreva UMA frase curta e acolhedora dizendo que vai mandar um video que mostra o aplicativo e como funciona por dentro (se ela pediu aula gratuita, diga antes, com carinho, que hoje nao tem aula gratuita) e termine com a marca ${MARCA_VIDEO} (o sistema envia o video depois da sua mensagem e tira a marca). Se ela fez uma pergunta especifica, responda em uma frase com a base e mande o video junto. So uma vez por conversa: se a linha "Video do app" no fim das instrucoes disser que ja foi enviado, nao use a marca de novo. Depois do video, pergunte se ficou alguma duvida.
+- VIDEO DO APP: neste video o Breno apresenta o aplicativo e a plataforma e mostra como a pessoa usa, entao ela consegue ver ANTES de comprar. Use SO quando ela pedir para ver o app, demonstracao, exemplo, prova ou aula gratuita, ou perguntar se vale a pena. Quando ela pedir informacao ou perguntar como funciona, NAO mande o video: use a EXPLICACAO SIMPLES DA MENTORIA (regra no fim das instrucoes), que manda o texto curto e os prints do aplicativo. Escreva UMA frase curta e acolhedora dizendo que vai mandar um video que mostra o aplicativo e como funciona por dentro (se ela pediu aula gratuita, diga antes, com carinho, que hoje nao tem aula gratuita) e termine com a marca ${MARCA_VIDEO} (o sistema envia o video depois da sua mensagem e tira a marca). Se ela fez uma pergunta especifica, responda em uma frase com a base e mande o video junto. So uma vez por conversa: se a linha "Video do app" no fim das instrucoes disser que ja foi enviado, nao use a marca de novo. Depois do video, pergunte se ficou alguma duvida.
 - LINK DE PAGAMENTO: se ela disser que quer comprar, se inscrever, entrar na mentoria, pedir o link de pagamento ou aceitar o que o atendente ofereceu (ex.: "pode mandar o link", "vamos", "quero"): mande NESTA mesma mensagem o link ${LINK_PAGAMENTO} (so o link, em texto puro, sem markdown) e diga "Assim que finalizar o pagamento me avisa aqui". NAO peca e-mail, NAO diga que vai liberar acesso e NAO use ${MARCA_HUMANO}. Nao mande o link se ela nao pediu nem demonstrou vontade de comprar: primeiro tire as duvidas dela sobre a mentoria e, se fizer sentido, pergunte se quer que voce mande o link.
 - Se a equipe (atendente) ja mandou mensagem nesta conversa, continue de onde ela parou e nunca ignore o que o atendente ofereceu. Nunca peca o mesmo dado (como o e-mail) duas vezes.
 - PIX GERADO E NAO PAGO (e qualquer pessoa que ainda nao comprou): ela AINDA NAO TEM ACESSO. O acesso so existe depois que o pagamento e aprovado. Por isso NUNCA pergunte "voce ja conseguiu acessar as aulas?", NUNCA diga "para acessar voce precisa criar sua conta", NUNCA peca o e-mail para "liberar o cadastro" e NUNCA mande o link de login ou de cadastro da plataforma. Seu trabalho e VENDER com carinho: entender o que impediu o pagamento (uma pergunta por vez), tirar as duvidas dela SO com a base e ajudar a concluir o pagamento.
@@ -691,6 +691,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     const printsJa = printsJaEnviados(linhas)
     const hostInfo = await carregarHostinger(admin)
     if (ehAluna) system = system + '\n\n' + regraDePrints(printsJa)
+    else if (canal === 'recuperacao') system = system + '\n\n' + regraExplicacaoLead(printsJa)
     system = system + '\n\n' + blocoHostinger(hostInfo)
 
     system = system + '\n\n' + REGRA_ESTILO_HUMANO
@@ -729,7 +730,18 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     // Sem markdown no WhatsApp: tira ** e __ que a IA as vezes coloca
     // Print de tela: so para aluna, no maximo um, e nunca repetido na conversa
     let printSlug: string | null = null
-    { const mp = texto.match(MARCA_PRINT_RE); if (mp) { const pt = printPorSlug(mp[1]); if (pt && ehAluna && printsJa.indexOf(pt.slug) < 0) printSlug = pt.slug; texto = texto.replace(new RegExp(MARCA_PRINT_RE.source, 'gi'), '').trim() } }
+    {
+      const escolhidos: string[] = []
+      const reTodas = new RegExp(MARCA_PRINT_RE.source, 'gi')
+      let mm: RegExpExecArray | null
+      while ((mm = reTodas.exec(texto)) !== null) {
+        const pt = printPorSlug(mm[1])
+        if (!pt || printsJa.indexOf(pt.slug) >= 0 || escolhidos.indexOf(pt.slug) >= 0) continue
+        if (ehAluna ? !pt.soLead && escolhidos.length < 1 : canal === 'recuperacao' && PRINTS_LEAD.indexOf(pt.slug) >= 0) escolhidos.push(pt.slug)
+      }
+      if (escolhidos.length) printSlug = escolhidos.join(',')
+      texto = texto.replace(new RegExp(MARCA_PRINT_RE.source, 'gi'), '').trim()
+    }
     // Tira o jeito de IA ("Fico feliz em saber...", "Perfeito!", "Qualquer duvida...")
     {
       const jaPerguntou = linhas.some(function(m) { return m.direction === 'out' && m.type !== 'system' && /(como\s+(est[aã]o|est[aá]|vai)\s+(indo\s+)?(as\s+aulas|a\s+plataforma)|conseguiu\s+acessar|est[aá]\s+indo\s+(l[aá]\s+)?na\s+plataforma)/i.test(String(m.body || '')) })

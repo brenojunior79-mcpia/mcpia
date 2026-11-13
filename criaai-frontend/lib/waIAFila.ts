@@ -164,8 +164,11 @@ async function executar(admin: any, it: any, inicio: number, escala: number): Pr
     }
     // Print da tela da plataforma (so quando o assistente escolheu um): logo depois do texto
     if (it.print_slug && enviadas > 0) {
-      await esperar(entre(1500, 3000) * escala)
-      if (await aindaPodeResponder(admin, it)) await enviarPrint(admin, it, phoneId)
+      for (const slug of String(it.print_slug).split(',').filter(Boolean)) {
+        await esperar(entre(1500, 3000) * escala)
+        if (!(await aindaPodeResponder(admin, it))) break
+        await enviarPrint(admin, Object.assign({}, it, { print_slug: slug }), phoneId)
+      }
     }
     // Pediu ajuda humana: o assistente se desliga sozinho nessa conversa para a equipe assumir
     // e a conversa vai para o dono (admin), se ainda nao tiver atendente
