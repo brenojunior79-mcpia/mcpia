@@ -80,7 +80,20 @@ function Numeros({ itens }: { itens: [string, string | number][] }) {
 }
 
 export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: { inicial: Sequencia; conexoes: ConexaoSeq[]; stats?: StatsSeq; onVoltar: (recarregar: boolean) => void }) {
-  const [seq, setSeq] = useState<Sequencia>(inicial)
+  // Blocos soltos (fora do fluxo, nao rodam) ficam guardados em trigger.soltos. Na tela ficam no fim da lista;
+  // corteId = primeiro bloco solto (dali em diante nada roda). null = todos ligados.
+  const [seq, setSeq] = useState<Sequencia>(function() {
+    const soltosIni: PassoSeq[] = Array.isArray((inicial.trigger as any).soltos) ? (inicial.trigger as any).soltos : []
+    const tr: any = { ...inicial.trigger }
+    delete tr.soltos
+    return { ...inicial, trigger: tr, steps: inicial.steps.concat(soltosIni) }
+  })
+  const [corteId, setCorteId] = useState<string | null>(function() {
+    const soltosIni: PassoSeq[] = Array.isArray((inicial.trigger as any).soltos) ? (inicial.trigger as any).soltos : []
+    return soltosIni.length ? soltosIni[0].id : null
+  })
+  const [linhaSel, setLinhaSel] = useState<number | null>(null)
+  const [ligando, setLigando] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null)
   const [id, setId] = useState<string | undefined>(inicial.id)
   const [sel, setSel] = useState<string>('gatilho')
   const [menu, setMenu] = useState<{ i: number; x: number; y: number } | null>(null) // i: -1 = depois do gatilho; i = depois do bloco i (x,y = onde abrir, na tela)
@@ -160,6 +173,16 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
       .then(function(r) { return r.json() }).then(function(j) { if (j.url) setUrls(function(u) { return { ...u, [caminhoSel]: j.url } }) }).catch(function() {})
   }, [caminhoSel])
 
+  const idxCorte = corteId ? seq.steps.findIndex(function(x) { return x.id === corteId }) : -1
+  const conectados = idxCorte >= 0 ? idxCorte : seq.steps.length
+  function apagarLinha(k: number) {
+    // linha k liga nos[k] ao bloco de indice k: ele e os seguintes ficam soltos
+    const alvo = seq.steps[k]
+    if (!alvo) return
+    setCorteId(alvo.id); setLinhaSel(null)
+    mudar(function(s) { return s })
+  }
+  function religar() { setCorteId(null); mudar(function(s) { return s }) }
   function setPasso(pid: string, fn: (p: PassoSeq) => PassoSeq) { mudar(function(s) { return { ...s, steps: s.steps.map(function(p) { return p.id === pid ? fn(p) : p }) } }) }
   // Quadro livre: depois que um bloco foi arrastado, todos guardam a propria posicao
   const livre = !!seq.trigger.pos || seq.steps.some(function(x) { return !!x.pos })
@@ -192,13 +215,16 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
   }
   function remover(i: number) {
     const o = seq.steps[i]
+    if (corteId === o.id) { const prox = seq.steps[i + 1]; setCorteId(prox ? prox.id : null) }
     mudar(function(s) { return { ...s, steps: s.steps.filter(function(p) { return p.id !== o.id }) } })
     if (sel === o.id) setSel('gatilho')
   }
 
   async function salvar(comEnabled?: boolean): Promise<boolean> {
     setSalvando(true); setMsg(''); setOk('')
-    const corpo: any = { action: 'salvar', ...seq, id, ...(comEnabled === undefined ? {} : { enabled: comEnabled }) }
+    const ligados = seq.steps.slice(0, conectados)
+    const soltos = seq.steps.slice(conectados)
+    const corpo: any = { action: 'salvar', ...seq, steps: ligados, trigger: { ...seq.trigger, ...(soltos.length ? { soltos } : {}) }, id, ...(comEnabled === undefined ? {} : { enabled: comEnabled }) }
     try {
       const r = await fetch('/api/whatsapp/seq', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) })
       const j = await r.json().catch(function() { return {} })
@@ -316,6 +342,7 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
   }
   function aoPressionar(e: React.PointerEvent) {
     if ((e.target as HTMLElement).closest('[data-ctl]')) return
+    if (!(e.target as Element).closest('[data-linha]')) setLinhaSel(null)
     if (e.button !== undefined && e.button > 0 && e.button !== 1) return
     arrasto.current = { x: e.clientX, y: e.clientY, vx: viewRef.current.x, vy: viewRef.current.y, moveu: false, id: e.pointerId }
     setMenu(null)
@@ -373,7 +400,7 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
     if (!el) return
     const r = el.getBoundingClientRect()
     const v = viewRef.current
-    adicionar(seq.steps.length - 1, tipo, { x: Math.round((e.clientX - r.left - v.x) / v.k - W / 2), y: Math.round((e.clientY - r.top - v.y) / v.k - 20) })
+    adicionar(conectados - 1, tipo, { x: Math.round((e.clientX - r.left - v.x) / v.k - W / 2), y: Math.round((e.clientY - r.top - v.y) / v.k - 20) })
   }
 
   // Roda do mouse: zoom na posicao do mouse (como na Zapfy).
@@ -411,6 +438,32 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
   const evento = g.tipo === 'evento' ? EVENTOS.find(function(x) { return x.k === g.evento }) : null
   const nGatilho = (stats ? stats.runs : []).reduce(function(a, r) { return a + r.n }, 0)
 
+  function comecarLigacao(e: React.PointerEvent, k: number) {
+    if (idxCorte < 0) return
+    const el = area.current
+    if (!el) return
+    e.stopPropagation()
+    const r = el.getBoundingClientRect()
+    const v = viewRef.current
+    const x1 = pos[k].x + W + 9, y1 = pos[k].y + PORTA_Y
+    const sx = e.clientX, sy = e.clientY
+    let moveu = false
+    function mover(ev: PointerEvent) {
+      if (!moveu && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 6) return
+      moveu = true
+      setLigando({ x1, y1, x2: (ev.clientX - r.left - v.x) / v.k, y2: (ev.clientY - r.top - v.y) / v.k })
+    }
+    function soltar(ev: PointerEvent) {
+      window.removeEventListener('pointermove', mover); window.removeEventListener('pointerup', soltar)
+      setLigando(null)
+      if (!moveu) return
+      const alvo = document.elementFromPoint(ev.clientX, ev.clientY)
+      const bloco = alvo && (alvo as HTMLElement).closest ? (alvo as HTMLElement).closest('[data-solto="1"]') : null
+      if (bloco) religar()
+    }
+    window.addEventListener('pointermove', mover); window.addEventListener('pointerup', soltar)
+  }
+
   function cartao(n: { key: string; passo: PassoSeq | null; i: number }, k: number) {
     const p = n.passo
     const selecionado = sel === n.key
@@ -433,12 +486,14 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
     else corpo = <div style={caixa}>{p.template ? '📄 ' + p.template : <i style={{ color: 'var(--muted2)' }}>Escolha o modelo. Clique aqui.</i>}</div>
     const pausa = p && ehEnvio(p) && n.i > 0 && ehEnvio(seq.steps[n.i - 1])
     const arrastando = !!dragPos && dragPos.key === n.key
+    const solto = !!p && n.i >= conectados
+    const ultimoLigado = idxCorte >= 0 && n.i === conectados - 1
     return (
-      <div key={n.key} data-bloco="1" ref={function(el) { refs.current[n.key] = el }}
+      <div key={n.key} data-bloco="1" data-solto={solto ? '1' : undefined} ref={function(el) { refs.current[n.key] = el }}
         onPointerDown={function(e) { noPressionar(e, n.key, k) }} onPointerMove={noMover} onPointerUp={noSoltar} onPointerCancel={function() { arrNo.current = null; setDragPos(null) }}
-        style={{ position: 'absolute', left: pos[k].x, top: pos[k].y, width: W, background: 'var(--surface)', border: selecionado ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 12, boxShadow: arrastando ? '0 12px 30px rgba(0,0,0,0.18)' : selecionado ? '0 6px 22px rgba(0,0,0,0.12)' : '0 1px 4px rgba(0,0,0,0.06)', cursor: arrastando ? 'grabbing' : 'grab', boxSizing: 'border-box', zIndex: arrastando ? 5 : selecionado ? 2 : 1 }}>
+        style={{ position: 'absolute', left: pos[k].x, top: pos[k].y, width: W, background: 'var(--surface)', border: selecionado ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 12, boxShadow: arrastando ? '0 12px 30px rgba(0,0,0,0.18)' : selecionado ? '0 6px 22px rgba(0,0,0,0.12)' : '0 1px 4px rgba(0,0,0,0.06)', cursor: arrastando ? 'grabbing' : 'grab', boxSizing: 'border-box', zIndex: arrastando ? 5 : selecionado ? 2 : 1, opacity: solto && !selecionado ? 0.6 : 1, borderStyle: solto && !selecionado ? 'dashed' : 'solid' }}>
         {p && <div style={{ position: 'absolute', left: -6, top: PORTA_Y - 5, width: 10, height: 10, borderRadius: 99, background: 'var(--surface)', border: '2px solid #10b981' }} />}
-        <button data-ctl="1" title="Adicionar o próximo bloco" onClick={function(e) { e.stopPropagation(); if (menu && menu.i === n.i) { setMenu(null); return } const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); setMenu({ i: n.i, x: r.right + 10, y: r.top }) }}
+        <button data-ctl="1" title={ultimoLigado ? 'Clique para adicionar o próximo bloco, ou arraste até um bloco solto para religar' : 'Adicionar o próximo bloco'} onPointerDown={ultimoLigado ? function(e) { comecarLigacao(e, k) } : undefined} onClick={function(e) { e.stopPropagation(); if (menu && menu.i === n.i) { setMenu(null); return } const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); setMenu({ i: n.i, x: r.right + 10, y: r.top }) }}
           style={{ position: 'absolute', right: -11, top: PORTA_Y - 10, width: 20, height: 20, borderRadius: 99, border: '2px solid #10b981', background: 'var(--surface)', color: '#10b981', fontSize: 14, lineHeight: '15px', fontWeight: 800, padding: 0, cursor: 'pointer', zIndex: 3 }}>+</button>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px' }}>
           <div style={{ width: 26, height: 26, borderRadius: 8, background: cor + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>{icone}</div>
@@ -451,6 +506,13 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
           {p && <button data-ctl="1" title="Apagar bloco" onClick={function(e) { e.stopPropagation(); remover(n.i) }} style={iconeBtn}>🗑</button>}
         </div>
         <div style={{ padding: '0 10px 8px' }}>
+          {solto && n.i === conectados && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 6, fontSize: 11, fontWeight: 700, color: '#b45309' }}>
+              <span>Fora do fluxo (não roda)</span>
+              <button data-ctl="1" type="button" onClick={function(e) { e.stopPropagation(); religar() }} style={{ cursor: 'pointer', border: '1px solid #16a34a', background: 'transparent', color: '#15803d', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 800, fontFamily: 'inherit' }}>Religar</button>
+            </div>
+          )}
+          {solto && n.i !== conectados && <div style={{ fontSize: 11, fontWeight: 700, color: '#b45309', marginBottom: 6 }}>Fora do fluxo (não roda)</div>}
           {pausa && <div style={{ fontSize: 11, color: 'var(--muted2)', marginBottom: 5 }}>⏱ Pausa natural antes de enviar</div>}
           {corpo}
         </div>
@@ -741,7 +803,7 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
                   return (
                     <button key={m.tipo} type="button" draggable title={ROTULO_TIPO[m.tipo] + ': ' + m.desc + ' (clique para pôr no fim, ou arraste para o quadro)'}
                       onDragStart={function(e) { e.dataTransfer.setData('text/bloco', m.tipo); e.dataTransfer.effectAllowed = 'copy' }}
-                      onClick={function() { adicionar(seq.steps.length - 1, m.tipo) }} className="cb-item">
+                      onClick={function() { adicionar(conectados - 1, m.tipo) }} className="cb-item">
                       <span className="cb-ico" style={{ background: m.cor + '1f' }}>{m.icone}</span>
                       <span className="cb-item-txt"><span className="cb-item-nome">{ROTULO_TIPO[m.tipo]}</span><span className="cb-item-desc">{m.desc}</span></span>
                     </button>
@@ -759,16 +821,38 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
             <div style={{ position: 'absolute', left: 0, top: 0, width: largura, height: altura, transformOrigin: '0 0', transform: 'translate(' + view.x + 'px, ' + view.y + 'px) scale(' + view.k + ')' }}>
               <svg width={largura} height={altura} style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none', overflow: 'visible' }}>
                 {nos.slice(0, -1).map(function(n, k) {
+                  // linha k: de nos[k] ate o bloco de indice k
+                  if (k === conectados) return null
+                  const soltoL = k > conectados
                   const x1 = pos[k].x + W + 9
                   const y1 = pos[k].y + PORTA_Y
                   const x2 = pos[k + 1].x - 6
                   const y2 = pos[k + 1].y + PORTA_Y
                   const c = Math.max(50, Math.abs(x2 - x1) * 0.5)
                   const d = 'M ' + x1 + ' ' + y1 + ' C ' + (x1 + c) + ' ' + y1 + ', ' + (x2 - c) + ' ' + y2 + ', ' + x2 + ' ' + y2
-                  return <path key={n.key} d={d} fill="none" stroke="#10b981" strokeOpacity={0.7} strokeWidth={1.6} />
+                  const marcada = linhaSel === k
+                  return (
+                    <g key={n.key}>
+                      <path d={d} fill="none" stroke={soltoL ? '#9ca3af' : marcada ? '#ef4444' : '#10b981'} strokeOpacity={soltoL ? 0.6 : marcada ? 1 : 0.7} strokeWidth={marcada ? 2.6 : 1.6} strokeDasharray={soltoL ? '6 5' : undefined} />
+                      {!soltoL && <path data-linha="1" d={d} fill="none" stroke="transparent" strokeWidth={16} style={{ pointerEvents: 'stroke', cursor: 'pointer' }} onClick={function(e) { e.stopPropagation(); setLinhaSel(linhaSel === k ? null : k) }} />}
+                    </g>
+                  )
                 })}
+                {ligando && <path d={'M ' + ligando.x1 + ' ' + ligando.y1 + ' L ' + ligando.x2 + ' ' + ligando.y2} fill="none" stroke="#10b981" strokeWidth={2} strokeDasharray="6 5" />}
               </svg>
               {nos.map(function(n, k) { return cartao(n, k) })}
+              {linhaSel !== null && linhaSel < conectados && nos[linhaSel + 1] && (function() {
+                const k = linhaSel
+                const mx = ((pos[k].x + W + 9) + (pos[k + 1].x - 6)) / 2
+                const my = ((pos[k].y + PORTA_Y) + (pos[k + 1].y + PORTA_Y)) / 2
+                return (
+                  <button data-ctl="1" type="button" title="Apagar esta linha (o bloco seguinte e os depois dele ficam fora do fluxo)" aria-label="Apagar esta linha"
+                    onClick={function(e) { e.stopPropagation(); apagarLinha(k) }}
+                    style={{ position: 'absolute', left: mx - 16, top: my - 16, width: 32, height: 32, borderRadius: 99, border: '2px solid #ef4444', background: 'var(--surface)', color: '#dc2626', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 6, boxShadow: '0 4px 12px rgba(0,0,0,0.18)', padding: 0 }}>
+                    <i className="ti ti-trash" />
+                  </button>
+                )
+              })()}
             </div>
           </div>
           <div data-ctl="1" style={{ position: 'absolute', left: 12, bottom: 12, display: 'flex', alignItems: 'center', gap: 4, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: 3, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>

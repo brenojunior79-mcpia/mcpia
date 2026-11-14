@@ -31,9 +31,16 @@ export function validarSeq(input: any): { ok: true; seq: Sequencia } | { ok: fal
   }
   const posGatilho = lePos(g.pos)
   if (posGatilho) trigger.pos = posGatilho
+  // Blocos soltos (fora do fluxo): guardados no gatilho so para a tela; o motor nunca os executa
+  if (Array.isArray(g.soltos) && g.soltos.length > 0) {
+    const vs = validarSeq({ name: 'soltos', trigger: { tipo: 'palavra', palavras: [] }, steps: g.soltos })
+    if (!vs.ok) return vs
+    ;(trigger as any).soltos = vs.seq.steps
+  }
   const steps: PassoSeq[] = []
   const raw: any[] = Array.isArray(input?.steps) ? input.steps.slice(0, 40) : []
   const ids: Record<string, boolean> = {}
+  for (const x of ((trigger as any).soltos || [])) ids[x.id] = true
   for (const s of raw) {
     const id = String(s?.id || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 24)
     if (!id || ids[id]) return { ok: false, erro: 'Fluxo com blocos repetidos. Recarregue a página e tente de novo.' }
