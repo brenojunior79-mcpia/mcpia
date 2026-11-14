@@ -945,6 +945,15 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     texto = prepararRespostaPix(texto, ehAluna)
     if (jaFalou) texto = tirarNomeDaResposta(texto, primeiro)
     else texto = colocarNomeNaPrimeira(texto, primeiro)
+    // Anti-repeticao de novo, agora com o texto FINAL: a limpeza acima (tira "Otimo!", "Qualquer duvida...", o nome etc.)
+    // pode deixar a resposta igual a uma que ja foi mandada, mesmo quando o texto cru da IA era diferente.
+    // Ex.: "Ja estou assistindo" e depois "Sim sim" recebiam duas vezes "Agora e so comecar a estudar as aulas no seu melhor horario."
+    if (!passaParaHumano) {
+      const jaMandadas = linhas.filter(function(m) { return m.direction === 'out' && m.type === 'text' && String(m.body || '').trim() }).map(function(m) { return String(m.body || '') })
+      const repF = tirarRepetido(texto, jaMandadas)
+      if (repF.todoRepetido) { console.error('[wa-ia] resposta final repetida, nao enviada', convId); return true }
+      if (repF.repetiu && repF.texto) texto = repF.texto
+    }
     const okEnf = await enfileirar(texto, passaParaHumano, querVideo, printSlug)
     // Segunda mensagem do cupom (link + aviso), 1 minuto depois da primeira; se a pessoa escrever antes, ela e trocada pela resposta nova
     if (okEnf && cupomDepois && lerEmUltimo > 0) {
