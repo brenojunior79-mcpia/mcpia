@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import SeletorProduto from '@/components/whatsapp/SeletorProduto'
 import { createClient } from '@/lib/supabase-browser'
 import { EVENTOS, VARIAVEIS } from '@/lib/waAutoTipos'
 import { ehEnvio, novoId, textoAtraso, ROTULO_TIPO, type PassoSeq, type Pos, type Sequencia, type Unidade } from '@/lib/waSeqTipos'
@@ -508,7 +509,7 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
                 </div>
               )}
               <label style={{ ...lab, marginTop: 10 }}>Só para o produto (opcional)</label>
-              <input className="at-input" value={g.produto || ''} placeholder="Ex.: mentoria" onChange={function(e) { const v = e.target.value; mudar(function(s) { return s.trigger.tipo === 'evento' ? { ...s, trigger: { ...s.trigger, produto: v } } : s }) }} />
+              <SeletorProduto valor={g.produto || ''} onChange={function(v) { mudar(function(s) { return s.trigger.tipo === 'evento' ? { ...s, trigger: { ...s.trigger, produto: v } } : s }) }} />
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, fontSize: 13, fontWeight: 700, color: 'var(--text)', cursor: 'pointer' }}>
                 <input type="checkbox" checked={seq.cancel_on_purchase} onChange={function(e) { const v = e.target.checked; mudar(function(s) { return { ...s, cancel_on_purchase: v } }) }} style={{ width: 16, height: 16 }} />
                 Parar o fluxo se a pessoa comprar

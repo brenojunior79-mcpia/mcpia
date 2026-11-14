@@ -95,3 +95,4 @@ com um assistente de IA chamado **Júnior**.
 - Blocos: atraso (1 s a 30 dias), texto, audio, imagem, video (so dentro de 24 h da ultima mensagem da pessoa) e modelo aprovado.
 - Motor: pg_cron `wa-seq-run` a cada 15 s chama `/api/whatsapp/seq/run` (mesmo segredo `x-auto-secret`).
 - Os fluxos antigos por evento (`wa_auto_flows`: "Pix Gerado" e "Aprovada") continuam separados e rodando em `lib/waAuto.ts`.
+- Produtos para filtrar fluxos: aba "Produtos" (`components/whatsapp/Produtos.tsx`, rota `app/api/whatsapp/produtos`), guardados em `wa_settings` chave `produtos`. No fluxo escolhe-se o produto numa lista (`SeletorProduto.tsx`); o motor confere se o nome do produto da Hubla CONTEM o nome escolhido.

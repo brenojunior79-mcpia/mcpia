@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import SeletorProduto from '@/components/whatsapp/SeletorProduto'
 import { EVENTOS, VARIAVEIS, type FluxoAuto, type Passo } from '@/lib/waAutoTipos'
 
 export type ConexaoLeve = { id: string; name: string; display_phone: string | null; active: boolean }
@@ -200,7 +201,7 @@ export default function EditorEvento({ inicial, conexoes, onVoltar }: { inicial:
           )}
           <div style={{ marginTop: 12 }}>
             <label style={lab}>Só para o produto (opcional)</label>
-            <input className="at-input" placeholder="Parte do nome do produto, ex: Starter" maxLength={80} value={f.trigger_filter.produto || ''} onChange={function(e) { setF({ ...f, trigger_filter: { ...f.trigger_filter, produto: e.target.value } }) }} />
+            <SeletorProduto valor={f.trigger_filter.produto || ''} onChange={function(v) { setF({ ...f, trigger_filter: { ...f.trigger_filter, produto: v } }) }} />
           </div>
           <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontWeight: 700, fontSize: 13.5, color: 'var(--text)', marginTop: 14 }}>
             <input type="checkbox" checked={f.cancel_on_purchase} onChange={function(e) { setF({ ...f, cancel_on_purchase: e.target.checked }) }} style={{ width: 18, height: 18 }} />
