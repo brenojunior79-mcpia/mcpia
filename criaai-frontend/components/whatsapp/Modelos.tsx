@@ -3,12 +3,17 @@ import { useEffect, useState } from 'react'
 
 export type Tpl = { name: string; language: string; status: string; category: string; rejected_reason?: string; header: string; body: string; footer: string; buttons: string[]; vars: number }
 
-const ST: Record<string, { t: string; c: string; bg: string }> = {
-  APPROVED: { t: 'Aprovado', c: '#15803d', bg: 'rgba(22,163,74,0.14)' },
-  PENDING: { t: 'Em análise', c: '#b45309', bg: 'rgba(217,119,6,0.16)' },
-  REJECTED: { t: 'Recusado', c: '#b91c1c', bg: 'rgba(220,38,38,0.14)' },
-  PAUSED: { t: 'Pausado', c: '#b45309', bg: 'rgba(217,119,6,0.16)' },
-  DISABLED: { t: 'Desativado', c: '#6b7280', bg: 'rgba(107,114,128,0.16)' },
+const ST: Record<string, { t: string; c: string; bg: string; ico: string }> = {
+  APPROVED: { t: 'Aprovado', c: '#15803d', bg: 'rgba(22,163,74,0.14)', ico: 'circle-check' },
+  PENDING: { t: 'Em análise', c: '#b45309', bg: 'rgba(217,119,6,0.16)', ico: 'hourglass' },
+  REJECTED: { t: 'Recusado', c: '#b91c1c', bg: 'rgba(220,38,38,0.14)', ico: 'circle-x' },
+  PAUSED: { t: 'Pausado', c: '#b45309', bg: 'rgba(217,119,6,0.16)', ico: 'clock' },
+  DISABLED: { t: 'Desativado', c: '#6b7280', bg: 'rgba(107,114,128,0.16)', ico: 'lock' },
+}
+const ST_OUTRO = { c: '#6b7280', bg: 'rgba(107,114,128,0.16)', ico: 'info-circle' }
+function Selo({ status }: { status: string }) {
+  const s = ST[status] || { t: status, ...ST_OUTRO }
+  return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: s.bg, color: s.c, borderRadius: 999, padding: '2px 9px', fontSize: 11.5, fontWeight: 700, flexShrink: 0, whiteSpace: 'nowrap' }}><i className={'ti ti-' + s.ico} style={{ fontSize: 13 }} />{s.t}</span>
 }
 const CAT: Record<string, string> = { MARKETING: 'Marketing', UTILITY: 'Utilidade', AUTHENTICATION: 'Autenticação' }
 
@@ -28,7 +33,9 @@ function limparNome(v: string): string {
   return v.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[\s-]+/g, '_').replace(/[^a-z0-9_]/g, '').slice(0, 100)
 }
 
-const btn: React.CSSProperties = { cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '7px 11px', fontSize: 12.5, fontWeight: 700 }
+const h1: React.CSSProperties = { fontFamily: 'Syne, sans-serif', fontSize: 18, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text)', margin: 0 }
+const sub: React.CSSProperties = { fontSize: 13, color: 'var(--muted2)', lineHeight: 1.5, margin: '4px 0 0', maxWidth: '65ch' }
+const fecharBtn: React.CSSProperties = { width: 34, height: 34, padding: 0, justifyContent: 'center', flexShrink: 0 }
 const lab: React.CSSProperties = { fontSize: 12.5, fontWeight: 700, color: 'var(--text)', marginBottom: 4, display: 'block' }
 
 type Pasta = { tpls: Tpl[] | null; erro: string; carregando: boolean }
@@ -75,74 +82,85 @@ export default function Modelos({ isAdmin, tpls, erro, carregando, onReload, can
 
   // Tela das pastas
   if (!aberta) {
-    const pastaCard = function(id: string, icone: string, titulo: string, sub: string, n: number | null) {
+    const pastaCard = function(id: string, icone: string, titulo: string, txt: string, n: number | null) {
       return (
-        <div key={id} onClick={function() { setPasta(id); setAviso('') }} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 14, marginBottom: 10 }}>
-          <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--accent-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, flexShrink: 0 }}>{icone}</div>
+        <button key={id} onClick={function() { setPasta(id); setAviso('') }} style={{ cursor: 'pointer', width: '100%', display: 'flex', alignItems: 'center', gap: 12, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 14, marginBottom: 10, textAlign: 'left', fontFamily: 'inherit', color: 'var(--text)' }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(22,163,74,0.12)', color: '#15803d', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}><i className={'ti ti-' + icone} /></div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 800, fontSize: 15.5, color: 'var(--text)' }}>{titulo}</div>
-            <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginTop: 2 }}>{sub}</div>
+            <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--text)' }}>{titulo}</div>
+            <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginTop: 2 }}>{txt}</div>
+            <span style={{ display: 'inline-block', marginTop: 6, fontSize: 12, fontWeight: 700, color: 'var(--muted2)', background: 'var(--surface2)', borderRadius: 999, padding: '2px 9px', fontVariantNumeric: 'tabular-nums' }}>{n === null ? 'Carregando…' : n + ' modelo' + (n === 1 ? '' : 's')}</span>
           </div>
-          <span style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text)', background: 'var(--surface2)', borderRadius: 999, padding: '3px 10px' }}>{n === null ? '…' : n + ' modelo' + (n === 1 ? '' : 's')}</span>
-          <span style={{ color: 'var(--accent)', fontWeight: 800, fontSize: 13.5 }}>Abrir ›</span>
-        </div>
+          <i className="ti ti-chevron-right" style={{ color: 'var(--muted2)', fontSize: 18, flexShrink: 0 }} />
+        </button>
       )
     }
     return (
-      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 16 }}>
-        <div style={{ maxWidth: 720, margin: '0 auto' }}>
-          <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--text)', marginBottom: 4 }}>📄 Modelos de mensagem</div>
-          <div style={{ fontSize: 13, color: 'var(--muted2)', lineHeight: 1.5, marginBottom: 14 }}>Cada número do WhatsApp tem os seus próprios modelos. Abra a pasta do número que você quer ver.</div>
-          {!soRecuperacao && pastaCard('suporte', '📁', 'Modelos de suporte', 'Usados no Chat de suporte e nos disparos.', tpls ? tpls.length : null)}
-          {lista.map(function(c) { const o = outras[c.id]; return pastaCard(c.id, '📁', 'Modelos de ' + c.nome.toLowerCase(), 'Usados nos fluxos da Hubla e no Chat de recuperação' + (c.numero ? ' · ' + c.numero : '') + '.', o && o.tpls ? o.tpls.length : null) })}
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 20 }}>
+        <div style={{ maxWidth: 760, margin: '0 auto' }}>
+          <div style={{ marginBottom: 16 }}>
+            <h2 style={h1}>Modelos de mensagem</h2>
+            <p style={sub}>Cada número do WhatsApp tem os seus próprios modelos. Abra a pasta do número que você quer ver.</p>
+          </div>
+          {!soRecuperacao && pastaCard('suporte', 'headset', 'Modelos de suporte', 'Usados no Chat de suporte e nos disparos.', tpls ? tpls.length : null)}
+          {lista.map(function(c) { const o = outras[c.id]; return pastaCard(c.id, 'brand-whatsapp', 'Modelos de ' + c.nome.toLowerCase(), 'Usados nos fluxos da Hubla e no Chat de recuperação' + (c.numero ? ' · ' + c.numero : '') + '.', o && o.tpls ? o.tpls.length : null) })}
         </div>
       </div>
     )
   }
 
   return (
-    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 16 }}>
-      <div style={{ maxWidth: 920, margin: '0 auto' }}>
-        {lista.length > 0 && !(soRecuperacao && lista.length === 1) && <button onClick={function() { setPasta(null); setAviso('') }} style={{ cursor: 'pointer', border: 0, background: 'transparent', color: 'var(--accent)', fontWeight: 800, fontSize: 13.5, padding: 0, marginBottom: 8 }}>← Voltar para as pastas</button>}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
-          <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--text)', flex: 1 }}>{lista.length > 0 ? '📁 ' + nomePasta : '📄 Modelos de mensagem'}</div>
-          <button style={btn} onClick={recarregar} disabled={dados.carregando}>{dados.carregando ? 'Atualizando…' : '↻ Atualizar'}</button>
-          {isAdmin && <button onClick={function() { setNovo(true); setAviso('') }} style={{ cursor: 'pointer', border: 0, background: '#16a34a', color: '#fff', borderRadius: 8, padding: '8px 13px', fontWeight: 800, fontSize: 13 }}>+ Novo modelo</button>}
-        </div>
-        <div style={{ fontSize: 13, color: 'var(--muted2)', lineHeight: 1.5, marginBottom: 14 }}>
-          Modelos são mensagens pré-aprovadas pela Meta. Servem para <b>começar uma conversa</b> ou voltar a falar depois de 24h sem resposta do aluno. Só os modelos <b>Aprovados</b> podem ser enviados.
+    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 20 }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+        {lista.length > 0 && !(soRecuperacao && lista.length === 1) && <button className="at-b" onClick={function() { setPasta(null); setAviso('') }} style={{ marginBottom: 12 }}><i className="ti ti-arrow-left" />Voltar para as pastas</button>}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+          <div style={{ flex: '1 1 260px', minWidth: 0 }}>
+            <h2 style={h1}>{lista.length > 0 ? nomePasta : 'Modelos de mensagem'}</h2>
+            <p style={sub}>Modelos são mensagens pré-aprovadas pela Meta. Servem para <b>começar uma conversa</b> ou voltar a falar depois de 24h sem resposta do aluno. Só os modelos <b>Aprovados</b> podem ser enviados.</p>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button className="at-b" onClick={recarregar} disabled={dados.carregando}><i className={'ti ' + (dados.carregando ? 'ti-loader' : 'ti-refresh')} />{dados.carregando ? 'Atualizando…' : 'Atualizar'}</button>
+            {isAdmin && <button className="at-b at-b-ok" onClick={function() { setNovo(true); setAviso('') }}><i className="ti ti-plus" />Novo modelo</button>}
+          </div>
         </div>
 
-        {aviso && <div style={{ marginBottom: 12, fontSize: 13, color: '#b91c1c', fontWeight: 700 }}>{aviso}</div>}
-        {dados.erro && <div style={{ marginBottom: 12, padding: 12, borderRadius: 12, background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.25)', color: 'var(--text)', fontSize: 13.5, lineHeight: 1.5 }}>{dados.erro}</div>}
-        {!dados.erro && dados.tpls && dados.tpls.length === 0 && <div style={{ padding: 24, textAlign: 'center', color: 'var(--muted2)', fontSize: 14 }}>Nenhum modelo ainda.{isAdmin ? ' Clique em “+ Novo modelo” para criar o primeiro.' : ''}</div>}
-        {!dados.tpls && !dados.erro && <div style={{ padding: 24, textAlign: 'center', color: 'var(--muted2)' }}>Carregando…</div>}
+        {aviso && <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontSize: 13, color: '#b91c1c', fontWeight: 700 }}><i className="ti ti-alert-triangle" />{aviso}</div>}
+        {dados.erro && <div role="alert" style={{ display: 'flex', gap: 8, marginBottom: 12, padding: 12, borderRadius: 12, background: 'rgba(220,38,38,0.08)', color: 'var(--text)', fontSize: 13.5, lineHeight: 1.5 }}><i className="ti ti-alert-triangle" style={{ color: '#b91c1c', fontSize: 17, marginTop: 1 }} /><span>{dados.erro}</span></div>}
+        {!dados.erro && dados.tpls && dados.tpls.length === 0 && (
+          <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--muted2)' }}>
+            <i className="ti ti-template" style={{ fontSize: 40, opacity: 0.45 }} />
+            <div style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--text)', marginTop: 8 }}>Nenhum modelo ainda.</div>
+            {isAdmin && <div style={{ fontSize: 13, marginTop: 4 }}>Clique em <b>Novo modelo</b> para criar o primeiro.</div>}
+          </div>
+        )}
+        {!dados.tpls && !dados.erro && <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 32, color: 'var(--muted2)', fontSize: 13.5 }}><i className="ti ti-loader" style={{ fontSize: 18 }} />Carregando modelos…</div>}
 
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden' }}>
+        {dados.tpls && dados.tpls.length > 0 && <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden' }}>
           {(dados.tpls || []).map(function(t, i) {
-            const s = ST[t.status] || { t: t.status, c: '#6b7280', bg: 'rgba(107,114,128,0.16)' }
             return (
-              <button key={t.name + t.language} onClick={function() { setVendo(t) }} style={{ cursor: 'pointer', width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '13px 14px', border: 0, borderTop: i === 0 ? 0 : '1px solid var(--border)', background: 'transparent', color: 'var(--text)', textAlign: 'left', fontFamily: 'inherit' }}>
-                <span style={{ fontWeight: 700, fontSize: 14, flex: 1, minWidth: 0, wordBreak: 'break-all' }}>{t.name}</span>
-                <span style={{ background: s.bg, color: s.c, borderRadius: 999, padding: '2px 9px', fontSize: 11.5, fontWeight: 800, flexShrink: 0 }}>{s.t}</span>
-                <span style={{ color: 'var(--muted2)', fontSize: 18, lineHeight: 1, flexShrink: 0 }}>›</span>
+              <button key={t.name + t.language} onClick={function() { setVendo(t) }} style={{ cursor: 'pointer', width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', border: 0, borderTop: i === 0 ? 0 : '1px solid var(--border)', background: 'transparent', color: 'var(--text)', textAlign: 'left', fontFamily: 'inherit' }}>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: 'block', fontWeight: 700, fontSize: 14, wordBreak: 'break-all' }}>{t.name}</span>
+                  <span style={{ display: 'block', fontSize: 12, color: 'var(--muted2)', marginTop: 2 }}>{CAT[t.category] || t.category} · {t.language}</span>
+                </span>
+                <Selo status={t.status} />
+                <i className="ti ti-chevron-right" style={{ color: 'var(--muted2)', fontSize: 17, flexShrink: 0 }} />
               </button>
             )
           })}
-        </div>
+        </div>}
       </div>
 
       {vendo && (function(t: Tpl) {
-        const s = ST[t.status] || { t: t.status, c: '#6b7280', bg: 'rgba(107,114,128,0.16)' }
         return (
           <div onClick={function() { setVendo(null) }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-            <div onClick={function(e) { e.stopPropagation() }} style={{ background: 'var(--surface)', color: 'var(--text)', borderRadius: 16, padding: 20, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto' }}>
+            <div role="dialog" aria-modal="true" aria-label={t.name} onClick={function(e) { e.stopPropagation() }} style={{ background: 'var(--surface)', color: 'var(--text)', borderRadius: 16, padding: 20, width: '100%', maxWidth: 480, boxShadow: '0 12px 40px rgba(0,0,0,0.25)', maxHeight: '90vh', overflowY: 'auto' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 6 }}>
                 <div style={{ fontWeight: 800, fontSize: 16, flex: 1, wordBreak: 'break-all' }}>{t.name}</div>
-                <button onClick={function() { setVendo(null) }} style={{ border: 0, background: 'transparent', color: 'var(--muted2)', fontSize: 24, lineHeight: 1, cursor: 'pointer' }}>×</button>
+                <button className="at-b" aria-label="Fechar" onClick={function() { setVendo(null) }} style={fecharBtn}><i className="ti ti-x" /></button>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-                <span style={{ background: s.bg, color: s.c, borderRadius: 999, padding: '2px 9px', fontSize: 11.5, fontWeight: 800 }}>{s.t}</span>
+                <Selo status={t.status} />
                 <span style={{ fontSize: 12, color: 'var(--muted2)' }}>{CAT[t.category] || t.category} · {t.language}{t.vars > 0 ? ' · ' + t.vars + ' variável' + (t.vars > 1 ? 's' : '') : ''}</span>
               </div>
               <div style={{ background: '#d9fdd3', color: '#111b21', borderRadius: 12, padding: '10px 12px', fontSize: 14, lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
@@ -151,8 +169,8 @@ export default function Modelos({ isAdmin, tpls, erro, carregando, onReload, can
                 {t.footer && <div style={{ fontSize: 12, opacity: 0.6, marginTop: 6 }}>{t.footer}</div>}
               </div>
               {t.buttons.length > 0 && <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginTop: 10 }}>Botões: {t.buttons.join(' · ')}</div>}
-              {t.status === 'REJECTED' && t.rejected_reason && <div style={{ fontSize: 12.5, color: '#b91c1c', marginTop: 10 }}>Motivo: {t.rejected_reason}</div>}
-              {isAdmin && <div style={{ marginTop: 14 }}><button onClick={async function() { await apagar(t); setVendo(null) }} disabled={apagando === t.name} style={{ cursor: 'pointer', border: '1px solid rgba(220,38,38,0.4)', background: 'transparent', color: '#dc2626', borderRadius: 8, padding: '6px 12px', fontWeight: 700, fontSize: 12.5 }}>{apagando === t.name ? 'Apagando…' : 'Apagar modelo'}</button></div>}
+              {t.status === 'REJECTED' && t.rejected_reason && <div style={{ display: 'flex', gap: 6, fontSize: 12.5, color: '#b91c1c', marginTop: 10, padding: '8px 10px', borderRadius: 10, background: 'rgba(220,38,38,0.08)' }}><i className="ti ti-circle-x" style={{ fontSize: 15, marginTop: 1 }} /><span>Motivo: {t.rejected_reason}</span></div>}
+              {isAdmin && <div style={{ marginTop: 14 }}><button className="at-b" onClick={async function() { await apagar(t); setVendo(null) }} disabled={apagando === t.name} style={{ borderColor: 'rgba(220,38,38,0.4)', color: '#dc2626' }}><i className="ti ti-trash" />{apagando === t.name ? 'Apagando…' : 'Apagar modelo'}</button></div>}
             </div>
           </div>
         )
@@ -192,10 +210,10 @@ function NovoModelo({ connection, onClose, onCriado }: { connection: string; onC
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={function(e) { e.stopPropagation() }} style={{ background: 'var(--surface)', color: 'var(--text)', borderRadius: 16, padding: 20, width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto' }}>
+      <div role="dialog" aria-modal="true" aria-label="Novo modelo de mensagem" onClick={function(e) { e.stopPropagation() }} style={{ background: 'var(--surface)', color: 'var(--text)', borderRadius: 16, padding: 20, width: '100%', maxWidth: 520, boxShadow: '0 12px 40px rgba(0,0,0,0.25)', maxHeight: '90vh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <div style={{ fontWeight: 800, fontSize: 16 }}>Novo modelo de mensagem</div>
-          <button onClick={onClose} style={{ border: 0, background: 'transparent', color: 'var(--muted2)', fontSize: 22, cursor: 'pointer' }}>×</button>
+          <h3 style={{ ...h1, fontSize: 17 }}>Novo modelo de mensagem</h3>
+          <button className="at-b" aria-label="Fechar" onClick={onClose} style={fecharBtn}><i className="ti ti-x" /></button>
         </div>
 
         <label style={lab}>Nome do modelo</label>
@@ -234,7 +252,7 @@ function NovoModelo({ connection, onClose, onCriado }: { connection: string; onC
               return (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                   <div style={{ width: 52, fontWeight: 700, fontSize: 13 }}>{'{{' + (i + 1) + '}}'}</div>
-                  <input className="at-input" value={v} placeholder={i === 0 ? 'ex: Maria' : 'exemplo'} onChange={function(e) { const c = exemplos.slice(); c[i] = e.target.value; setEx(c) }} />
+                  <input className="at-input" style={{ flex: 1, minWidth: 0 }} value={v} placeholder={i === 0 ? 'ex: Maria' : 'exemplo'} onChange={function(e) { const c = exemplos.slice(); c[i] = e.target.value; setEx(c) }} />
                 </div>
               )
             })}
@@ -244,10 +262,10 @@ function NovoModelo({ connection, onClose, onCriado }: { connection: string; onC
         <label style={lab}>Rodapé (opcional)</label>
         <input className="at-input" value={rod} maxLength={60} placeholder="ex: Plataforma do Cristão Próspero" onChange={function(e) { setRod(e.target.value) }} style={{ marginBottom: 12 }} />
 
-        {msg && <div style={{ fontSize: 13, color: '#b91c1c', fontWeight: 700, marginBottom: 10 }}>{msg}</div>}
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={btn}>Cancelar</button>
-          <button onClick={salvar} disabled={salvando || !nome || !corpo.trim()} style={{ cursor: 'pointer', border: 0, background: '#16a34a', color: '#fff', borderRadius: 8, padding: '8px 14px', fontWeight: 800, fontSize: 13, opacity: salvando || !nome || !corpo.trim() ? 0.55 : 1 }}>{salvando ? 'Enviando…' : 'Enviar para aprovação'}</button>
+        {msg && <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#b91c1c', fontWeight: 700, marginBottom: 10 }}><i className="ti ti-alert-triangle" />{msg}</div>}
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          <button className="at-b" onClick={onClose}>Cancelar</button>
+          <button className="at-b at-b-ok" onClick={salvar} disabled={salvando || !nome || !corpo.trim()}><i className={'ti ' + (salvando ? 'ti-loader' : 'ti-send')} />{salvando ? 'Enviando…' : 'Enviar para aprovação'}</button>
         </div>
         <div style={{ fontSize: 11.5, color: 'var(--muted2)', marginTop: 10 }}>A Meta analisa o modelo (de minutos a algumas horas). Quando ficar <b>Aprovado</b>, ele aparece para enviar na conversa.</div>
       </div>

@@ -2,6 +2,10 @@
 import { useEffect, useState } from 'react'
 import { DIAS, PADRAO, type Horario as H } from '@/lib/waHours'
 
+const titulo: React.CSSProperties = { margin: 0, fontFamily: 'Syne, sans-serif', fontSize: 18, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text)' }
+const sub: React.CSSProperties = { fontSize: 13, color: 'var(--muted2)', lineHeight: 1.5, marginTop: 3 }
+const cab: React.CSSProperties = { display: 'flex', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap', marginBottom: 16 }
+const erroSt: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#b91c1c', fontWeight: 700, marginBottom: 10 }
 const lab: React.CSSProperties = { fontSize: 12.5, fontWeight: 700, color: 'var(--text)', marginBottom: 4, display: 'block' }
 
 // Admin define o horario de atendimento e a mensagem automatica de fora do horario
@@ -35,13 +39,13 @@ export default function Horario() {
     setSalvando(false)
   }
 
-  if (!carregou) return <div style={{ padding: 24, color: 'var(--muted2)' }}>Carregando…</div>
+  if (!carregou) return <div style={{ padding: 24, color: 'var(--muted2)', display: 'flex', alignItems: 'center', gap: 8 }}><i className="ti ti-loader" />Carregando…</div>
 
   return (
-    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 16 }}>
+    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 20 }}>
       <div style={{ maxWidth: 680, margin: '0 auto' }}>
-        <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--text)', marginBottom: 6 }}>🕒 Horário de atendimento</div>
-        <div style={{ fontSize: 13, color: 'var(--muted2)', lineHeight: 1.5, marginBottom: 14 }}>
+        <h2 style={titulo}>Horário de atendimento</h2>
+        <div style={{ ...sub, marginBottom: 16 }}>
           Quando alguém escrever <b>fora do horário</b>, a plataforma responde sozinha com o aviso abaixo. O horário vale para Brasília.
           {aberto !== null && <> Agora o atendimento está <b style={{ color: aberto ? '#15803d' : '#b45309' }}>{aberto ? 'aberto' : 'fechado'}</b>.</>}
         </div>
@@ -59,14 +63,14 @@ export default function Horario() {
             const x = h.days[d.k]
             return (
               <div key={d.k} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', flexWrap: 'wrap' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, width: 120, cursor: 'pointer', fontSize: 14, color: 'var(--text)', fontWeight: 600 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, width: 130, cursor: 'pointer', fontSize: 14, color: 'var(--text)', fontWeight: 600 }}>
                   <input type="checkbox" checked={x.on} onChange={function(e) { dia(d.k, { on: e.target.checked }) }} style={{ width: 17, height: 17 }} />{d.nome}
                 </label>
                 {x.on ? (
                   <>
-                    <input className="at-input" type="time" value={x.start} onChange={function(e) { dia(d.k, { start: e.target.value }) }} style={{ width: 120 }} />
+                    <input className="at-input" type="time" value={x.start} onChange={function(e) { dia(d.k, { start: e.target.value }) }} style={{ width: 120, fontVariantNumeric: 'tabular-nums' }} />
                     <span style={{ color: 'var(--muted2)', fontSize: 13 }}>até</span>
-                    <input className="at-input" type="time" value={x.end} onChange={function(e) { dia(d.k, { end: e.target.value }) }} style={{ width: 120 }} />
+                    <input className="at-input" type="time" value={x.end} onChange={function(e) { dia(d.k, { end: e.target.value }) }} style={{ width: 120, fontVariantNumeric: 'tabular-nums' }} />
                   </>
                 ) : <span style={{ color: 'var(--muted2)', fontSize: 13 }}>Sem atendimento</span>}
               </div>
@@ -85,9 +89,9 @@ export default function Horario() {
           </div>
         </div>
 
-        {msg && <div style={{ fontSize: 13, color: '#b91c1c', fontWeight: 700, marginBottom: 8 }}>{msg}</div>}
-        {ok && <div style={{ fontSize: 13, color: '#15803d', fontWeight: 700, marginBottom: 8 }}>{ok}</div>}
-        <button onClick={salvar} disabled={salvando} style={{ cursor: 'pointer', border: 0, background: '#16a34a', color: '#fff', borderRadius: 10, padding: '11px 20px', fontWeight: 800, fontSize: 14, opacity: salvando ? 0.6 : 1 }}>{salvando ? 'Salvando…' : 'Salvar'}</button>
+        {msg && <div role="alert" style={erroSt}><i className="ti ti-alert-triangle" />{msg}</div>}
+        {ok && <div style={{ ...erroSt, color: '#15803d' }}><i className="ti ti-circle-check" />{ok}</div>}
+        <button className="at-b at-b-ok" onClick={salvar} disabled={salvando} style={{ padding: '10px 18px', fontSize: 14, opacity: salvando ? 0.6 : 1 }}><i className="ti ti-check" />{salvando ? 'Salvando…' : 'Salvar'}</button>
       </div>
     </div>
   )

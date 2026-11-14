@@ -25,7 +25,15 @@ function resumo(h: H): string {
   }).join(' | ')
 }
 
-const ICONE: Record<string, string> = { primeira: '👋', palavra: '🔑', qualquer: '💬' }
+const ICONE: Record<string, string> = { primeira: 'mood-smile', palavra: 'message-2', qualquer: 'messages' }
+const titulo: React.CSSProperties = { margin: 0, fontFamily: 'Syne, sans-serif', fontSize: 18, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text)' }
+const sub: React.CSSProperties = { fontSize: 13, color: 'var(--muted2)', lineHeight: 1.5, marginTop: 3 }
+const cab: React.CSSProperties = { display: 'flex', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap', marginBottom: 16 }
+const erroSt: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#b91c1c', fontWeight: 700, marginBottom: 10 }
+const cartao: React.CSSProperties = { cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 14, marginBottom: 10 }
+const icoBox: React.CSSProperties = { width: 42, height: 42, borderRadius: 12, background: 'rgba(22,163,74,0.10)', color: '#15803d', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 21, flexShrink: 0 }
+const nomeSt: React.CSSProperties = { fontWeight: 800, fontSize: 15, color: 'var(--text)', overflowWrap: 'anywhere' }
+const descSt: React.CSSProperties = { fontSize: 12.5, color: 'var(--muted2)', marginTop: 2, lineHeight: 1.45 }
 const lab: React.CSSProperties = { fontSize: 12.5, fontWeight: 700, color: 'var(--text)', marginBottom: 4, display: 'block' }
 const box: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 14, marginBottom: 14 }
 
@@ -62,10 +70,10 @@ function Editor({ inicial, onVoltar }: { inicial: Fluxo; onVoltar: (recarregar: 
   const g = GATILHOS.find(function(x) { return x.k === f.trigger })
 
   return (
-    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 16 }}>
+    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 20 }}>
       <div style={{ maxWidth: 680, margin: '0 auto' }}>
-        <button onClick={function() { onVoltar(false) }} style={{ cursor: 'pointer', border: 0, background: 'transparent', color: 'var(--accent)', fontWeight: 800, fontSize: 13.5, padding: 0, marginBottom: 10 }}>← Voltar para fluxos</button>
-        <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--text)', marginBottom: 12 }}>{novo ? '➕ Novo fluxo' : '✏️ Editar fluxo'}</div>
+        <button onClick={function() { onVoltar(false) }} className="at-b" style={{ marginBottom: 14 }}><i className="ti ti-arrow-left" />Voltar para fluxos</button>
+        <h2 style={{ ...titulo, marginBottom: 14 }}>{novo ? 'Novo fluxo' : 'Editar fluxo'}</h2>
 
         <div style={box}>
           <label style={lab}>Nome do fluxo</label>
@@ -132,10 +140,10 @@ function Editor({ inicial, onVoltar }: { inicial: Fluxo; onVoltar: (recarregar: 
           </div>
         </div>
 
-        {msg && <div style={{ fontSize: 13, color: '#b91c1c', fontWeight: 700, marginBottom: 8 }}>{msg}</div>}
+        {msg && <div role="alert" style={erroSt}><i className="ti ti-alert-triangle" />{msg}</div>}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button onClick={salvar} disabled={salvando} style={{ cursor: 'pointer', border: 0, background: '#16a34a', color: '#fff', borderRadius: 10, padding: '11px 20px', fontWeight: 800, fontSize: 14, opacity: salvando ? 0.6 : 1 }}>{salvando ? 'Salvando…' : 'Salvar fluxo'}</button>
-          {!novo && <button onClick={apagar} disabled={salvando} style={{ cursor: 'pointer', border: '1px solid rgba(220,38,38,0.4)', background: 'transparent', color: '#dc2626', borderRadius: 10, padding: '11px 16px', fontWeight: 700, fontSize: 14 }}>Apagar</button>}
+          <button className="at-b at-b-ok" onClick={salvar} disabled={salvando} style={{ padding: '10px 18px', fontSize: 14, opacity: salvando ? 0.6 : 1 }}><i className="ti ti-check" />{salvando ? 'Salvando…' : 'Salvar fluxo'}</button>
+          {!novo && <button className="at-b" onClick={apagar} disabled={salvando} style={{ padding: '10px 16px', fontSize: 14, color: '#dc2626', borderColor: 'rgba(220,38,38,0.4)' }}><i className="ti ti-trash" />Apagar</button>}
         </div>
       </div>
     </div>
@@ -192,26 +200,26 @@ export default function Fluxos() {
   if (tela === 'evento') return <EditorEvento inicial={editAuto} conexoes={conexoes} onVoltar={function() { setTela('lista') }} />
 
   if (tela === 'escolher') {
-    const op = function(icone: string, titulo: string, desc: string, ir: () => void) {
+    const op = function(icone: string, tit: string, desc: string, ir: () => void) {
       return (
-        <div onClick={ir} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 14, marginBottom: 10 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--accent-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>{icone}</div>
+        <div onClick={ir} style={{ ...cartao, flexWrap: 'nowrap' }}>
+          <div style={icoBox}><i className={'ti ti-' + icone} /></div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--text)' }}>{titulo}</div>
-            <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginTop: 2, lineHeight: 1.45 }}>{desc}</div>
+            <div style={nomeSt}>{tit}</div>
+            <div style={descSt}>{desc}</div>
           </div>
-          <span style={{ color: 'var(--accent)', fontWeight: 800, fontSize: 13.5 }}>Criar ›</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', color: '#15803d', fontWeight: 800, fontSize: 13, flexShrink: 0 }}>Criar<i className="ti ti-chevron-right" style={{ fontSize: 16 }} /></span>
         </div>
       )
     }
     return (
-      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 16 }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 20 }}>
         <div style={{ maxWidth: 680, margin: '0 auto' }}>
-          <button onClick={function() { setTela('lista') }} style={{ cursor: 'pointer', border: 0, background: 'transparent', color: 'var(--accent)', fontWeight: 800, fontSize: 13.5, padding: 0, marginBottom: 10 }}>← Voltar para fluxos</button>
-          <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--text)', marginBottom: 12 }}>Que tipo de fluxo você quer criar?</div>
-          {op('🧩', 'Fluxo em blocos (construtor)', 'Monte uma sequência: começa quando a pessoa manda uma palavra ou quando acontece algo na compra, com atrasos, textos, áudios, imagens, vídeos e modelos. Você vê quantos enviaram, entregaram e leram.', function() { setEditSeq({ ...VAZIA_SEQ, steps: [] }); setTela('construtor') })}
-          {op('💬', 'Resposta automática', 'Responde sozinho quando alguém escreve para o suporte (palavra-chave, primeira mensagem…).', function() { setEdit(VAZIO); setTela('editar') })}
-          {op('🛒', 'Fluxo por evento da Hubla', 'Começa quando acontece algo na Hubla: carrinho abandonado, Pix gerado, cartão recusado, compra aprovada… Com esperas e modelos de mensagem.', function() { setEditAuto({ ...VAZIO_EVENTO, connection_id: conexoes.length === 1 ? conexoes[0].id : null }); setTela('evento') })}
+          <button onClick={function() { setTela('lista') }} className="at-b" style={{ marginBottom: 14 }}><i className="ti ti-arrow-left" />Voltar para fluxos</button>
+          <h2 style={{ ...titulo, marginBottom: 14 }}>Que tipo de fluxo você quer criar?</h2>
+          {op('layout', 'Fluxo em blocos (construtor)', 'Monte uma sequência: começa quando a pessoa manda uma palavra ou quando acontece algo na compra, com atrasos, textos, áudios, imagens, vídeos e modelos. Você vê quantos enviaram, entregaram e leram.', function() { setEditSeq({ ...VAZIA_SEQ, steps: [] }); setTela('construtor') })}
+          {op('message-circle', 'Resposta automática', 'Responde sozinho quando alguém escreve para o suporte (palavra-chave, primeira mensagem…).', function() { setEdit(VAZIO); setTela('editar') })}
+          {op('shopping-cart', 'Fluxo por evento da Hubla', 'Começa quando acontece algo na Hubla: carrinho abandonado, Pix gerado, cartão recusado, compra aprovada… Com esperas e modelos de mensagem.', function() { setEditAuto({ ...VAZIO_EVENTO, connection_id: conexoes.length === 1 ? conexoes[0].id : null }); setTela('evento') })}
         </div>
       </div>
     )
@@ -222,8 +230,8 @@ export default function Fluxos() {
   if (tela === 'horario') {
     return (
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: '10px 16px 0', maxWidth: 680, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
-          <button onClick={function() { setTela('lista') }} style={{ cursor: 'pointer', border: 0, background: 'transparent', color: 'var(--accent)', fontWeight: 800, fontSize: 13.5, padding: 0 }}>← Voltar para fluxos</button>
+        <div style={{ padding: '16px 20px 0', maxWidth: 680, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
+          <button onClick={function() { setTela('lista') }} className="at-b"><i className="ti ti-arrow-left" />Voltar para fluxos</button>
         </div>
         <Horario />
       </div>
@@ -231,99 +239,116 @@ export default function Fluxos() {
   }
 
   const ativo = !!h && h.away_enabled
-  const chip = function(on: boolean, ok: boolean): React.CSSProperties { return { fontSize: 12, fontWeight: 800, borderRadius: 999, padding: '4px 10px', background: !ok ? 'var(--surface2)' : on ? 'rgba(22,163,74,0.14)' : 'var(--surface2)', color: !ok ? 'var(--muted2)' : on ? '#15803d' : 'var(--muted2)' } }
+  const chip = function(on: boolean, ok: boolean): React.CSSProperties { return { display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 800, borderRadius: 999, padding: '4px 10px', whiteSpace: 'nowrap', background: !ok ? 'var(--surface2)' : on ? 'rgba(22,163,74,0.14)' : 'var(--surface2)', color: !ok ? 'var(--muted2)' : on ? '#15803d' : 'var(--muted2)' } }
+  const ponto = function(on: boolean) { return <span aria-hidden style={{ width: 7, height: 7, borderRadius: 99, background: on ? '#16a34a' : 'var(--border2)' }} /> }
+  const icone = function(nome: string) { return <div style={icoBox}><i className={'ti ti-' + nome} /></div> }
+  const sw = function(on: boolean, fn: () => void) {
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }} onClick={function(e) { e.stopPropagation() }}>
+        <span style={{ fontSize: 12, fontWeight: 800, color: on ? '#15803d' : 'var(--muted2)' }}>{on ? 'Ligado' : 'Desligado'}</span>
+        <button type="button" className={'at-sw' + (on ? ' on' : '')} aria-pressed={on} aria-label={on ? 'Clique para desligar' : 'Clique para ligar'} title={on ? 'Clique para desligar' : 'Clique para ligar'} onClick={fn} />
+      </span>
+    )
+  }
+  const abrir = function(t: string) { return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, color: '#15803d', fontWeight: 800, fontSize: 13 }}>{t}<i className="ti ti-chevron-right" style={{ fontSize: 16 }} /></span> }
+  const secao = function(ico: string, t: string) { return <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 800, fontSize: 13.5, color: 'var(--text)', margin: '22px 0 10px' }}><i className={'ti ti-' + ico} style={{ fontSize: 17, color: 'var(--muted2)' }} />{t}</div> }
   return (
-    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 16 }}>
-      <div style={{ maxWidth: 720, margin: '0 auto' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
-          <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--text)', flex: 1 }}>⚡ Fluxos</div>
-          <button onClick={function() { setTela('escolher') }} style={{ cursor: 'pointer', border: 0, background: '#16a34a', color: '#fff', borderRadius: 10, padding: '9px 16px', fontWeight: 800, fontSize: 13.5 }}>+ Novo fluxo</button>
-        </div>
-        <div style={{ fontSize: 13, color: 'var(--muted2)', lineHeight: 1.5, marginBottom: 14 }}>
-          Automações do WhatsApp: respostas que a plataforma envia sozinha. Clique em um fluxo para ver e editar.
-        </div>
-
-        <div onClick={function() { setTela('horario') }} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 14, flexWrap: 'wrap', marginBottom: 10 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--accent-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>🕒</div>
-          <div style={{ flex: '1 1 220px', minWidth: 0 }}>
-            <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--text)' }}>Horário de atendimento</div>
-            <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginTop: 2 }}>Responde sozinho quando alguém escreve fora do horário.</div>
-            {h && <div style={{ fontSize: 12.5, color: 'var(--text)', marginTop: 4, fontWeight: 600 }}>{resumo(h)}</div>}
+    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 20 }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+        <div style={cab}>
+          <div style={{ flex: '1 1 260px', minWidth: 0 }}>
+            <h2 style={titulo}>Fluxos</h2>
+            <div style={sub}>Automações do WhatsApp: respostas que a plataforma envia sozinha. Clique em um fluxo para ver e editar.</div>
           </div>
-          <span style={chip(ativo, !!h)}>{!h ? '…' : ativo ? '● Ativo' : '○ Desligado'}</span>
-          <span style={{ color: 'var(--accent)', fontWeight: 800, fontSize: 13.5 }}>Editar ›</span>
+          <button className="at-b at-b-ok" onClick={function() { setTela('escolher') }}><i className="ti ti-plus" />Novo fluxo</button>
         </div>
 
-        {erro && <div style={{ fontSize: 13, color: '#b91c1c', fontWeight: 700, marginBottom: 8 }}>{erro}</div>}
-        {fluxos && fluxos.length === 0 && !erro && <div style={{ fontSize: 13.5, color: 'var(--muted2)', padding: '14px 4px' }}>Você ainda não criou outros fluxos. Clique em <b>+ Novo fluxo</b> para criar um.</div>}
+        <div onClick={function() { setTela('horario') }} style={cartao}>
+          {icone('clock')}
+          <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+            <div style={nomeSt}>Horário de atendimento</div>
+            <div style={descSt}>Responde sozinho quando alguém escreve fora do horário.</div>
+            {h && <div style={{ fontSize: 12.5, color: 'var(--text)', marginTop: 4, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{resumo(h)}</div>}
+          </div>
+          <span style={chip(ativo, !!h)}>{!h ? 'Carregando…' : <>{ponto(ativo)}{ativo ? 'Ativo' : 'Desligado'}</>}</span>
+          {abrir('Editar')}
+        </div>
+
+        {erro && <div role="alert" style={erroSt}><i className="ti ti-alert-triangle" />{erro}</div>}
+        {!fluxos && !erro && <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--muted2)', padding: '14px 4px' }}><i className="ti ti-loader" />Carregando fluxos…</div>}
+        {fluxos && fluxos.length === 0 && !erro && (
+          <div style={{ textAlign: 'center', padding: '28px 16px', color: 'var(--muted2)' }}>
+            <i className="ti ti-bolt" style={{ fontSize: 40, opacity: 0.5 }} />
+            <div style={{ fontSize: 13.5, marginTop: 6, lineHeight: 1.5 }}>Você ainda não criou outros fluxos. Clique em <b>Novo fluxo</b> para criar um.</div>
+          </div>
+        )}
         {(fluxos || []).map(function(f) {
           return (
-            <div key={f.id} onClick={function() { setEdit(f); setTela('editar') }} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 14, flexWrap: 'wrap', marginBottom: 10, opacity: f.enabled ? 1 : 0.7 }}>
-              <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--accent-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>{ICONE[f.trigger] || '⚡'}</div>
+            <div key={f.id} onClick={function() { setEdit(f); setTela('editar') }} style={{ ...cartao, opacity: f.enabled ? 1 : 0.75 }}>
+              {icone(ICONE[f.trigger] || 'bolt')}
               <div style={{ flex: '1 1 220px', minWidth: 0 }}>
-                <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--text)' }}>{f.name}</div>
-                <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginTop: 2 }}>{descricao(f)}</div>
-                <div style={{ fontSize: 12.5, color: 'var(--text)', marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>💬 {f.message}</div>
+                <div style={nomeSt}>{f.name}</div>
+                <div style={descSt}>{descricao(f)}</div>
+                <div style={{ fontSize: 12.5, color: 'var(--text)', marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.message}</div>
               </div>
-              <button onClick={function(e) { e.stopPropagation(); ligar(f, !f.enabled) }} title={f.enabled ? 'Clique para desligar' : 'Clique para ligar'} style={{ cursor: 'pointer', border: 0, ...chip(f.enabled, true) }}>{f.enabled ? '● Ativo' : '○ Desligado'}</button>
-              <span style={{ color: 'var(--accent)', fontWeight: 800, fontSize: 13.5 }}>Editar ›</span>
+              {sw(f.enabled, function() { ligar(f, !f.enabled) })}
+              {abrir('Editar')}
             </div>
           )
         })}
 
-        {seqs.length > 0 && <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', margin: '18px 0 8px' }}>🧩 Fluxos em blocos</div>}
+        {seqs.length > 0 && secao('layout', 'Fluxos em blocos')}
         {seqs.map(function(f) {
           const cn = seqConexoes.find(function(c) { return c.id === f.connection_id })
           const g = f.trigger
           const gat = g.tipo === 'palavra' ? 'Palavra: ' + (g.palavras.length ? g.palavras.join(', ') : '…') : 'Evento: ' + nomeEvento(g.evento) + (g.metodo ? ' · ' + g.metodo : '')
-          // Relatorio: quantos fluxos ja foram enviados (pessoas que passaram por todos os blocos)
           // Conta quem JA RECEBEU o fluxo: o maior numero de pessoas que receberam algum bloco de mensagem (nao so quem terminou todos os blocos)
           const porBloco: Record<string, number> = {}
           const sendsF = (seqStats[f.id] || { sends: [] }).sends || []
           sendsF.forEach(function(x) { if (['falhou', 'erro', 'failed'].indexOf(String(x.status)) < 0) porBloco[x.step_id] = (porBloco[x.step_id] || 0) + x.n })
           const enviados = Object.keys(porBloco).reduce(function(a, k) { return Math.max(a, porBloco[k]) }, 0)
           return (
-            <div key={f.id} onClick={function() { setEditSeq(f); setTela('construtor') }} style={{ cursor: 'pointer', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 14, marginBottom: 10, opacity: f.enabled ? 1 : 0.75 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--accent-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>🧩</div>
-                <div style={{ flex: '1 1 220px', minWidth: 0 }}>
-                  <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--text)' }}>{f.name}</div>
-                  <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginTop: 2 }}>{gat}{cn ? ' · ' + cn.name : ''}</div>
-                  <div style={{ fontSize: 12.5, color: 'var(--text)', marginTop: 4 }}>✅ {enviados} {enviados === 1 ? 'fluxo enviado' : 'fluxos enviados'}</div>
-                </div>
-                <span style={chip(f.enabled, true)}>{f.enabled ? '● Ligado' : '○ Desligado'}</span>
-                <span style={{ color: 'var(--accent)', fontWeight: 800, fontSize: 13.5 }}>Abrir ›</span>
+            <div key={f.id} onClick={function() { setEditSeq(f); setTela('construtor') }} style={{ ...cartao, opacity: f.enabled ? 1 : 0.75 }}>
+              {icone('layout')}
+              <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+                <div style={nomeSt}>{f.name}</div>
+                <div style={descSt}>{gat}{cn ? ' · ' + cn.name : ''}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12.5, color: 'var(--text)', marginTop: 4 }}><i className="ti ti-checks" style={{ color: '#16a34a', fontSize: 15 }} /><b style={{ fontVariantNumeric: 'tabular-nums' }}>{enviados}</b> {enviados === 1 ? 'fluxo enviado' : 'fluxos enviados'}</div>
               </div>
+              <span style={chip(f.enabled, true)}>{ponto(f.enabled)}{f.enabled ? 'Ligado' : 'Desligado'}</span>
+              {abrir('Abrir')}
             </div>
           )
         })}
 
-        {autos.length > 0 && <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', margin: '18px 0 8px' }}>🛒 Fluxos por evento da Hubla</div>}
+        {autos.length > 0 && secao('shopping-cart', 'Fluxos por evento da Hubla')}
         {autos.map(function(f) {
           const st = stats[f.id] || {}
-          const passos = f.steps.map(function(p) { return p.tipo === 'esperar' ? '⏱ ' + textoEspera(p.minutos) : '💬 ' + (p.template || '?') }).join(' → ')
+          const passos = f.steps.map(function(p) { return p.tipo === 'esperar' ? 'Esperar ' + textoEspera(p.minutos) : (p.template || '?') }).join(' → ')
           const num = function(k: string) { return Number(st[k] || 0) }
           const cn = conexoes.find(function(c) { return c.id === f.connection_id })
+          const erros = num('erros') + num('falharam')
+          const n = function(t: string, v: number, cor?: string) { return <span style={{ color: cor || 'var(--muted2)' }}>{t}: <b style={{ color: cor || 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{v}</b></span> }
           return (
-            <div key={f.id} onClick={function() { setEditAuto(f); setTela('evento') }} style={{ cursor: 'pointer', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 14, marginBottom: 10, opacity: f.enabled ? 1 : 0.75 }}>
+            <div key={f.id} onClick={function() { setEditAuto(f); setTela('evento') }} style={{ ...cartao, display: 'block', opacity: f.enabled ? 1 : 0.75 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--accent-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>🛒</div>
+                {icone('shopping-cart')}
                 <div style={{ flex: '1 1 220px', minWidth: 0 }}>
-                  <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--text)' }}>{f.name}</div>
-                  <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginTop: 2 }}>Evento: {nomeEvento(f.trigger_event)}{f.trigger_filter.metodo ? ' · ' + f.trigger_filter.metodo : ''}{cn ? ' · ' + cn.name : ''}</div>
+                  <div style={nomeSt}>{f.name}</div>
+                  <div style={descSt}>Evento: {nomeEvento(f.trigger_event)}{f.trigger_filter.metodo ? ' · ' + f.trigger_filter.metodo : ''}{cn ? ' · ' + cn.name : ''}</div>
                   <div style={{ fontSize: 12.5, color: 'var(--text)', marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{passos || 'Sem passos ainda'}</div>
                 </div>
-                <button onClick={function(e) { e.stopPropagation(); ligarAuto(f, !f.enabled) }} title={f.enabled ? 'Clique para desligar' : 'Clique para ligar'} style={{ cursor: 'pointer', border: 0, ...chip(f.enabled, true) }}>{f.enabled ? '● Ligado' : '○ Desligado'}</button>
-                <span style={{ color: 'var(--accent)', fontWeight: 800, fontSize: 13.5 }}>Editar ›</span>
+                {sw(f.enabled, function() { ligarAuto(f, !f.enabled) })}
+                {abrir('Editar')}
               </div>
-              <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12, color: 'var(--muted2)', marginTop: 10 }}>
-                <span>Esperando: <b style={{ color: 'var(--text)' }}>{num('ativos')}</b></span>
-                <span>Concluídos: <b style={{ color: 'var(--text)' }}>{num('concluidos')}</b></span>
-                <span>Cancelados (compraram): <b style={{ color: 'var(--text)' }}>{num('cancelados')}</b></span>
-                <span>Enviadas: <b style={{ color: 'var(--text)' }}>{num('enviadas')}</b></span>
-                <span>Entregues: <b style={{ color: 'var(--text)' }}>{num('entregues')}</b></span>
-                <span>Lidas: <b style={{ color: 'var(--text)' }}>{num('lidas')}</b></span>
-                {(num('erros') + num('falharam')) > 0 && <span style={{ color: '#b91c1c' }}>Com erro: <b>{num('erros') + num('falharam')}</b></span>}
+              <div style={{ display: 'flex', gap: '6px 14px', flexWrap: 'wrap', fontSize: 12, marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+                {n('Esperando', num('ativos'))}
+                {n('Concluídos', num('concluidos'))}
+                {n('Cancelados (compraram)', num('cancelados'))}
+                {n('Enviadas', num('enviadas'))}
+                {n('Entregues', num('entregues'))}
+                {n('Lidas', num('lidas'))}
+                {erros > 0 && n('Com erro', erros, '#b91c1c')}
               </div>
             </div>
           )

@@ -36,7 +36,7 @@ function Espera({ p, onChange }: { p: Extract<Passo, { tipo: 'esperar' }>; onCha
   }
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-      <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>⏱ Esperar</span>
+      <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}><i className="ti ti-hourglass" style={{ marginRight: 5, color: 'var(--muted2)' }} />Esperar</span>
       <input className="at-input" type="number" min={1} value={n} onChange={function(e) { aplica(e.target.value, u) }} style={{ width: 90 }} />
       <select className="at-input" value={u} onChange={function(e) { aplica(n, Number(e.target.value)) }} style={{ width: 'auto' }}>
         <option value={1}>minutos</option>
@@ -66,7 +66,7 @@ function Envio({ p, modelos, carregando, onChange }: { p: Extract<Passo, { tipo:
   }
   return (
     <div>
-      <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>💬 Enviar modelo de mensagem</div>
+      <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}><i className="ti ti-template" style={{ marginRight: 5, color: 'var(--muted2)' }} />Enviar modelo de mensagem</div>
       <select className="at-input" value={p.template ? p.template + '|' + p.language : ''} onChange={function(e) { escolher(e.target.value) }}>
         <option value="">{carregando ? 'Carregando modelos…' : modelos.length === 0 ? 'Nenhum modelo aprovado neste número' : 'Escolha o modelo…'}</option>
         {modelos.map(function(x) { return <option key={x.name + x.language} value={x.name + '|' + x.language}>{x.name} ({x.language})</option> })}
@@ -164,10 +164,10 @@ export default function EditorEvento({ inicial, conexoes, onVoltar }: { inicial:
   }
 
   return (
-    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 16 }}>
+    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 20 }}>
       <div style={{ maxWidth: 680, margin: '0 auto' }}>
-        <button onClick={function() { onVoltar(false) }} style={{ cursor: 'pointer', border: 0, background: 'transparent', color: 'var(--accent)', fontWeight: 800, fontSize: 13.5, padding: 0, marginBottom: 10 }}>← Voltar para fluxos</button>
-        <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--text)', marginBottom: 12 }}>{novo ? '➕ Novo fluxo por evento' : '✏️ Editar fluxo por evento'}</div>
+        <button onClick={function() { onVoltar(false) }} className="at-b" style={{ marginBottom: 14 }}><i className="ti ti-arrow-left" />Voltar para fluxos</button>
+        <h2 style={{ margin: '0 0 14px', fontFamily: 'Syne, sans-serif', fontSize: 18, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text)' }}>{novo ? 'Novo fluxo por evento' : 'Editar fluxo por evento'}</h2>
 
         <div style={box}>
           <label style={lab}>Nome do fluxo</label>
@@ -222,9 +222,9 @@ export default function EditorEvento({ inicial, conexoes, onVoltar }: { inicial:
                       : <Envio p={s} modelos={modelos} carregando={carregando} onChange={function(p) { setPasso(i, p) }} />}
                   </div>
                   <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                    <button style={btnPeq} onClick={function() { mover(i, -1) }} title="Subir">↑</button>
-                    <button style={btnPeq} onClick={function() { mover(i, 1) }} title="Descer">↓</button>
-                    <button style={{ ...btnPeq, color: '#dc2626' }} onClick={function() { tirar(i) }} title="Remover">✕</button>
+                    <button style={btnPeq} onClick={function() { mover(i, -1) }} title="Subir" aria-label="Subir"><i className="ti ti-chevron-up" /></button>
+                    <button style={btnPeq} onClick={function() { mover(i, 1) }} title="Descer" aria-label="Descer"><i className="ti ti-chevron-down" /></button>
+                    <button style={{ ...btnPeq, color: '#dc2626' }} onClick={function() { tirar(i) }} title="Remover" aria-label="Remover"><i className="ti ti-x" /></button>
                   </div>
                 </div>
               </div>
@@ -248,7 +248,7 @@ export default function EditorEvento({ inicial, conexoes, onVoltar }: { inicial:
 
         {!novo && (
           <div style={box}>
-            <label style={lab}>🧪 Testar no seu próprio número</label>
+            <label style={lab}><i className="ti ti-send" style={{ marginRight: 5, color: 'var(--muted2)' }} />Testar no seu próprio número</label>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <input className="at-input" placeholder="(DDD) número" value={tNum} onChange={function(e) { setTNum(e.target.value) }} style={{ flex: '1 1 160px' }} />
               <input className="at-input" placeholder="Nome (opcional)" value={tNome} onChange={function(e) { setTNome(e.target.value) }} style={{ flex: '1 1 140px' }} />
@@ -257,7 +257,7 @@ export default function EditorEvento({ inicial, conexoes, onVoltar }: { inicial:
               <input type="checkbox" checked={tPular} onChange={function(e) { setTPular(e.target.checked) }} style={{ width: 16, height: 16 }} />
               Pular as esperas (enviar na hora)
             </label>
-            <button onClick={testar} disabled={testando || salvando || !tNum.trim()} style={{ cursor: 'pointer', border: 0, background: 'var(--accent)', color: '#fff', borderRadius: 10, padding: '9px 16px', fontWeight: 800, fontSize: 13.5, marginTop: 10, opacity: testando || !tNum.trim() ? 0.6 : 1 }}>{testando ? 'Agendando…' : 'Salvar e enviar teste'}</button>
+            <button onClick={testar} disabled={testando || salvando || !tNum.trim()} className="at-b" style={{ marginTop: 10, opacity: testando || !tNum.trim() ? 0.6 : 1 }}><i className="ti ti-send" />{testando ? 'Agendando…' : 'Salvar e enviar teste'}</button>
             <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 6 }}>O teste usa dados de exemplo (produto de teste). Não conta nos números do fluxo.</div>
           </div>
         )}
@@ -265,7 +265,7 @@ export default function EditorEvento({ inicial, conexoes, onVoltar }: { inicial:
         {msg && <div style={{ fontSize: 13, color: '#b91c1c', fontWeight: 700, marginBottom: 8 }}>{msg}</div>}
         {ok && <div style={{ fontSize: 13, color: '#15803d', fontWeight: 700, marginBottom: 8 }}>{ok}</div>}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button onClick={function() { salvar() }} disabled={salvando} style={{ cursor: 'pointer', border: 0, background: '#16a34a', color: '#fff', borderRadius: 10, padding: '11px 20px', fontWeight: 800, fontSize: 14, opacity: salvando ? 0.6 : 1 }}>{salvando ? 'Salvando…' : 'Salvar fluxo'}</button>
+          <button className="at-b at-b-ok" onClick={function() { salvar() }} disabled={salvando} style={{ padding: '10px 18px', fontSize: 14, opacity: salvando ? 0.6 : 1 }}><i className="ti ti-check" />{salvando ? 'Salvando…' : 'Salvar fluxo'}</button>
           {!novo && <button onClick={apagar} disabled={salvando} style={{ cursor: 'pointer', border: '1px solid rgba(220,38,38,0.4)', background: 'transparent', color: '#dc2626', borderRadius: 10, padding: '11px 16px', fontWeight: 700, fontSize: 14 }}>Apagar</button>}
         </div>
       </div>

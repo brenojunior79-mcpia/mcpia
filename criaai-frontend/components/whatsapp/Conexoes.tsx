@@ -9,7 +9,7 @@ const linha: React.CSSProperties = { fontSize: 13.5, color: 'var(--text)', displ
 
 function Selo({ cor, children }: { cor: 'verde' | 'amarelo' | 'vermelho' | 'cinza'; children: React.ReactNode }) {
   const c = cor === 'verde' ? ['#15803d', 'rgba(22,163,74,0.5)'] : cor === 'amarelo' ? ['#b45309', 'rgba(217,119,6,0.5)'] : cor === 'vermelho' ? ['#dc2626', 'rgba(220,38,38,0.5)'] : ['var(--muted2)', 'var(--border2)']
-  return <span style={{ fontSize: 11.5, fontWeight: 800, color: c[0], border: '1px solid ' + c[1], borderRadius: 999, padding: '2px 9px', letterSpacing: 0.3 }}>{children}</span>
+  return <span style={{ fontSize: 11.5, fontWeight: 800, color: c[0], border: '1px solid ' + c[1], borderRadius: 999, padding: '2px 9px', letterSpacing: 0.3, whiteSpace: 'nowrap' }}>{children}</span>
 }
 
 function fmtNumero(n: string): string {
@@ -96,20 +96,20 @@ export default function Conexoes() {
 
   const total = lista ? lista.length : 0
   return (
-    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 16 }}>
-      <div style={{ maxWidth: 720, margin: '0 auto' }}>
+    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 20 }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 800, fontSize: 19, color: 'var(--text)' }}>Lista de conexões</div>
-            <div style={{ fontSize: 13, color: 'var(--muted2)' }}>{lista ? total + ' conexão' + (total === 1 ? '' : 'ões') + ' cadastrada' + (total === 1 ? '' : 's') : 'Carregando…'}</div>
+          <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+            <h2 style={{ margin: 0, fontFamily: 'Syne, sans-serif', fontSize: 18, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text)' }}>Lista de conexões</h2>
+            <div style={{ fontSize: 13, color: 'var(--muted2)', marginTop: 3, fontVariantNumeric: 'tabular-nums' }}>{lista ? total + ' conexão' + (total === 1 ? '' : 'ões') + ' cadastrada' + (total === 1 ? '' : 's') : 'Carregando…'}</div>
           </div>
-          <button onClick={carregar} disabled={carregando} style={{ cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', borderRadius: 10, padding: '9px 14px', fontWeight: 700, fontSize: 13.5 }}>{carregando ? '…' : '↻ Atualizar'}</button>
-          <button onClick={function() { setNovo(!novo) }} style={{ cursor: 'pointer', border: 0, background: '#1f7a5a', color: '#fff', borderRadius: 10, padding: '9px 16px', fontWeight: 800, fontSize: 13.5 }}>+ Adicionar conexão</button>
+          <button className="at-b" onClick={carregar} disabled={carregando} style={{ opacity: carregando ? 0.6 : 1 }}><i className={'ti ti-' + (carregando ? 'loader' : 'refresh')} />{carregando ? 'Atualizando…' : 'Atualizar'}</button>
+          <button className="at-b at-b-ok" onClick={function() { setNovo(!novo) }}><i className={'ti ti-' + (novo ? 'x' : 'plus')} />Adicionar conexão</button>
         </div>
-        <div style={{ height: 12 }} />
+        <div style={{ height: 16 }} />
 
         {novo && (
-          <div style={{ ...box, border: '1px solid rgba(31,122,90,0.5)' }}>
+          <div style={{ ...box, border: '1px solid rgba(22,163,74,0.45)' }}>
             <div style={{ fontWeight: 800, fontSize: 14.5, color: 'var(--text)', marginBottom: 6 }}>Adicionar outro WhatsApp oficial</div>
             <div style={{ fontSize: 13.5, color: 'var(--text)', lineHeight: 1.6 }}>
               Para ligar mais um número, você precisa me passar:
@@ -128,11 +128,11 @@ export default function Conexoes() {
               <input className="at-input" placeholder="Ex: 1123306704209618" value={fPhone} onChange={function(e) { setFPhone(e.target.value) }} style={{ marginTop: 4, marginBottom: 8 }} />
               <label style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text)' }}>ID da conta do WhatsApp (WABA)</label>
               <input className="at-input" placeholder="Ex: 931704369886996" value={fWaba} onChange={function(e) { setFWaba(e.target.value) }} style={{ marginTop: 4 }} />
-              <button onClick={cadastrar} disabled={salvando || !fNome.trim() || !fPhone.trim() || !fWaba.trim()} style={{ cursor: 'pointer', border: 0, background: '#1f7a5a', color: '#fff', borderRadius: 10, padding: '9px 16px', fontWeight: 800, fontSize: 13.5, marginTop: 10, opacity: salvando || !fPhone.trim() || !fWaba.trim() ? 0.6 : 1 }}>{salvando ? 'Conferindo na Meta…' : 'Cadastrar conexão'}</button>
+              <button className="at-b at-b-ok" onClick={cadastrar} disabled={salvando || !fNome.trim() || !fPhone.trim() || !fWaba.trim()} style={{ marginTop: 10, opacity: salvando || !fPhone.trim() || !fWaba.trim() ? 0.6 : 1 }}>{salvando ? 'Conferindo na Meta…' : 'Cadastrar conexão'}</button>
               <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 6 }}>A plataforma confere na Meta se o número pertence mesmo a essa conta. Não muda nada no número de suporte.</div>
             </div>
             <div style={{ marginTop: 12 }}>
-              <button onClick={procurar} disabled={procurando} style={{ cursor: 'pointer', border: 0, background: '#1f7a5a', color: '#fff', borderRadius: 10, padding: '9px 16px', fontWeight: 800, fontSize: 13.5, opacity: procurando ? 0.6 : 1 }}>{procurando ? 'Procurando…' : '🔎 Procurar números disponíveis'}</button>
+              <button className="at-b" onClick={procurar} disabled={procurando} style={{ opacity: procurando ? 0.6 : 1 }}><i className="ti ti-search" />{procurando ? 'Procurando…' : 'Procurar números disponíveis'}</button>
               <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginTop: 6 }}>Mostra os números que a plataforma já consegue enxergar na Meta, com os IDs. É só leitura, não muda nada.</div>
               <div style={{ marginTop: 10, fontSize: 13, color: 'var(--text)', fontWeight: 700 }}>Já tem o ID da conta (WABA) do número novo? Cole aqui:</div>
               <input className="at-input" placeholder="Ex: 123456789012345" value={wabaDigitado} onChange={function(e) { setWabaDigitado(e.target.value) }} onKeyDown={function(e) { if (e.key === 'Enter') procurar() }} style={{ marginTop: 6 }} />
@@ -152,7 +152,7 @@ export default function Conexoes() {
                         return (
                           <div key={n.id} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 6, fontSize: 13, color: 'var(--text)' }}>
                             <b>{n.numero}</b><span style={{ color: 'var(--muted2)' }}>{n.nome}</span>
-                            {ja ? <span style={{ fontSize: 11.5, fontWeight: 800, color: '#15803d' }}>JÁ LIGADO (SUPORTE)</span> : <button onClick={function() { copiar('Número ' + n.numero + ' · Phone Number ID: ' + n.id + ' · WABA: ' + a.waba, k) }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface)', color: 'var(--text)', borderRadius: 8, padding: '4px 10px', fontWeight: 700, fontSize: 12 }}>{copiado === k ? '✓ Copiado' : 'Copiar IDs'}</button>}
+                            {ja ? <span style={{ fontSize: 11.5, fontWeight: 800, color: '#15803d' }}>JÁ LIGADO (SUPORTE)</span> : <button onClick={function() { copiar('Número ' + n.numero + ' · Phone Number ID: ' + n.id + ' · WABA: ' + a.waba, k) }} className="at-b" style={{ padding: '4px 10px', fontSize: 12 }}><i className={'ti ti-' + (copiado === k ? 'check' : 'copy')} />{copiado === k ? 'Copiado' : 'Copiar IDs'}</button>}
                             <div style={{ width: '100%', fontSize: 12, color: 'var(--muted2)', wordBreak: 'break-all' }}>Phone Number ID: {n.id} · WABA: {a.waba}</div>
                           </div>
                         )
@@ -167,22 +167,29 @@ export default function Conexoes() {
           </div>
         )}
 
-        {erro && <div style={{ fontSize: 13, color: '#b91c1c', fontWeight: 700, marginBottom: 10 }}>{erro}</div>}
+        {erro && <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#b91c1c', fontWeight: 700, marginBottom: 10 }}><i className="ti ti-alert-triangle" />{erro}</div>}
         {faltam.length > 0 && <div style={{ ...box, fontSize: 13.5, color: 'var(--text)' }}>Falta ligar o número. Chaves que faltam na Vercel: <b>{faltam.join(', ')}</b>.</div>}
-        {msg && <div style={{ fontSize: 13, color: 'var(--text)', fontWeight: 700, marginBottom: 10 }}>{msg}</div>}
+        {msg && <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text)', fontWeight: 700, marginBottom: 10 }}><i className="ti ti-info-circle" style={{ color: 'var(--muted2)' }} />{msg}</div>}
 
+        {!lista && !erro && <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--muted2)', padding: '14px 4px' }}><i className="ti ti-loader" />Carregando conexões…</div>}
+        {lista && lista.length === 0 && !erro && (
+          <div style={{ textAlign: 'center', padding: '28px 16px', color: 'var(--muted2)' }}>
+            <i className="ti ti-plug-connected" style={{ fontSize: 40, opacity: 0.5 }} />
+            <div style={{ fontSize: 13.5, marginTop: 6, lineHeight: 1.5 }}>Nenhum número ligado ainda. Clique em <b>Adicionar conexão</b> para começar.</div>
+          </div>
+        )}
         {(lista || []).map(function(c) {
           const q = c.qualidade === 'GREEN' ? ['ALTA', 'verde'] : c.qualidade === 'YELLOW' ? ['MÉDIA', 'amarelo'] : c.qualidade === 'RED' ? ['BAIXA', 'vermelho'] : ['—', 'cinza']
           return (
             <div key={c.id || c.phoneId} style={box}>
-              <div style={{ display: 'flex', gap: 12, alignItems: 'center', background: 'rgba(31,122,90,0.08)', border: '1px solid rgba(31,122,90,0.45)', borderRadius: 12, padding: 12 }}>
-                <div style={{ position: 'relative', width: 46, height: 46, borderRadius: '50%', background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
-                  📱<span style={{ position: 'absolute', right: -1, bottom: -1, width: 13, height: 13, borderRadius: '50%', border: '2px solid var(--surface)', background: c.numStatus === 'CONNECTED' || !c.numStatus ? '#22c55e' : '#f59e0b' }} />
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
+                <div style={{ position: 'relative', width: 46, height: 46, borderRadius: '50%', background: 'rgba(22,163,74,0.10)', color: '#15803d', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 23, flexShrink: 0 }}>
+                  <i className="ti ti-brand-whatsapp" /><span style={{ position: 'absolute', right: -1, bottom: -1, width: 13, height: 13, borderRadius: '50%', border: '2px solid var(--surface)', background: c.numStatus === 'CONNECTED' || !c.numStatus ? '#22c55e' : '#f59e0b' }} />
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)' }}>{c.apelido || c.nome || 'WhatsApp'}</div>
+                <div style={{ flex: '1 1 180px', minWidth: 0 }}>
+                  <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)', overflowWrap: 'anywhere' }}>{c.apelido || c.nome || 'WhatsApp'}</div>
                   <div style={{ fontSize: 12.5, color: 'var(--muted2)' }}>WABA: {c.wabaNome || c.waba || '—'}</div>
-                  <div style={{ fontSize: 13.5, color: 'var(--text)', fontWeight: 600, marginTop: 2 }}>{fmtNumero(c.numero)}</div>
+                  <div style={{ fontSize: 13.5, color: 'var(--text)', fontWeight: 600, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>{fmtNumero(c.numero)}</div>
                 </div>
                 {c.principal ? <Selo cor="verde">PRINCIPAL · SUPORTE</Selo> : <Selo cor="cinza">FLUXOS DA HUBLA</Selo>}
               </div>
@@ -196,8 +203,8 @@ export default function Conexoes() {
               </div>
 
               <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
-                <button onClick={function() { if (c.principal) ligarWebhook(); else acao(c, 'webhook') }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface)', color: 'var(--text)', borderRadius: 10, padding: '9px 14px', fontWeight: 700, fontSize: 13 }}>🔗 Ligar webhook</button>
-                {!c.principal && <button onClick={function() { acao(c, 'remover') }} style={{ cursor: 'pointer', border: '1px solid rgba(220,38,38,0.4)', background: 'transparent', color: '#dc2626', borderRadius: 10, padding: '9px 14px', fontWeight: 700, fontSize: 13 }}>Remover</button>}
+                <button className="at-b" onClick={function() { if (c.principal) ligarWebhook(); else acao(c, 'webhook') }}><i className="ti ti-link" />Ligar webhook</button>
+                {!c.principal && <button className="at-b" onClick={function() { acao(c, 'remover') }} style={{ color: '#dc2626', borderColor: 'rgba(220,38,38,0.4)' }}><i className="ti ti-trash" />Remover</button>}
               </div>
               {!c.principal && <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 8, lineHeight: 1.5 }}>Este número é usado só para enviar os fluxos por evento da Hubla. Respostas das pessoas nele ainda não aparecem no Atendimento.</div>}
               <div style={{ fontSize: 11.5, color: 'var(--muted2)', marginTop: 10, wordBreak: 'break-all' }}>Phone Number ID: {c.phoneId} · WABA ID: {c.waba || '—'}</div>
