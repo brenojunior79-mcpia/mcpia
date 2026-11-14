@@ -35,6 +35,7 @@ export async function avisarEncerramentoSuporte(admin: any): Promise<number> {
       const ultima = linhas[0]
       if (!ultima || ultima.direction !== 'out') continue                       // ultima e da pessoa: o Junior ainda vai responder (e junta o aviso)
       if (new Date(String(ultima.created_at)).getTime() < Date.now() - 90 * 60000) continue
+      if (new Date(String(ultima.created_at)).getTime() > Date.now() - 2 * 60000) continue   // acabou de responder: espera 2 min para nao mandar duas mensagens coladas
       if (linhas.some(function(m) { return m.direction === 'out' && m.sent_by && new Date(String(m.created_at)).getTime() >= Date.now() - 90 * 60000 })) continue // atendente humano entrou
       if (avisouEncerramentoHoje(linhas)) continue
       const ultIn = linhas.find(function(m) { return m.direction === 'in' })
