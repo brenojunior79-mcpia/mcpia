@@ -100,6 +100,16 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
   const [tPular, setTPular] = useState(true)
   const [testando, setTestando] = useState(false)
   const [busca, setBusca] = useState('')
+  const [blocosRecolhidos, setBlocosRecolhidos] = useState(false)
+  const [painelFechado, setPainelFechado] = useState(false)
+  useEffect(function() {
+    try {
+      setBlocosRecolhidos(localStorage.getItem('mcpia_fluxo_blocos') === 'recolhido')
+      setPainelFechado(localStorage.getItem('mcpia_fluxo_painel') === 'fechado')
+    } catch (e) { /* sem armazenamento: comeca aberto */ }
+  }, [])
+  function recolherBlocos(v: boolean) { setBlocosRecolhidos(v); try { localStorage.setItem('mcpia_fluxo_blocos', v ? 'recolhido' : 'aberto') } catch (e) {} }
+  function fecharPainel(v: boolean) { setPainelFechado(v); try { localStorage.setItem('mcpia_fluxo_painel', v ? 'fechado' : 'aberto') } catch (e) {} }
   const [dragPos, setDragPos] = useState<{ key: string; x: number; y: number } | null>(null)
   const arrNo = useRef<{ key: string; sx: number; sy: number; ox: number; oy: number; moveu: boolean; id: number } | null>(null)
   const posRef = useRef<Record<string, Pos>>({})
@@ -436,7 +446,7 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
             <div style={{ ...etiqueta, fontSize: 9.5 }}>{tag}</div>
           </div>
           {p && <button data-ctl="1" title="Duplicar bloco" onClick={function(e) { e.stopPropagation(); duplicar(n.i) }} style={iconeBtn}>⧉</button>}
-          <button data-ctl="1" title="Editar" onClick={function(e) { e.stopPropagation(); setSel(n.key); setMenu(null) }} style={iconeBtn}>✎</button>
+          <button data-ctl="1" title="Editar" onClick={function(e) { e.stopPropagation(); setSel(n.key); setMenu(null); fecharPainel(false) }} style={iconeBtn}>✎</button>
           {p && <button data-ctl="1" title="Apagar bloco" onClick={function(e) { e.stopPropagation(); remover(n.i) }} style={iconeBtn}>🗑</button>}
         </div>
         <div style={{ padding: '0 10px 8px' }}>
@@ -640,17 +650,39 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
       <style>{`
         .cb-corpo { flex: 1; min-height: 0; display: flex; }
         .cb-painel { width: 340px; flex-shrink: 0; border-left: 1px solid var(--border); background: var(--surface); overflow-y: auto; padding: 14px; }
-        .cb-blocos { width: 230px; flex-shrink: 0; border-right: 1px solid var(--border); background: var(--surface); overflow-y: auto; padding: 12px; display: flex; flex-direction: column; }
-        .cb-lista { display: flex; flex-direction: column; gap: 2px; }
-        .cb-item { cursor: grab; display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; border: 0; background: transparent; color: var(--text); padding: 7px 8px; border-radius: 10px; }
-        .cb-item:hover { background: var(--surface2); }
-        .cb-dica { font-size: 11.5px; color: var(--muted2); line-height: 1.45; margin-top: 12px; }
+        .cb-blocos { width: 248px; flex-shrink: 0; border-right: 1px solid var(--border); background: var(--surface); overflow-y: auto; overflow-x: hidden; padding: 12px; display: flex; flex-direction: column; gap: 12px; transition: width .2s cubic-bezier(.2,.8,.2,1), padding .2s; }
+        .cb-blocos.recolhido { width: 60px; padding: 10px 8px; }
+        .cb-blocos-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .cb-blocos.recolhido .cb-blocos-topo { justify-content: center; }
+        .cb-blocos-titulo { font-family: Syne, sans-serif; font-weight: 800; font-size: 15px; letter-spacing: -0.02em; color: var(--text); }
+        .cb-recolher { width: 32px; height: 32px; flex-shrink: 0; border-radius: 9px; border: 1px solid var(--border2); background: var(--surface); color: var(--muted2); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; font-size: 17px; transition: color .15s, background .15s; }
+        .cb-recolher:hover { color: var(--text); background: var(--surface2); }
+        .cb-recolher:focus-visible, .cb-item:focus-visible { outline: 2px solid #16a34a; outline-offset: 2px; }
+        .cb-grupo { display: flex; flex-direction: column; gap: 3px; }
+        .cb-grupo-titulo { font-size: 12px; font-weight: 700; color: var(--muted2); padding: 0 6px 2px; }
+        .cb-item { cursor: grab; display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; border: 1px solid transparent; background: transparent; color: var(--text); padding: 6px; border-radius: 11px; font-family: inherit; transition: background .15s, border-color .15s; }
+        .cb-item:hover { background: var(--surface2); border-color: var(--border); }
+        .cb-item:active { cursor: grabbing; }
+        .cb-ico { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+        .cb-item-txt { min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+        .cb-item-nome { font-weight: 700; font-size: 13px; }
+        .cb-item-desc { font-size: 11.5px; color: var(--muted2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .cb-blocos.recolhido .cb-item { justify-content: center; padding: 4px; }
+        .cb-blocos.recolhido .cb-item-txt, .cb-blocos.recolhido .cb-grupo-titulo, .cb-blocos.recolhido .cb-dica, .cb-blocos.recolhido .at-busca, .cb-blocos.recolhido .cb-blocos-titulo { display: none; }
+        .cb-blocos.recolhido .cb-grupo + .cb-grupo { border-top: 1px solid var(--border); padding-top: 8px; }
+        .cb-dica { font-size: 11.5px; color: var(--muted2); line-height: 1.45; margin-top: auto; padding: 0 4px; }
+        .cb-painel-topo { display: flex; justify-content: flex-end; margin: -4px -4px 4px 0; }
+        .cb-abrir-painel { position: absolute; top: 12px; right: 12px; z-index: 5; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--border2); background: var(--surface); color: var(--text); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .cb-abrir-painel:hover { background: var(--surface2); }
+        @media (prefers-reduced-motion: reduce) { .cb-blocos { transition: none; } }
         .cb-chave { position: relative; width: 40px; height: 22px; border-radius: 99px; border: 0; cursor: pointer; padding: 0; transition: background .2s; }
         .cb-chave span { position: absolute; top: 3px; width: 16px; height: 16px; border-radius: 99px; background: #fff; transition: left .2s; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
         @media (max-width: 900px) {
           .cb-corpo { flex-direction: column; }
           .cb-blocos { width: auto; border-right: 0; border-bottom: 1px solid var(--border); padding: 8px; }
-          .cb-blocos .at-input, .cb-dica { display: none; }
+          .cb-blocos, .cb-blocos.recolhido { width: auto; flex-direction: row; align-items: center; }
+          .cb-blocos .at-busca, .cb-dica, .cb-blocos-topo, .cb-grupo-titulo, .cb-item-desc { display: none; }
+          .cb-grupo { flex-direction: row; gap: 4px; }
           .cb-lista { flex-direction: row; overflow-x: auto; gap: 4px; }
           .cb-item { width: auto; flex-shrink: 0; background: var(--surface2); white-space: nowrap; }
           .cb-painel { width: auto; border-left: 0; border-top: 1px solid var(--border); max-height: 46vh; }
@@ -689,20 +721,34 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
         </div>
       )}
       <div className="cb-corpo">
-        <div className="cb-blocos">
-          <input className="at-input" value={busca} onChange={function(e) { setBusca(e.target.value) }} placeholder="🔍 Buscar blocos…" style={{ marginBottom: 10 }} />
-          <div className="cb-lista">
-            {MENU.filter(function(m) { const q = busca.trim().toLowerCase(); return !q || (ROTULO_TIPO[m.tipo] + ' ' + m.desc).toLowerCase().indexOf(q) >= 0 }).map(function(m) {
-              return (
-                <button key={m.tipo} draggable title={m.desc + ' (clique para pôr no fim, ou arraste para o quadro)'}
-                  onDragStart={function(e) { e.dataTransfer.setData('text/bloco', m.tipo); e.dataTransfer.effectAllowed = 'copy' }}
-                  onClick={function() { adicionar(seq.steps.length - 1, m.tipo) }} className="cb-item">
-                  <span style={{ width: 30, height: 30, borderRadius: 8, background: m.cor + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>{m.icone}</span>
-                  <span style={{ fontWeight: 700, fontSize: 13 }}>{ROTULO_TIPO[m.tipo]}</span>
-                </button>
-              )
-            })}
+        <div className={'cb-blocos' + (blocosRecolhidos ? ' recolhido' : '')}>
+          <div className="cb-blocos-topo">
+            <span className="cb-blocos-titulo">Blocos</span>
+            <button type="button" className="cb-recolher" onClick={function() { recolherBlocos(!blocosRecolhidos) }} title={blocosRecolhidos ? 'Mostrar os nomes dos blocos' : 'Recolher para ter mais espaço no quadro'} aria-label={blocosRecolhidos ? 'Abrir a coluna de blocos' : 'Recolher a coluna de blocos'} aria-expanded={!blocosRecolhidos}>
+              <i className={'ti ti-' + (blocosRecolhidos ? 'chevron-right' : 'chevron-left')} />
+            </button>
           </div>
+          <div className="at-busca"><i className="ti ti-search" /><input className="at-input" value={busca} onChange={function(e) { setBusca(e.target.value) }} placeholder="Buscar blocos" /></div>
+          {([['Mensagens', ['texto', 'audio', 'imagem', 'video', 'modelo']], ['Lógica', ['atraso', 'resposta', 'ia']]] as [string, string[]][]).map(function(g) {
+            const q = blocosRecolhidos ? '' : busca.trim().toLowerCase()
+            const itens = MENU.filter(function(m) { return g[1].indexOf(m.tipo) >= 0 && (!q || (ROTULO_TIPO[m.tipo] + ' ' + m.desc).toLowerCase().indexOf(q) >= 0) })
+            if (itens.length === 0) return null
+            return (
+              <div key={g[0]} className="cb-grupo">
+                <div className="cb-grupo-titulo">{g[0]}</div>
+                {itens.map(function(m) {
+                  return (
+                    <button key={m.tipo} type="button" draggable title={ROTULO_TIPO[m.tipo] + ': ' + m.desc + ' (clique para pôr no fim, ou arraste para o quadro)'}
+                      onDragStart={function(e) { e.dataTransfer.setData('text/bloco', m.tipo); e.dataTransfer.effectAllowed = 'copy' }}
+                      onClick={function() { adicionar(seq.steps.length - 1, m.tipo) }} className="cb-item">
+                      <span className="cb-ico" style={{ background: m.cor + '1f' }}>{m.icone}</span>
+                      <span className="cb-item-txt"><span className="cb-item-nome">{ROTULO_TIPO[m.tipo]}</span><span className="cb-item-desc">{m.desc}</span></span>
+                    </button>
+                  )
+                })}
+              </div>
+            )
+          })}
           <div className="cb-dica">Clique num bloco para colocá-lo no fim do fluxo, ou arraste para o quadro.</div>
         </div>
         <div style={{ flex: 1, minWidth: 0, minHeight: 320, position: 'relative' }}>
@@ -730,9 +776,17 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
             <button title="Aumentar" onClick={function() { zoomCentro(1.2) }} style={miniBtn}>+</button>
             <button title="Ajustar o fluxo à tela" onClick={ajustar} style={{ ...miniBtn, width: 'auto', padding: '0 8px', fontSize: 12.5 }}>Ajustar</button>
           </div>
+          {painelFechado && <button type="button" data-ctl="1" className="cb-abrir-painel" onClick={function() { fecharPainel(false) }}><i className="ti ti-adjustments-horizontal" />Editar bloco</button>}
           <div data-ctl="1" style={{ position: 'absolute', right: 12, bottom: 12, fontSize: 11.5, color: 'var(--muted2)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 8px', pointerEvents: 'none' }}>Arraste para mover · Roda do mouse para zoom</div>
         </div>
-        <div className="cb-painel">{painel()}</div>
+        {!painelFechado && (
+          <div className="cb-painel">
+            <div className="cb-painel-topo">
+              <button type="button" className="cb-recolher" onClick={function() { fecharPainel(true) }} title="Fechar o painel para ter mais espaço no quadro" aria-label="Fechar o painel de edição"><i className="ti ti-x" /></button>
+            </div>
+            {painel()}
+          </div>
+        )}
       </div>
       {menu && (
         <div data-ctl="1" style={{ position: 'fixed', left: Math.max(8, Math.min(menu.x, (typeof window !== 'undefined' ? window.innerWidth : 1200) - 290)), top: Math.max(8, Math.min(menu.y, (typeof window !== 'undefined' ? window.innerHeight : 800) - 380)), width: 270, maxHeight: 'calc(100vh - 16px)', overflowY: 'auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, boxShadow: '0 10px 30px rgba(0,0,0,0.22)', zIndex: 1000, padding: 6 }}>
