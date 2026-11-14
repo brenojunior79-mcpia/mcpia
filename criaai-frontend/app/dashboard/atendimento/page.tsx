@@ -899,9 +899,57 @@ export default function AtendimentoPage() {
         .at-msgs { background-color: #efeae2; background-image: ${PAPEL_CLARO}; background-size: 260px 260px; }
         [data-theme='dark'] .at-msgs { background-color: #0b141a; background-image: ${PAPEL_ESCURO}; }
         .at-head { box-shadow: 0 1px 4px rgba(0,0,0,0.08); position: relative; z-index: 2; background: var(--surface2); }
-        .at-b { cursor: pointer; border: 1px solid var(--border2); background: var(--surface); color: var(--text); border-radius: 999px; padding: 7px 14px; font-weight: 700; font-size: 12.5px; white-space: nowrap; transition: transform .12s, box-shadow .12s; }
-        .at-b:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.12); }
-        .at-b-ok { border: 0; background: linear-gradient(135deg,#22c55e,#16a34a); color: #fff; font-weight: 800; box-shadow: 0 3px 8px rgba(22,163,74,0.35); }
+        .at-b { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border2); background: var(--surface); color: var(--text); border-radius: 10px; padding: 7px 12px; font-weight: 700; font-size: 12.5px; white-space: nowrap; transition: background .15s, border-color .15s; font-family: inherit; }
+        .at-b:hover { background: var(--surface2); }
+        .at-b .ti { font-size: 15px; }
+        .at-b-ok { border-color: #16a34a; background: #16a34a; color: #fff; font-weight: 800; }
+        .at-b-ok:hover { background: #15803d; border-color: #15803d; }
+        .at-b-ia { border-color: #7c3aed; background: #7c3aed; color: #fff; }
+        .at-b-ia:hover { background: #6d28d9; border-color: #6d28d9; }
+        .at-b:disabled { opacity: .5; cursor: not-allowed; }
+        .at-b:focus-visible, .at-tab:focus-visible, .at-seg button:focus-visible, .at-ico:focus-visible, .at-sw:focus-visible { outline: 2px solid #16a34a; outline-offset: 2px; }
+        .at-top { padding: 12px 20px; border-bottom: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .at-logo { width: 36px; height: 36px; border-radius: 10px; background: rgba(22,163,74,0.12); color: #16a34a; display: inline-flex; align-items: center; justify-content: center; font-size: 21px; }
+        .at-status { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 700; color: var(--muted2); }
+        .at-status i { width: 8px; height: 8px; border-radius: 99px; display: inline-block; }
+        .at-tabs { display: flex; gap: 2px; padding: 0 14px; border-bottom: 1px solid var(--border); background: var(--surface); overflow-x: auto; scrollbar-width: none; }
+        .at-tabs::-webkit-scrollbar { display: none; }
+        .at-tab { cursor: pointer; display: inline-flex; align-items: center; gap: 7px; border: 0; background: transparent; color: var(--muted2); padding: 12px 12px 10px; font-weight: 700; font-size: 13.5px; white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -1px; font-family: inherit; transition: color .15s, border-color .15s; }
+        .at-tab .ti { font-size: 17px; }
+        .at-tab:hover { color: var(--text); }
+        .at-tab.on { color: #15803d; border-bottom-color: #16a34a; }
+        [data-theme='dark'] .at-tab.on { color: #4ade80; border-bottom-color: #22c55e; }
+        .at-seg { display: flex; gap: 2px; padding: 3px; background: var(--surface2); border-radius: 11px; }
+        .at-seg button { flex: 1; min-width: 0; cursor: pointer; border: 0; background: transparent; color: var(--muted2); border-radius: 8px; padding: 7px 6px; font-weight: 700; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-flex; align-items: center; justify-content: center; gap: 5px; font-family: inherit; transition: background .15s, color .15s; }
+        .at-seg button:hover { color: var(--text); }
+        .at-seg button.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+        .at-seg .ti { font-size: 15px; }
+        .at-n { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; font-size: 11px; font-weight: 800; background: #ef4444; color: #fff; box-sizing: border-box; }
+        .at-cnt { font-weight: 600; opacity: .7; }
+        .at-busca { position: relative; }
+        .at-busca .ti { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--muted2); font-size: 16px; pointer-events: none; }
+        .at-busca .at-input { padding-left: 34px; }
+        .at-ias { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+        .at-ia-linha { display: flex; align-items: center; gap: 10px; padding: 8px 10px; font-size: 12.5px; font-weight: 700; color: var(--text); }
+        .at-ia-linha + .at-ia-linha { border-top: 1px solid var(--border); }
+        .at-ia-linha .ti { font-size: 16px; color: #7c3aed; }
+        .at-ia-linha small { display: block; font-size: 11.5px; font-weight: 600; color: var(--muted2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .at-sw { position: relative; flex-shrink: 0; width: 36px; height: 20px; border-radius: 99px; border: 0; padding: 0; cursor: pointer; background: var(--border2); transition: background .2s; }
+        .at-sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 99px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.3); transition: transform .2s cubic-bezier(.2,.8,.2,1); }
+        .at-sw.on { background: #7c3aed; }
+        .at-sw.on::after { transform: translateX(16px); }
+        .at-ico { cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; min-width: 36px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--border2); background: var(--surface); color: var(--text); font-size: 13px; font-weight: 700; font-family: inherit; white-space: nowrap; transition: background .15s; }
+        .at-ico:hover { background: var(--surface2); }
+        .at-ico.on { background: rgba(22,163,74,0.12); border-color: #16a34a; color: #15803d; }
+        .at-ico .ti { font-size: 18px; }
+        .at-meta { display: flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 700; margin-top: 3px; min-width: 0; }
+        .at-meta .ti { font-size: 13px; flex-shrink: 0; }
+        .at-meta span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .at-vazio { text-align: center; max-width: 340px; padding: 24px; }
+        .at-vazio-ico { width: 64px; height: 64px; margin: 0 auto 16px; border-radius: 18px; background: var(--surface); color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 34px; box-shadow: 0 6px 18px rgba(0,0,0,0.10); }
+        .at-list ::selection, .at-chat ::selection { background: rgba(22,163,74,0.25); }
+        .at-list ::-webkit-scrollbar, .at-msgs::-webkit-scrollbar { width: 8px; }
+        .at-list ::-webkit-scrollbar-thumb, .at-msgs::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
         .at-m { position: relative; border-radius: 10px; box-shadow: 0 1px 1px rgba(11,20,26,0.16); }
         .at-m-in { background: #ffffff; color: #111b21; }
         .at-m-out { background: #d9fdd3; color: #111b21; }
@@ -918,8 +966,11 @@ export default function AtendimentoPage() {
         .at-sys { background: #fff5c4; color: #54656f; border-radius: 8px; padding: 6px 12px; box-shadow: 0 1px 1px rgba(11,20,26,0.13); }
         [data-theme='dark'] .at-sys { background: #1f2c34; color: #ffd279; }
         .at-item { transition: background .15s; }
-        .at-item.at-on { background: var(--accent-light); box-shadow: inset 4px 0 0 #16a34a; }
-        .at-input { width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border2); background: var(--surface2); color: var(--text); font-size: 14px; outline: none; font-family: inherit; }
+        .at-item.at-on { background: rgba(22,163,74,0.10); }
+        .at-item.at-on:hover { background: rgba(22,163,74,0.14); }
+        .at-input { width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border2); background: var(--surface2); color: var(--text); font-size: 14px; outline: none; font-family: inherit; transition: border-color .15s, box-shadow .15s; caret-color: #16a34a; }
+        .at-input:focus { border-color: #16a34a; box-shadow: 0 0 0 3px rgba(22,163,74,0.15); }
+        .at-input::placeholder { color: var(--muted2); }
         @media (max-width: 760px) {
           .at-list { width: 100%; border-right: 0; ${sel ? 'display: none;' : ''} }
           .at-chat { ${sel ? '' : 'display: none;'} }
@@ -928,9 +979,9 @@ export default function AtendimentoPage() {
       `}</style>
 
       {/* Topo: estado da conexao */}
-      <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span style={{ width: 34, height: 34, borderRadius: 11, background: 'linear-gradient(135deg,#22c55e,#16a34a)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, boxShadow: '0 4px 10px rgba(22,163,74,0.35)' }}>💬</span><span style={{ fontWeight: 800, fontSize: 17, color: 'var(--text)', fontFamily: 'Syne, sans-serif' }}>Atendimento WhatsApp</span></div>
-        {totalNaoLidas > 0 && <span style={{ background: '#ef4444', color: '#fff', fontSize: 11, fontWeight: 800, borderRadius: 999, padding: '2px 8px' }}>{totalNaoLidas} não lida{totalNaoLidas > 1 ? 's' : ''}</span>}
+      <div className="at-top">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span className="at-logo"><i className="ti ti-brand-whatsapp" /></span><span style={{ fontWeight: 800, fontSize: 18, color: 'var(--text)', fontFamily: 'Syne, sans-serif', letterSpacing: '-0.02em' }}>Atendimento WhatsApp</span></div>
+        {totalNaoLidas > 0 && <span className="at-n" style={{ height: 22, padding: '0 9px', fontSize: 11.5 }}>{totalNaoLidas} não lida{totalNaoLidas > 1 ? 's' : ''}</span>}
         <div style={{ flex: 1 }} />
         {isAdmin && ferramentas && <button title="Mostra as contas e os IDs dos números que o token enxerga" onClick={async function() {
           try {
@@ -955,15 +1006,15 @@ export default function AtendimentoPage() {
             window.alert(r.ok ? 'Webhook ligado à conta ' + j.waba + '.' + (j.apps && j.apps.length ? '\nApps ligados: ' + j.apps.join(', ') : '') : (j.error || 'Não foi possível ligar.'))
           } catch (e) { window.alert('Sem conexão. Tente de novo.') }
         }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '5px 9px', fontSize: 12, fontWeight: 700 }}>🔗 Ligar webhook</button>}
-        {status && !status.connected && <span style={{ fontSize: 12.5, color: '#b45309', fontWeight: 700 }}>🟠 Não conectado</span>}
-        {status && status.connected && ferramentas && <span style={{ fontSize: 12.5, color: '#15803d', fontWeight: 700 }}>🟢 Conectado · {status.number}{status.quality ? ' · qualidade ' + status.quality : ''}</span>}
+        {status && !status.connected && <span className="at-status" style={{ color: '#b45309' }}><i style={{ background: '#f59e0b' }} />Não conectado</span>}
+        {status && status.connected && <span className="at-status"><i style={{ background: '#22c55e', boxShadow: '0 0 0 3px rgba(34,197,94,0.2)' }} />Conectado{ferramentas ? ' · ' + status.number + (status.quality ? ' · qualidade ' + status.quality : '') : ''}</span>}
       </div>
 
       {/* Abas */}
-      <div style={{ display: 'flex', gap: 6, padding: '8px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface)', overflowX: 'auto' }}>
-        {([['conversas', '💬 Conversas'], ['atendentes', '👥 Atendentes'], ['modelos', '📄 Modelos'], ['disparo', '📣 Disparo'], ['fluxos', '⚡ Fluxos'], ['conhecimento', '🧠 Base de conhecimento'], ['eventos', '🔔 Eventos'], ['conexoes', '🔌 Conexões']] as const).filter(function(t) { return (t[0] !== 'atendentes' && t[0] !== 'fluxos' && t[0] !== 'conhecimento' && t[0] !== 'disparo' && t[0] !== 'eventos' && t[0] !== 'conexoes') || isAdmin }).map(function(t) {
+      <div className="at-tabs" role="tablist">
+        {([['conversas', 'Conversas', 'messages'], ['atendentes', 'Atendentes', 'users'], ['modelos', 'Modelos', 'template'], ['disparo', 'Disparo', 'speakerphone'], ['fluxos', 'Fluxos', 'bolt'], ['conhecimento', 'Base de conhecimento', 'brain'], ['eventos', 'Eventos', 'bell'], ['conexoes', 'Conexões', 'plug-connected']] as const).filter(function(t) { return (t[0] !== 'atendentes' && t[0] !== 'fluxos' && t[0] !== 'conhecimento' && t[0] !== 'disparo' && t[0] !== 'eventos' && t[0] !== 'conexoes') || isAdmin }).map(function(t) {
           const on = tab === t[0]
-          return <button key={t[0]} onClick={function() { setTab(t[0]); if (t[0] === 'modelos') carregarTpls(); if (t[0] === 'disparo') setDisparoAberto(true) }} style={{ cursor: 'pointer', border: 0, borderRadius: 999, padding: '7px 16px', fontWeight: 800, fontSize: 13, whiteSpace: 'nowrap', transition: 'all .15s', background: on ? 'linear-gradient(135deg,#22c55e,#16a34a)' : 'var(--surface2)', color: on ? '#fff' : 'var(--muted2)', boxShadow: on ? '0 3px 8px rgba(22,163,74,0.35)' : 'none' }}>{t[1]}</button>
+          return <button key={t[0]} role="tab" aria-selected={on} className={'at-tab' + (on ? ' on' : '')} onClick={function() { setTab(t[0]); if (t[0] === 'modelos') carregarTpls(); if (t[0] === 'disparo') setDisparoAberto(true) }}><i className={'ti ti-' + t[2]} />{t[1]}{t[0] === 'conversas' && totalNaoLidas > 0 && <span className="at-n">{totalNaoLidas}</span>}</button>
         })}
       </div>
 
@@ -989,55 +1040,57 @@ export default function AtendimentoPage() {
         <div className="at-list">
           <div style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
             {escopo === 'todos' && (
-              <div style={{ display: 'flex', gap: 6 }}>
-                {([['suporte', '🎧 Suporte', '#1f7a5a', 'rgba(31,122,90,0.12)'], ['recuperacao', '🛒 Recuperação', '#c2410c', 'rgba(234,88,12,0.12)'], ['assistente', '🤖 Assistente', '#7c3aed', 'rgba(124,58,237,0.12)']] as const).filter(function(t) { return t[0] !== 'recuperacao' || canais.length > 0 }).map(function(t) {
+              <div className="at-seg">
+                {([['suporte', 'Suporte', 'headset'], ['recuperacao', 'Recuperação', 'shopping-cart'], ['assistente', 'Assistente', 'robot']] as const).filter(function(t) { return t[0] !== 'recuperacao' || canais.length > 0 }).map(function(t) {
                   const on = canal === t[0]
                   const nl = naoLidasCanal(t[0])
                   return (
-                    <button key={t[0]} onClick={function() { if (canal !== t[0]) { setCanal(t[0]); setSel(null); setMsgs([]) } }} style={{ flex: 1, minWidth: 0, cursor: 'pointer', border: on ? '2px solid ' + t[2] : '2px solid transparent', borderRadius: 10, padding: '8px 4px', fontWeight: 800, fontSize: 12.5, lineHeight: 1.25, background: on ? t[3] : 'var(--surface2)', color: on ? 'var(--text)' : 'var(--muted2)' }}>
-                      {t[1]}
-                      <div style={{ fontSize: 11.5, fontWeight: 700, opacity: 0.8, marginTop: 2 }}>{abertasCanal(t[0])} abertas{nl > 0 ? ' · ' : ''}{nl > 0 && <span style={{ background: '#ef4444', color: '#fff', borderRadius: 999, padding: '0 6px', fontSize: 11 }}>{nl}</span>}</div>
+                    <button key={t[0]} className={on ? 'on' : ''} title={abertasCanal(t[0]) + ' conversa(s) aberta(s)'} onClick={function() { if (canal !== t[0]) { setCanal(t[0]); setSel(null); setMsgs([]) } }} style={{ flexDirection: 'column', gap: 1, padding: '6px 4px' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><i className={'ti ti-' + t[2]} />{t[1]}</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600 }}><span className="at-cnt">{abertasCanal(t[0])} abertas</span>{nl > 0 && <span className="at-n">{nl}</span>}</span>
                     </button>
                   )
                 })}
               </div>
             )}
-            {canal === 'assistente' && <div style={{ fontSize: 12, color: '#6d28d9', background: 'rgba(124,58,237,0.10)', borderRadius: 10, padding: '8px 10px', lineHeight: 1.5 }}>🤖 Conversas que o assistente está atendendo agora. Quando ele passa para a equipe, a conversa volta para o chat de Suporte ou Recuperação.</div>}
-            {escopo === 'recuperacao' && <div style={{ fontWeight: 800, fontSize: 13.5, color: '#c2410c', background: 'rgba(234,88,12,0.12)', borderRadius: 10, padding: '8px 10px' }}>🛒 Chat de recuperação</div>}
-            <input className="at-input" placeholder="Buscar nome, número ou frase da conversa" value={busca} onChange={function(e) { setBusca(e.target.value) }} />
+            {canal === 'assistente' && <div style={{ fontSize: 12, color: 'var(--muted2)', lineHeight: 1.5, padding: '0 2px' }}>Conversas que o assistente está atendendo agora. Quando ele passa para a equipe, a conversa volta para o chat de Suporte ou Recuperação.</div>}
+            {escopo === 'recuperacao' && <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 800, fontSize: 13.5, color: '#c2410c', padding: '2px 2px' }}><i className="ti ti-shopping-cart" style={{ fontSize: 17 }} />Chat de recuperação</div>}
+            <div className="at-busca"><i className="ti ti-search" /><input className="at-input" placeholder="Buscar nome, número ou frase" value={busca} onChange={function(e) { setBusca(e.target.value) }} /></div>
             {isAdmin && (
-              <button onClick={alternarIAGeral} title="Liga ou desliga o assistente de IA em todas as conversas de uma vez (inclusive as novas)" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, border: '1px solid ' + (iaGeral ? '#7c3aed' : 'var(--border2)'), background: iaGeral ? 'rgba(124,58,237,0.12)' : 'var(--surface2)', color: iaGeral ? '#7c3aed' : 'var(--text)', borderRadius: 10, padding: '8px 10px', fontWeight: 800, fontSize: 12.5 }}>
-                <span>🤖 Assistente em todas as conversas</span>
-                <span style={{ background: iaGeral ? '#7c3aed' : 'var(--border2)', color: iaGeral ? '#fff' : 'var(--muted2)', borderRadius: 999, padding: '2px 10px', fontSize: 11.5 }}>{iaGeral ? 'LIGADO' : 'desligado'}</span>
-              </button>
-            )}
-            {isAdmin && (
-              <button onClick={alternarAgenda} title="O assistente liga sozinho no horário de atendimento da semana. Fora dele vale o aviso de horário de atendimento." style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, border: '1px solid ' + (iaAgenda.agenda ? '#7c3aed' : 'var(--border2)'), background: iaAgenda.agenda ? 'rgba(124,58,237,0.12)' : 'var(--surface2)', color: iaAgenda.agenda ? '#7c3aed' : 'var(--text)', borderRadius: 10, padding: '8px 10px', fontWeight: 800, fontSize: 12.5 }}>
-                <span>⏰ Automático: {iaAgenda.resumo || (iaAgenda.inicio.slice(0, 2) + 'h às ' + iaAgenda.fim.slice(0, 2) + 'h')}</span>
-                <span style={{ background: iaAgenda.agenda ? '#7c3aed' : 'var(--border2)', color: iaAgenda.agenda ? '#fff' : 'var(--muted2)', borderRadius: 999, padding: '2px 10px', fontSize: 11.5 }}>{iaAgenda.agenda ? 'LIGADO' : 'desligado'}</span>
-              </button>
+              <div className="at-ias">
+                <div className="at-ia-linha">
+                  <i className="ti ti-robot" />
+                  <div style={{ flex: 1, minWidth: 0 }}>Assistente em todas as conversas<small>{iaGeral ? 'Respondendo sozinho agora' : 'Desligado'}</small></div>
+                  <button className={'at-sw' + (iaGeral ? ' on' : '')} role="switch" aria-checked={iaGeral} aria-label="Assistente em todas as conversas" title="Liga ou desliga o assistente de IA em todas as conversas de uma vez (inclusive as novas)" onClick={alternarIAGeral} />
+                </div>
+                <div className="at-ia-linha">
+                  <i className="ti ti-clock" />
+                  <div style={{ flex: 1, minWidth: 0 }}>Ligar sozinho no horário<small>{iaAgenda.resumo || (iaAgenda.inicio.slice(0, 2) + 'h às ' + iaAgenda.fim.slice(0, 2) + 'h')}</small></div>
+                  <button className={'at-sw' + (iaAgenda.agenda ? ' on' : '')} role="switch" aria-checked={iaAgenda.agenda} aria-label="Ligar o assistente sozinho no horário" title="O assistente liga sozinho no horário de atendimento da semana. Fora dele vale o aviso de horário de atendimento." onClick={alternarAgenda} />
+                </div>
+              </div>
             )}
             {(function() {
               // Estilo Unnichat: dois botoes fixos (Em espera / Minhas) + menu com as demais visoes (so admin)
               const cont = function(k: string) { return convs.filter(function(c) { return canalDaConv(c) === canal && c.status !== 'resolvida' && (k === 'todas' ? true : k === 'sem' ? !c.assigned_to : c.assigned_to === k) }).length }
               const nomeFiltro = function(k: string) { return k === 'todas' ? 'Todas' : k === meuId ? 'Minhas' : primeiroNome(k) }
               const emEspera = filtro === 'sem'
-              const botao = function(on: boolean): React.CSSProperties { return { cursor: 'pointer', border: 0, borderRadius: 10, padding: '10px 6px', fontWeight: 700, fontSize: 13.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', background: on ? '#1f7a5a' : 'var(--surface2)', color: on ? '#fff' : 'var(--muted2)' } }
+              const botao = function(on: boolean): React.CSSProperties { return { cursor: 'pointer', border: '1px solid ' + (on ? '#16a34a' : 'var(--border2)'), borderRadius: 10, padding: '8px 6px', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', background: on ? 'rgba(22,163,74,0.10)' : 'var(--surface)', color: on ? '#15803d' : 'var(--muted2)', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 } }
               const pessoasMenu = pessoas.filter(function(x) { return canal === 'assistente' || atendeCanal(x, canal === 'recuperacao') }).sort(function(x, y) { return (x.id === meuId ? -1 : 0) - (y.id === meuId ? -1 : 0) })
               return (
                 <div style={{ position: 'relative', display: 'flex', gap: 6 }}>
-                  <button onClick={function() { setFiltro('sem'); setMenuAberto(false) }} style={{ ...botao(emEspera), flex: 1 }}>Em espera ({cont('sem')})</button>
-                  <button onClick={function() { if (emEspera) setFiltro(isAdmin ? 'todas' : meuId); setMenuAberto(false) }} style={{ ...botao(!emEspera), flex: 1 }}>{emEspera ? (isAdmin ? 'Todas' : 'Minhas') + ' (' + cont(isAdmin ? 'todas' : meuId) + ')' : nomeFiltro(filtro) + ' (' + cont(filtro) + ')'}</button>
-                  {isAdmin && <button onClick={function() { setMenuAberto(!menuAberto) }} title="Ver por atendente" style={{ ...botao(menuAberto), flex: '0 0 42px', fontSize: 18, padding: '6px 0' }}>☰</button>}
+                  <button onClick={function() { setFiltro('sem'); setMenuAberto(false) }} style={{ ...botao(emEspera), flex: 1 }}><i className="ti ti-hourglass" style={{ fontSize: 15 }} />Em espera <span className="at-cnt">{cont('sem')}</span></button>
+                  <button onClick={function() { if (emEspera) setFiltro(isAdmin ? 'todas' : meuId); setMenuAberto(false) }} style={{ ...botao(!emEspera), flex: 1 }}><i className="ti ti-inbox" style={{ fontSize: 15 }} />{emEspera ? (isAdmin ? 'Todas' : 'Minhas') : nomeFiltro(filtro)} <span className="at-cnt">{cont(emEspera ? (isAdmin ? 'todas' : meuId) : filtro)}</span></button>
+                  {isAdmin && <button onClick={function() { setMenuAberto(!menuAberto) }} title="Ver por atendente" aria-label="Ver por atendente" style={{ ...botao(menuAberto), flex: '0 0 40px', padding: '6px 0' }}><i className="ti ti-adjustments-horizontal" style={{ fontSize: 17 }} /></button>}
                   {isAdmin && menuAberto && (
                     <>
                       <div onClick={function() { setMenuAberto(false) }} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
                       <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 6, width: '100%', maxHeight: 320, overflowY: 'auto', zIndex: 41, background: 'var(--surface)', border: '1px solid var(--border2)', borderRadius: 12, boxShadow: '0 10px 30px rgba(0,0,0,0.18)' }}>
-                        {([{ k: 'todas', t: 'Todas as conversas', i: '👥' }] as { k: string; t: string; i: string }[]).concat(pessoasMenu.map(function(pp) { return { k: pp.id, t: pp.id === meuId ? 'Minhas' : (pp.nome || pp.email), i: '👤' } })).map(function(f) {
+                        {([{ k: 'todas', t: 'Todas as conversas', i: 'users' }] as { k: string; t: string; i: string }[]).concat(pessoasMenu.map(function(pp) { return { k: pp.id, t: pp.id === meuId ? 'Minhas' : (pp.nome || pp.email), i: 'user' } })).map(function(f) {
                           const on = filtro === f.k
                           return (
                             <div key={f.k} onClick={function() { setFiltro(f.k); setMenuAberto(false) }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border)', background: on ? 'var(--accent-light)' : undefined, color: 'var(--text)', fontSize: 14, fontWeight: on ? 800 : 600 }}>
-                              <span style={{ width: 20, textAlign: 'center' }}>{f.i}</span>
+                              <i className={'ti ti-' + f.i} style={{ width: 20, textAlign: 'center', fontSize: 17, color: 'var(--muted2)' }} />
                               <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.t}</span>
                               <span style={{ color: 'var(--muted2)', fontWeight: 700 }}>({cont(f.k)})</span>
                             </div>
@@ -1049,15 +1102,17 @@ export default function AtendimentoPage() {
                 </div>
               )
             })()}
-            <div style={{ display: 'flex', gap: 6 }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <div className="at-seg" style={{ flex: 1 }}>
               {(['abertas', 'naolidas', 'resolvidas'] as const).map(function(a) {
                 const on = aba === a
                 const qtdNaoLidas = convs.filter(function(c) { return canalDaConv(c) === canal && c.status !== 'resolvida' && c.unread > 0 }).length
-                return <button key={a} onClick={function() { setAba(a) }} style={{ flex: 1, cursor: 'pointer', border: 0, borderRadius: 8, padding: '7px 4px', fontWeight: 700, fontSize: 13, background: on ? 'var(--accent-light)' : 'var(--surface2)', color: on ? 'var(--accent)' : 'var(--muted2)' }}>
+                return <button key={a} className={on ? 'on' : ''} onClick={function() { setAba(a) }}>
                   {a === 'abertas' ? 'Abertas' : a === 'resolvidas' ? 'Finalizadas' : 'Não lidas'}
-                  {a === 'naolidas' && qtdNaoLidas > 0 && <span style={{ marginLeft: 5, background: '#ef4444', color: '#fff', borderRadius: 999, padding: '0 6px', fontSize: 11 }}>{qtdNaoLidas}</span>}
+                  {a === 'naolidas' && qtdNaoLidas > 0 && <span className="at-n">{qtdNaoLidas}</span>}
                 </button>
               })}
+              </div>
               {lista.length > 0 && (function() {
                 const n = lista.filter(function(c) { return marcadas[c.id] }).length
                 const todas = n === lista.length
@@ -1068,7 +1123,7 @@ export default function AtendimentoPage() {
                     const m: Record<string, boolean> = {}
                     lista.forEach(function(c) { m[c.id] = true })
                     setMarcadas(m); setModoSel(true); setAcaoMsg('')
-                  }} style={{ cursor: 'pointer', flex: '0 0 26px', width: 26, height: 26, alignSelf: 'center', borderRadius: 6, border: '2px solid ' + (modoSel ? '#2563eb' : 'var(--border2)'), background: modoSel ? '#2563eb' : 'transparent', color: '#fff', fontSize: 15, fontWeight: 900, lineHeight: 1, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{modoSel ? (algumas ? '−' : '✓') : ''}</button>
+                  }} aria-label="Selecionar conversas" style={{ cursor: 'pointer', flex: '0 0 22px', width: 22, height: 22, alignSelf: 'center', borderRadius: 6, border: '2px solid ' + (modoSel ? '#16a34a' : 'var(--border2)'), background: modoSel ? '#16a34a' : 'transparent', color: '#fff', fontSize: 14, fontWeight: 900, lineHeight: 1, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{modoSel ? (algumas ? '−' : <i className="ti ti-check" style={{ fontSize: 14 }} />) : ''}</button>
                 )
               })()}
             </div>
@@ -1108,28 +1163,32 @@ export default function AtendimentoPage() {
             })()}
           </div>
           <div style={{ flex: 1, overflowY: 'auto' }}>
-            {lista.length === 0 && <div style={{ padding: 20, fontSize: 13.5, color: 'var(--muted2)', textAlign: 'center' }}>{buscaAtiva ? (buscando ? 'Buscando…' : 'Nenhuma conversa encontrada para “' + termo + '”.') : aba === 'abertas' ? 'Nenhuma conversa aberta.' : aba === 'naolidas' ? 'Nenhuma mensagem não lida. 🎉' : 'Nenhuma conversa finalizada.'}</div>}
+            {lista.length === 0 && <div style={{ padding: '36px 20px', fontSize: 13.5, color: 'var(--muted2)', textAlign: 'center', lineHeight: 1.5 }}><i className={'ti ti-' + (buscaAtiva ? 'search' : 'inbox')} style={{ display: 'block', fontSize: 30, marginBottom: 8, opacity: 0.6 }} />{buscaAtiva ? (buscando ? 'Buscando…' : 'Nenhuma conversa encontrada para “' + termo + '”.') : aba === 'abertas' ? 'Nenhuma conversa aberta.' : aba === 'naolidas' ? 'Nenhuma mensagem não lida.' : 'Nenhuma conversa finalizada.'}</div>}
             {lista.map(function(c) {
               const on = c.id === sel
               return (
-                <div key={c.id} className={'at-item' + (on ? ' at-on' : '')} onClick={function() { if (modoSel) setMarcadas(function(m) { const n = { ...m }; if (n[c.id]) delete n[c.id]; else n[c.id] = true; return n }); else { if (buscaAtiva && canalDaConv(c) !== canal) setCanal(canalDaConv(c)); abrir(c) } }} style={{ display: 'flex', gap: 10, padding: '11px 12px', cursor: 'pointer', borderBottom: '1px solid var(--border)', background: modoSel && marcadas[c.id] ? 'rgba(37,99,235,0.10)' : undefined, alignItems: modoSel ? 'center' : undefined }}>
+                <div key={c.id} className={'at-item' + (on ? ' at-on' : '')} onClick={function() { if (modoSel) setMarcadas(function(m) { const n = { ...m }; if (n[c.id]) delete n[c.id]; else n[c.id] = true; return n }); else { if (buscaAtiva && canalDaConv(c) !== canal) setCanal(canalDaConv(c)); abrir(c) } }} style={{ display: 'flex', gap: 12, padding: '12px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border)', background: modoSel && marcadas[c.id] ? 'rgba(22,163,74,0.10)' : undefined, alignItems: modoSel ? 'center' : undefined }}>
                   {modoSel && <input type="checkbox" readOnly checked={!!marcadas[c.id]} style={{ width: 18, height: 18, flexShrink: 0, pointerEvents: 'none' }} />}
                   <Avatar c={c} size={44} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
                       <div style={{ fontWeight: c.unread > 0 ? 800 : 600, fontSize: 14, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomeDe(c)}</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                        {!(c.unread > 0) && !modoSel && <button title="Marcar como não lida" onClick={function(e) { e.stopPropagation(); marcarNaoLida(c.id) }} style={{ cursor: 'pointer', border: 0, background: 'transparent', color: 'var(--muted2)', fontSize: 13, padding: 0, lineHeight: 1 }}>✉</button>}
-                        <div style={{ fontSize: 11.5, color: c.unread > 0 ? '#16a34a' : 'var(--muted2)' }}>{hora(c.last_message_at)}</div>
+                        {!(c.unread > 0) && !modoSel && <button title="Marcar como não lida" aria-label="Marcar como não lida" onClick={function(e) { e.stopPropagation(); marcarNaoLida(c.id) }} style={{ cursor: 'pointer', border: 0, background: 'transparent', color: 'var(--muted2)', fontSize: 15, padding: 0, lineHeight: 1 }}><i className="ti ti-mail" /></button>}
+                        <div style={{ fontSize: 11.5, fontWeight: c.unread > 0 ? 700 : 500, color: c.unread > 0 ? '#16a34a' : 'var(--muted2)', fontVariantNumeric: 'tabular-nums' }}>{hora(c.last_message_at)}</div>
                       </div>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
                       <div style={{ fontSize: 12.5, color: buscaAtiva && trechos[c.id] ? 'var(--text)' : 'var(--muted2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{buscaAtiva && trechos[c.id] ? '💬 ' + trechos[c.id] : c.last_text}</div>
-                      {c.unread > 0 && <span style={{ background: '#16a34a', color: '#fff', borderRadius: 999, minWidth: 20, height: 20, padding: '0 6px', fontSize: 11.5, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' }}>{c.unread}</span>}
+                      {c.unread > 0 && <span className="at-n" style={{ background: '#16a34a', minWidth: 20, height: 20 }}>{c.unread}</span>}
                     </div>
-                    {(isAdmin || !c.assigned_to) && <div style={{ fontSize: 11, color: c.assigned_to ? 'var(--muted2)' : '#b45309', fontWeight: 700, marginTop: 2 }}>{c.assigned_to ? '👤 ' + primeiroNome(c.assigned_to) : '⏳ Em espera'}</div>}
-                    {iaOn(c) && <div style={{ fontSize: 11, color: '#7c3aed', fontWeight: 800, marginTop: 2 }}>🤖 Assistente ligado</div>}
-                    {c.profile_label && <div style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 700, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>🎓 {c.profile_label}</div>}
+                    {((isAdmin || !c.assigned_to) || iaOn(c)) && (
+                      <div className="at-meta" style={{ gap: 10 }}>
+                        {(isAdmin || !c.assigned_to) && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: c.assigned_to ? 'var(--muted2)' : '#b45309' }}><i className={'ti ti-' + (c.assigned_to ? 'user' : 'hourglass')} />{c.assigned_to ? primeiroNome(c.assigned_to) : 'Em espera'}</span>}
+                        {iaOn(c) && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#7c3aed' }}><i className="ti ti-robot" />Assistente</span>}
+                      </div>
+                    )}
+                    {c.profile_label && <div className="at-meta" style={{ color: 'var(--accent)' }}><i className="ti ti-school" /><span>{c.profile_label}</span></div>}
                   </div>
                 </div>
               )
@@ -1150,19 +1209,19 @@ export default function AtendimentoPage() {
           )}
           {!atual ? (
             <div className="at-msgs" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-              <div style={{ background: 'var(--surface)', borderRadius: 20, padding: '28px 30px', maxWidth: 380, textAlign: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.12)', border: '1px solid var(--border)' }}>
-                <div style={{ width: 64, height: 64, margin: '0 auto 14px', borderRadius: 20, background: 'linear-gradient(135deg,#22c55e,#16a34a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, boxShadow: '0 8px 20px rgba(22,163,74,0.35)' }}>💬</div>
-                <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--text)', marginBottom: 6 }}>Atendimento Cristão Próspero</div>
-                <div style={{ fontSize: 13.5, color: 'var(--muted2)', lineHeight: 1.55 }}>{canal === 'recuperacao' ? 'Aqui ficam as mensagens enviadas pelos fluxos da Hubla e as respostas das pessoas.' : canal === 'assistente' ? 'Aqui ficam as conversas que o assistente está atendendo. Escolha uma para acompanhar.' : 'Escolha uma conversa à esquerda para responder.'}</div>
+              <div className="at-vazio">
+                <div className="at-vazio-ico"><i className={'ti ti-' + (canal === 'recuperacao' ? 'shopping-cart' : canal === 'assistente' ? 'robot' : 'messages')} /></div>
+                <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--text)', marginBottom: 6, fontFamily: 'Syne, sans-serif', letterSpacing: '-0.02em' }}>Atendimento Cristão Próspero</div>
+                <div style={{ fontSize: 13.5, color: 'var(--muted2)', lineHeight: 1.55, textWrap: 'balance' as any }}>{canal === 'recuperacao' ? 'Aqui ficam as mensagens enviadas pelos fluxos da Hubla e as respostas das pessoas.' : canal === 'assistente' ? 'Aqui ficam as conversas que o assistente está atendendo. Escolha uma para acompanhar.' : 'Escolha uma conversa à esquerda para responder.'}</div>
               </div>
             </div>
           ) : (
             <>
               <div className="at-head">
-                <button className="at-back" onClick={function() { setSel(null) }} style={{ border: 0, background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>←</button>
+                <button className="at-back" aria-label="Voltar para a lista" onClick={function() { setSel(null) }} style={{ border: 0, background: 'var(--surface)', color: 'var(--text)', borderRadius: 10, width: 34, height: 34, cursor: 'pointer', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}><i className="ti ti-arrow-left" /></button>
                 <Avatar c={atual} size={42} />
                 <div className="at-head-info">
-                  <div style={{ fontWeight: 800, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomeDe(atual)}{atual.connection_id && <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 800, color: '#c2410c', border: '1px solid rgba(194,65,12,0.45)', borderRadius: 999, padding: '1px 8px' }}>🛒 Recuperação</span>}</div>
+                  <div style={{ fontWeight: 800, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomeDe(atual)}{atual.connection_id && <span style={{ marginLeft: 8, display: 'inline-flex', alignItems: 'center', gap: 4, verticalAlign: 'middle', fontSize: 11, fontWeight: 800, color: '#c2410c', background: 'rgba(234,88,12,0.12)', borderRadius: 999, padding: '2px 8px' }}><i className="ti ti-shopping-cart" />Recuperação</span>}</div>
                   <div className="at-head-sub">{fmtPhone(atual.wa_id)}{atual.profile_label ? ' · 🎓 ' + (info ? atual.profile_label.split(' · ')[0] + ' · ' + (info.plano || 'Sem plano') : atual.profile_label) : ''}
                     {compra && (compra.comprou_em
                       ? <span style={{ color: '#15803d', fontWeight: 700 }}> · 🛒 {compra.cat === 'm' || !compra.produto ? 'Comprou a Mentoria em ' : 'Comprou ' + compra.produto + ' em '}{fmtDia(compra.comprou_em)}{compra.por === 'nome' ? ' (pelo nome)' : ''}</span>
@@ -1174,18 +1233,18 @@ export default function AtendimentoPage() {
                 </div>
                 <div className="at-head-acoes">
                 {isAdmin
-                  ? <button onClick={function() { alternarIA([atual.id], !iaOn(atual)) }} title={iaOn(atual) ? 'O assistente está respondendo sozinho nesta conversa. Clique para desligar.' : 'Clique para o assistente de IA passar a responder sozinho nesta conversa.'} style={{ cursor: 'pointer', border: '1px solid ' + (iaOn(atual) ? '#7c3aed' : 'var(--border2)'), background: iaOn(atual) ? '#7c3aed' : 'var(--surface2)', color: iaOn(atual) ? '#fff' : 'var(--text)', borderRadius: 999, padding: '7px 14px', fontWeight: 800, fontSize: 12.5, whiteSpace: 'nowrap' }}>🤖 {iaOn(atual) ? 'Assistente ligado' : 'Ligar assistente'}</button>
-                  : iaOn(atual) ? <span title="O assistente de IA está respondendo esta conversa" style={{ border: '1px solid #7c3aed', color: '#7c3aed', borderRadius: 8, padding: '6px 9px', fontWeight: 800, fontSize: 12, whiteSpace: 'nowrap' }}>🤖 Assistente ativo</span> : null}
+                  ? <button onClick={function() { alternarIA([atual.id], !iaOn(atual)) }} title={iaOn(atual) ? 'O assistente está respondendo sozinho nesta conversa. Clique para desligar.' : 'Clique para o assistente de IA passar a responder sozinho nesta conversa.'} className={'at-b' + (iaOn(atual) ? ' at-b-ia' : '')}><i className="ti ti-robot" />{iaOn(atual) ? 'Assistente ligado' : 'Ligar assistente'}</button>
+                  : iaOn(atual) ? <span title="O assistente de IA está respondendo esta conversa" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(124,58,237,0.12)', color: '#7c3aed', borderRadius: 10, padding: '6px 10px', fontWeight: 800, fontSize: 12, whiteSpace: 'nowrap' }}><i className="ti ti-robot" />Assistente ativo</span> : null}
                 {isAdmin && (
-                  <select value={atual.assigned_to || ''} onChange={function(e) { atribuir(e.target.value) }} title="Atendente desta conversa" style={{ border: '1px solid var(--border2)', background: 'var(--surface)', color: 'var(--text)', borderRadius: 999, padding: '7px 12px', fontSize: 12.5, fontWeight: 700, maxWidth: 160 }}>
+                  <select value={atual.assigned_to || ''} onChange={function(e) { atribuir(e.target.value) }} title="Atendente desta conversa" style={{ border: '1px solid var(--border2)', background: 'var(--surface)', color: 'var(--text)', borderRadius: 10, padding: '7px 10px', fontSize: 12.5, fontWeight: 700, maxWidth: 160, fontFamily: 'inherit' }}>
                     <option value="">Em espera</option>
                     {pessoas.filter(function(x) { return x.id === atual.assigned_to || atendeCanal(x, !!atual.connection_id) }).map(function(p) { return <option key={p.id} value={p.id}>{p.id === meuId ? 'Eu (' + (p.nome.split(' ')[0] || 'admin') + ')' : (p.nome.split(' ')[0] || p.email)}</option> })}
                   </select>
                 )}
-                <button onClick={function() { marcarNaoLida(atual.id) }} title="Marcar como não lida (volta para a lista em destaque)" className="at-b">✉ Não lida</button>
+                <button onClick={function() { marcarNaoLida(atual.id) }} title="Marcar como não lida (volta para a lista em destaque)" className="at-b"><i className="ti ti-mail" />Não lida</button>
                 {atual.status === 'resolvida'
-                  ? <button onClick={function() { mudarStatus('aberta') }} className="at-b">Reabrir</button>
-                  : <button onClick={function() { mudarStatus('resolvida') }} className="at-b at-b-ok">✓ Finalizar</button>}
+                  ? <button onClick={function() { mudarStatus('aberta') }} className="at-b"><i className="ti ti-arrow-back-up" />Reabrir</button>
+                  : <button onClick={function() { mudarStatus('resolvida') }} className="at-b at-b-ok"><i className="ti ti-check" />Finalizar</button>}
                 </div>
               </div>
 
@@ -1228,21 +1287,21 @@ export default function AtendimentoPage() {
                 <div ref={fim} />
               </div>
 
-              <div style={{ padding: '10px 12px', background: 'var(--surface2)', borderTop: '1px solid var(--border)' }}>
+              <div style={{ padding: '10px 14px 12px', background: 'var(--surface)', borderTop: '1px solid var(--border)' }}>
                 {erro && <div style={{ marginBottom: 8, fontSize: 13, color: '#b91c1c', fontWeight: 600 }}>{erro}</div>}
-                {!atual.assigned_to && <div style={{ marginBottom: 8, fontSize: 12.5, color: '#b45309', fontWeight: 700 }}>⏳ Esta conversa está em espera. Ao responder, ela fica com você.</div>}
+                {!atual.assigned_to && <div style={{ marginBottom: 8, fontSize: 12.5, color: '#b45309', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}><i className="ti ti-hourglass" />Esta conversa está em espera. Ao responder, ela fica com você.</div>}
                 {janelaAberta ? (
                   <>
-                    <div style={{ fontSize: 11.5, color: 'var(--muted2)', marginBottom: 6 }}>Você pode responder por mais ~{horasRestantes}h.</div>
+                    <div style={{ fontSize: 11.5, color: 'var(--muted2)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}><i className="ti ti-clock" />Você pode responder por mais ~{horasRestantes}h.</div>
                     {(function() {
                       const lista: { id?: string; titulo: string; texto: string; tem_video?: boolean }[] = rapidasDb[canalConv] || (atual.connection_id ? RAPIDAS : RAPIDAS_SUPORTE)
                       if (lista.length === 0 && !isAdmin) return null
                       return (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
                           {lista.map(function(r) {
-                            return <button key={r.id || r.titulo} disabled={enviando} title={r.texto} onClick={function() { usarRapida(r) }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 999, padding: '6px 12px', fontSize: 13, fontWeight: 700, opacity: enviando ? 0.55 : 1 }}>{r.tem_video ? '🎬' : '⚡'} {r.titulo}</button>
+                            return <button key={r.id || r.titulo} disabled={enviando} title={r.texto} onClick={function() { usarRapida(r) }} style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5, border: '1px solid var(--border2)', background: 'var(--surface)', color: 'var(--text)', borderRadius: 999, padding: '5px 11px', fontSize: 12.5, fontWeight: 700, opacity: enviando ? 0.55 : 1, fontFamily: 'inherit' }}><i className={'ti ti-' + (r.tem_video ? 'video' : 'bolt')} style={{ fontSize: 14, color: '#16a34a' }} />{r.titulo}</button>
                           })}
-                          {isAdmin && <button onClick={function() { setGerRapidas(true) }} title="Adicionar, editar ou apagar mensagens rápidas" style={{ cursor: 'pointer', border: '1px dashed var(--border2)', background: 'transparent', color: 'var(--muted2)', borderRadius: 999, padding: '6px 12px', fontSize: 13, fontWeight: 700 }}>＋ Adicionar / editar</button>}
+                          {isAdmin && <button onClick={function() { setGerRapidas(true) }} title="Adicionar, editar ou apagar mensagens rápidas" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, border: '1px dashed var(--border2)', background: 'transparent', color: 'var(--muted2)', borderRadius: 999, padding: '5px 11px', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit' }}><i className="ti ti-plus" style={{ fontSize: 14 }} />Adicionar / editar</button>}
                         </div>
                       )
                     })()}
@@ -1275,24 +1334,24 @@ export default function AtendimentoPage() {
                         )}
                         {mostrarEmoji && <EmojiPicker onPick={inserirEmoji} />}
                         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
-                          <button title="Emojis" aria-label="Abrir emojis" onClick={function() { setMostrarEmoji(!mostrarEmoji) }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: mostrarEmoji ? 'var(--accent-light)' : 'var(--surface2)', borderRadius: '50%', width: 42, height: 42, fontSize: 22, lineHeight: 1, flexShrink: 0 }}>😊</button>
+                          <button title="Emojis" aria-label="Abrir emojis" onClick={function() { setMostrarEmoji(!mostrarEmoji) }} className={'at-ico' + (mostrarEmoji ? ' on' : '')} style={{ width: 42, height: 42, padding: 0, borderRadius: 12, flexShrink: 0 }}><i className="ti ti-mood-smile" style={{ fontSize: 21 }} /></button>
                         <textarea className="at-input" data-msg="1" rows={2} placeholder={anexo ? 'Legenda (opcional)…' : 'Digite a resposta…'} value={texto} onChange={function(e) { setTexto(e.target.value) }}
-                          onKeyDown={function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (anexo) enviarArquivo(anexo, anexo.name, mimeDe(anexo), texto); else enviar() } }} style={{ resize: 'none', flex: 1, minWidth: 0, borderRadius: 22, padding: '10px 16px', background: 'var(--surface)' }} />
+                          onKeyDown={function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (anexo) enviarArquivo(anexo, anexo.name, mimeDe(anexo), texto); else enviar() } }} style={{ resize: 'none', flex: 1, minWidth: 0, borderRadius: 14, padding: '10px 14px', background: 'var(--surface2)' }} />
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
                           <input ref={fileRef} type="file" accept="image/jpeg,image/png,video/mp4,video/3gpp,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.json,application/json" style={{ display: 'none' }} onChange={function(e) { escolherArquivo(e.target.files && e.target.files[0]); e.target.value = '' }} />
-                          <button title="Enviar arquivo, foto ou vídeo" onClick={function() { if (fileRef.current) fileRef.current.click() }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 999, whiteSpace: 'nowrap', padding: '7px 13px', fontSize: 14, fontWeight: 700 }}>📎 Arquivo</button>
-                          <button title="Gravar áudio" onClick={iniciarGravacao} disabled={enviando} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 999, whiteSpace: 'nowrap', padding: '7px 13px', fontSize: 14, fontWeight: 700 }}>🎤 Áudio</button>
-                          <button title="Enviar modelo aprovado" onClick={function() { setMostrarTpl(!mostrarTpl) }} style={{ cursor: 'pointer', border: '1px solid var(--border2)', background: mostrarTpl ? 'var(--accent-light)' : 'var(--surface2)', color: 'var(--text)', borderRadius: 999, whiteSpace: 'nowrap', padding: '7px 13px', fontSize: 14, fontWeight: 700 }}>📄 Modelo</button>
+                          <button title="Enviar arquivo, foto ou vídeo" onClick={function() { if (fileRef.current) fileRef.current.click() }} className="at-ico"><i className="ti ti-paperclip" />Arquivo</button>
+                          <button title="Gravar áudio" onClick={iniciarGravacao} disabled={enviando} className="at-ico"><i className="ti ti-microphone" />Áudio</button>
+                          <button title="Enviar modelo aprovado" onClick={function() { setMostrarTpl(!mostrarTpl) }} className={'at-ico' + (mostrarTpl ? ' on' : '')}><i className="ti ti-template" />Modelo</button>
                           <div style={{ flex: 1 }} />
-                          <button disabled={enviando || (!texto.trim() && !anexo)} onClick={function() { if (anexo) enviarArquivo(anexo, anexo.name, mimeDe(anexo), texto); else enviar() }} style={{ cursor: 'pointer', border: 0, background: 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff', borderRadius: 999, whiteSpace: 'nowrap', padding: '10px 18px', fontWeight: 800, fontSize: 14, boxShadow: '0 4px 12px rgba(22,163,74,0.35)', opacity: enviando || (!texto.trim() && !anexo) ? 0.55 : 1 }}>{enviando ? '…' : 'Enviar ➤'}</button>
+                          <button disabled={enviando || (!texto.trim() && !anexo)} onClick={function() { if (anexo) enviarArquivo(anexo, anexo.name, mimeDe(anexo), texto); else enviar() }} className="at-b at-b-ok" style={{ height: 38, padding: '0 18px', fontSize: 14 }}>{enviando ? 'Enviando…' : <>Enviar<i className="ti ti-send" /></>}</button>
                         </div>
                       </>
                     )}
                   </>
                 ) : (
                   <div style={{ background: 'rgba(217,119,6,0.1)', borderRadius: 12, padding: 12 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>⏳ Passaram 24 horas desde a última mensagem do aluno.</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}><i className="ti ti-clock" style={{ color: '#d97706', fontSize: 16 }} />Passaram 24 horas desde a última mensagem do aluno.</div>
                     <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginBottom: 8 }}>Para voltar a falar, escolha um <b>modelo aprovado</b>. Quando o aluno responder, a conversa volta a ficar livre.</div>
                     <TemplatePicker tpls={tplsDaConversa} enviando={enviando} onSend={function(t) { enviar(t) }} />
                   </div>
