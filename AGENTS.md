@@ -52,7 +52,7 @@ com um assistente de IA chamado **Júnior**.
 
 **Liberar cadastro pelo Júnior (WhatsApp):** quando o aluno manda o print do erro "Não encontramos uma compra com esse e-mail" OU diz que comprou (inclusive há muito tempo ou em outra plataforma, como Kiwify) e não consegue criar conta/entrar/achar as aulas na plataforma nova, o Júnior (autorizado pelo Breno, vale para qualquer aluno e não passa para a equipe) pede o e-mail digitado e emite `[[LIBERAR_CADASTRO: e-mail]]` (`lib/juniorCadastro.ts`). O sistema grava em `cadastro_liberados` (nota "Liberado pelo Júnior (WhatsApp)" com data e telefone), responde pedindo para criar a conta de novo e, após 3 liberações para o mesmo número, passa para a equipe. Não vale para o chat do site.
 
-**Reembolso:** o Júnior nunca promete prazo nem diz que o dinheiro foi devolvido. Primeiro pergunta o motivo e tenta ajudar; só passa para a equipe se o aluno mantiver o pedido. A equipe executa.
+**Reembolso:** no WhatsApp o Júnior não responde pedido de reembolso: a conversa vai direto para o Breno (`lib/juniorReembolso.ts`). No chat do site vale a regra 42 do prompt: pergunta o motivo, tenta ajudar e não promete prazo nem diz que o dinheiro foi devolvido. A equipe executa.
 
 ## Júnior (assistente de IA)
 

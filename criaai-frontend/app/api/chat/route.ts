@@ -44,8 +44,8 @@ export async function POST(req: NextRequest) {
     }
     const sit = situacaoPlanoAluno(hasActivePlan, hidePlans)
     if (sit) systemContent = systemContent + '\n\n' + sit
-    // Final da conversa alternado (R$200 no Pix ou Estrutura Express com cupom, so para quem nao tem a Express); muda a cada dia
-    systemContent = systemContent + '\n\n' + situacaoFinalConversa(tipoFinalConversa(jaTemExpress || profileResult.data?.is_admin === true, user.id + new Date().toISOString().slice(0, 10)))
+    // Final da conversa: so a pergunta da Estrutura Express, so para quem nao tem a Express
+    systemContent = systemContent + '\n\n' + situacaoFinalConversa(tipoFinalConversa(jaTemExpress || profileResult.data?.is_admin === true), jaTemExpress || profileResult.data?.is_admin === true)
 
     // Eventos reais do aluno (Hubla e plataforma): o Junior entende o momento dele antes de responder
     try {
