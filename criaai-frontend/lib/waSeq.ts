@@ -288,7 +288,9 @@ async function enviarMidia(admin: any, token: string, phoneId: string, to: strin
     const fd = new FormData()
     fd.append('messaging_product', 'whatsapp')
     fd.append('type', cl.mime)
-    fd.append('file', new Blob([await dl.data.arrayBuffer()], { type: cl.mime }), String(s.nome || 'arquivo').replace(/[^\w.\- ()]/g, '_').slice(0, 100))
+    if (dl.data.size > cl.max) return falha('O arquivo deste bloco é grande demais para o WhatsApp.')
+    // Usa o arquivo baixado direto (slice so troca o tipo, sem copiar): antes o video ficava 2 vezes na memoria
+    fd.append('file', dl.data.slice(0, dl.data.size, cl.mime), String(s.nome || 'arquivo').replace(/[^\w.\- ()]/g, '_').slice(0, 100))
     let up: any = null
     try {
       const res = await fetch(GRAPH + '/' + phoneId + '/media', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: fd })

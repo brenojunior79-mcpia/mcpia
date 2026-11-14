@@ -135,12 +135,12 @@ async function transcreverAudio(admin: any, msgId: string): Promise<string> {
     if (!m.media_path) return ''
     const dl = await admin.storage.from('wa-media').download(m.media_path)
     if (dl.error || !dl.data) return ''
-    const buf = await dl.data.arrayBuffer()
-    if (buf.byteLength < 200) return ''
+    if (dl.data.size < 200 || dl.data.size > 25 * 1024 * 1024) return ''
     const mime = String(m.mime || 'audio/ogg')
     const ext = mime.indexOf('mpeg') >= 0 ? 'mp3' : mime.indexOf('mp4') >= 0 ? 'm4a' : mime.indexOf('aac') >= 0 ? 'aac' : mime.indexOf('amr') >= 0 ? 'amr' : 'ogg'
     const fd = new FormData()
-    fd.append('file', new Blob([buf], { type: mime }), 'audio.' + ext)
+    // Usa o arquivo baixado direto (slice so troca o tipo, sem copiar): antes o audio ficava 2 vezes na memoria
+    fd.append('file', dl.data.slice(0, dl.data.size, mime), 'audio.' + ext)
     fd.append('model', 'whisper-1')
     fd.append('language', 'pt')
     const resp = await fetch('https://api.openai.com/v1/audio/transcriptions', { method: 'POST', headers: { Authorization: 'Bearer ' + process.env.OPENAI_API_KEY }, body: fd, signal: AbortSignal.timeout(25000) })
@@ -165,6 +165,8 @@ async function parteDaMidia(admin: any, m: any): Promise<any | null> {
     if (!imagem && !pdf) return null
     const dl = await admin.storage.from('wa-media').download(m.media_path)
     if (dl.error || !dl.data) return null
+    // Confere o tamanho antes de ler: arquivo grande demais nem chega a ser copiado para a memoria
+    if (dl.data.size < 100 || dl.data.size > (pdf ? 10 : 8) * 1024 * 1024) return null
     const buf = Buffer.from(await dl.data.arrayBuffer())
     if (buf.length < 100 || buf.length > (pdf ? 10 : 8) * 1024 * 1024) return null
     const b64 = buf.toString('base64')
