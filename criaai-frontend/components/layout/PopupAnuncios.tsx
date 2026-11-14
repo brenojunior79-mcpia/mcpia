@@ -68,75 +68,88 @@ export default function PopupAnuncios({ profile, user }: { profile: any; user: a
 
   if (!aberto) return null
 
+  const beneficios: { i: string; t: string }[] = [
+    { i: 'chart-line', t: 'Veja os resultados de hoje' },
+    { i: 'player-play', t: 'Pause ou ative campanhas' },
+    { i: 'rocket', t: 'Aumente o orçamento com segurança' },
+  ]
+
   return (
-    <div
-      onClick={function() { setAberto(false) }}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(10,8,30,0.72)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, animation: 'paFade .3s ease' }}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Automatize suas vendas por meio do anúncio"
-        onClick={function(e) { e.stopPropagation() }}
-        style={{ position: 'relative', width: '100%', maxWidth: 440, maxHeight: '94vh', overflowY: 'auto', background: 'var(--surface, #fff)', borderRadius: 24, padding: '26px 20px 20px', boxShadow: '0 24px 70px rgba(0,0,0,0.45)', animation: 'paPop .35s cubic-bezier(.2,.9,.3,1.2)', textAlign: 'center' }}
-      >
-        <button
-          type="button"
-          onClick={function() { setAberto(false) }}
-          aria-label="Fechar"
-          style={{ position: 'absolute', top: 10, right: 10, width: 34, height: 34, borderRadius: '50%', border: 0, background: 'var(--surface2, #f1f1f6)', color: 'var(--muted, #666)', fontSize: 18, cursor: 'pointer', lineHeight: 1 }}
-        >✕</button>
+    <div className="pa2-fundo" onClick={function() { setAberto(false) }}>
+      <div className="pa2-card" role="dialog" aria-modal="true" aria-labelledby="pa2-titulo" onClick={function(e) { e.stopPropagation() }}>
+        <button type="button" className="pa2-fechar" onClick={function() { setAberto(false) }} aria-label="Fechar"><i className="ti ti-x" /></button>
 
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 99, background: 'var(--accent-light, #eceaff)', color: 'var(--accent, #4b3fe8)', fontSize: 12, fontWeight: 800, marginBottom: 12 }}>
-          <i className="ti ti-brand-meta" /> Nova aula
+        <div className="pa2-topo">
+          <span className="pa2-brilho" aria-hidden="true" />
+          <div className="pa2-selo"><span className="pa2-ponto" />Aula nova liberada</div>
+          <div className="pa2-meta" aria-hidden="true"><i className="ti ti-brand-meta" /></div>
+          <h2 id="pa2-titulo" className="pa2-titulo">Automatize suas vendas por meio do anúncio</h2>
+          <p className="pa2-sub">Aprenda a acompanhar e ajustar seus anúncios do Facebook aqui mesmo, na plataforma.</p>
         </div>
 
-        <h2 style={{ margin: '0 8px 16px', fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 24, lineHeight: 1.2, color: 'var(--text, #14122b)' }}>
-          Automatize suas vendas por meio do anúncio
-        </h2>
+        <div className="pa2-corpo">
+          <button type="button" className="pa2-video" onClick={assistir} aria-label="Assistir a aula" style={{ backgroundImage: capa ? 'url(' + capa + ')' : undefined }}>
+            <span className="pa2-video-escuro" />
+            <span className="pa2-play-onda" aria-hidden="true" />
+            <span className="pa2-play"><i className="ti ti-player-play" /></span>
+            <span className="pa2-video-nome">Conhecendo o Gerenciador de Anúncios</span>
+          </button>
 
-        {/* Mockup: janela de computador com a capa da aula */}
-        <div style={{ margin: '0 auto 18px', maxWidth: 380 }}>
-          <div style={{ borderRadius: 14, overflow: 'hidden', border: '1px solid var(--border, #e3e3ee)', boxShadow: '0 14px 34px rgba(60,50,160,0.28)', background: '#1f1b4d' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 10px', background: '#2a2566' }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ff5f57' }} />
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#febc2e' }} />
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#28c840' }} />
-              <span style={{ flex: 1, marginLeft: 8, height: 14, borderRadius: 7, background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.7)', fontSize: 9, lineHeight: '14px', textAlign: 'center', overflow: 'hidden', whiteSpace: 'nowrap' }}>Gerenciando seus anúncios</span>
-            </div>
-            <button
-              type="button"
-              onClick={assistir}
-              aria-label="Assistir a aula"
-              style={{ position: 'relative', display: 'block', width: '100%', border: 0, padding: 0, cursor: 'pointer', background: capa ? 'url(' + capa + ') center / cover no-repeat' : 'linear-gradient(135deg,#4b3fe8,#5b4ef8,#8b6dfa)' }}
-            >
-              <span style={{ display: 'block', paddingTop: '56.25%' }} />
-              <span style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.5) 100%)' }} />
-              <span style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 62, height: 62, borderRadius: '50%', background: 'rgba(255,255,255,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 22px rgba(0,0,0,0.4)', animation: 'paPulse 1.8s ease-in-out infinite' }}>
-                <span style={{ width: 0, height: 0, marginLeft: 5, borderTop: '12px solid transparent', borderBottom: '12px solid transparent', borderLeft: '19px solid #4b3fe8' }} />
-              </span>
-              <span style={{ position: 'absolute', left: 12, right: 12, bottom: 9, textAlign: 'left', color: '#fff', fontWeight: 800, fontSize: 12, textShadow: '0 1px 6px rgba(0,0,0,0.7)' }}>Conhecendo o Gerenciador de Anúncios</span>
-            </button>
-          </div>
-          <div style={{ height: 8, margin: '0 auto', width: '38%', background: '#2a2566', borderRadius: '0 0 10px 10px', opacity: 0.55 }} />
+          <ul className="pa2-lista">
+            {beneficios.map(function(b) {
+              return <li key={b.t}><span className="pa2-ico"><i className={'ti ti-' + b.i} /></span>{b.t}</li>
+            })}
+          </ul>
+
+          <button type="button" className="pa2-cta" onClick={assistir}>
+            <span className="pa2-cta-luz" aria-hidden="true" />
+            <i className="ti ti-player-play" />Assistir a aula agora<i className="ti ti-arrow-right" />
+          </button>
+          <button type="button" className="pa2-depois" onClick={function() { setAberto(false) }}>Agora não</button>
         </div>
-
-        <button
-          type="button"
-          onClick={assistir}
-          style={{ width: '100%', padding: '15px 18px', border: 0, borderRadius: 14, cursor: 'pointer', background: 'linear-gradient(135deg,#4b3fe8,#6d5ffb)', color: '#fff', fontWeight: 800, fontSize: 16, fontFamily: 'inherit', boxShadow: '0 8px 22px rgba(75,63,232,0.4)' }}
-        >
-          ▶ Assistir aula
-        </button>
-        <button
-          type="button"
-          onClick={function() { setAberto(false) }}
-          style={{ marginTop: 8, padding: '10px 14px', border: 0, background: 'transparent', color: 'var(--muted2, #888)', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
-        >
-          Agora não
-        </button>
       </div>
-      <style>{'@keyframes paFade{from{opacity:0}to{opacity:1}}@keyframes paPop{from{opacity:0;transform:scale(.92) translateY(14px)}to{opacity:1;transform:none}}@keyframes paPulse{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.08)}}'}</style>
+      <style>{`
+        .pa2-fundo { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(8,6,28,0.78); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); animation: pa2Fade .3s ease-out; }
+        .pa2-card { position: relative; width: 100%; max-width: 460px; max-height: 94vh; overflow-y: auto; border-radius: 26px; background: var(--surface, #fff); box-shadow: 0 30px 80px rgba(20,10,80,0.55); animation: pa2Pop .5s cubic-bezier(.16,1,.3,1); text-align: center; }
+        .pa2-fechar { position: absolute; top: 12px; right: 12px; z-index: 3; width: 36px; height: 36px; border-radius: 50%; border: 0; cursor: pointer; background: rgba(255,255,255,0.18); color: #fff; font-size: 18px; display: flex; align-items: center; justify-content: center; transition: background .15s; }
+        .pa2-fechar:hover { background: rgba(255,255,255,0.3); }
+        .pa2-topo { position: relative; overflow: hidden; padding: 28px 24px 70px; color: #fff; background: radial-gradient(120% 90% at 15% 0%, #8b6dfa 0%, transparent 55%), radial-gradient(90% 80% at 100% 20%, #0866ff 0%, transparent 60%), linear-gradient(160deg, #3b2fd6 0%, #1e1a6b 100%); }
+        .pa2-brilho { position: absolute; inset: -40% -20% auto; height: 160%; background: conic-gradient(from 0deg, transparent 0 70%, rgba(255,255,255,0.18) 80%, transparent 90%); animation: pa2Gira 9s linear infinite; pointer-events: none; }
+        .pa2-selo { position: relative; display: inline-flex; align-items: center; gap: 8px; padding: 6px 13px; border-radius: 99px; background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.28); font-size: 12.5px; font-weight: 800; }
+        .pa2-ponto { width: 8px; height: 8px; border-radius: 99px; background: #4ade80; box-shadow: 0 0 0 0 rgba(74,222,128,0.7); animation: pa2Ponto 1.6s ease-out infinite; }
+        .pa2-meta { position: relative; width: 64px; height: 64px; margin: 18px auto 14px; border-radius: 20px; background: #fff; color: #0866ff; font-size: 38px; display: flex; align-items: center; justify-content: center; box-shadow: 0 12px 30px rgba(8,102,255,0.45); animation: pa2Flutua 3.2s ease-in-out infinite; }
+        .pa2-titulo { position: relative; margin: 0 auto 8px; max-width: 360px; font-family: Syne, sans-serif; font-weight: 800; font-size: 26px; line-height: 1.15; letter-spacing: -0.02em; text-wrap: balance; }
+        .pa2-sub { position: relative; margin: 0 auto; max-width: 340px; font-size: 14.5px; line-height: 1.5; color: rgba(255,255,255,0.86); text-wrap: balance; }
+        .pa2-corpo { position: relative; padding: 0 22px 18px; margin-top: -52px; }
+        .pa2-video { position: relative; display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; padding: 0; cursor: pointer; border-radius: 16px; overflow: hidden; background: #1e1a6b center / cover no-repeat; box-shadow: 0 16px 36px rgba(30,26,107,0.45); outline: 3px solid var(--surface, #fff); transition: transform .2s ease; }
+        .pa2-video:hover { transform: translateY(-2px); }
+        .pa2-video-escuro { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.05) 35%, rgba(0,0,0,0.62) 100%); }
+        .pa2-play-onda { position: absolute; left: 50%; top: 50%; width: 66px; height: 66px; margin: -33px 0 0 -33px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.8); animation: pa2Onda 1.8s ease-out infinite; }
+        .pa2-play { position: absolute; left: 50%; top: 50%; width: 66px; height: 66px; margin: -33px 0 0 -33px; border-radius: 50%; background: #fff; color: #3b2fd6; font-size: 30px; display: flex; align-items: center; justify-content: center; padding-left: 4px; box-sizing: border-box; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+        .pa2-video-nome { position: absolute; left: 14px; right: 14px; bottom: 11px; text-align: left; color: #fff; font-weight: 800; font-size: 13.5px; text-shadow: 0 1px 6px rgba(0,0,0,0.7); }
+        .pa2-lista { list-style: none; margin: 18px 0 18px; padding: 0; display: grid; gap: 8px; text-align: left; }
+        .pa2-lista li { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; background: var(--surface2, #f3f2fa); color: var(--text, #14122b); font-size: 14.5px; font-weight: 700; opacity: 0; animation: pa2Entra .45s cubic-bezier(.16,1,.3,1) forwards; }
+        .pa2-lista li:nth-child(1) { animation-delay: .25s; } .pa2-lista li:nth-child(2) { animation-delay: .35s; } .pa2-lista li:nth-child(3) { animation-delay: .45s; }
+        .pa2-ico { width: 34px; height: 34px; flex-shrink: 0; border-radius: 10px; background: rgba(8,102,255,0.12); color: #0866ff; font-size: 19px; display: flex; align-items: center; justify-content: center; }
+        .pa2-cta { position: relative; overflow: hidden; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 17px 18px; border: 0; border-radius: 16px; cursor: pointer; background: linear-gradient(135deg, #0866ff, #4b3fe8); color: #fff; font-family: inherit; font-weight: 800; font-size: 17px; box-shadow: 0 10px 26px rgba(8,102,255,0.45); transition: transform .15s ease, box-shadow .15s ease; animation: pa2Chama 2.4s ease-in-out 1.2s infinite; }
+        .pa2-cta:hover { transform: translateY(-2px); box-shadow: 0 14px 32px rgba(8,102,255,0.55); }
+        .pa2-cta .ti { font-size: 20px; }
+        .pa2-cta-luz { position: absolute; top: 0; bottom: 0; left: -40%; width: 30%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent); transform: skewX(-20deg); animation: pa2Luz 2.6s ease-in-out .8s infinite; }
+        .pa2-depois { margin-top: 8px; padding: 10px 14px; border: 0; background: transparent; color: var(--muted2, #777); font-size: 13.5px; font-weight: 700; cursor: pointer; font-family: inherit; }
+        .pa2-depois:hover { color: var(--text, #14122b); }
+        .pa2-fechar:focus-visible, .pa2-video:focus-visible, .pa2-cta:focus-visible, .pa2-depois:focus-visible { outline: 3px solid #0866ff; outline-offset: 3px; }
+        @keyframes pa2Fade { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes pa2Pop { from { opacity: 0; transform: translateY(24px) scale(.94) } to { opacity: 1; transform: none } }
+        @keyframes pa2Gira { to { transform: rotate(360deg) } }
+        @keyframes pa2Ponto { 0% { box-shadow: 0 0 0 0 rgba(74,222,128,0.7) } 100% { box-shadow: 0 0 0 10px rgba(74,222,128,0) } }
+        @keyframes pa2Flutua { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-6px) } }
+        @keyframes pa2Onda { 0% { transform: scale(1); opacity: .9 } 100% { transform: scale(1.7); opacity: 0 } }
+        @keyframes pa2Entra { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
+        @keyframes pa2Luz { 0% { left: -40% } 60%,100% { left: 130% } }
+        @keyframes pa2Chama { 0%,100% { transform: scale(1) } 50% { transform: scale(1.025) } }
+        @media (max-width: 420px) { .pa2-titulo { font-size: 23px; } .pa2-topo { padding: 24px 18px 64px; } .pa2-corpo { padding: 0 16px 14px; } }
+        @media (prefers-reduced-motion: reduce) { .pa2-fundo, .pa2-card, .pa2-brilho, .pa2-ponto, .pa2-meta, .pa2-play-onda, .pa2-lista li, .pa2-cta, .pa2-cta-luz { animation: none !important; } .pa2-lista li { opacity: 1; } }
+      `}</style>
     </div>
   )
 }
