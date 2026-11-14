@@ -203,7 +203,8 @@ export async function tratarEventoSequencias(admin: any, eventType: string, payl
       const g = s.trigger || {}
       if (g.tipo !== 'evento' || g.evento !== eventType) continue
       if (!passaFiltro({ metodo: g.metodo, produto: g.produto }, info)) continue
-      if (eventType === 'invoice.payment_succeeded') {
+      // Cobranca gerada ou paga: a mesma pessoa nao entra duas vezes no mesmo fluxo em 24 h (gerou duas cobrancas = recebia a mesma mensagem em dobro)
+      if (eventType === 'invoice.payment_succeeded' || eventType === 'invoice.created') {
         const desde = new Date(agora - 24 * 3600 * 1000).toISOString()
         const ja = await admin.from('wa_seq_runs').select('id').eq('seq_id', s.id).eq('wa_id', info.wa).eq('is_test', false).in('status', ['ativo', 'concluido']).gte('created_at', desde).limit(1)
         if (ja.data && ja.data.length > 0) continue
@@ -401,6 +402,13 @@ export async function processarSequencias(admin: any, token: string): Promise<{ 
           r = { ok: false, code: -2, msgId: '', erro: MSG_JANELA }
         } else if (s.tipo === 'texto') {
           const texto = aplicaNome(s.texto, primeiroNome(run.name)).trim()
+          // Trava: se esse mesmo texto ja foi enviado nesta conversa nos ultimos 15 minutos (ex.: dois fluxos esperando a mesma resposta), nao manda de novo
+          let repetido = false
+          if (conv && conv.id) {
+            const rec = await admin.from('wa_messages').select('id').eq('conversation_id', conv.id).eq('direction', 'out').eq('type', 'text').eq('body', texto).gte('created_at', new Date(Date.now() - 15 * 60000).toISOString()).limit(1)
+            repetido = !!(rec.data && rec.data.length > 0)
+          }
+          if (repetido) { idx++; continue }
           r = await enviarTexto(cn.phone_number_id, run.wa_id, texto)
           if (r.ok) { tipoMsg = 'text'; corpo = texto }
         } else {
