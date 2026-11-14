@@ -32,13 +32,17 @@ export async function GET() {
     admin.from('hubla_compras').select('produto').not('produto', 'is', null).order('paid_at', { ascending: false }).limit(1000),
   ])
   const produtos = limpar((r.data?.value as any)?.lista)
-  const contagem: Record<string, { nome: string; n: number }> = {}
+  // Junta o mesmo produto escrito de jeitos diferentes (ex.: "ESTRUTURA EXPRESS" e "Estrutura Express") e mostra o jeito mais usado
+  const contagem: Record<string, { nome: string; n: number; formas: Record<string, number> }> = {}
   for (const x of (v.data || []) as any[]) {
     const nome = String(x.produto || '').replace(/\s+/g, ' ').trim()
     if (!nome) continue
     const k = nome.toLowerCase()
-    if (!contagem[k]) contagem[k] = { nome, n: 0 }
+    if (!contagem[k]) contagem[k] = { nome, n: 0, formas: {} }
     contagem[k].n++
+    contagem[k].formas[nome] = (contagem[k].formas[nome] || 0) + 1
+    const melhor = Object.keys(contagem[k].formas).sort(function(a, b) { return contagem[k].formas[b] - contagem[k].formas[a] || (a === a.toUpperCase() ? 1 : -1) })[0]
+    contagem[k].nome = melhor
   }
   const sugestoes = Object.values(contagem).sort(function(a, b) { return b.n - a.n }).slice(0, 12).map(function(x) { return x.nome })
   return NextResponse.json({ produtos, sugestoes })
