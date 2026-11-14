@@ -7,7 +7,7 @@ import { classificar } from '@/lib/waMedia'
 import { EVENTOS, type Metodo } from '@/lib/waAutoTipos'
 import { responderUltimaPendente, MARCA_FLUXO_IA } from '@/lib/waIA'
 import { COMPRA, LIMITE, lerEvento, passaFiltro, enviar, textoDoModelo, jaPagou } from '@/lib/waAuto'
-import { MAX_ATRASO_S, segundosDoAtraso, type PassoSeq, type Sequencia, type Unidade } from '@/lib/waSeqTipos'
+import { MAX_ATRASO_S, ehEnvio, lePos, segundosDoAtraso, type PassoSeq, type Sequencia, type Unidade } from '@/lib/waSeqTipos'
 
 const JANELA_MS = 24 * 3600 * 1000
 const REPETIR_PALAVRA_HORAS = 12
@@ -29,6 +29,8 @@ export function validarSeq(input: any): { ok: true; seq: Sequencia } | { ok: fal
     const palavras: string[] = (Array.isArray(g.palavras) ? g.palavras : []).map(function(x: any) { return String(x || '').trim().slice(0, 60) }).filter(Boolean).slice(0, 20)
     trigger = { tipo: 'palavra', palavras, match: g.match === 'igual' ? 'igual' : 'contem' }
   }
+  const posGatilho = lePos(g.pos)
+  if (posGatilho) trigger.pos = posGatilho
   const steps: PassoSeq[] = []
   const raw: any[] = Array.isArray(input?.steps) ? input.steps.slice(0, 40) : []
   const ids: Record<string, boolean> = {}
@@ -71,6 +73,8 @@ export function validarSeq(input: any): { ok: true; seq: Sequencia } | { ok: fal
     } else {
       return { ok: false, erro: 'Bloco desconhecido no fluxo.' }
     }
+    const posBloco = lePos(s?.pos)
+    if (posBloco) steps[steps.length - 1].pos = posBloco
   }
   const seq: Sequencia = {
     name, trigger, steps, enabled: input?.enabled === true,
@@ -421,6 +425,13 @@ export async function processarSequencias(admin: any, token: string): Promise<{ 
         out.enviados++; idx++
         await admin.from('wa_seq_sends').insert({ run_id: run.id, seq_id: run.seq_id, step_id: s.id, wa_message_id: r.msgId || null, status: 'sent', is_test: run.is_test === true })
         await registrar(admin, sq.connection_id, run, tipoMsg, corpo, r.msgId, extra)
+        // Pausa natural: duas mensagens seguidas nao saem coladas. A proxima fica para daqui a 4 a 12 segundos
+        // (o agendador passa a cada 15 segundos, entao na pratica chega entre 15 e 30 segundos depois).
+        if (idx < steps.length && ehEnvio(steps[idx])) {
+          await fim('ativo', null, { step_index: idx, next_run_at: new Date(Date.now() + (4 + Math.random() * 8) * 1000).toISOString() })
+          parou = true
+          break
+        }
         continue
       }
       if (LIMITE.indexOf(r.code) >= 0 || r.code === -1) {

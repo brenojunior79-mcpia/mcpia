@@ -4,7 +4,10 @@ import type { Metodo } from '@/lib/waAutoTipos'
 export type Unidade = 'segundos' | 'minutos' | 'horas' | 'dias'
 export type ParamModelo = { mode: 'nome' | 'produto' | 'link' | 'texto'; value: string }
 
-export type PassoSeq =
+// Posicao do bloco no quadro (so visual: o motor ignora)
+export type Pos = { x: number; y: number }
+
+export type PassoSeq = (
   | { id: string; tipo: 'atraso'; valor: number; unidade: Unidade }
   | { id: string; tipo: 'resposta'; valor: number; unidade: Unidade; aoExpirar: 'continuar' | 'encerrar' }
   | { id: string; tipo: 'ia' }
@@ -13,10 +16,24 @@ export type PassoSeq =
   | { id: string; tipo: 'imagem'; path: string; mime: string; nome: string; legenda: string }
   | { id: string; tipo: 'video'; path: string; mime: string; nome: string; legenda: string }
   | { id: string; tipo: 'modelo'; template: string; language: string; params: ParamModelo[] }
+) & { pos?: Pos }
 
-export type GatilhoSeq =
+export type GatilhoSeq = (
   | { tipo: 'palavra'; palavras: string[]; match: 'contem' | 'igual' }
   | { tipo: 'evento'; evento: string; metodo?: Metodo; produto?: string }
+) & { pos?: Pos }
+
+export function lePos(p: any): Pos | undefined {
+  if (!p || typeof p !== 'object') return undefined
+  const x = Math.round(Number(p.x)), y = Math.round(Number(p.y))
+  if (!isFinite(x) || !isFinite(y)) return undefined
+  return { x: Math.max(-5000, Math.min(20000, x)), y: Math.max(-5000, Math.min(20000, y)) }
+}
+
+// Bloco que envia algo para a pessoa (entre dois desses o motor faz uma pausa natural)
+export function ehEnvio(p: { tipo: string } | undefined): boolean {
+  return !!p && p.tipo !== 'atraso' && p.tipo !== 'resposta' && p.tipo !== 'ia'
+}
 
 export type Sequencia = {
   id?: string

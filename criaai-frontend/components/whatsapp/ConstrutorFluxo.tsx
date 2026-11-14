@@ -2,15 +2,15 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { EVENTOS, VARIAVEIS } from '@/lib/waAutoTipos'
-import { novoId, textoAtraso, ROTULO_TIPO, type PassoSeq, type Sequencia, type Unidade } from '@/lib/waSeqTipos'
+import { ehEnvio, novoId, textoAtraso, ROTULO_TIPO, type PassoSeq, type Pos, type Sequencia, type Unidade } from '@/lib/waSeqTipos'
 
 export type StatsSeq = { runs: { step_index: number; status: string; vencido: boolean; n: number }[]; sends: { step_id: string; status: string; n: number }[] }
 export type ConexaoSeq = { id: string; name: string; display_phone: string | null; active: boolean }
 type Modelo = { name: string; language: string; status: string; body: string; vars: number }
 
-const W = 240          // largura de cada bloco
-const GAP = 96         // espaco entre blocos
-const PORTA_Y = 34     // altura da bolinha de entrada (a partir do topo do bloco)
+const W = 220          // largura de cada bloco
+const GAP = 90         // espaco entre blocos
+const PORTA_Y = 22     // altura da bolinha de entrada (a partir do topo do bloco)
 const OFFS = [70, 0, 96, 24] // alturas alternadas, como no desenho do exemplo
 
 const MENU: { tipo: PassoSeq['tipo']; icone: string; cor: string; desc: string }[] = [
@@ -60,17 +60,17 @@ function numeros(st: StatsSeq | undefined, passos: PassoSeq[], i: number) {
 
 const tituloCartao: React.CSSProperties = { fontWeight: 800, fontSize: 14, color: 'var(--text)', lineHeight: 1.25 }
 const etiqueta: React.CSSProperties = { fontSize: 10.5, fontWeight: 800, letterSpacing: 0.6, color: 'var(--muted2)', textTransform: 'uppercase' }
-const caixa: React.CSSProperties = { background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 10px', fontSize: 13, color: 'var(--text)', lineHeight: 1.4, wordBreak: 'break-word' }
+const caixa: React.CSSProperties = { background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 8px', fontSize: 12, color: 'var(--text)', lineHeight: 1.4, wordBreak: 'break-word' }
 const lab: React.CSSProperties = { fontSize: 12.5, fontWeight: 700, color: 'var(--text)', marginBottom: 4, display: 'block' }
 
 function Numeros({ itens }: { itens: [string, string | number][] }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px 6px', gap: 4 }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 8px', gap: 4 }}>
       {itens.map(function(x) {
         return (
           <div key={x[0]} style={{ textAlign: 'center', flex: 1 }}>
-            <div style={{ fontSize: 10.5, color: 'var(--muted2)', fontWeight: 600 }}>{x[0]}</div>
-            <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{x[1]}</div>
+            <div style={{ fontSize: 9.5, color: 'var(--muted2)', fontWeight: 600 }}>{x[0]}</div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text)' }}>{x[1]}</div>
           </div>
         )
       })}
@@ -99,6 +99,10 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
   const [tNome, setTNome] = useState('')
   const [tPular, setTPular] = useState(true)
   const [testando, setTestando] = useState(false)
+  const [busca, setBusca] = useState('')
+  const [dragPos, setDragPos] = useState<{ key: string; x: number; y: number } | null>(null)
+  const arrNo = useRef<{ key: string; sx: number; sy: number; ox: number; oy: number; moveu: boolean; id: number } | null>(null)
+  const posRef = useRef<Record<string, Pos>>({})
   const area = useRef<HTMLDivElement>(null)
   const refs = useRef<Record<string, HTMLDivElement | null>>({})
   const arrasto = useRef<{ x: number; y: number; vx: number; vy: number; moveu: boolean; id: number } | null>(null)
@@ -146,16 +150,32 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
   }, [caminhoSel])
 
   function setPasso(pid: string, fn: (p: PassoSeq) => PassoSeq) { mudar(function(s) { return { ...s, steps: s.steps.map(function(p) { return p.id === pid ? fn(p) : p }) } }) }
-  function adicionar(depoisDe: number, tipo: PassoSeq['tipo']) {
+  // Quadro livre: depois que um bloco foi arrastado, todos guardam a propria posicao
+  const livre = !!seq.trigger.pos || seq.steps.some(function(x) { return !!x.pos })
+  function comPosicoes(s: Sequencia, troca: Record<string, Pos>): Sequencia {
+    const atual = posRef.current
+    const P = function(key: string, own?: Pos) { return troca[key] || own || atual[key] }
+    return { ...s, trigger: { ...s.trigger, pos: P('gatilho', s.trigger.pos) } as any, steps: s.steps.map(function(p) { return { ...p, pos: P(p.id, p.pos) } as PassoSeq }) }
+  }
+  function adicionar(depoisDe: number, tipo: PassoSeq['tipo'], onde?: Pos) {
     const p = novoPasso(tipo)
-    mudar(function(s) { const l = s.steps.slice(); l.splice(depoisDe + 1, 0, p); return { ...s, steps: l } })
+    const soltoLivre = livre || !!onde
+    mudar(function(s) {
+      const base = soltoLivre ? comPosicoes(s, {}) : s
+      const l = base.steps.slice()
+      if (soltoLivre) {
+        const ant = depoisDe < 0 ? base.trigger.pos : (l[depoisDe] ? l[depoisDe].pos : undefined)
+        p.pos = onde || (ant ? { x: ant.x + W + GAP, y: ant.y } : undefined)
+      }
+      l.splice(depoisDe + 1, 0, p)
+      return { ...base, steps: l }
+    })
     setMenu(null); setSel(p.id)
-    const k = depoisDe + 2
-    setTimeout(function() { mostrarNo(k) }, 30)
+    setTimeout(function() { mostrarNo(p.id) }, 40)
   }
   function duplicar(i: number) {
     const o = seq.steps[i]
-    const c: PassoSeq = { ...(o as any), id: novoId() }
+    const c: PassoSeq = { ...(o as any), id: novoId(), ...(o.pos ? { pos: { x: o.pos.x + 30, y: o.pos.y + 40 } } : {}) }
     mudar(function(s) { const l = s.steps.slice(); l.splice(i + 1, 0, c); return { ...s, steps: l } })
     setSel(c.id)
   }
@@ -229,10 +249,21 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
   // ---------- posicoes ----------
   const nos: { key: string; passo: PassoSeq | null; i: number }[] = [{ key: 'gatilho', passo: null, i: -1 }]
   seq.steps.forEach(function(p, i) { nos.push({ key: p.id, passo: p, i }) })
-  const pos = nos.map(function(n, k) { return { x: 40 + k * (W + GAP), y: OFFS[k % OFFS.length] + 30 } })
-  const h = function(key: string) { return alturas[key] || 140 }
-  const largura = 40 + nos.length * (W + GAP) + 380
-  const altura = Math.max(...nos.map(function(n, k) { return pos[k].y + h(n.key) })) + 140
+  const pos: Pos[] = nos.map(function(n, k) {
+    if (dragPos && dragPos.key === n.key) return { x: dragPos.x, y: dragPos.y }
+    const own = n.passo ? n.passo.pos : seq.trigger.pos
+    return own || { x: 40 + k * (W + GAP), y: OFFS[k % OFFS.length] + 30 }
+  })
+  const mapa: Record<string, Pos> = {}
+  nos.forEach(function(n, k) { mapa[n.key] = pos[k] })
+  posRef.current = mapa
+  const h = function(key: string) { return alturas[key] || 110 }
+  const minX = Math.min(...pos.map(function(p) { return p.x }))
+  const minY = Math.min(...pos.map(function(p) { return p.y }))
+  const maxX = Math.max(...pos.map(function(p) { return p.x })) + W
+  const maxY = Math.max(...nos.map(function(n, k) { return pos[k].y + h(n.key) }))
+  const largura = Math.max(0, maxX) + 400
+  const altura = Math.max(0, maxY) + 200
 
   // ---------- mover e dar zoom no quadro ----------
   function limita(k: number) { return Math.min(2, Math.max(0.3, k)) }
@@ -252,18 +283,19 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
     const el = area.current
     if (!el) return
     const cw = el.clientWidth, ch = el.clientHeight
-    const cw2 = pos[pos.length - 1].x + W + 60
-    const ch2 = altura - 90
+    const cw2 = maxX - minX + 40
+    const ch2 = maxY - minY + 40
     const k = limita(Math.min(1, (cw - 32) / cw2, (ch - 32) / ch2))
-    setView({ k, x: 16, y: Math.max(8, (ch - ch2 * k) / 2) })
+    setView({ k, x: 16 - (minX - 20) * k, y: Math.max(16, (ch - ch2 * k) / 2) - (minY - 20) * k })
   }
   function cem() { setView({ x: 24, y: 8, k: 1 }) }
   // Traz um bloco para a parte visivel do quadro (depois de adicionar)
-  function mostrarNo(k: number) {
+  function mostrarNo(key: string) {
     const el = area.current
-    if (!el) return
+    const alvo = posRef.current[key]
+    if (!el || !alvo) return
     const v = viewRef.current
-    const xd = 40 + k * (W + GAP)
+    const xd = alvo.x
     const direita = v.x + (xd + W + 24) * v.k
     const esquerda = v.x + (xd - 24) * v.k
     let nx = v.x
@@ -290,6 +322,49 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
   }
   function soltar() { arrasto.current = null }
 
+  // Arrastar um bloco pelo quadro (um toque sem arrastar so seleciona o bloco)
+  function noPressionar(e: React.PointerEvent, key: string, k: number) {
+    if ((e.target as HTMLElement).closest('[data-ctl]')) return
+    if (e.button !== undefined && e.button > 0) return
+    e.stopPropagation()
+    arrNo.current = { key, sx: e.clientX, sy: e.clientY, ox: pos[k].x, oy: pos[k].y, moveu: false, id: e.pointerId }
+    setMenu(null)
+  }
+  function noMover(e: React.PointerEvent) {
+    const a = arrNo.current
+    if (!a) return
+    const z = viewRef.current.k
+    const dx = e.clientX - a.sx, dy = e.clientY - a.sy
+    if (!a.moveu) {
+      if (Math.hypot(dx, dy) < 5) return
+      a.moveu = true
+      try { (e.currentTarget as HTMLElement).setPointerCapture(a.id) } catch (err) {}
+    }
+    setDragPos({ key: a.key, x: Math.round(a.ox + dx / z), y: Math.round(a.oy + dy / z) })
+  }
+  function noSoltar(e: React.PointerEvent) {
+    const a = arrNo.current
+    arrNo.current = null
+    if (!a) return
+    if (!a.moveu) { setSel(a.key); return }
+    const z = viewRef.current.k
+    const fim: Pos = { x: Math.round(a.ox + (e.clientX - a.sx) / z), y: Math.round(a.oy + (e.clientY - a.sy) / z) }
+    const troca: Record<string, Pos> = {}
+    troca[a.key] = fim
+    mudar(function(s) { return comPosicoes(s, troca) })
+    setDragPos(null)
+  }
+  function soltarDoMenu(e: React.DragEvent) {
+    const tipo = e.dataTransfer.getData('text/bloco') as PassoSeq['tipo']
+    if (!tipo || !MENU.some(function(m) { return m.tipo === tipo })) return
+    e.preventDefault()
+    const el = area.current
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    const v = viewRef.current
+    adicionar(seq.steps.length - 1, tipo, { x: Math.round((e.clientX - r.left - v.x) / v.k - W / 2), y: Math.round((e.clientY - r.top - v.y) / v.k - 20) })
+  }
+
   // Roda do mouse: rola o quadro. Ctrl (ou Cmd) + roda, ou o gesto de pinca do touchpad: zoom na posicao do mouse.
   useEffect(function() {
     const el = area.current
@@ -315,7 +390,7 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
   useEffect(function() {
     const t = setTimeout(function() {
       const el = area.current
-      if (el && pos[pos.length - 1].x + W + 60 > el.clientWidth) ajustar()
+      if (el && (maxX + 60 > el.clientWidth || minX < 0 || minY < 0)) ajustar()
     }, 60)
     return function() { clearTimeout(t) }
   }, [])
@@ -344,31 +419,35 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
     else if (p.tipo === 'audio') corpo = <div style={caixa}>{p.path ? '🎤 ' + (p.nome || 'áudio') : <i style={{ color: 'var(--muted2)' }}>Sem áudio. Clique para enviar.</i>}</div>
     else if (p.tipo === 'imagem' || p.tipo === 'video') corpo = <div style={caixa}>{p.path ? (p.tipo === 'imagem' ? '🖼️ ' : '🎬 ') + (p.nome || p.tipo) + (p.legenda ? ' — ' + p.legenda.slice(0, 40) : '') : <i style={{ color: 'var(--muted2)' }}>Sem arquivo. Clique para enviar.</i>}</div>
     else corpo = <div style={caixa}>{p.template ? '📄 ' + p.template : <i style={{ color: 'var(--muted2)' }}>Escolha o modelo. Clique aqui.</i>}</div>
+    const pausa = p && ehEnvio(p) && n.i > 0 && ehEnvio(seq.steps[n.i - 1])
+    const arrastando = !!dragPos && dragPos.key === n.key
     return (
-      <div key={n.key} data-bloco="1" ref={function(el) { refs.current[n.key] = el }} onClick={function() { setSel(n.key); setMenu(null) }}
-        style={{ position: 'absolute', left: pos[k].x, top: pos[k].y, width: W, background: 'var(--surface)', border: selecionado ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 14, boxShadow: selecionado ? '0 6px 22px rgba(0,0,0,0.12)' : '0 2px 8px rgba(0,0,0,0.06)', cursor: 'pointer', boxSizing: 'border-box' }}>
-        <div style={{ position: 'absolute', left: -7, top: PORTA_Y - 7, width: 12, height: 12, borderRadius: 99, background: 'var(--surface)', border: '3px solid #10b981' }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 12px 10px' }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: cor + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{icone}</div>
-          <div style={{ minWidth: 0 }}>
-            <div style={etiqueta}>{tag}</div>
-            <div style={tituloCartao}>{titulo}</div>
+      <div key={n.key} data-bloco="1" ref={function(el) { refs.current[n.key] = el }}
+        onPointerDown={function(e) { noPressionar(e, n.key, k) }} onPointerMove={noMover} onPointerUp={noSoltar} onPointerCancel={function() { arrNo.current = null; setDragPos(null) }}
+        style={{ position: 'absolute', left: pos[k].x, top: pos[k].y, width: W, background: 'var(--surface)', border: selecionado ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 12, boxShadow: arrastando ? '0 12px 30px rgba(0,0,0,0.18)' : selecionado ? '0 6px 22px rgba(0,0,0,0.12)' : '0 1px 4px rgba(0,0,0,0.06)', cursor: arrastando ? 'grabbing' : 'grab', boxSizing: 'border-box', zIndex: arrastando ? 5 : selecionado ? 2 : 1 }}>
+        {p && <div style={{ position: 'absolute', left: -6, top: PORTA_Y - 5, width: 10, height: 10, borderRadius: 99, background: 'var(--surface)', border: '2px solid #10b981' }} />}
+        <button data-ctl="1" title="Adicionar o próximo bloco" onClick={function(e) { e.stopPropagation(); if (menu && menu.i === n.i) { setMenu(null); return } const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); setMenu({ i: n.i, x: r.right + 10, y: r.top }) }}
+          style={{ position: 'absolute', right: -11, top: PORTA_Y - 10, width: 20, height: 20, borderRadius: 99, border: '2px solid #10b981', background: 'var(--surface)', color: '#10b981', fontSize: 14, lineHeight: '15px', fontWeight: 800, padding: 0, cursor: 'pointer', zIndex: 3 }}>+</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px' }}>
+          <div style={{ width: 26, height: 26, borderRadius: 8, background: cor + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>{icone}</div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ ...tituloCartao, fontSize: 12.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{titulo}</div>
+            <div style={{ ...etiqueta, fontSize: 9.5 }}>{tag}</div>
           </div>
+          {p && <button data-ctl="1" title="Duplicar bloco" onClick={function(e) { e.stopPropagation(); duplicar(n.i) }} style={iconeBtn}>⧉</button>}
+          <button data-ctl="1" title="Editar" onClick={function(e) { e.stopPropagation(); setSel(n.key); setMenu(null) }} style={iconeBtn}>✎</button>
+          {p && <button data-ctl="1" title="Apagar bloco" onClick={function(e) { e.stopPropagation(); remover(n.i) }} style={iconeBtn}>🗑</button>}
         </div>
-        <div style={{ borderTop: '1px solid var(--border)' }}>
+        <div style={{ padding: '0 10px 8px' }}>
+          {pausa && <div style={{ fontSize: 11, color: 'var(--muted2)', marginBottom: 5 }}>⏱ Pausa natural antes de enviar</div>}
+          {corpo}
+        </div>
+        <div style={{ borderTop: '1px solid var(--border)', background: 'var(--surface2)', borderRadius: '0 0 11px 11px' }}>
           {!p && <Numeros itens={[['Iniciaram', nGatilho]]} />}
           {p && p.tipo === 'atraso' && <Numeros itens={[['Agendado', num.agendado], ['Pendente', num.pendente], ['Concluído', num.concluido]]} />}
           {p && p.tipo === 'ia' && <Numeros itens={[['Transferidos', num.concluido]]} />}
           {p && p.tipo === 'resposta' && <Numeros itens={[['Aguardando', num.agendado], ['Pendente', num.pendente], ['Concluído', num.concluido]]} />}
-          {p && p.tipo !== 'atraso' && p.tipo !== 'resposta' && p.tipo !== 'ia' && <Numeros itens={[['Enviado', num.enviado], ['Entregue', num.entregue], ['Lido', num.lido], ['Falha', num.falha]]} />}
-          <div style={{ padding: '0 12px 10px' }}>{corpo}</div>
-        </div>
-        <div style={{ borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', background: 'var(--surface2)', borderRadius: '0 0 12px 12px' }}>
-          <div style={{ display: 'flex', gap: 6 }}>
-            {p && <button data-ctl="1" title="Duplicar bloco" onClick={function(e) { e.stopPropagation(); duplicar(n.i) }} style={miniBtn}>⧉</button>}
-            {p && <button data-ctl="1" title="Apagar bloco" onClick={function(e) { e.stopPropagation(); remover(n.i) }} style={miniBtn}>🗑</button>}
-          </div>
-          <button data-ctl="1" title="Adicionar o próximo bloco" onClick={function(e) { e.stopPropagation(); if (menu && menu.i === n.i) { setMenu(null); return } const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); setMenu({ i: n.i, x: r.right + 12, y: r.top }) }} style={{ cursor: 'pointer', width: 30, height: 30, borderRadius: 99, border: 0, background: '#3f3f46', color: '#fff', fontSize: 20, lineHeight: '28px', fontWeight: 700, padding: 0 }}>+</button>
+          {p && ehEnvio(p) && <Numeros itens={[['Enviado', num.enviado], ['Entregue', num.entregue], ['Lido', num.lido], ['Falha', num.falha]]} />}
         </div>
       </div>
     )
@@ -560,7 +639,21 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
       <style>{`
         .cb-corpo { flex: 1; min-height: 0; display: flex; }
         .cb-painel { width: 340px; flex-shrink: 0; border-left: 1px solid var(--border); background: var(--surface); overflow-y: auto; padding: 14px; }
-        @media (max-width: 900px) { .cb-corpo { flex-direction: column; } .cb-painel { width: auto; border-left: 0; border-top: 1px solid var(--border); max-height: 46vh; } }
+        .cb-blocos { width: 230px; flex-shrink: 0; border-right: 1px solid var(--border); background: var(--surface); overflow-y: auto; padding: 12px; display: flex; flex-direction: column; }
+        .cb-lista { display: flex; flex-direction: column; gap: 2px; }
+        .cb-item { cursor: grab; display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; border: 0; background: transparent; color: var(--text); padding: 7px 8px; border-radius: 10px; }
+        .cb-item:hover { background: var(--surface2); }
+        .cb-dica { font-size: 11.5px; color: var(--muted2); line-height: 1.45; margin-top: 12px; }
+        .cb-chave { position: relative; width: 40px; height: 22px; border-radius: 99px; border: 0; cursor: pointer; padding: 0; transition: background .2s; }
+        .cb-chave span { position: absolute; top: 3px; width: 16px; height: 16px; border-radius: 99px; background: #fff; transition: left .2s; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+        @media (max-width: 900px) {
+          .cb-corpo { flex-direction: column; }
+          .cb-blocos { width: auto; border-right: 0; border-bottom: 1px solid var(--border); padding: 8px; }
+          .cb-blocos .at-input, .cb-dica { display: none; }
+          .cb-lista { flex-direction: row; overflow-x: auto; gap: 4px; }
+          .cb-item { width: auto; flex-shrink: 0; background: var(--surface2); white-space: nowrap; }
+          .cb-painel { width: auto; border-left: 0; border-top: 1px solid var(--border); max-height: 46vh; }
+        }
       `}</style>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '10px 14px', background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
         <button onClick={voltar} style={{ cursor: 'pointer', border: 0, background: 'transparent', color: 'var(--accent)', fontWeight: 800, fontSize: 13.5, padding: 0 }}>← Fluxos</button>
@@ -569,9 +662,15 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
           <option value="">Escolha o número…</option>
           {conexoes.map(function(c) { return <option key={c.id} value={c.id}>{c.name}{c.display_phone ? ' · ' + c.display_phone : ''}{c.active ? '' : ' (inativo)'}</option> })}
         </select>
-        <button onClick={alternarLigado} disabled={salvando} title={seq.enabled ? 'Clique para desligar' : 'Clique para ligar'} style={{ cursor: 'pointer', border: 0, borderRadius: 999, padding: '7px 14px', fontWeight: 800, fontSize: 12.5, background: seq.enabled ? 'rgba(22,163,74,0.16)' : 'var(--surface2)', color: seq.enabled ? '#15803d' : 'var(--muted2)' }}>{seq.enabled ? '● Ligado' : '○ Desligado'}</button>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 13, color: 'var(--text)', marginLeft: 6 }}>
+          <button onClick={alternarLigado} disabled={salvando} title={seq.enabled ? 'Clique para desligar' : 'Clique para ligar'} className="cb-chave" style={{ background: seq.enabled ? '#16a34a' : 'var(--border2, #cbd5e1)' }}>
+            <span style={{ left: seq.enabled ? 21 : 3 }} />
+          </button>
+          {seq.enabled ? 'Ativo' : 'Desligado'}
+        </label>
         <div style={{ flex: 1 }} />
         {ok && <span style={{ fontSize: 12.5, color: '#15803d', fontWeight: 800 }}>{ok}</span>}
+        {!sujo && !ok && id && <span style={{ fontSize: 12, color: 'var(--muted2)' }}>Salvo</span>}
         {sujo && !ok && <span style={{ fontSize: 12, color: 'var(--muted2)' }}>Alterações não salvas</span>}
         <button onClick={function() { setTeste(!teste) }} style={{ cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 10, padding: '8px 14px', fontWeight: 800, fontSize: 13 }}>Testar</button>
         <button onClick={function() { salvar() }} disabled={salvando} style={{ cursor: 'pointer', border: 0, background: '#16a34a', color: '#fff', borderRadius: 10, padding: '9px 18px', fontWeight: 800, fontSize: 13.5, opacity: salvando ? 0.6 : 1 }}>{salvando ? 'Salvando…' : 'Salvar'}</button>
@@ -589,18 +688,36 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
         </div>
       )}
       <div className="cb-corpo">
-        <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
+        <div className="cb-blocos">
+          <input className="at-input" value={busca} onChange={function(e) { setBusca(e.target.value) }} placeholder="🔍 Buscar blocos…" style={{ marginBottom: 10 }} />
+          <div className="cb-lista">
+            {MENU.filter(function(m) { const q = busca.trim().toLowerCase(); return !q || (ROTULO_TIPO[m.tipo] + ' ' + m.desc).toLowerCase().indexOf(q) >= 0 }).map(function(m) {
+              return (
+                <button key={m.tipo} draggable title={m.desc + ' (clique para pôr no fim, ou arraste para o quadro)'}
+                  onDragStart={function(e) { e.dataTransfer.setData('text/bloco', m.tipo); e.dataTransfer.effectAllowed = 'copy' }}
+                  onClick={function() { adicionar(seq.steps.length - 1, m.tipo) }} className="cb-item">
+                  <span style={{ width: 30, height: 30, borderRadius: 8, background: m.cor + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>{m.icone}</span>
+                  <span style={{ fontWeight: 700, fontSize: 13 }}>{ROTULO_TIPO[m.tipo]}</span>
+                </button>
+              )
+            })}
+          </div>
+          <div className="cb-dica">Clique num bloco para colocá-lo no fim do fluxo, ou arraste para o quadro.</div>
+        </div>
+        <div style={{ flex: 1, minWidth: 0, minHeight: 320, position: 'relative' }}>
           <div ref={area} onPointerDown={aoPressionar} onPointerMove={aoMover} onPointerUp={soltar} onPointerCancel={soltar}
+            onDragOver={function(e) { if (e.dataTransfer.types.indexOf('text/bloco') >= 0) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy' } }} onDrop={soltarDoMenu}
             style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: 'var(--surface2)', backgroundImage: 'radial-gradient(var(--border) 1px, transparent 1px)', backgroundSize: (22 * view.k) + 'px ' + (22 * view.k) + 'px', backgroundPosition: view.x + 'px ' + view.y + 'px', cursor: arrasto.current && arrasto.current.moveu ? 'grabbing' : 'grab', userSelect: 'none', WebkitUserSelect: 'none', touchAction: 'none' }}>
             <div style={{ position: 'absolute', left: 0, top: 0, width: largura, height: altura, transformOrigin: '0 0', transform: 'translate(' + view.x + 'px, ' + view.y + 'px) scale(' + view.k + ')' }}>
-              <svg width={largura} height={altura} style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none' }}>
+              <svg width={largura} height={altura} style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none', overflow: 'visible' }}>
                 {nos.slice(0, -1).map(function(n, k) {
-                  const x1 = pos[k].x + W
-                  const y1 = pos[k].y + h(n.key) - 24
-                  const x2 = pos[k + 1].x
+                  const x1 = pos[k].x + W + 9
+                  const y1 = pos[k].y + PORTA_Y
+                  const x2 = pos[k + 1].x - 6
                   const y2 = pos[k + 1].y + PORTA_Y
-                  const d = 'M ' + x1 + ' ' + y1 + ' C ' + (x1 + GAP * 0.6) + ' ' + y1 + ', ' + (x2 - GAP * 0.6) + ' ' + y2 + ', ' + x2 + ' ' + y2
-                  return <path key={n.key} d={d} fill="none" stroke="#9ca3af" strokeWidth={1.5} />
+                  const c = Math.max(50, Math.abs(x2 - x1) * 0.5)
+                  const d = 'M ' + x1 + ' ' + y1 + ' C ' + (x1 + c) + ' ' + y1 + ', ' + (x2 - c) + ' ' + y2 + ', ' + x2 + ' ' + y2
+                  return <path key={n.key} d={d} fill="none" stroke="#10b981" strokeOpacity={0.7} strokeWidth={1.6} />
                 })}
               </svg>
               {nos.map(function(n, k) { return cartao(n, k) })}
@@ -633,6 +750,7 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
   )
 }
 
+const iconeBtn: React.CSSProperties = { cursor: 'pointer', width: 22, height: 22, borderRadius: 6, border: 0, background: 'transparent', color: 'var(--muted2)', fontSize: 12, padding: 0, lineHeight: '22px', flexShrink: 0 }
 const miniBtn: React.CSSProperties = { cursor: 'pointer', width: 28, height: 28, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: 14, fontWeight: 700, padding: 0, lineHeight: '26px' }
 const miniTxt: React.CSSProperties = { cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 8, padding: '6px 12px', fontWeight: 700, fontSize: 12.5 }
 function abaBtn(on: boolean): React.CSSProperties {
