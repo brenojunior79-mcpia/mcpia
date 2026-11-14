@@ -15,7 +15,7 @@ export default function CarrosselResultados({ onOpen }: { onOpen: (src: string) 
   const lista = PRINTS.concat(PRINTS)
 
   return (
-    <div style={{ overflowX: 'hidden', overflowY: 'hidden', position: 'relative', margin: '0 -4px' }}>
+    <div className="faixa-moldura" style={{ overflowX: 'hidden', overflowY: 'hidden', position: 'relative', margin: '0 -4px' }}>
       <div className="faixa-resultados" style={{ display: 'flex', gap: 14, width: 'max-content', padding: '2px 4px 6px' }}>
         {lista.map(function(src, i) {
           const n = (i % PRINTS.length) + 1
@@ -24,19 +24,22 @@ export default function CarrosselResultados({ onOpen }: { onOpen: (src: string) 
               key={src + '-' + i}
               onClick={function() { onOpen(src) }}
               aria-hidden={i >= PRINTS.length ? true : undefined}
-              style={{ flex: '0 0 auto', borderRadius: 16, overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'zoom-in', boxShadow: 'var(--shadow-sm)' }}
+              // Todos os cartoes do mesmo tamanho (antes cada print tinha uma largura e o print deitado ficava enorme).
+              // O print inteiro continua aparecendo ao tocar para ampliar.
+              style={{ flex: '0 0 auto', width: 'min(250px, 64vw)', height: 'min(420px, 60vh)', borderRadius: 16, overflow: 'hidden', border: '1px solid var(--border)', background: '#efeae2', cursor: 'zoom-in', boxShadow: 'var(--shadow-sm)' }}
             >
+              {/* O print aparece inteiro (sem cortar texto); a sobra fica com o bege do fundo do WhatsApp */}
               <img
                 src={src}
                 alt={'Resultado de aluno ' + n}
                 draggable={false}
-                style={{ height: 'min(420px, 60vh)', width: 'auto', display: 'block' }}
+                style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
               />
             </div>
           )
         })}
       </div>
-      <style>{'@keyframes faixaResultados{from{transform:translateX(0)}to{transform:translateX(calc(-50% - 7px))}}.faixa-resultados{animation:faixaResultados 45s linear infinite;will-change:transform}'}</style>
+      <style>{'@keyframes faixaResultados{from{transform:translateX(0)}to{transform:translateX(calc(-50% - 7px))}}.faixa-resultados{animation:faixaResultados 45s linear infinite;will-change:transform}.faixa-moldura:hover .faixa-resultados{animation-play-state:paused}.faixa-moldura{-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 28px,#000 calc(100% - 28px),transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 28px,#000 calc(100% - 28px),transparent 100%)}@media (prefers-reduced-motion: reduce){.faixa-resultados{animation:none}.faixa-moldura{overflow-x:auto!important}}'}</style>
     </div>
   )
 }
