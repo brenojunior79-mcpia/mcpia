@@ -365,15 +365,16 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
     adicionar(seq.steps.length - 1, tipo, { x: Math.round((e.clientX - r.left - v.x) / v.k - W / 2), y: Math.round((e.clientY - r.top - v.y) / v.k - 20) })
   }
 
-  // Roda do mouse: rola o quadro. Ctrl (ou Cmd) + roda, ou o gesto de pinca do touchpad: zoom na posicao do mouse.
+  // Roda do mouse: zoom na posicao do mouse (como na Zapfy).
   useEffect(function() {
     const el = area.current
     if (!el) return
     function roda(e: WheelEvent) {
       e.preventDefault()
       const r = el!.getBoundingClientRect()
-      if (e.ctrlKey || e.metaKey) zoomEm(e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * 0.01))
-      else setView(function(v) { return { ...v, x: v.x - e.deltaX, y: v.y - e.deltaY } })
+      // Roda do mouse (ou pinca do touchpad): aproxima/afasta onde o mouse esta. Para mover o quadro, arraste.
+      const passo = e.ctrlKey || e.metaKey ? 0.01 : 0.0025
+      zoomEm(e.clientX - r.left, e.clientY - r.top, Math.exp(-Math.max(-120, Math.min(120, e.deltaY)) * passo))
     }
     el.addEventListener('wheel', roda, { passive: false })
     return function() { el.removeEventListener('wheel', roda) }
@@ -729,7 +730,7 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
             <button title="Aumentar" onClick={function() { zoomCentro(1.2) }} style={miniBtn}>+</button>
             <button title="Ajustar o fluxo à tela" onClick={ajustar} style={{ ...miniBtn, width: 'auto', padding: '0 8px', fontSize: 12.5 }}>Ajustar</button>
           </div>
-          <div data-ctl="1" style={{ position: 'absolute', right: 12, bottom: 12, fontSize: 11.5, color: 'var(--muted2)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 8px', pointerEvents: 'none' }}>Arraste para mover · Ctrl + roda para zoom</div>
+          <div data-ctl="1" style={{ position: 'absolute', right: 12, bottom: 12, fontSize: 11.5, color: 'var(--muted2)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 8px', pointerEvents: 'none' }}>Arraste para mover · Roda do mouse para zoom</div>
         </div>
         <div className="cb-painel">{painel()}</div>
       </div>
