@@ -29,12 +29,19 @@ export async function middleware(request: NextRequest) {
   // nas telas do painel (dashboard/layout.tsx) e nas rotas de API.
   // Nunca deixa a navegacao esperar o Supabase por mais de 3 segundos: se ele demorar, a pagina abre
   // do mesmo jeito (o login e conferido de verdade no layout do painel e nas rotas de API).
+  // Se a renovacao FALHAR (ex.: Supabase respondeu "muitos pedidos" (429), demorou ou caiu a rede), o login NAO e apagado:
+  // a pagina segue com os cookies que o navegador ja tinha e a renovacao e tentada de novo na proxima pagina.
+  // Antes, um 429 fazia o Supabase limpar a sessao e o aluno caia na tela de login sem motivo.
+  let resultado: any = null
   try {
-    await Promise.race([
+    resultado = await Promise.race([
       supabase.auth.getSession(),
-      new Promise(function(resolve) { setTimeout(resolve, 3000) }),
+      new Promise(function(resolve) { setTimeout(function() { resolve(null) }, 3000) }),
     ])
-  } catch (e) {}
+  } catch (e) {
+    return NextResponse.next()
+  }
+  if (!resultado || resultado.error) return NextResponse.next()
   return response
 }
 
