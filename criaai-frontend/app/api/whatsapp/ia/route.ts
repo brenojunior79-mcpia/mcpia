@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminClient, requireAdmin, requireStaff } from '@/lib/whatsapp'
-import { responderUltimaPendente, responderPendentesGeral, estadoAgendaIA, assistenteAtendendoAgora } from '@/lib/waIA'
+import { responderUltimaPendente, responderPendentesGeral, estadoAgendaIA, assistenteAtendendoAgora, resumoSemana } from '@/lib/waIA'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -11,7 +11,7 @@ export async function GET() {
   if (!uid) return NextResponse.json({ error: 'Nao autorizado' }, { status: 401 })
   const a = await estadoAgendaIA(adminClient())
   // geral = o assistente esta atendendo todas as conversas AGORA (ligado a mao ou dentro da agenda)
-  return NextResponse.json({ geral: assistenteAtendendoAgora(a), manual: a.geral, agenda: a.agendaAtiva, inicio: a.inicio, fim: a.fim, dentro: a.dentro })
+  return NextResponse.json({ geral: assistenteAtendendoAgora(a), manual: a.geral, agenda: a.agendaAtiva, inicio: a.inicio || a.horario.days.mon.start, fim: a.fim || a.horario.days.mon.end, dentro: a.dentro, resumo: resumoSemana(a.horario) })
 }
 
 // Liga ou desliga o assistente de IA numa conversa (ids + ativo) ou em todas (geral). SOMENTE o admin (atendentes nao conseguem).

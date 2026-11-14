@@ -12,7 +12,8 @@ import { statusAnuncios } from '@/lib/acessoAnuncios'
 import { contasDoTelefone, blocoContasDoNumero, resumoContasDoNumero, type ContaDoNumero } from '@/lib/juniorContas'
 import { semLinkHostinger, REGRA_RESPONSAVEL, JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno, soUmPasso, tirarLinkMarkdown, linkClicavel, tirarFrasesDeAjuda, tipoFinalConversa, situacaoFinalConversa } from '@/lib/junior'
 import { phoneIdDaConversa, postMessage } from '@/lib/whatsapp'
-import { agoraNoFuso } from '@/lib/waHours'
+import { AVISO_ENCERRAR_INICIO, MIN_AVISO_NA_RESPOSTA, avisoEncerramento, avisouEncerramentoHoje, horaFalada } from '@/lib/waAvisoFim'
+import { agoraNoFuso, abertoAgora as abertoAgoraEm, normalizar as normalizarHorario, DIAS as DIAS_SEMANA, type Horario } from '@/lib/waHours'
 import { REGRA_EXPRESS_WHATSAPP, pediuLiberarExpress, removerMarcaExpress, liberarExpressPeloJunior, emailDaMarca } from '@/lib/juniorExpress'
 import { eventosDaPessoa } from '@/lib/juniorEventos'
 import { falouEmReembolso, AVISO_REEMBOLSO } from '@/lib/juniorReembolso'
@@ -187,17 +188,46 @@ async function avisarFalha(admin: any, convId: string, motivo: string): Promise<
 //  - 'manual': o admin ligou nesta conversa (ia_ativa)
 //  - 'geral': o admin ligou o assistente para TODAS as conversas (wa_ia_config.geral), a conversa nao foi desligada
 //    de proposito (ia_humano). Ligado = responde sempre, mesmo que a equipe tenha respondido antes
-export type AgendaIA = { geral: boolean; agendaAtiva: boolean; inicio: string; fim: string; dentro: boolean }
+export type AgendaIA = {
+  geral: boolean; agendaAtiva: boolean
+  inicio: string; fim: string          // horario de HOJE ('' quando hoje nao tem atendimento, ex.: domingo)
+  dentro: boolean
+  minutosParaFechar: number | null     // so quando esta dentro do horario
+  horario: Horario                     // a semana toda (wa_settings 'hours'): use abertoAgora(a.horario, data) para saber se uma data estava aberta
+}
 
 // Le a configuracao do assistente: ligado para todas (geral) e/ou agenda diaria (ex.: das 08:00 as 20:00, todos os dias, horario de Brasilia)
 export async function estadoAgendaIA(admin: any, d: Date = new Date()): Promise<AgendaIA> {
-  const c = await admin.from('wa_ia_config').select('geral, agenda_ativa, agenda_inicio, agenda_fim').eq('id', 1).maybeSingle()
+  // O horario vem da SEMANA configurada (wa_settings "hours": cada dia com seu inicio e fim; dia desligado = sem atendimento, ex.: domingo).
+  // A chave ligada/desligada continua sendo wa_ia_config.agenda_ativa.
+  const [c, st] = await Promise.all([
+    admin.from('wa_ia_config').select('geral, agenda_ativa').eq('id', 1).maybeSingle(),
+    admin.from('wa_settings').select('value').eq('key', 'hours').maybeSingle(),
+  ])
   const x: any = c.data || {}
-  const inicio = /^([01]\d|2[0-3]):[0-5]\d$/.test(String(x.agenda_inicio)) ? String(x.agenda_inicio) : '08:00'
-  const fim = /^([01]\d|2[0-3]):[0-5]\d$/.test(String(x.agenda_fim)) ? String(x.agenda_fim) : '20:00'
-  const hm = agoraNoFuso('America/Sao_Paulo', d).hm
-  const dentro = inicio < fim ? (hm >= inicio && hm < fim) : (hm >= inicio || hm < fim)
-  return { geral: x.geral === true, agendaAtiva: x.agenda_ativa === true, inicio, fim, dentro }
+  const h = normalizarHorario((st.data as any)?.value)
+  const n = agoraNoFuso(h.tz, d)
+  const dia = h.days[n.dia]
+  const aberto = !!dia && dia.on
+  const inicio = aberto ? dia.start : ''
+  const fim = aberto ? dia.end : ''
+  const dentro = aberto && n.hm >= inicio && n.hm < fim
+  const emMin = function(hm: string): number { return Number(hm.slice(0, 2)) * 60 + Number(hm.slice(3, 5)) }
+  return { geral: x.geral === true, agendaAtiva: x.agenda_ativa === true, inicio, fim, dentro, minutosParaFechar: dentro ? emMin(fim) - emMin(n.hm) : null, horario: h }
+}
+
+// Resumo da semana para mostrar na tela: "Seg a Sex 9h–18h · Sáb 9h–13h · Dom fechado"
+export { horaFalada }
+export function resumoSemana(h: Horario): string {
+  const abrev: Record<string, string> = { mon: 'Seg', tue: 'Ter', wed: 'Qua', thu: 'Qui', fri: 'Sex', sat: 'Sáb', sun: 'Dom' }
+  const grupos: { dias: string[]; txt: string }[] = []
+  for (const d of DIAS_SEMANA) {
+    const x = h.days[d.k]
+    const txt = x.on ? horaFalada(x.start) + '–' + horaFalada(x.end) : 'fechado'
+    const ult = grupos[grupos.length - 1]
+    if (ult && ult.txt === txt) ult.dias.push(abrev[d.k]); else grupos.push({ dias: [abrev[d.k]], txt })
+  }
+  return grupos.map(function(g) { return (g.dias.length > 1 ? g.dias[0] + ' a ' + g.dias[g.dias.length - 1] : g.dias[0]) + ' ' + g.txt }).join(' · ')
 }
 
 // true quando o atendimento "de verdade" esta valendo agora para o aviso de horario:
@@ -348,8 +378,7 @@ export async function responderQuemAguardou(admin: any): Promise<number> {
       if (feitos >= 6) break
       if (c.ia_humano === true) continue
       // A mensagem chegou com o atendimento fechado? (se chegou dentro do horario, o fluxo normal ja cuidou dela)
-      const hm = agoraNoFuso('America/Sao_Paulo', new Date(c.last_inbound_at)).hm
-      const dentroQuandoChegou = a.inicio < a.fim ? (hm >= a.inicio && hm < a.fim) : (hm >= a.inicio || hm < a.fim)
+      const dentroQuandoChegou = abertoAgoraEm(a.horario, new Date(c.last_inbound_at))
       if (dentroQuandoChegou) continue
       const ms = await admin.from('wa_messages').select('id, direction, type, body, sent_by, created_at').eq('conversation_id', c.id).order('created_at', { ascending: false }).limit(8)
       const linhas: any[] = ms.data || []
@@ -838,6 +867,16 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     // Frases de enrolacao no fim ("Se precisar de ajuda, e so avisar") saem, a nao ser que seja a despedida final da conversa
     if (!acabou) texto = tirarFrasesDeAjuda(texto)
     if (!texto) { await avisarFalha(admin, convId, 'texto vazio'); return true }
+    // Fim do horario do SUPORTE chegando (ordem do Breno): nos ultimos 30 minutos a resposta leva o aviso "em breve vamos encerrar o suporte. Consegui te ajudar?"
+    // Uma vez por conversa por dia; nunca no chat de recuperacao (24h) e nunca quando a conversa ja acabou ou foi para a equipe.
+    if (canal !== 'recuperacao' && !passaParaHumano && !acabou && texto.indexOf(AVISO_ENCERRAR_INICIO) < 0) {
+      try {
+        const agFim = await estadoAgendaIA(admin)
+        if (agFim.agendaAtiva && agFim.dentro && agFim.minutosParaFechar !== null && agFim.minutosParaFechar <= MIN_AVISO_NA_RESPOSTA && !avisouEncerramentoHoje(linhas)) {
+          texto = texto.trim() + '\n\n' + avisoEncerramento(agFim.fim, true)
+        }
+      } catch (e) { /* so conforto: sem o aviso a resposta segue normal */ }
+    }
 
     // Depois de pensar: conferir de novo se continua ligado e se nao chegou mensagem mais nova
     const [cv2, ult] = await Promise.all([

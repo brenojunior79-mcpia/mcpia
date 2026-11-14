@@ -617,7 +617,7 @@ O suporte privado humano funciona pelo menu "WhatsApp de Suporte" dentro da prop
 
 Responsaveis pelo suporte humano: Lidia e Livia.
 
-Horario do suporte humano: Segunda a sexta, 09h as 18h. Nao ha atendimento humano aos sabados nem aos domingos.
+Horario do suporte: Segunda a sexta, das 09h as 18h, e aos sabados, das 09h as 13h. Domingo nao ha atendimento. Fora desse horario as mensagens ficam salvas e sao respondidas quando o suporte volta.
 
 Horario do Junior IA (voce): todos os dias das 09h00 as 18h00, e tambem disponivel aqui no chat do site a qualquer hora como apoio.
 
@@ -1213,7 +1213,7 @@ Bloco "Entendendo as metricas":
 Quando o aluno estiver com problema de restricao ou conta bloqueada, indique primeiro as aulas 13 e 14. Para metricas, as aulas 15 e 16. Para pixel, as aulas 4 e 5. Para criar conta de anuncios, a aula 3. Para subir o anuncio, a aula 6. Para produto fisico, as aulas 8 a 12.
 
 ## 11) WHATSAPP DE SUPORTE
-Tela com a mensagem "Esta com duvida em alguma coisa? Fale com a gente que vamos te ajudar agora." Mostra se a equipe esta "Online agora" ou "Fora do horario" (atendimento de segunda a sexta, das 9h as 18h) e, fora do horario, um atalho para o Assistente IA. O botao verde "Falar com suporte agora" abre o WhatsApp da equipe com a mensagem pronta "Ola, preciso de suporte na Plataforma do Cristao Prospero".
+Tela com a mensagem "Esta com duvida em alguma coisa? Fale com a gente que vamos te ajudar agora." Mostra se a equipe esta "Online agora" ou "Fora do horario" (atendimento de segunda a sexta, das 9h as 18h, e aos sabados, das 9h as 13h) e, fora do horario, um atalho para o Assistente IA. O botao verde "Falar com suporte agora" abre o WhatsApp da equipe com a mensagem pronta "Ola, preciso de suporte na Plataforma do Cristao Prospero".
 WhatsApp do suporte: https://wa.me/553791348869
 
 ## 12) AULAS AO VIVO

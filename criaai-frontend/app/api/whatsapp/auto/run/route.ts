@@ -6,6 +6,7 @@ import { fecharDia } from '@/lib/waFechamento'
 import { retomarFalhas, responderForaDoHorario } from '@/lib/waRetomada'
 import { atualizarPrecosHostinger } from '@/lib/juniorHostinger'
 import { estadoAgendaIA, responderPendentesGeral, acompanharSilencioFluxo } from '@/lib/waIA'
+import { avisarEncerramentoSuporte } from '@/lib/waEncerramento'
 
 export const maxDuration = 60
 export const dynamic = 'force-dynamic'
@@ -44,6 +45,9 @@ export async function POST(req: NextRequest) {
   // Quem escreveu fora do horario (e so recebeu o aviso de horario): responde todas, a cada minuto, ate acabar
   let foraHorario = 0
   try { const ag2 = await estadoAgendaIA(admin); if (ag2.agendaAtiva && ag2.dentro) foraHorario = await responderForaDoHorario(admin) } catch (e) { console.error('[wa-fora-horario]', e) }
+  // Ultimos minutos do horario do suporte: avisa quem esta em conversa que o suporte vai encerrar
+  let avisosFim = 0
+  try { avisosFim = await avisarEncerramentoSuporte(admin) } catch (e) { console.error('[wa-aviso-encerramento]', e) }
   // Depois do fluxo: se a pessoa ficou 15 min em silencio, o Junior pergunta se ela conseguiu acessar as aulas
   let acompanhamento = 0
   try { acompanhamento = await acompanharSilencioFluxo(admin) } catch (e) { console.error('[wa-ia] acompanhamento:', e) }
@@ -55,5 +59,5 @@ export async function POST(req: NextRequest) {
   // Fim do horario de atendimento: ultima resposta para quem esperava e depois marca tudo como lido e finaliza as conversas
   let fechamento = 'fora'
   try { fechamento = await fecharDia(admin) } catch (e) { console.error('[wa-fechamento]', e) }
-  return NextResponse.json({ ok: true, ...r, abertura, foraHorario, acompanhamento, retomadas, fechamento })
+  return NextResponse.json({ ok: true, ...r, abertura, foraHorario, avisosFim, acompanhamento, retomadas, fechamento })
 }
