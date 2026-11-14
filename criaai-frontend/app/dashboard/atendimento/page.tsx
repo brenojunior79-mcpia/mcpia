@@ -1013,7 +1013,7 @@ export default function AtendimentoPage() {
 
       {/* Abas */}
       <div className="at-tabs" role="tablist">
-        {([['conversas', 'Conversas', 'messages'], ['modelos', 'Modelos', 'template'], ['disparo', 'Disparo', 'speakerphone'], ['fluxos', 'Fluxos', 'bolt'], ['conhecimento', 'Base de conhecimento', 'brain'], ['eventos', 'Eventos', 'bell'], ['conexoes', 'Conexões', 'plug-connected']] as const).filter(function(t) { return (t[0] !== 'atendentes' && t[0] !== 'fluxos' && t[0] !== 'conhecimento' && t[0] !== 'disparo' && t[0] !== 'eventos' && t[0] !== 'conexoes') || isAdmin }).map(function(t) {
+        {([['conversas', 'Conversas', 'messages'], ['modelos', 'Modelos', 'template'], ['disparo', 'Disparo', 'speakerphone'], ['fluxos', 'Fluxos', 'bolt'], ['conhecimento', 'Base de conhecimento', 'brain'], ['eventos', 'Eventos', 'bell'], ['conexoes', 'Conexões', 'plug-connected']] as const).filter(function(t) { return (t[0] !== 'fluxos' && t[0] !== 'conhecimento' && t[0] !== 'disparo' && t[0] !== 'eventos' && t[0] !== 'conexoes') || isAdmin }).map(function(t) {
           const on = tab === t[0]
           return <button key={t[0]} role="tab" aria-selected={on} className={'at-tab' + (on ? ' on' : '')} onClick={function() { setTab(t[0]); if (t[0] === 'modelos') carregarTpls(); if (t[0] === 'disparo') setDisparoAberto(true) }}><i className={'ti ti-' + t[2]} />{t[1]}{t[0] === 'conversas' && totalNaoLidas > 0 && <span className="at-n">{totalNaoLidas}</span>}</button>
         })}
