@@ -13,6 +13,14 @@ function quando(iso: string) {
   return new Date(iso).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
+// Link do WhatsApp: so numeros, com 55 na frente quando faltar
+function linkZap(n: string) {
+  let d = String(n || '').replace(/\D/g, '')
+  if (!d) return ''
+  if (d.length <= 11) d = '55' + d
+  return 'https://wa.me/' + d
+}
+
 type Filtro = 'todos' | 'aprovado' | 'recusado'
 
 export default function EventosPagamento() {
@@ -61,7 +69,12 @@ export default function EventosPagamento() {
                 <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{e.plano ? 'Plano ' + e.plano : ''}</span>
                 <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--muted2)' }}>{quando(e.created_at)}</span>
               </div>
-              <div style={{ fontSize: 13, color: 'var(--text)', marginTop: 6, wordBreak: 'break-word' }}>{[e.nome, e.email].filter(Boolean).join(' · ') || 'Sem nome'}</div>
+              <div style={{ fontSize: 13, color: 'var(--text)', marginTop: 6, wordBreak: 'break-word', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                {linkZap(e.whatsapp)
+                  ? <a href={linkZap(e.whatsapp)} target="_blank" rel="noopener noreferrer" title="Chamar no WhatsApp" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#16a34a', color: '#fff', borderRadius: 999, padding: '3px 10px', fontSize: 12.5, fontWeight: 800, textDecoration: 'none' }}><i className="ti ti-brand-whatsapp" /> {e.whatsapp}</a>
+                  : <span style={{ fontSize: 12, color: 'var(--muted2)' }}>sem WhatsApp</span>}
+                <span>{[e.nome, e.email].filter(Boolean).join(' · ') || 'Sem nome'}</span>
+              </div>
               {e.motivo && <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginTop: 2 }}>{e.motivo}</div>}
             </div>
           )
