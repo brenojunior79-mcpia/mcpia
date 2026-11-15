@@ -61,3 +61,14 @@ export async function avisarVendaAdmin(admin: any, a: AvisoVenda): Promise<void>
 export async function testeVendaAdmin(admin: any): Promise<number> {
   return enviarParaAdmins(admin, montarAviso({ renovacao: false, produto: 'Plano Pro', valor: 39.9, nome: 'Exemplo de aluno', email: null, origem: 'Hubla' }))
 }
+
+// Aviso para o admin quando alguem tenta assinar um plano pelo cartao e NAO consegue (cartao recusado ou erro)
+export async function avisarFalhaPagamentoAdmin(admin: any, p: { email: string; plano: string; motivo: string }): Promise<void> {
+  try {
+    await enviarParaAdmins(admin, {
+      title: '⚠️ Pagamento de plano não passou',
+      body: ('Plano ' + p.plano + ' · ' + (p.email || 'sem e-mail') + ' · ' + p.motivo).slice(0, 240),
+      url: '/dashboard/admin',
+    })
+  } catch (e) { console.error('[push-falha-pagamento] erro:', e) }
+}

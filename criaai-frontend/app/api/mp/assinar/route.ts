@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { adminClient } from '@/lib/whatsapp'
+import { avisarFalhaPagamentoAdmin } from '@/lib/pushAdmin'
 import { PLANOS_MP, mp, mpConfigurado, erroCartao, liberarPlanoMP } from '@/lib/mercadopago'
 
 export const dynamic = 'force-dynamic'
@@ -40,6 +41,7 @@ export async function POST(req: NextRequest) {
   })
   if (!r.ok || !r.data?.id) {
     console.error('[mp-assinar] recusado:', r.status, JSON.stringify({ message: r.data?.message, cause: r.data?.cause }))
+    await avisarFalhaPagamentoAdmin(admin, { email, plano, motivo: erroCartao(r.data) })
     return NextResponse.json({ error: erroCartao(r.data) }, { status: 400 })
   }
   const id = String(r.data.id)
