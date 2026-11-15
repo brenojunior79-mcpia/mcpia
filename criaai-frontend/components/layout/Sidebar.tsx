@@ -11,6 +11,14 @@ import styles from './Sidebar.module.css'
 export default function Sidebar({ profile, user }: { profile: any, user: any }) {
   const pathname = usePathname()
   const router = useRouter()
+  // Carrega a tela antes do clique (ao passar o mouse ou encostar o dedo no item): o menu abre bem mais rapido.
+  // Nao e automatico para todos os itens de uma vez, para nao gastar a internet do aluno a toa.
+  const jaAntecipou = useRef<Record<string, boolean>>({})
+  function antecipar(href: string) {
+    if (jaAntecipou.current[href]) return
+    jaAntecipou.current[href] = true
+    try { router.prefetch(href) } catch (e) { /* so ajuda na velocidade */ }
+  }
   const supabase = createClient()
   const plan = profile?.plans
   const isAdmin = profile?.is_admin
@@ -250,7 +258,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
                 <Link
                   key={item.href}
                   href={item.href}
-                  prefetch={false}
+                  prefetch={false} onMouseEnter={function() { antecipar(item.href) }} onTouchStart={function() { antecipar(item.href) }}
                   onClick={function() { setMobileOpen(false) }}
                   className={styles.navItem + ' ' + styles.navItemPromo + (pathname === item.href ? ' ' + styles.active : '')}
                   title="Indique a plataforma e ganhe R$ 60 no Pix"
@@ -268,7 +276,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
               <Link
                 key={item.href}
                 href={item.href}
-                prefetch={false}
+                prefetch={false} onMouseEnter={function() { antecipar(item.href) }} onTouchStart={function() { antecipar(item.href) }}
                 onClick={function() { setMobileOpen(false) }}
                 className={styles.navItem + (pathname === item.href ? ' ' + styles.active : '')}
                 style={(item as any).badge ? ((item as any).tone === 'green' ? { background: 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff', fontWeight: 700, boxShadow: '0 4px 14px rgba(22,163,74,0.35)' } : (item as any).tone === 'blue' ? { background: 'linear-gradient(135deg,#3b82f6,#2563eb)', color: '#fff', fontWeight: 700, boxShadow: '0 4px 14px rgba(37,99,235,0.35)' } : { background: 'linear-gradient(135deg,#f59e0b,#f97316)', color: '#fff', fontWeight: 700, boxShadow: '0 4px 14px rgba(249,115,22,0.35)' }) : undefined}
