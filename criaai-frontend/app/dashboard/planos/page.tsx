@@ -2,12 +2,8 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import styles from './planos.module.css'
+import CheckoutCartao from '@/components/CheckoutCartao'
 
-const HUBLA_LINKS: Record<string, string> = {
-  Starter: 'https://pay.hub.la/0AueQQcwJxUeV9BE1ax7',
-  Pro: 'https://pay.hub.la/16HkQulcBTksGN8AEnow',
-  Premium: 'https://pay.hub.la/TwrkZegsChmWcaJ9LO4z',
-}
 
 const plans = [
   {
@@ -76,6 +72,12 @@ export default function PlanosPage() {
   const [libPlano, setLibPlano] = useState('Starter')
   const [libMsg, setLibMsg] = useState('')
   const [libBusy, setLibBusy] = useState(false)
+  // Checkout no cartao (Mercado Pago)
+  const [pagando, setPagando] = useState<{ nome: string; valor: number } | null>(null)
+  const [sucesso, setSucesso] = useState('')
+  const [assinaturaCartao, setAssinaturaCartao] = useState<{ tem: boolean; plano: string | null }>({ tem: false, plano: null })
+  const [cancelando, setCancelando] = useState(false)
+  const [cancelMsg, setCancelMsg] = useState('')
   const supabase = createClient()
   const timeLeft = useCountdown(createdAt)
   const showTimer = timeLeft !== null && timeLeft > 0
@@ -100,18 +102,31 @@ export default function PlanosPage() {
       }
     }
     load()
+    carregarAssinatura()
   }, [])
 
-  function checkout(planName: string) {
-    setLoading(planName)
-    const baseUrl = HUBLA_LINKS[planName]
-    if (!baseUrl) {
-      alert('Plano nao configurado. Tente novamente mais tarde.')
-      setLoading('')
-      return
-    }
+  function carregarAssinatura() {
+    fetch('/api/mp/cancelar', { cache: 'no-store' }).then(function(r) { return r.json() }).then(function(j) { setAssinaturaCartao({ tem: !!j.temAssinatura, plano: j.plano || null }) }).catch(function() {})
+  }
 
-    window.location.href = baseUrl
+  function checkout(planName: string) {
+    const p = plans.find(function(x) { return x.name === planName })
+    if (!p) return
+    setSucesso(''); setCancelMsg('')
+    setPagando({ nome: p.name, valor: p.price })
+  }
+
+  async function cancelarAssinatura() {
+    if (cancelando) return
+    if (!window.confirm('Cancelar a assinatura no cartão? A cobrança mensal para e o plano deixa de funcionar.')) return
+    setCancelando(true); setCancelMsg('')
+    try {
+      const r = await fetch('/api/mp/cancelar', { method: 'POST' })
+      const j = await r.json().catch(function() { return {} })
+      if (!r.ok) setCancelMsg(j.error || 'Não foi possível cancelar agora.')
+      else { setCancelMsg('Assinatura cancelada. A cobrança no cartão foi interrompida.'); setAssinaturaCartao({ tem: false, plano: null }) }
+    } catch (e) { setCancelMsg('Sem conexão. Tente de novo.') }
+    setCancelando(false)
   }
 
   // Admin: libera um plano para o aluno pelo e-mail
@@ -219,6 +234,24 @@ export default function PlanosPage() {
           </div>
         )}
 
+        {sucesso && (
+          <div role="status" style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(22,163,74,0.1)', border: '1px solid rgba(22,163,74,0.35)', color: 'var(--text)', borderRadius: 14, padding: '14px 16px', marginBottom: 20, fontSize: 14.5, fontWeight: 700 }}>
+            <i className="ti ti-circle-check" style={{ fontSize: 24, color: '#16a34a', flexShrink: 0 }} />{sucesso}
+          </div>
+        )}
+        {assinaturaCartao.tem && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px', marginBottom: 20 }}>
+            <div style={{ fontSize: 14, color: 'var(--text)' }}><b>Sua assinatura no cartão:</b> plano {assinaturaCartao.plano || ''}, cobrado todo mês pelo Mercado Pago.</div>
+            <button type="button" onClick={cancelarAssinatura} disabled={cancelando} style={{ cursor: 'pointer', border: '1px solid rgba(220,38,38,0.4)', background: 'transparent', color: '#dc2626', borderRadius: 10, padding: '8px 14px', fontWeight: 700, fontSize: 13.5, fontFamily: 'inherit' }}>{cancelando ? 'Cancelando…' : 'Cancelar assinatura'}</button>
+          </div>
+        )}
+        {cancelMsg && <div style={{ marginBottom: 16, fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>{cancelMsg}</div>}
+        {pagando && (
+          <CheckoutCartao plano={pagando.nome} valor={pagando.valor} email={userEmail}
+            onFechar={function() { setPagando(null) }}
+            onSucesso={function(msg) { setPagando(null); setSucesso(msg); carregarAssinatura(); setTimeout(function() { window.location.reload() }, 2500) }} />
+        )}
+
         <div className={styles.plans}>
           {plans.map(function(p: any) {
             return (
@@ -275,7 +308,7 @@ export default function PlanosPage() {
                   onClick={function() { checkout(p.name) }}
                   disabled={loading === p.name}
                 >
-                  {loading === p.name ? 'Redirecionando...' : showTimer ? 'Assinar e ganhar +5 creditos' : 'Assinar agora'}
+                  {showTimer ? 'Assinar e ganhar +5 creditos' : 'Assinar agora'}
                 </button>
               </div>
             )

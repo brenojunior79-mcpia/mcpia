@@ -9,7 +9,7 @@ const DAYS_AFTER_SIGNUP = 7
 const SHOW_EVERY_DAYS = 3
 const COUPON = 'FE10'
 // Checkout direto do plano Pro (mesmo link da pagina de planos)
-const PRO_CHECKOUT = 'https://pay.hub.la/16HkQulcBTksGN8AEnow'
+const PRO_CHECKOUT = '/dashboard/planos'
 
 // Avisa a plataforma o que o aluno fez com o pop-up (para o card de estatisticas do admin). Erros sao ignorados.
 function track(event: string) {

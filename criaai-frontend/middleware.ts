@@ -47,5 +47,5 @@ export async function middleware(request: NextRequest) {
 
 // Arquivos fixos (fontes, imagens, musicas, service worker) nao precisam renovar o login: ficam fora do middleware, o que os deixa mais rapidos.
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|fonts/|sw.js|manifest.json|.well-known/|api/hubla/webhook|api/cakto/webhook|api/whatsapp/webhook|.*\\.(?:svg|png|jpg|jpeg|gif|webp|mp3|woff2|ttf|css|apk)$).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|fonts/|sw.js|manifest.json|.well-known/|api/hubla/webhook|api/cakto/webhook|api/whatsapp/webhook|api/mp/webhook|.*\\.(?:svg|png|jpg|jpeg|gif|webp|mp3|woff2|ttf|css|apk)$).*)'],
 }
