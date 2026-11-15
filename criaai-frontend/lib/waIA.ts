@@ -26,6 +26,18 @@ import { REGRA_ASSINATURA_WHATSAPP, pediuVerificarAssinatura, removerMarcaAssina
 const MARCA_HUMANO = '[[HUMANO]]'
 // Aviso que o construtor de fluxos deixa na conversa quando passa a conversa para o Junior (ele continua sem cumprimentar de novo)
 export const MARCA_FLUXO_IA = '🤖 O fluxo passou a conversa para o Júnior'
+// Dia de hoje no horario de Brasilia (AAAA-MM-DD)
+function diaBrasilia(d: Date): string { return new Date(d.getTime() - 3 * 3600000).toISOString().slice(0, 10) }
+// Ja saiu alguma mensagem nossa (equipe ou Junior) para a pessoa hoje?
+function jaFalouHoje(linhas: any[]): boolean {
+  const hoje = diaBrasilia(new Date())
+  return (linhas || []).some(function(m: any) { return m.direction === 'out' && m.type !== 'system' && m.created_at && diaBrasilia(new Date(m.created_at)) === hoje })
+}
+// Tira a saudacao do comeco ("Bom dia! 🙏 Fico..." vira "Fico...")
+function semSaudacao(t: string): string {
+  const r = String(t || '').replace(/^\s*(?:A paz do Senhor|Bom dia|Boa tarde|Boa noite|Ol[aá]|Oi)(?:\s*,?\s*[A-Za-zÀ-ÿ]+)?\s*[!,.]+\s*(?:[☀-➿\uD800-\uDFFF️]\s*)*/, '')
+  return r ? r.charAt(0).toUpperCase() + r.slice(1) : t
+}
 const REGRA_SEM_SAUDACAO = `# CONTINUACAO DE CONVERSA (SEM SAUDACAO)\nUm fluxo automatico acabou de passar esta conversa para voce. A conversa JA ESTA EM ANDAMENTO: a pessoa ja foi cumprimentada. NAO cumprimente (nada de "Oi", "Ola", "Bom dia/tarde/noite"), NAO se apresente e NAO diga que esta assumindo a conversa. Responda direto ao que a pessoa acabou de dizer e continue de onde as mensagens acima pararam, no mesmo tom.`
 const MARCA_FIM = '[[FIM]]'
 const MARCA_COMPROU = '[[JA_COMPROU]]'
@@ -720,6 +732,8 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       for (let i = linhas.length - 1; i >= 0; i--) { if (linhas[i].type === 'system' && String(linhas[i].body || '') === MARCA_FLUXO_IA) { iMarca = i; break } }
       if (iMarca >= 0 && !linhas.slice(iMarca + 1).some(function(m) { return m.direction === 'out' && m.type !== 'system' })) system = system + '\n\n' + REGRA_SEM_SAUDACAO
     }
+    // Ja falamos com a pessoa hoje (equipe ou Junior): nada de nova saudacao
+    if (jaFalouHoje(linhas)) system = system + '\n\n# JA CONVERSAMOS HOJE\nA equipe ou voce ja mandou mensagem para esta pessoa HOJE. NAO cumprimente de novo (nada de "Bom dia", "Boa tarde", "Oi", "A paz do Senhor"). Responda direto ao que ela disse.'
 
     // Video "App" (resposta rapida salva no canal de recuperacao): so uma vez por conversa
     const jaVideo = linhas.some(function(m) { return m.direction === 'out' && m.type === 'video' })
@@ -848,6 +862,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     }
     // Trava do desconto (ordem do Breno): o link de R$ 197 so sai depois de DUAS confirmacoes da pessoa (veja lib/juniorDesconto.ts)
     texto = decidirDesconto(texto, linhas, primeiro)
+    if (jaFalouHoje(linhas)) texto = semSaudacao(texto)
     if (!texto.trim()) return true // frase de saida ja foi enviada antes: fica calado, nunca repete
     // Cupom da Estrutura Express (roteiro do Breno): avisa que vai mandar o link, e o link sai 1 minuto depois (veja lib/juniorCupomExpress.ts)
     let cupomDepois: string | null = null
