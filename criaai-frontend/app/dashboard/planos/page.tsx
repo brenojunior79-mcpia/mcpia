@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import styles from './planos.module.css'
 import CheckoutCartao from '@/components/CheckoutCartao'
+import EventosPagamento from '@/components/EventosPagamento'
 
 
 const plans = [
@@ -171,6 +172,8 @@ export default function PlanosPage() {
             {libMsg && <div style={{ marginTop: 10, fontSize: 13, fontWeight: 700, color: libMsg.indexOf('✓') === 0 ? '#16a34a' : '#dc2626' }}>{libMsg}</div>}
           </div>
         )}
+
+        {isAdmin && <EventosPagamento />}
 
         {/* Banner cronometro de boas-vindas */}
         {showTimer && timer && (

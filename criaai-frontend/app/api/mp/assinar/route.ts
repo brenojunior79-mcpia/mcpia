@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { adminClient } from '@/lib/whatsapp'
 import { avisarFalhaPagamentoAdmin } from '@/lib/pushAdmin'
-import { PLANOS_MP, mp, mpConfigurado, erroCartao, liberarPlanoMP } from '@/lib/mercadopago'
+import { PLANOS_MP, mp, mpConfigurado, erroCartao, liberarPlanoMP, registrarEventoMP } from '@/lib/mercadopago'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,8 +23,9 @@ export async function POST(req: NextRequest) {
 
   const admin = adminClient()
   // Ja tem assinatura ativa no Mercado Pago: cancela a antiga depois que a nova for autorizada (troca de plano)
-  const cur = await admin.from('profiles').select('mp_preapproval_id').eq('id', user.id).maybeSingle()
+  const cur = await admin.from('profiles').select('mp_preapproval_id, full_name').eq('id', user.id).maybeSingle()
   const antiga = String(cur.data?.mp_preapproval_id || '')
+  const base = { user_id: user.id, email, nome: String((cur.data as any)?.full_name || ''), plano }
 
   const r = await mp('/preapproval', {
     method: 'POST',
@@ -41,6 +42,7 @@ export async function POST(req: NextRequest) {
   })
   if (!r.ok || !r.data?.id) {
     console.error('[mp-assinar] recusado:', r.status, JSON.stringify({ message: r.data?.message, cause: r.data?.cause }))
+    await registrarEventoMP(admin, { ...base, tipo: 'recusado', motivo: erroCartao(r.data), codigo: String(r.data?.message || r.status) })
     await avisarFalhaPagamentoAdmin(admin, { email, plano, motivo: erroCartao(r.data) })
     return NextResponse.json({ error: erroCartao(r.data) }, { status: 400 })
   }
@@ -48,9 +50,11 @@ export async function POST(req: NextRequest) {
   const status = String(r.data.status || '')
   if (status !== 'authorized') {
     // Pendente: o aviso do Mercado Pago libera o plano quando for autorizado
+    await registrarEventoMP(admin, { ...base, tipo: 'pendente', motivo: 'Aguardando o banco aprovar', codigo: status })
     await admin.from('profiles').update({ mp_preapproval_id: id, updated_at: new Date().toISOString() }).eq('id', user.id)
     return NextResponse.json({ ok: true, status, mensagem: 'Recebemos o seu pedido. Assim que o cartão for aprovado, o plano é liberado.' })
   }
+  await registrarEventoMP(admin, { ...base, tipo: 'aprovado', motivo: 'Assinatura autorizada', codigo: id })
   const ok = await liberarPlanoMP(admin, user.id, plano, id)
   if (antiga && antiga !== id) {
     const c = await mp('/preapproval/' + encodeURIComponent(antiga), { method: 'PUT', json: { status: 'cancelled' } })

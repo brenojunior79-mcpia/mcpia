@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminClient } from '@/lib/whatsapp'
-import { mp, avisoValido, lerReferencia, liberarPlanoMP, encerrarPlanoMP } from '@/lib/mercadopago'
+import { mp, avisoValido, lerReferencia, liberarPlanoMP, encerrarPlanoMP, registrarEventoMP } from '@/lib/mercadopago'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,10 +20,12 @@ export async function POST(req: NextRequest) {
   const admin = adminClient()
 
   let preapprovalId = ''
+  let pagamento: any = null
   if (tipo === 'subscription_preapproval' || tipo === 'preapproval') preapprovalId = dataId
   else if (tipo === 'subscription_authorized_payment') {
     const pg = await mp('/authorized_payments/' + encodeURIComponent(dataId))
     preapprovalId = String(pg.data?.preapproval_id || '')
+    pagamento = pg.data || null
   } else {
     return NextResponse.json({ ok: true })
   }
@@ -37,6 +39,15 @@ export async function POST(req: NextRequest) {
     await liberarPlanoMP(admin, ref.userId, ref.plano, preapprovalId)
   } else if (status === 'cancelled' || status === 'paused') {
     await encerrarPlanoMP(admin, preapprovalId)
+  }
+  // Card do admin: cobranca mensal aprovada/recusada e assinatura cancelada
+  const pagEmail = String(r.data.payer_email || '')
+  if (pagamento && ref) {
+    const st = String(pagamento.status || pagamento.payment?.status || '')
+    if (st === 'approved' || st === 'processed') await registrarEventoMP(admin, { user_id: ref.userId, email: pagEmail, plano: ref.plano, tipo: 'aprovado', motivo: 'Cobrança mensal aprovada', codigo: 'pag-' + dataId })
+    else if (st === 'rejected' || st === 'recycling') await registrarEventoMP(admin, { user_id: ref.userId, email: pagEmail, plano: ref.plano, tipo: 'recusado', motivo: 'Cobrança mensal recusada pelo banco', codigo: 'pag-' + dataId })
+  } else if ((status === 'cancelled' || status === 'paused') && ref) {
+    await registrarEventoMP(admin, { user_id: ref.userId, email: pagEmail, plano: ref.plano, tipo: 'cancelado', motivo: status === 'paused' ? 'Assinatura pausada' : 'Assinatura cancelada', codigo: preapprovalId })
   }
   return NextResponse.json({ ok: true })
 }

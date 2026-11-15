@@ -25,6 +25,7 @@ export async function mp(caminho: string, init?: { method?: string; json?: any; 
 // Mensagem simples para o aluno a partir do erro do Mercado Pago (sem detalhes tecnicos)
 export function erroCartao(data: any): string {
   const txt = JSON.stringify(data || {}).toLowerCase()
+  if (txt.indexOf('cc_val_433') >= 0) return 'O banco não autorizou este cartão para pagamento mensal. Tente um cartão de CRÉDITO de outro banco (cartão de débito e alguns cartões virtuais não funcionam).'
   if (txt.indexOf('insufficient') >= 0) return 'O cartão não tem limite suficiente. Tente outro cartão.'
   if (txt.indexOf('cvv') >= 0 || txt.indexOf('security_code') >= 0) return 'O código de segurança do cartão está errado. Confira e tente de novo.'
   if (txt.indexOf('expiration') >= 0) return 'A data de validade do cartão está errada. Confira e tente de novo.'
@@ -90,4 +91,10 @@ export async function encerrarPlanoMP(admin: any, preapprovalId: string): Promis
   if (!cur.data || cur.data.is_admin) return false
   const u = await admin.from('profiles').update({ subscription_status: 'canceled', updated_at: new Date().toISOString() }).eq('id', cur.data.id).eq('mp_preapproval_id', preapprovalId)
   return !u.error
+}
+
+// Guarda cada tentativa de assinatura (aprovado, recusado, pendente) para o card do admin na tela Planos
+export async function registrarEventoMP(admin: any, e: { user_id?: string | null; email?: string; nome?: string; plano?: string; tipo: string; motivo?: string; codigo?: string }): Promise<void> {
+  try { await admin.from('mp_eventos').insert({ user_id: e.user_id || null, email: e.email || null, nome: e.nome || null, plano: e.plano || null, tipo: e.tipo, motivo: e.motivo || null, codigo: (e.codigo || '').slice(0, 200) || null }) }
+  catch (x) { console.error('[mp-eventos] erro ao gravar') }
 }
