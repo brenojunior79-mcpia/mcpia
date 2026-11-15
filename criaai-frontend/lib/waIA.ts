@@ -848,6 +848,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     }
     // Trava do desconto (ordem do Breno): o link de R$ 197 so sai depois de DUAS confirmacoes da pessoa (veja lib/juniorDesconto.ts)
     texto = decidirDesconto(texto, linhas, primeiro)
+    if (!texto.trim()) return true // frase de saida ja foi enviada antes: fica calado, nunca repete
     // Cupom da Estrutura Express (roteiro do Breno): avisa que vai mandar o link, e o link sai 1 minuto depois (veja lib/juniorCupomExpress.ts)
     let cupomDepois: string | null = null
     if (ehAluna && !passaParaHumano) { const dc = decidirCupomExpress(texto, linhas, primeiro); texto = dc.texto; cupomDepois = dc.depois }

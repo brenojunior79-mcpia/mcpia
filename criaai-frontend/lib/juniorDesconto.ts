@@ -13,10 +13,19 @@ const PERGUNTOU_DESCONTO = /promo|desconto|quanto|valor|como seria|qual o pre|qu
 
 function corpo(m: any): string { return String(m?.body || '').trim() }
 
-export function recusou(txt: string): boolean { return !!txt && NAO.test(txt) }
+// Pedido do link (caso Ivan, 13/11/2026): "Link", "Manda", "vai enviar?", "Link pra comprar", "Voce nao enviou o link",
+// "Nao veio link" sao PEDIDOS do link, nao recusa (antes o "nao" fazia o sistema achar que a pessoa recusou e repetir a frase de saida).
+const PEDIU_LINK = /link|manda|mande|envia|envie|enviar|enviou|veio|cad[eê]|comprar|compra|pagar|pagamento|garantir|vaga/i
+// Emojis de "ok" / "sim"
+const OK_EMOJI = /👍|🆗|✅|👌|🙌|🙏|❤️|😍|🥰/
+
+export function recusou(txt: string): boolean { return !!txt && NAO.test(txt) && !PEDIU_LINK.test(txt) }
 
 export function aceitou(txt: string): boolean {
-  return !!txt && SIM.test(txt) && !NAO.test(txt)
+  if (!txt) return false
+  if (PEDIU_LINK.test(txt)) return true
+  if (OK_EMOJI.test(txt) && !NAO.test(txt)) return true
+  return SIM.test(txt) && !NAO.test(txt)
 }
 
 function limpar(texto: string): string {
@@ -47,14 +56,19 @@ export function decidirDesconto(textoModelo: string, linhasAsc: any[], primeiro:
   // 2) Ja perguntou, mas ainda nao confirmou o valor
   if (iVal < 0) {
     if (respondeuDepois(iPerg) && (aceitou(atual) || PERGUNTOU_DESCONTO.test(atual))) return CONFIRMA_DESCONTO
-    return semLinkNemRepeticao(textoModelo, primeiro)
+    return semLinkNemRepeticao(textoModelo, primeiro, linhasAsc)
   }
   // 3) Ja confirmou o valor: o link so sai se a pessoa aceitou agora
   if (respondeuDepois(iVal) && aceitou(atual)) return textoModelo
-  return semLinkNemRepeticao(textoModelo, primeiro)
+  return semLinkNemRepeticao(textoModelo, primeiro, linhasAsc)
 }
 
-function semLinkNemRepeticao(texto: string, primeiro: string): string {
+function semLinkNemRepeticao(texto: string, primeiro: string, linhasAsc: any[]): string {
   const sobra = limpar(texto)
-  return sobra || ('Entendo' + (primeiro && primeiro !== 'voce' ? ', ' + primeiro : '') + '. Quando fizer sentido pra você, é só me chamar aqui 🙏')
+  if (sobra) return sobra
+  // A frase de saida so vai UMA vez na conversa. Se ja foi, nao manda nada (nunca repete).
+  const jaFoi = (linhasAsc || []).some(function(m: any) { return m.direction !== 'in' && /Quando fizer sentido pra voc/i.test(corpo(m)) })
+  if (jaFoi) return ''
+  return 'Entendo' + (primeiro && primeiro !== 'voce' ? ', ' + primeiro : '') + '. Quando fizer sentido pra você, é só me chamar aqui 🙏'
 }
+
