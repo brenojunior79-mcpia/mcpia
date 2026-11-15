@@ -19,6 +19,23 @@ export function emailDaMarca(texto: string): string {
 }
 
 // Tira qualquer marca que sobrar no texto (o aluno nunca ve a marca)
+// A conversa e sobre acesso a Estrutura Express? (a pessoa falou de "express" nas ultimas mensagens)
+export function conversaDaExpress(linhas: any[]): boolean {
+  return (linhas || []).filter(function(m: any) { return m.direction === 'in' }).slice(-10)
+    .some(function(m: any) { return /estrutura\s*express|\bexpress\b/i.test(String(m.body || '')) })
+}
+
+// E-mails que a PESSOA escreveu na conversa, do mais novo para o mais antigo (sem repetir)
+export function emailsDaPessoa(linhas: any[]): string[] {
+  const out: string[] = []
+  const ins = (linhas || []).filter(function(m: any) { return m.direction === 'in' }).reverse()
+  for (const m of ins) {
+    const achados = String(m.body || '').match(/[^\s@<>()"',;:]+@[^\s@<>()"',;:]+\.[a-z]{2,}/gi) || []
+    for (const e of achados) { const x = e.toLowerCase().replace(/[.]+$/, ''); if (out.indexOf(x) < 0) out.push(x) }
+  }
+  return out
+}
+
 export function removerMarcaExpress(texto: string): string {
   return String(texto || '').replace(new RegExp(MARCA_RE.source, 'gi'), '').trim()
 }
@@ -46,6 +63,8 @@ Voce consegue liberar o menu da Estrutura Express, mas SO quando a pessoa disser
 - Se o e-mail dela AINDA NAO esta identificado (veja a linha "Conta identificada" no fim das instrucoes) e ela ainda nao disse o e-mail na conversa: pergunte so isto, curto: "Qual e-mail voce usa na plataforma?" Nao emita a marca ainda. Nao peca comprovante nem print.
 - Assim que ela disser o e-mail (ou se a conta ja esta identificada), responda APENAS com a marca [[LIBERAR_EXPRESS: e-mail-dela]] (se a conta ja esta identificada, [[LIBERAR_EXPRESS]]). Nao escreva mais nada junto: o sistema libera e responde a pessoa.
 - NUNCA diga que liberou: quem libera e o sistema. Nao use [[HUMANO]] junto com a marca.
+- E-MAIL CERTO (MUITO IMPORTANTE): a Estrutura Express e liberada na CONTA da pessoa, ou seja, no e-mail que ela usa para ENTRAR na plataforma, NUNCA no e-mail da compra. Pergunte sempre "Qual e-mail voce usa para entrar na plataforma?" (nunca "o e-mail da compra"). Se ela disser que comprou com outro e-mail, no nome de outra pessoa (esposa, filho, amigo), ou que nao tem mais acesso ao e-mail da compra, IGNORE o e-mail da compra e use o e-mail da conta dela. Se ela mandar mais de um e-mail, use o que ela disse que usa na plataforma (normalmente o ultimo que ela confirmou como "o que eu uso").
+- Neste assunto (acesso a Estrutura Express de quem ja tem conta) NUNCA use [[LIBERAR_CADASTRO]] nem [[CONSULTAR_COMPRA]]: essas marcas sao so para quem nao consegue criar conta. Nao diga "e so entrar com esse e-mail" para quem ja disse que entra e o menu da Estrutura Express continua bloqueado: emita a marca da Estrutura Express.
 - Quem ainda nao comprou e quer comprar: siga a base (preco e link oficial) e nao emita a marca.`
 
 type Resultado = { texto: string; humano: boolean; status: string }

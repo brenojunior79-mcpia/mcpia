@@ -14,7 +14,7 @@ import { semLinkHostinger, REGRA_RESPONSAVEL, JUNIOR_PROMPT, FINAL_REMINDER, NEW
 import { phoneIdDaConversa, postMessage } from '@/lib/whatsapp'
 import { AVISO_ENCERRAR_INICIO, MIN_AVISO_NA_RESPOSTA, avisoEncerramento, avisouEncerramentoHoje, horaFalada } from '@/lib/waAvisoFim'
 import { agoraNoFuso, abertoAgora as abertoAgoraEm, normalizar as normalizarHorario, DIAS as DIAS_SEMANA, type Horario } from '@/lib/waHours'
-import { REGRA_EXPRESS_WHATSAPP, pediuLiberarExpress, removerMarcaExpress, liberarExpressPeloJunior, emailDaMarca } from '@/lib/juniorExpress'
+import { REGRA_EXPRESS_WHATSAPP, pediuLiberarExpress, removerMarcaExpress, liberarExpressPeloJunior, emailDaMarca, conversaDaExpress, emailsDaPessoa } from '@/lib/juniorExpress'
 import { eventosDaPessoa } from '@/lib/juniorEventos'
 import { falouEmReembolso, AVISO_REEMBOLSO } from '@/lib/juniorReembolso'
 import { REGRA_COMPRA_WHATSAPP, MENSAGEM_PRIMEIRO_ACESSO, pediuConsultarCompra, removerMarcaCompra, dadosDaMarcaCompra, consultarCompraPeloJunior } from '@/lib/juniorCompra'
@@ -899,6 +899,18 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     // Lead (nao aluna) nunca tem cadastro liberado pelo Junior: tira a marca e segue como vendedor
     if (!ehAluna && pediuLiberarCadastro(texto)) {
       texto = removerMarcaCadastro(texto).trim() || 'Me conta, ficou alguma dúvida sobre a mentoria? 🙏'
+    }
+    // Trava (caso Wiliames, 15/11/2026): conversa sobre ACESSO A ESTRUTURA EXPRESS de quem ja tem conta nao e caso de liberar cadastro.
+    // Se a IA emitir [[LIBERAR_CADASTRO]] nesse assunto, o sistema troca pela liberacao da Express na conta da pessoa:
+    // usa o e-mail mais recente que ela escreveu e que JA TEM conta na plataforma (nunca o e-mail da compra de outra pessoa).
+    if (pediuLiberarCadastro(texto) && conversaDaExpress(linhas)) {
+      let contaExpress = ''
+      for (const e of emailsDaPessoa(linhas)) {
+        const pe = await admin.from('profiles').select('id').ilike('email', e).limit(1)
+        if (pe.data && pe.data.length > 0) { contaExpress = e; break }
+      }
+      if (contaExpress) texto = '[[LIBERAR_EXPRESS: ' + contaExpress + ']]'
+      else if (conv.profile_id) texto = '[[LIBERAR_EXPRESS]]'
     }
     if (pediuLiberarCadastro(texto)) {
       // Print do erro de cadastro ("Nao encontramos uma compra com esse e-mail"): o sistema libera o e-mail e pede para criar a conta de novo
