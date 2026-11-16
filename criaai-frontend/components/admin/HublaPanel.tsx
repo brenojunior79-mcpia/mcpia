@@ -15,6 +15,25 @@ function kindOf(ev: any): 'compra' | 'reembolso' | null {
   return null
 }
 
+// Nome simples de cada aviso (todos os eventos aparecem na lista) e a cor: verde = bom, vermelho = ruim, laranja = atencao, cinza = informativo
+const EVENTOS: Record<string, [string, string]> = {
+  'invoice.payment_succeeded': ['Pagamento aprovado', 'v'], 'subscription.activated': ['Assinatura ativada', 'v'], 'customer.member_added': ['Acesso liberado', 'v'],
+  'purchase_approved': ['Compra aprovada', 'v'], 'subscription_created': ['Assinatura criada', 'v'],
+  'invoice.created': ['Fatura criada (em aberto)', 'l'], 'invoice.status_updated': ['Fatura atualizada', 'c'], 'subscription.created': ['Assinatura criada', 'c'],
+  'lead.abandoned_checkout': ['Abandonou o checkout', 'l'], 'invoice.expired': ['Fatura venceu', 'l'], 'subscription.expiring': ['Assinatura vencendo', 'l'],
+  'invoice.payment_failed': ['Pagamento recusado', 'r'], 'subscription.deactivated': ['Assinatura desativada', 'r'], 'customer.member_removed': ['Acesso removido', 'r'],
+  'refund_request.created': ['Pediu reembolso', 'r'], 'refund_request.accepted': ['Reembolso aceito', 'r'], 'invoice.refunded': ['Reembolsado', 'r'], 'refund': ['Reembolsado', 'r'], 'chargeback': ['Chargeback', 'r'],
+  'member.course_completed': ['Concluiu curso', 'c'], 'member.module_completed': ['Concluiu módulo', 'c'],
+}
+const CORES: Record<string, [string, string]> = { v: ['rgba(34,197,94,0.12)', 'var(--green)'], r: ['rgba(239,68,68,0.12)', 'var(--red)'], l: ['rgba(245,158,11,0.14)', '#d97706'], c: ['var(--surface2)', 'var(--muted2)'] }
+function rotuloEvento(ev: any): [string, string] {
+  const k = kindOf(ev)
+  if (EVENTOS[ev.event_type]) return EVENTOS[ev.event_type]
+  if (k === 'compra') return ['Compra', 'v']
+  if (k === 'reembolso') return ['Reembolso', 'r']
+  return [String(ev.event_type || 'Aviso'), 'c']
+}
+
 function nomeOrigem(o: string): string {
   return o === 'cakto' ? 'Cakto' : 'Hubla'
 }
@@ -36,7 +55,7 @@ export default function HublaPanel() {
   const [error, setError] = useState('')
 
   async function loadEvents() {
-    const e = await supabase.from('hubla_events').select('*').order('created_at', { ascending: false }).limit(300)
+    const e = await supabase.from('hubla_events').select('*').order('created_at', { ascending: false }).limit(1000)
     setEvents(e.data || [])
     const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
     const r = await supabase.from('hubla_events').select('id', { count: 'exact', head: true }).eq('action', 'removido').gte('created_at', since)
@@ -66,11 +85,10 @@ export default function HublaPanel() {
   // So compra e reembolso; o mesmo aluno/tipo em ate 10 minutos conta uma vez (a Hubla manda varios avisos por compra)
   const lista: any[] = []
   events.forEach(function(ev: any) {
-    const k = kindOf(ev)
-    if (!k) return
+    const k = kindOf(ev) || ev.event_type
     if (prov !== 'todas' && (ev.provider || 'hubla') !== prov) return
     const dup = lista.find(function(x: any) {
-      return x.k === k && x.ev.email === ev.email && (x.ev.provider || 'hubla') === (ev.provider || 'hubla') && Math.abs(new Date(x.ev.created_at).getTime() - new Date(ev.created_at).getTime()) < 10 * 60 * 1000
+      return x.k === k && x.ev.email === ev.email && (x.ev.provider || 'hubla') === (ev.provider || 'hubla') && Math.abs(new Date(x.ev.created_at).getTime() - new Date(ev.created_at).getTime()) < 2 * 60 * 1000
     })
     if (dup) return
     lista.push({ k: k, ev: ev })
@@ -128,7 +146,7 @@ export default function HublaPanel() {
       {/* Ultimos avisos */}
       <div className={styles.tableCard} style={{ marginBottom: 28 }}>
         <div className={styles.tableHeader}>
-          <div className={styles.tableTitle}>Últimas compras e reembolsos</div>
+          <div className={styles.tableTitle}>Eventos da Hubla e da Cakto</div>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
             <span style={{ fontSize: 12, color: 'var(--muted2)', marginRight: 6 }}>7 dias: <b style={{ color: 'var(--green)' }}>{compras7} compras</b> · <b style={{ color: 'var(--red)' }}>{reemb7} reembolsos</b></span>
             {[{ id: 'todas', nome: 'Todas' }, { id: 'hubla', nome: 'Hubla' }, { id: 'cakto', nome: 'Cakto' }].map(function(t) {
@@ -144,7 +162,7 @@ export default function HublaPanel() {
         </div>
         {lista.length === 0 ? (
           <div style={{ padding: 24, textAlign: 'center', color: 'var(--muted2)', fontSize: 13 }}>
-            Nenhuma compra ou reembolso registrado ainda. Eles aparecem aqui conforme a Hubla e a Cakto avisam a plataforma.
+            Nenhum evento registrado ainda. Eles aparecem aqui conforme a Hubla e a Cakto avisam a plataforma.
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
@@ -161,13 +179,14 @@ export default function HublaPanel() {
               <tbody>
                 {lista.slice(0, visible).map(function(x: any) {
                   const ev = x.ev
-                  const isRef = x.k === 'reembolso'
+                  const rot = rotuloEvento(ev)
+                  const cor = CORES[rot[1]] || CORES.c
                   const detalhe = ev.action === 'ignorado' && ev.note === 'aluno nao encontrado na plataforma' ? 'ainda sem cadastro na plataforma' : (ev.note || '')
                   return (
                     <tr key={ev.id} style={{ borderTop: '1px solid var(--border)' }}>
                       <td style={{ padding: '10px 18px', whiteSpace: 'nowrap' }}>{fmt(ev.created_at)}</td>
                       <td style={{ padding: '10px 18px' }}>
-                        <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700, background: isRef ? 'rgba(239,68,68,0.12)' : 'rgba(34,197,94,0.12)', color: isRef ? 'var(--red)' : 'var(--green)' }}>{isRef ? 'Reembolso' : 'Compra'}</span>
+                        <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700, background: cor[0], color: cor[1], whiteSpace: 'nowrap' }}>{rot[0]}</span>
                       </td>
                       <td style={{ padding: '10px 18px' }}>{nomeOrigem(ev.provider || 'hubla')}</td>
                       <td style={{ padding: '10px 18px' }}>{ev.email || '—'}</td>
