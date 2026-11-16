@@ -58,9 +58,9 @@ async function findUserIdByEmail(email: string): Promise<string | null> {
 }
 
 // Guarda um historico simples do que a Hubla avisou e do que fizemos (para o admin conferir).
-async function logEvent(eventType: string, email: string | null, userId: string | null, action: string, note: string): Promise<void> {
+async function logEvent(eventType: string, plano: string | null, email: string | null, userId: string | null, action: string, note: string): Promise<void> {
   try {
-    await admin.from('hubla_events').insert({ event_type: eventType, email, user_id: userId, action, note: note.slice(0, 300) })
+    await admin.from('hubla_events').insert({ event_type: eventType, email, user_id: userId, action, note: note.slice(0, 300), plano })
   } catch (e) {}
 }
 
@@ -143,6 +143,7 @@ export async function POST(req: NextRequest) {
 
     const eventType: string = payload.type || ''
     const email = payload.event?.user?.email || null
+    const planoDoAviso = resolvePlanName(payload) // Starter/Pro/Premium (vazio quando o aviso e de outro produto)
 
     await trackSale(admin, eventType, payload, email)
     if (eventType === 'invoice.payment_succeeded') await avisarVendaHubla(payload, email)
@@ -158,7 +159,7 @@ export async function POST(req: NextRequest) {
           if (info.email) await admin.from('hubla_compras').update({ reembolsado: true }).eq('cat', 'e').eq('email', info.email.toLowerCase())
           if (info.wa) await admin.from('hubla_compras').update({ reembolsado: true }).eq('cat', 'e').eq('wa', info.wa)
         } catch (e) { console.error('[hubla-webhook] reembolso express:', e) }
-        await logEvent(eventType, email, null, 'ignorado', 'reembolso da Estrutura Express: acesso ao menu removido, plano da plataforma mantido')
+        await logEvent(eventType, planoDoAviso, email, null, 'ignorado', 'reembolso da Estrutura Express: acesso ao menu removido, plano da plataforma mantido')
         return NextResponse.json({ received: true, express: true })
       }
     }
@@ -183,14 +184,14 @@ export async function POST(req: NextRequest) {
 
     if (!email) {
       console.error('[hubla-webhook] sem email no payload')
-      await logEvent(eventType, null, null, 'ignorado', 'sem email no aviso')
+      await logEvent(eventType, planoDoAviso, null, null, 'ignorado', 'sem email no aviso')
       return NextResponse.json({ received: true, warning: 'sem email' })
     }
 
     const userId = await findUserIdByEmail(email)
     if (!userId) {
       console.error('[hubla-webhook] usuario nao encontrado para email', email)
-      await logEvent(eventType, email, null, 'ignorado', 'aluno nao encontrado na plataforma')
+      await logEvent(eventType, planoDoAviso, email, null, 'ignorado', 'aluno nao encontrado na plataforma')
       return NextResponse.json({ received: true, warning: 'usuario nao encontrado' })
     }
 
@@ -257,14 +258,14 @@ export async function POST(req: NextRequest) {
       case 'customer.member_added':
       case 'subscription.activated': {
         const ok = await grantAccess()
-        await logEvent(eventType, email, userId, ok ? 'liberado' : 'ignorado', ok ? 'plano: ' + resolvePlanName(payload) : 'produto não é plano da plataforma (nada alterado)')
+        await logEvent(eventType, planoDoAviso, email, userId, ok ? 'liberado' : 'ignorado', ok ? 'plano: ' + resolvePlanName(payload) : 'produto não é plano da plataforma (nada alterado)')
         break
       }
 
       case 'customer.member_removed':
       case 'subscription.deactivated': {
         const ok = await revokeAccess()
-        await logEvent(eventType, email, userId, ok ? 'removido' : 'ignorado', ok ? 'assinatura encerrada' : 'não era o plano atual (nada alterado)')
+        await logEvent(eventType, planoDoAviso, email, userId, ok ? 'removido' : 'ignorado', ok ? 'assinatura encerrada' : 'não era o plano atual (nada alterado)')
         break
       }
 
@@ -277,12 +278,12 @@ export async function POST(req: NextRequest) {
           // Estava em atraso e pagou: o acesso volta na hora
           await admin.from('profiles').update({ subscription_status: 'active', updated_at: new Date().toISOString() }).eq('id', userId)
           await trackBilling(userId, payload, planName)
-          await logEvent(eventType, email, userId, 'liberado', 'pagamento em atraso regularizado: ' + planName)
+          await logEvent(eventType, planoDoAviso, email, userId, 'liberado', 'pagamento em atraso regularizado: ' + planName)
         } else if (planName && paidSub && cur.data?.hubla_subscription_id === paidSub && cur.data?.subscription_status === 'active') {
           await trackBilling(userId, payload, planName)
-          await logEvent(eventType, email, userId, 'registrado', 'pagamento registrado: ' + planName)
+          await logEvent(eventType, planoDoAviso, email, userId, 'registrado', 'pagamento registrado: ' + planName)
         } else {
-          await logEvent(eventType, email, userId, 'ignorado', 'pagamento de outro produto ou assinatura')
+          await logEvent(eventType, planoDoAviso, email, userId, 'ignorado', 'pagamento de outro produto ou assinatura')
         }
         break
       }
@@ -294,9 +295,9 @@ export async function POST(req: NextRequest) {
         const cur = await admin.from('profiles').select('hubla_subscription_id, subscription_status, is_admin').eq('id', userId).maybeSingle()
         if (!cur.data?.is_admin && failedSub && cur.data?.hubla_subscription_id === failedSub && cur.data?.subscription_status === 'active') {
           await admin.from('profiles').update({ subscription_status: 'past_due', updated_at: new Date().toISOString() }).eq('id', userId)
-          await logEvent(eventType, email, userId, 'bloqueado', 'renovação recusada: assinatura em atraso')
+          await logEvent(eventType, planoDoAviso, email, userId, 'bloqueado', 'renovação recusada: assinatura em atraso')
         } else {
-          await logEvent(eventType, email, userId, 'ignorado', 'pagamento recusado sem plano ativo (nada alterado)')
+          await logEvent(eventType, planoDoAviso, email, userId, 'ignorado', 'pagamento recusado sem plano ativo (nada alterado)')
         }
         break
       }
@@ -306,17 +307,17 @@ export async function POST(req: NextRequest) {
         const refundedSub: string | null = payload.event?.invoice?.subscriptionId || payload.event?.subscriptions?.[0]?.id || null
         const prof = await admin.from('profiles').select('hubla_subscription_id, is_admin').eq('id', userId).maybeSingle()
         if (prof.data?.is_admin) {
-          await logEvent(eventType, email, userId, 'ignorado', 'conta admin')
+          await logEvent(eventType, planoDoAviso, email, userId, 'ignorado', 'conta admin')
           break
         }
         // Se o aluno ja comprou de novo (outra assinatura), um reembolso antigo nao pode tirar o plano novo
         if (refundedSub && prof.data?.hubla_subscription_id && refundedSub !== prof.data.hubla_subscription_id) {
-          await logEvent(eventType, email, userId, 'ignorado', 'reembolso de uma assinatura antiga; o plano atual foi mantido')
+          await logEvent(eventType, planoDoAviso, email, userId, 'ignorado', 'reembolso de uma assinatura antiga; o plano atual foi mantido')
           break
         }
         await admin.from('profiles').update({ subscription_status: 'canceled', refunded_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', userId)
         await clearBilling(admin, userId, true)
-        await logEvent(eventType, email, userId, 'removido', 'reembolso')
+        await logEvent(eventType, planoDoAviso, email, userId, 'removido', 'reembolso')
         break
       }
 
@@ -330,7 +331,7 @@ export async function POST(req: NextRequest) {
 
       default:
         console.log('[hubla-webhook] evento nao tratado:', eventType)
-        await logEvent(eventType, email, userId, 'ignorado', 'evento sem acao')
+        await logEvent(eventType, planoDoAviso, email, userId, 'ignorado', 'evento sem acao')
         break
     }
 
