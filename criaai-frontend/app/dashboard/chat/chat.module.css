@@ -17,6 +17,7 @@
 
 /* Topo: pilula branca com foto, nome e status */
 .header { position: relative; display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: transparent; flex-shrink: 0; z-index: 2; }
+.voltar { width: 50px; height: 50px; border-radius: 50%; background: var(--wa-pilula); color: var(--wa-icone); font-size: 26px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; text-decoration: none; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
 .pilula { display: flex; align-items: center; gap: 10px; background: var(--wa-pilula); border-radius: 999px; padding: 5px 18px 5px 5px; box-shadow: 0 1px 3px rgba(0,0,0,.12); min-width: 0; color: var(--wa-txt); }
 .headerFoto { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; display: block; flex-shrink: 0; background: #ccc; }
 .headerInfo { min-width: 0; }

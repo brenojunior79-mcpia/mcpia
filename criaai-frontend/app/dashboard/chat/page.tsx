@@ -317,6 +317,7 @@ export default function ChatPage() {
   return (
     <div className={styles.page}>
       <div className={styles.header}>
+        <a href="/dashboard" className={styles.voltar} aria-label="Voltar para o menu da plataforma"><i className="ti ti-chevron-left" /></a>
         <div className={styles.pilula}>
           <img src={FOTO} alt={NOME} className={styles.headerFoto} />
           <div className={styles.headerInfo}>
