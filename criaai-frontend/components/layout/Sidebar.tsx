@@ -159,7 +159,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
 
   const navItems = [
     { href: '/dashboard', icon: 'ti-home', label: 'Painel do Aluno', locked: false },
-    { href: '/dashboard/chat', icon: 'ti-headset', label: 'Suporte', locked: false },
+    { href: '/dashboard/chat', icon: 'ti-brand-whatsapp', label: 'Suporte', locked: false, badge: 'NOVO', tone: 'whatsapp' },
     { href: '/dashboard/plataformas', icon: 'ti-building-store', label: 'Plataformas', locked: false },
     { href: '/dashboard/produtos', icon: 'ti-flame', label: 'Produtos em Alta', locked: false },
     { href: '/dashboard/sazonais', icon: 'ti-calendar-event', label: 'Produtos Sazonais', locked: false },
@@ -278,12 +278,12 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
                 prefetch={false} onMouseEnter={function() { antecipar(item.href) }} onTouchStart={function() { antecipar(item.href) }}
                 onClick={function() { setMobileOpen(false) }}
                 className={styles.navItem + (pathname === item.href ? ' ' + styles.active : '')}
-                style={(item as any).badge ? ((item as any).tone === 'green' ? { background: 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff', fontWeight: 700, boxShadow: '0 4px 14px rgba(22,163,74,0.35)' } : (item as any).tone === 'blue' ? { background: 'linear-gradient(135deg,#3b82f6,#2563eb)', color: '#fff', fontWeight: 700, boxShadow: '0 4px 14px rgba(37,99,235,0.35)' } : { background: 'linear-gradient(135deg,#f59e0b,#f97316)', color: '#fff', fontWeight: 700, boxShadow: '0 4px 14px rgba(249,115,22,0.35)' }) : undefined}
+                style={(item as any).badge ? ((item as any).tone === 'whatsapp' ? { background: 'linear-gradient(135deg,#25d366,#128c7e)', color: '#fff', fontWeight: 700, boxShadow: '0 4px 14px rgba(37,211,102,0.35)' } : (item as any).tone === 'green' ? { background: 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff', fontWeight: 700, boxShadow: '0 4px 14px rgba(22,163,74,0.35)' } : (item as any).tone === 'blue' ? { background: 'linear-gradient(135deg,#3b82f6,#2563eb)', color: '#fff', fontWeight: 700, boxShadow: '0 4px 14px rgba(37,99,235,0.35)' } : { background: 'linear-gradient(135deg,#f59e0b,#f97316)', color: '#fff', fontWeight: 700, boxShadow: '0 4px 14px rgba(249,115,22,0.35)' }) : undefined}
               >
                 <i className={'ti ' + item.icon} />
                 {item.label}
                 {(item as any).lockHint && <i className="ti ti-lock" title="Exige plano" style={{ marginLeft: 'auto', width: 'auto', fontSize: 14, opacity: 0.6 }} />}
-                {(item as any).badge && <span style={{ marginLeft: (item as any).lockHint ? 6 : 'auto', background: '#fff', color: (item as any).tone === 'green' ? '#15803d' : (item as any).tone === 'blue' ? '#1d4ed8' : '#ea580c', fontSize: 9.5, fontWeight: 800, letterSpacing: 0.4, borderRadius: 999, padding: '2px 7px' }}>{(item as any).badge}</span>}
+                {(item as any).badge && <span style={{ marginLeft: (item as any).lockHint ? 6 : 'auto', background: '#fff', color: (item as any).tone === 'whatsapp' ? '#128c7e' : (item as any).tone === 'green' ? '#15803d' : (item as any).tone === 'blue' ? '#1d4ed8' : '#ea580c', fontSize: 9.5, fontWeight: 800, letterSpacing: 0.4, borderRadius: 999, padding: '2px 7px' }}>{(item as any).badge}</span>}
               </Link>
             )
           })}
