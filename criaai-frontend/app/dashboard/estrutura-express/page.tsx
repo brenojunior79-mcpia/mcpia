@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
+import BlackFridayExpress from '@/components/BlackFridayExpress'
 import PlayerVimeo from '@/components/PlayerVimeo'
 
 type Aula = { id: string; ordem: number; titulo: string; descricao: string | null; video_id: string; material_label: string | null; material_url: string | null; material_aviso: string | null }
@@ -239,60 +240,10 @@ export default function EstruturaExpressPage() {
     return (
       <div style={wrap}><style>{CSS}</style>
         <div style={{ maxWidth: 1000, margin: '0 auto' }}>
-          <div className="ee-hero ee-up" style={{ position: 'relative', overflow: 'hidden', borderRadius: 24, padding: '48px 28px', textAlign: 'center', color: '#fff' }}>
-            <div className="ee-orb" style={{ width: 220, height: 220, background: '#f97316', top: -70, left: -50 }} />
-            <div className="ee-orb" style={{ width: 240, height: 240, background: '#7c3aed', bottom: -90, right: -40, animationDelay: '1.5s' }} />
-            <div className="ee-float" style={{ position: 'relative', fontSize: 58, marginBottom: 6 }}>⚡</div>
-            <div style={{ position: 'relative', display: 'inline-block', background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 999, padding: '5px 14px', fontSize: 12.5, fontWeight: 800, letterSpacing: 0.4, marginBottom: 14 }}>🔒 MENU EXCLUSIVO</div>
-            <h1 style={{ position: 'relative', fontFamily: 'Syne, sans-serif', fontSize: 'clamp(28px, 5vw, 44px)', fontWeight: 800, margin: '0 0 12px', lineHeight: 1.1, color: '#fff' }}>Tenha tudo pronto</h1>
-            <p style={{ position: 'relative', maxWidth: 640, margin: '0 auto 26px', fontSize: 'clamp(15px, 2.2vw, 18px)', lineHeight: 1.55, opacity: 0.95 }}>
-              O seu <b>produto pronto</b>, o <b>site pronto</b> e os <b>criativos já prontos</b> pra você subir e começar a fazer <b style={{ color: '#fdba74' }}>R$ 200 por dia</b>.
-            </p>
-            <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap', margin: '0 auto 24px', maxWidth: 640 }}>
-              <div style={{ flex: '1 1 220px', background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.22)', borderRadius: 16, padding: '12px 16px' }}>
-                <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.5, opacity: 0.85 }}>🔥 ALUNOS COM A ESTRUTURA EXPRESS</div>
-                <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 34, fontWeight: 800, lineHeight: 1.1, color: '#fdba74' }}>{exibido > 0 ? exibido.toLocaleString('pt-BR') : '...'}</div>
-              </div>
-              <div style={{ flex: '1 1 220px', background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.22)', borderRadius: 16, padding: '12px 16px' }}>
-                <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.5, opacity: 0.85 }}>⏳ OFERTA VÁLIDA ATÉ A MEIA-NOITE</div>
-                <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 34, fontWeight: 800, lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' }}>{restante || '--:--:--'}</div>
-              </div>
-            </div>
-            <div className="ee-pop" style={{ position: 'relative', display: 'inline-block', background: 'linear-gradient(135deg,#16a34a,#22c55e)', borderRadius: 14, padding: '10px 20px', fontSize: 16, fontWeight: 800, marginBottom: 16, boxShadow: '0 8px 22px rgba(34,197,94,0.35)' }}>🎉 Você acabou de ganhar R$ 100 de desconto!</div>
-            <div></div>
-            <a href={LINK_COMPRA} target="_blank" rel="noopener noreferrer" onClick={function() { registrar('clique') }} className="ee-cta" style={{ position: 'relative', display: 'inline-block', background: 'linear-gradient(135deg,#f59e0b,#f97316)', color: '#fff', textDecoration: 'none', fontWeight: 800, fontSize: 18, padding: '16px 34px', borderRadius: 14 }}>
-              🚀 Quero a Estrutura Express
-            </a>
-            <div style={{ position: 'relative', marginTop: 12, fontSize: 12, opacity: 0.7 }}>Os resultados variam de pessoa para pessoa e dependem da sua dedicação.</div>
-          </div>
+          {/* Black Friday da Estrutura Express 2.0 (no lugar da oferta) */}
+          <BlackFridayExpress modo="pagina" onEntrar={function() { registrar('clique') }} />
 
           <Depoimentos />
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginTop: 22 }}>
-            {recursos.map(function(r, i) {
-              return (
-                <div key={r.t} className="ee-card ee-up" style={{ animationDelay: (0.15 + i * 0.12) + 's', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 18, padding: '22px 20px' }}>
-                  <div style={{ fontSize: 34, marginBottom: 8 }}>{r.i}</div>
-                  <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 18, marginBottom: 4 }}>{r.t}</div>
-                  <div style={{ fontSize: 14, color: 'var(--muted2)', lineHeight: 1.5 }}>{r.d}</div>
-                </div>
-              )
-            })}
-          </div>
-
-          <div className="ee-up" style={{ animationDelay: '0.5s', marginTop: 22, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 18, padding: '22px 20px' }}>
-            <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 18, marginBottom: 14 }}>Como funciona</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 12 }}>
-              {passos.map(function(p, i) {
-                return (
-                  <div key={p} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#f59e0b,#f97316)', color: '#fff', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{i + 1}</div>
-                    <div style={{ fontWeight: 700, fontSize: 14.5 }}>{p}</div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
 
           <div style={{ textAlign: 'center', marginTop: 22, fontSize: 13.5, color: 'var(--muted2)' }}>
             Já comprou e não liberou? <a href="/dashboard/chat" style={{ color: 'var(--accent)', fontWeight: 700 }}>Fale com o suporte</a>
@@ -312,6 +263,7 @@ export default function EstruturaExpressPage() {
   return (
     <div style={wrap}><style>{CSS}</style>
       <div style={{ maxWidth: 1180, margin: '0 auto' }}>
+        <BlackFridayExpress modo="faixa" />
 
         <div className="ee-hero ee-up" style={{ position: 'relative', overflow: 'hidden', borderRadius: 24, padding: '28px 28px', color: '#fff', marginBottom: 20, border: '1px solid rgba(255,255,255,0.14)', boxShadow: '0 18px 50px rgba(124,45,18,0.30)' }}>
           <div className="ee-orb" style={{ width: 220, height: 220, background: '#f97316', top: -90, right: 30 }} />

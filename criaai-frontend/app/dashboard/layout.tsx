@@ -9,7 +9,7 @@ import JuniorFlutuante from '@/components/layout/JuniorFlutuante'
 import RefundBlocked from '@/components/layout/RefundBlocked'
 import PagamentoAtrasado from '@/components/layout/PagamentoAtrasado'
 import ReferralClaim from '@/components/referral/ReferralClaim'
-import PopupAnuncios from '@/components/layout/PopupAnuncios'
+import PopupBlackFriday from '@/components/layout/PopupBlackFriday'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
@@ -37,7 +37,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       <Sidebar profile={profile} user={user} />
       {/* Pop-up de plano (cupom FE10) desligado. Para voltar: importe PlanPopup de '@/components/layout/PlanPopup' e coloque <PlanPopup profile={profile} user={user} /> aqui. */}
-      <PopupAnuncios profile={profile} user={user} />
+      {/* Pop-up do dia: Black Friday da Estrutura Express 2.0 (antes era o da aula de anuncios: components/layout/PopupAnuncios.tsx) */}
+      <PopupBlackFriday user={user} />
       <InstallTracker />
       <PresenceTracker />
       <ReferralClaim />

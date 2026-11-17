@@ -39,6 +39,9 @@ function semSaudacao(t: string): string {
   const r = String(t || '').replace(/^\s*(?:A paz do Senhor|Bom dia|Boa tarde|Boa noite|Ol[aá]|Oi)(?:\s*,?\s*[A-Za-zÀ-ÿ]+)?\s*[!,.]+\s*(?:[☀-➿\uD800-\uDFFF️]\s*)*/, '')
   return r ? r.charAt(0).toUpperCase() + r.slice(1) : t
 }
+// Aviso da mudanca do suporte (WhatsApp -> menu Suporte da plataforma). A marca serve para saber se ja foi enviado hoje.
+const MARCA_AVISO_SUPORTE = 'nosso suporte oficial'
+const AVISO_SUPORTE_PLATAFORMA = 'Aproveitando a conversa, quero te avisar: este WhatsApp vai ser encerrado em breve. O nosso suporte oficial agora é só dentro da plataforma, no menu "Suporte". 🙏\n\nÉ só clicar aqui e mandar sua mensagem por lá, que já vai ser respondida também:\nhttps://www.mcpia.site/dashboard/chat'
 const REGRA_SEM_SAUDACAO = `# CONTINUACAO DE CONVERSA (SEM SAUDACAO)\nUm fluxo automatico acabou de passar esta conversa para voce. A conversa JA ESTA EM ANDAMENTO: a pessoa ja foi cumprimentada. NAO cumprimente (nada de "Oi", "Ola", "Bom dia/tarde/noite"), NAO se apresente e NAO diga que esta assumindo a conversa. Responda direto ao que a pessoa acabou de dizer e continue de onde as mensagens acima pararam, no mesmo tom.`
 const MARCA_FIM = '[[FIM]]'
 const MARCA_COMPROU = '[[JA_COMPROU]]'
@@ -980,6 +983,13 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       const repF = tirarRepetido(texto, jaMandadas)
       if (repF.todoRepetido) { console.error('[wa-ia] resposta final repetida, nao enviada', convId); return true }
       if (repF.repetiu && repF.texto) texto = repF.texto
+    }
+    // Mudanca do suporte para dentro da plataforma (ordem do Breno): uma vez por dia em cada conversa de aluno,
+    // depois da resposta, vai uma mensagem separada avisando que este WhatsApp vai encerrar e mandando o link do menu Suporte.
+    if (!passaParaHumano && ehAluna && texto.trim()) {
+      const hojeBr = diaBrasilia(new Date())
+      const avisouHoje = linhas.some(function(m: any) { return m.direction === 'out' && m.created_at && diaBrasilia(new Date(m.created_at)) === hojeBr && String(m.body || '').indexOf(MARCA_AVISO_SUPORTE) >= 0 })
+      if (!avisouHoje) texto = texto.trim() + '[[PARTE]]' + AVISO_SUPORTE_PLATAFORMA
     }
     const okEnf = await enfileirar(texto, passaParaHumano, querVideo, printSlug)
     // Segunda mensagem do cupom (link + aviso), 1 minuto depois da primeira; se a pessoa escrever antes, ela e trocada pela resposta nova
