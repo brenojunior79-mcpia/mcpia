@@ -159,7 +159,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
 
   const navItems = [
     { href: '/dashboard', icon: 'ti-home', label: 'Painel do Aluno', locked: false },
-    { href: '/dashboard/chat', icon: 'ti-message-circle', label: 'Assistente IA', locked: false },
+    { href: '/dashboard/chat', icon: 'ti-headset', label: 'Suporte', locked: false },
     { href: '/dashboard/plataformas', icon: 'ti-building-store', label: 'Plataformas', locked: false },
     { href: '/dashboard/produtos', icon: 'ti-flame', label: 'Produtos em Alta', locked: false },
     { href: '/dashboard/sazonais', icon: 'ti-calendar-event', label: 'Produtos Sazonais', locked: false },
@@ -171,7 +171,6 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
     { href: '/dashboard/vendas', icon: 'ti-rocket', label: 'Vendendo no Automatico', locked: false },
     { href: '/dashboard/estrutura-express', icon: 'ti-bolt', label: 'Estrutura Express', locked: false },
     { href: '/dashboard/anuncios', icon: 'ti-brand-meta', label: 'Gerenciando seus anúncios', locked: anunciosSemClique, lockStatus: 'Em atualizacao', lockHint: statusAnu === 'plano', badge: 'NOVO', tone: 'blue' },
-    { href: '/dashboard/suporte', icon: 'ti-brand-whatsapp', label: 'WhatsApp de Suporte', locked: false },
     { href: '/dashboard/aulas', icon: 'ti-device-tv', label: 'Aulas ao Vivo', locked: false },
     { href: '/dashboard/planos', icon: 'ti-credit-card', label: 'Planos', locked: false },
     ...((isAdmin || profile?.is_support) ? [{ href: '/dashboard/atendimento', icon: 'ti-brand-whatsapp', label: 'Atendimento WhatsApp', locked: false, badge: 'NOVO', tone: 'green' }] : []),

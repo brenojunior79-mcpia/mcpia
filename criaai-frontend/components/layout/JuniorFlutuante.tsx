@@ -101,7 +101,7 @@ export default function JuniorFlutuante() {
         <div className="jf-painel" style={{ position: 'fixed', right: 20, bottom: 96, width: 360, height: 500, maxHeight: 'calc(100vh - 120px)', zIndex: 1000, display: 'flex', flexDirection: 'column', background: 'var(--surface)', border: '1px solid var(--border2)', borderRadius: 18, boxShadow: '0 18px 50px rgba(0,0,0,.28)', overflow: 'hidden' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', background: '#1f6f50', color: '#fff' }}>
             <div style={{ position: 'relative' }}>
-              <img src="/avatar-junior/junior.svg" alt="Junior" style={{ width: 38, height: 38, borderRadius: '50%', display: 'block', background: '#fff' }} />
+              <img src="/avatar-junior/junior.jpg" alt="Junior" style={{ width: 38, height: 38, borderRadius: '50%', display: 'block', background: '#fff', objectFit: 'cover' }} />
               <span style={{ position: 'absolute', bottom: 0, right: 0, width: 11, height: 11, borderRadius: '50%', background: '#4ade80', border: '2px solid #1f6f50' }} />
             </div>
             <div style={{ flex: 1, lineHeight: 1.2 }}>

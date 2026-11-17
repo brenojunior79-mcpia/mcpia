@@ -295,7 +295,7 @@ export default function EstruturaExpressPage() {
           </div>
 
           <div style={{ textAlign: 'center', marginTop: 22, fontSize: 13.5, color: 'var(--muted2)' }}>
-            Já comprou e não liberou? <a href="/dashboard/suporte" style={{ color: 'var(--accent)', fontWeight: 700 }}>Fale com o suporte</a>
+            Já comprou e não liberou? <a href="/dashboard/chat" style={{ color: 'var(--accent)', fontWeight: 700 }}>Fale com o suporte</a>
           </div>
         </div>
       </div>

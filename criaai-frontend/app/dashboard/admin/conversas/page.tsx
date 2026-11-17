@@ -499,7 +499,7 @@ export default function ConversasAdminPage() {
         <section className="cv-chat">
           {!selectedUserId ? (
             <div className="cv-empty">
-              <img src="/avatar-junior/junior.svg" alt="" width={64} height={64} style={{ borderRadius: '50%' }} />
+              <img src="/avatar-junior/junior.jpg" alt="" width={64} height={64} style={{ borderRadius: '50%' }} />
               <div>Escolha um aluno para ler a conversa</div>
             </div>
           ) : (
@@ -533,7 +533,7 @@ export default function ConversasAdminPage() {
                       <div key={msg.id || idx} style={{ display: 'contents' }}>
                         {newDay && <div className="cv-day">{dayLabel(msg.created_at)}</div>}
                         <div className={'cv-row' + (isUser ? ' user' : '')}>
-                          {msg.role === 'assistant' && <img className="cv-bot-avatar" src="/avatar-junior/junior.svg" alt="Junior" />}
+                          {msg.role === 'assistant' && <img className="cv-bot-avatar" src="/avatar-junior/junior.jpg" alt="Junior" />}
                           {msg.role === 'admin' && <div className="cv-human-avatar"><i className="ti ti-user" /></div>}
                           <div className={'cv-bubble ' + (isUser ? 'user' : msg.role === 'admin' ? 'human' : 'bot')}>
                             {msg.role === 'admin' && <span className="cv-human-label">Você (atendimento)</span>}
