@@ -1,5 +1,6 @@
 // Assistente de IA (Junior) dentro das conversas do WhatsApp (suporte e recuperacao).
 // So responde nas conversas em que o ADMIN ligou o assistente (wa_conversations.ia_ativa) ou quando ele ligou para todas (wa_ia_config.geral).
+import { responderJunior } from '@/lib/iaJunior'
 import { blocoAnunciosDoAluno } from '@/lib/juniorCampanhas'
 import { blocoPerfilPessoa } from '@/lib/juniorPerfil'
 import { sugerirCorrecaoEmail, perguntaEmailSuspeito } from '@/lib/juniorEmail'
@@ -750,15 +751,10 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     // Espelhamento: fala do jeito da pessoa (tom, palavras, tamanho, emojis)
     { const perfil = blocoPerfilPessoa(linhas); if (perfil) system = system + '\n\n' + perfil }
 
+    // Junior responde com o Claude Haiku; se falhar, cai na OpenAI (lib/iaJunior.ts)
     const chamarModelo = async function(sys: string, temp: number) {
-      const rr = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { Authorization: 'Bearer ' + process.env.OPENAI_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: sys }, ...msgs], max_tokens: 700, temperature: temp }),
-        signal: AbortSignal.timeout(22000),
-      })
-      const jj: any = await rr.json().catch(function() { return null })
-      return { ok: rr.ok, status: rr.status, j: jj, texto: String(jj?.choices?.[0]?.message?.content || '').trim() }
+      const rj = await responderJunior({ system: sys, msgs, maxTokens: 700, variar: temp > 0.4, timeoutMs: 22000 })
+      return { ok: rj.ok, status: rj.status, j: { error: rj.via + ' ' + rj.motivo }, texto: rj.texto }
     }
     const r1 = await chamarModelo(system, 0.2)
     const resp = { ok: r1.ok, status: r1.status }
