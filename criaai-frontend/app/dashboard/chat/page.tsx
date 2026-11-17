@@ -125,7 +125,7 @@ export default function ChatPage() {
         const saved = localStorage.getItem(STORAGE_KEY)
         if (saved) {
           const parsed = JSON.parse(saved)
-          if (Array.isArray(parsed)) { setMessages(semBoasVindas(parsed)); setHydrated(true); return }
+          if (Array.isArray(parsed)) { setMessages(semBoasVindas(parsed).map(function(m) { return m.role === 'user' ? { ...m, lido: true } : m })); setHydrated(true); return }
         }
       } catch (e) {}
       setHydrated(true)
@@ -179,34 +179,50 @@ export default function ChatPage() {
 
   function falar(m: Message) { setMessages(function(prev) { return [...prev, m] }) }
 
-  async function enviar(conteudo: string, imagem: string | null, audioUrl?: string) {
-    if (loading) return
-    const userMsg: Message = { role: 'user', content: conteudo, imageUrl: imagem || undefined, audio: !!audioUrl, audioUrl, hora: agora(), lido: false }
-    const newMessages = [...messages, userMsg]
-    setMessages(newMessages)
+  // Tempo de resposta como uma pessoa (ordem do Breno): primeira mensagem da conversa em ~2 minutos, as seguintes em ~1 minuto.
+  // Enquanto espera, o aluno pode mandar mais mensagens; o Júnior responde tudo junto, no fim da espera.
+  const msgsRef = useRef<Message[]>([])
+  useEffect(function() { msgsRef.current = messages }, [messages])
+  const timerRespRef = useRef<any>(null)
+  const ocupadoRef = useRef(false)
+
+  function agendarResposta() {
+    if (timerRespRef.current || ocupadoRef.current) return
+    const lista = msgsRef.current
+    const tresHoras = 3 * 3600 * 1000
+    const conversando = lista.some(function(m) { return m.role === 'assistant' && m.hora && Date.now() - new Date(m.hora).getTime() < tresHoras })
+    const espera = (conversando ? 60000 : 120000) + Math.random() * 8000
+    // A IA é chamada ~25s antes, para a resposta ficar pronta e o "digitando…" terminar perto do tempo certo
+    timerRespRef.current = setTimeout(function() { timerRespRef.current = null; responder() }, Math.max(3000, espera - 25000))
+  }
+
+  async function responder() {
+    if (ocupadoRef.current) return
+    ocupadoRef.current = true
     setLoading(true)
-    const inicio = Date.now()
     try {
+      const lista = msgsRef.current
+      const pendentes = lista.filter(function(m) { return m.role === 'user' && !m.lido })
+      if (!pendentes.length) return
+      const imagem = pendentes.slice().reverse().find(function(m) { return !!m.imageUrl })?.imageUrl || null
+      const veioAudio = !!pendentes[pendentes.length - 1].audio
       const sessionResult = await supabase.auth.getSession()
       const session = sessionResult.data.session
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session ? session.access_token : '') },
-        body: JSON.stringify({
-          messages: newMessages.map(function(m) { return { role: m.role, content: m.content } }),
-          imageBase64: imagem,
-        }),
+        body: JSON.stringify({ messages: lista.map(function(m) { return { role: m.role, content: m.content } }), imageBase64: imagem }),
       })
       const data = await res.json()
-      // "visualizou" a mensagem: tiques azuis
-      await esperar(700 + Math.random() * 900 - (Date.now() - inicio))
+      // "visualizou" as mensagens: tiques azuis
       marcarLido()
+      await esperar(2500 + Math.random() * 3000)
       if (data.human) { setHumanActive(true); return }
       const resposta = String(data.reply || (res.ok ? '' : 'Não consegui responder agora. Pode mandar de novo?'))
       if (!resposta) return
 
       // Aluno mandou áudio: o Júnior responde em áudio (se a resposta não tiver link e não for longa demais)
-      if (audioUrl && !/https?:\/\//i.test(resposta) && resposta.length <= 700) {
+      if (veioAudio && !/https?:\/\//i.test(resposta) && resposta.length <= 700) {
         setStatus('gravando')
         const t0 = Date.now()
         let urlVoz = ''
@@ -214,31 +230,40 @@ export default function ChatPage() {
           const rv = await fetch('/api/chat/voz', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ texto: resposta.replace(/\*/g, '') }) })
           if (rv.ok) urlVoz = URL.createObjectURL(await rv.blob())
         } catch (e) {}
-        await esperar(Math.min(9000, 2500 + resposta.length * 22) - (Date.now() - t0))
+        await esperar(Math.min(20000, 6000 + resposta.length * 60) - (Date.now() - t0))
         setStatus('online')
         if (urlVoz) { falar({ role: 'assistant', content: resposta, audio: true, audioUrl: urlVoz, hora: agora() }); return }
       }
 
-      // Texto: uma mensagem curta de cada vez, com "digitando…" antes de cada uma
+      // Texto: uma mensagem curta de cada vez, com "digitando…" no tempo de quem escreve no celular
       const ps = partes(resposta)
       for (let i = 0; i < ps.length; i++) {
         setStatus('digitando')
-        const tempo = Math.min(7000, 900 + ps[i].length * 26) + Math.random() * 900
-        await esperar(i === 0 ? tempo - (Date.now() - inicio) * 0.4 : tempo)
+        await esperar(Math.min(18000, 3000 + ps[i].length * 60) + Math.random() * 1500)
         setStatus('online')
         falar({ role: 'assistant', content: ps[i], hora: agora() })
-        if (i < ps.length - 1) await esperar(500 + Math.random() * 700)
+        if (i < ps.length - 1) await esperar(1200 + Math.random() * 1500)
       }
     } catch (e) {
       falar({ role: 'assistant', content: 'Minha internet oscilou aqui. Pode mandar de novo?', hora: agora() })
     } finally {
       setStatus('online')
       setLoading(false)
+      ocupadoRef.current = false
+      // Chegou mensagem nova enquanto respondia: responde de novo, no tempo das mensagens seguintes
+      setTimeout(function() { if (msgsRef.current.some(function(m) { return m.role === 'user' && !m.lido })) agendarResposta() }, 50)
     }
   }
 
+  function enviar(conteudo: string, imagem: string | null, audioUrl?: string) {
+    const userMsg: Message = { role: 'user', content: conteudo, imageUrl: imagem || undefined, audio: !!audioUrl, audioUrl, hora: agora(), lido: false }
+    msgsRef.current = [...msgsRef.current, userMsg]
+    setMessages(msgsRef.current)
+    agendarResposta()
+  }
+
   function send() {
-    if ((!input.trim() && !pendingImage) || loading) return
+    if (!input.trim() && !pendingImage) return
     const txt = input.trim()
     const img = pendingImage
     setInput('')
@@ -249,7 +274,6 @@ export default function ChatPage() {
   // ---------- Áudio do aluno ----------
   async function comecarGravar() {
     setErroAudio('')
-    if (loading) return
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       const tipo = typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
@@ -402,10 +426,10 @@ export default function ChatPage() {
               <button className={styles.figurinha} onClick={function() { fileInputRef.current?.click() }} aria-label="Anexar imagem"><i className="ti ti-sticker" /></button>
             </div>
             {temTexto
-              ? <button className={styles.enviar} onClick={send} disabled={loading} aria-label="Enviar"><i className="ti ti-send" /></button>
+              ? <button className={styles.enviar} onClick={send} aria-label="Enviar"><i className="ti ti-send" /></button>
               : <>
                   <button className={styles.camera} onClick={function() { fileInputRef.current?.click() }} aria-label="Enviar foto ou print"><i className="ti ti-camera" /></button>
-                  <button className={styles.enviar} onClick={comecarGravar} disabled={loading} aria-label="Gravar áudio" title="Gravar áudio"><i className="ti ti-microphone" /></button>
+                  <button className={styles.enviar} onClick={comecarGravar} aria-label="Gravar áudio" title="Gravar áudio"><i className="ti ti-microphone" /></button>
                 </>}
           </>
         )}

@@ -514,10 +514,10 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       // Respostas antigas ainda nao enviadas desta conversa saem da fila (vale a mais nova).
       const agoraIso = new Date().toISOString()
       await admin.from('wa_ia_fila').update({ estado: 'cancelado', erro: 'substituida', finalizado_em: agoraIso }).eq('conversation_id', convId).eq('estado', 'pendente')
-      // Ordem do Breno (para nao parecer IA): a primeira mensagem da conversa (parada ha mais de 3h) e respondida em cerca de 3 minutos;
-      // cada mensagem seguinte, em cerca de 2 minutos. O tempo conta ate a resposta sair, entao desconta ~30s do "digitando" (lib/waIAFila.ts).
+      // Ordem do Breno (para nao parecer IA): a primeira mensagem da conversa (parada ha mais de 3h) e respondida em cerca de 2 minutos;
+      // cada mensagem seguinte, em cerca de 1 minuto. O tempo conta ate a resposta sair, entao desconta ~30s do "digitando" (lib/waIAFila.ts).
       const jaConversavam = linhas.some(function(m) { return String(m.id) !== String(msgId) && Date.now() - new Date(m.created_at).getTime() < 3 * 3600 * 1000 })
-      const esperaLeituraS = (jaConversavam ? 120 : 180) - 30 + Math.random() * 8
+      const esperaLeituraS = (jaConversavam ? 60 : 120) - 25 + Math.random() * 8
       const lerEm = new Date(Date.now() + esperaLeituraS * 1000).toISOString()
       lerEmUltimo = Date.now() + esperaLeituraS * 1000
       const ins = await admin.from('wa_ia_fila').insert({ ler_em: lerEm, conversation_id: convId, inbound_msg_id: String(msgId), inbound_wa_id: (ultimaIn as any).wa_message_id || null, wa_id: waId, connection_id: conv.connection_id || null, texto, passa_humano: passaParaHumano, enviar_video: querVideo && !passaParaHumano, print_slug: (!passaParaHumano && printSlug) ? printSlug : null })
