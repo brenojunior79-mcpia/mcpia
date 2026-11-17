@@ -24,11 +24,17 @@ export async function POST(req: NextRequest) {
       .filter(function(m: any) { return m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string' })
       .map(function(m: any) { return { role: m.role, content: String(m.content).slice(0, 4000) } })
       .slice(-30)
+    // A conversa tem que terminar numa fala do aluno: mensagens do Junior no fim (ex.: aviso de erro do aparelho) saem daqui
+    while (messages.length && messages[messages.length - 1].role === 'assistant') messages.pop()
+    if (!messages.length) return NextResponse.json({ reply: null })
 
     const profileResult = await supabase.from('profiles').select('full_name, created_at, subscription_status, is_admin').eq('id', user.id).single()
     const firstName = ((profileResult.data?.full_name || '').split(' ')[0]) || ''
     let systemContent = JUNIOR_PROMPT.split('{{firstName}}').join(firstName || 'você')
     systemContent = systemContent + '\n\n' + FINAL_REMINDER + '\n\n' + REGRAS_ESTILO_CHAT
+    // Conversa ja em andamento (o Junior ja respondeu nesta conversa): sem nova saudacao e sem repetir "como posso te ajudar?"
+    const jaConversando = messages.slice(0, -1).some(function(m) { return m.role === 'assistant' && String(m.content || '').trim() })
+    if (jaConversando) systemContent = systemContent + '\n\n# CONVERSA EM ANDAMENTO (PRIORIDADE MAXIMA)\nVoce JA esta conversando com esta pessoa. NAO cumprimente de novo (nada de "Ola", "Oi", "Opa", "A paz do Senhor", "Bom dia") e NAO pergunte "como posso te ajudar?". Se ela mandou so "oi", "voce esta ai?" ou parecido, responda "Estou aqui sim!" e continue o assunto que estava pendente nas ultimas mensagens.'
 
     // Estrutura Express: o Junior pode conferir a compra e liberar o menu (quem confere e o sistema, nao a IA)
     let jaTemExpress = false
@@ -65,7 +71,10 @@ export async function POST(req: NextRequest) {
 
     // Salva a mensagem do aluno (e a resposta do Junior, se houver) para o monitoramento
     const saveConversation = async function(replyText: string | null) {
-      const lastUserMessage = messages?.[messages.length - 1]
+      // Todas as falas do aluno desde a ultima resposta do Junior (ele pode mandar varias enquanto espera)
+      let iAssist = -1
+      for (let k = messages.length - 1; k >= 0; k--) { if (messages[k].role === 'assistant') { iAssist = k; break } }
+      const lastUserMessage = { content: messages.slice(iAssist + 1).filter(function(m) { return m.role === 'user' }).map(function(m) { return m.content }).join('\n') }
       const userContentToSave = (lastUserMessage?.content || '') + (imageBase64 ? ' [imagem anexada]' : '')
 
       // Guarda o print numa pasta privada (so o admin consegue ver) para poder consultar depois
@@ -122,6 +131,12 @@ export async function POST(req: NextRequest) {
     // Junior responde com o Claude Haiku; se falhar, cai na OpenAI (lib/iaJunior.ts)
     const rj = await responderJunior({ system: systemContent, msgs: apiMessages, maxTokens: 800, timeoutMs: 40000 })
     let reply: string = rj.texto
+    if (jaConversando && reply) {
+      // Trava: tira a saudacao do comeco e o "como posso te ajudar?" repetido
+      let t = reply.replace(/^\s*(?:Opa|Ol[aá]|Oi|A paz do Senhor|Bom dia|Boa tarde|Boa noite)(?:\s*,?\s*[A-Za-zÀ-ÿ]+)?\s*[!,.]+\s*/i, '')
+      t = t.replace(/(^|\n|[.!?]\s+)\s*(?:Tudo bem\??\s*)?(?:Me conta\s+)?como\s+(?:eu\s+)?posso\s+(?:te\s+)?ajudar[^.!?\n]*[.!?]?/gi, '$1').trim()
+      reply = t || 'Estou aqui sim! Me conta onde você parou que eu continuo te ajudando.'
+    }
     if (!rj.ok || !reply) {
       const motivo = rj.via + ' ' + rj.status + ' ' + rj.motivo
       console.error('[chat] IA sem resposta:', motivo)

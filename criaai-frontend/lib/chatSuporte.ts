@@ -29,6 +29,7 @@ let telaAberta = false
 let iniciando: Promise<void> | null = null
 let timerResp: any = null
 let ocupado = false
+let falhas = 0
 
 function agora() { return new Date().toISOString() }
 function esperar(ms: number) { return new Promise(function(r) { setTimeout(r, Math.max(0, ms)) }) }
@@ -57,7 +58,10 @@ export function telaDoChat(aberta: boolean) {
   if (aberta && estado.naoLidas) mudar({ naoLidas: 0 })
 }
 if (typeof document !== 'undefined') {
-  document.addEventListener('visibilitychange', function() { if (vendoAgora() && estado.naoLidas) mudar({ naoLidas: 0 }) })
+  document.addEventListener('visibilitychange', function() {
+    if (vendoAgora() && estado.naoLidas) mudar({ naoLidas: 0 })
+    if (document.visibilityState === 'visible' && estado.carregado && !ocupado && estado.mensagens.some(function(m) { return m.role === 'user' && !m.lido })) agendarResposta(true)
+  })
 }
 
 export function adicionarMensagem(m: MsgChat) {
@@ -145,6 +149,7 @@ function agendarResposta(retomando?: boolean) {
 async function responder() {
   if (ocupado) return
   ocupado = true
+  let retentar = false
   try {
     const lista = estado.mensagens
     const pendentes = lista.filter(function(m) { return m.role === 'user' && !m.lido })
@@ -156,9 +161,10 @@ async function responder() {
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session ? session.access_token : '') },
-      body: JSON.stringify({ messages: lista.map(function(m) { return { role: m.role, content: m.content } }), imageBase64: imagem }),
+      body: JSON.stringify({ messages: lista.filter(function(m) { return !(m.role === 'assistant' && /^Minha internet oscilou aqui/.test(m.content)) }).map(function(m) { return { role: m.role, content: m.content } }), imageBase64: imagem }),
     })
     const data = await res.json()
+    falhas = 0
     marcarLido() // "visualizou": tiques azuis
     await esperar(2500 + Math.random() * 3000)
     if (data.human) return
@@ -189,10 +195,13 @@ async function responder() {
       if (i < ps.length - 1) await esperar(1200 + Math.random() * 1500)
     }
   } catch (e) {
-    adicionarMensagem({ role: 'assistant', content: 'Minha internet oscilou aqui. Pode mandar de novo?', hora: agora() })
+    // Falha de internet (comum no celular quando o aluno sai do app): nao mostra erro; tenta de novo sozinho daqui a pouco
+    falhas++
+    if (falhas <= 5) { retentar = true; setTimeout(function() { responder() }, 15000 * falhas) }
   } finally {
     mudar({ status: 'online' })
     ocupado = false
+    if (retentar) return
     // Chegou mensagem nova enquanto respondia: responde de novo, no tempo das mensagens seguintes
     if (estado.mensagens.some(function(m) { return m.role === 'user' && !m.lido })) agendarResposta()
   }
