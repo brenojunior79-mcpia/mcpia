@@ -9,6 +9,7 @@ import { REGRA_ASSINATURA_CHAT, pediuVerificarAssinatura, removerMarcaAssinatura
 
 import { blocoAnunciosDoAluno } from '@/lib/juniorCampanhas'
 import { responderJunior } from '@/lib/iaJunior'
+import { tirarRepetido } from '@/lib/juniorHumano'
 import { JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno, REGRAS_ESTILO_CHAT, limparRespostaChat, tipoFinalConversa, situacaoFinalConversa } from '@/lib/junior'
 
 export async function POST(req: NextRequest) {
@@ -131,6 +132,18 @@ export async function POST(req: NextRequest) {
     // Junior responde com o Claude Haiku; se falhar, cai na OpenAI (lib/iaJunior.ts)
     const rj = await responderJunior({ system: systemContent, msgs: apiMessages, maxTokens: 800, timeoutMs: 40000 })
     let reply: string = rj.texto
+    // Anti-repeticao (igual ao WhatsApp): nao manda de novo o que o Junior ja disse nesta conversa
+    if (reply && rj.ok) {
+      const anteriores = messages.filter(function(m) { return m.role === 'assistant' }).map(function(m) { return String(m.content || '') })
+      let rep = tirarRepetido(reply, anteriores)
+      if (rep.todoRepetido) {
+        const extra = systemContent + '\n\nATENCAO (PRIORIDADE MAXIMA): a sua resposta ficou igual a uma mensagem que voce JA mandou nesta conversa. NAO repita. Releia a ULTIMA mensagem da pessoa e responda especificamente a ela, com outras palavras.'
+        const r2 = await responderJunior({ system: extra, msgs: apiMessages, maxTokens: 800, variar: true, timeoutMs: 30000 })
+        if (r2.ok && r2.texto) { reply = r2.texto; rep = tirarRepetido(reply, anteriores) }
+        if (rep.todoRepetido) reply = 'Me conta com as suas palavras o que está acontecendo agora, que eu te ajudo.'
+      }
+      if (rep.repetiu && rep.texto && !rep.todoRepetido) reply = rep.texto
+    }
     if (jaConversando && reply) {
       // Trava: tira a saudacao do comeco e o "como posso te ajudar?" repetido
       let t = reply.replace(/^\s*(?:Opa|Ol[aá]|Oi|A paz do Senhor|Bom dia|Boa tarde|Boa noite)(?:\s*,?\s*[A-Za-zÀ-ÿ]+)?\s*[!,.]+\s*/i, '')
