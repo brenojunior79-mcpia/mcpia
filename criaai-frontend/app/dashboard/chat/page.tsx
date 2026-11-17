@@ -33,9 +33,11 @@ function hhmm(iso?: string) {
 }
 function esperar(ms: number) { return new Promise(function(r) { setTimeout(r, Math.max(0, ms)) }) }
 
-function buildWelcome(firstName: string): Message {
-  const name = firstName ? ', ' + firstName : ''
-  return { role: 'assistant', content: 'A paz do Senhor' + name + '! 🙏\n\nAqui é o Júnior, do suporte da Mentoria Cristão Próspero.\n\nMe conta como posso te ajudar. Pode escrever, mandar áudio ou um print da tela.', hora: agora() }
+const NOME = 'Breno/Suporte'
+
+// Tira a antiga mensagem automatica de boas-vindas do historico salvo no aparelho
+function semBoasVindas(lista: Message[]): Message[] {
+  return lista.filter(function(m, i) { return !(i === 0 && m.role === 'assistant' && !m.human && /^A paz do Senhor/.test(m.content) && /(assistente da Mentoria|do suporte da Mentoria)/i.test(m.content)) })
 }
 
 // Quebra a resposta em mensagens curtas (como uma pessoa manda no WhatsApp): por parágrafo, no máximo 4
@@ -50,36 +52,41 @@ function partes(texto: string): string[] {
   return out.length ? out : [texto]
 }
 
-// Player de áudio no jeito do WhatsApp (botão play, barra e tempo)
-function Audio({ url, foto, saida }: { url?: string; foto?: string; saida: boolean }) {
+// Altura das ondinhas do audio (sempre a mesma)
+const ONDAS = Array.from({ length: 34 }, function(_v, i) { return 5 + Math.round(Math.abs(Math.sin(i * 1.7) * 13 + Math.cos(i * 0.6) * 6)) })
+
+// Player de áudio no jeito do WhatsApp (play, ondinhas, tempo e a foto com microfone)
+function Audio({ url, foto, saida, hora }: { url?: string; foto?: string; saida: boolean; hora: string }) {
   const ref = useRef<HTMLAudioElement>(null)
   const [tocando, setTocando] = useState(false)
   const [pos, setPos] = useState(0)
   const [dur, setDur] = useState(0)
   function fmt(s: number) { if (!isFinite(s) || s <= 0) return '0:00'; const m = Math.floor(s / 60); const r = Math.floor(s % 60); return m + ':' + (r < 10 ? '0' : '') + r }
-  if (!url) return <div className={styles.audio}><i className="ti ti-microphone" style={{ fontSize: 22, color: 'var(--wa-meta)' }} /><span style={{ fontSize: 13, color: 'var(--wa-meta)' }}>Mensagem de voz</span></div>
   const pct = dur > 0 ? Math.min(100, (pos / dur) * 100) : 0
   return (
     <div className={styles.audio}>
-      {!saida && foto && <img src={foto} alt="" className={styles.audioFoto} />}
-      <button className={styles.audioPlay} aria-label={tocando ? 'Pausar' : 'Ouvir'} onClick={function() { const a = ref.current; if (!a) return; if (a.paused) a.play(); else a.pause() }}>
+      <button className={styles.audioPlay} aria-label={tocando ? 'Pausar' : 'Ouvir'} disabled={!url} onClick={function() { const a = ref.current; if (!a) return; if (a.paused) a.play(); else a.pause() }}>
         <i className={'ti ' + (tocando ? 'ti-player-pause-filled' : 'ti-player-play-filled')} />
       </button>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div className={styles.audioBarra}><span style={{ width: pct + '%' }} /><i style={{ left: pct + '%' }} /></div>
-        <div className={styles.audioTempo}>{fmt(tocando || pos > 0 ? pos : dur)}</div>
+      <div className={styles.audioMeio}>
+        <div className={styles.ondas}>
+          {ONDAS.map(function(h, i) { return <span key={i} className={(i / ONDAS.length) * 100 < pct ? styles.tocado : ''} style={{ height: h }} /> })}
+          <i className={styles.ondaBola} style={{ left: pct + '%' }} />
+        </div>
+        <div className={styles.audioRodape}><span>{url ? fmt(tocando || pos > 0 ? pos : dur) : 'Mensagem de voz'}</span><span>{hora}</span></div>
       </div>
-      <audio ref={ref} src={url} preload="metadata"
+      {!saida && foto && <div className={styles.audioFotoBox}><img src={foto} alt="" className={styles.audioFoto} /><i className={'ti ti-microphone-filled ' + styles.audioMic} /></div>}
+      {url && <audio ref={ref} src={url} preload="metadata"
         onLoadedMetadata={function(e) { setDur((e.target as HTMLAudioElement).duration) }}
         onTimeUpdate={function(e) { setPos((e.target as HTMLAudioElement).currentTime) }}
         onPlay={function() { setTocando(true) }} onPause={function() { setTocando(false) }}
-        onEnded={function() { setTocando(false); setPos(0) }} />
+        onEnded={function() { setTocando(false); setPos(0) }} />}
     </div>
   )
 }
 
 export default function ChatPage() {
-  const [messages, setMessages] = useState<Message[]>([buildWelcome('')])
+  const [messages, setMessages] = useState<Message[]>([])
   const [firstName, setFirstName] = useState('')
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -118,10 +125,9 @@ export default function ChatPage() {
         const saved = localStorage.getItem(STORAGE_KEY)
         if (saved) {
           const parsed = JSON.parse(saved)
-          if (Array.isArray(parsed) && parsed.length > 0) { setMessages(parsed); setHydrated(true); return }
+          if (Array.isArray(parsed)) { setMessages(semBoasVindas(parsed)); setHydrated(true); return }
         }
       } catch (e) {}
-      setMessages([buildWelcome(name)])
       setHydrated(true)
     }
     init()
@@ -187,7 +193,7 @@ export default function ChatPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session ? session.access_token : '') },
         body: JSON.stringify({
-          messages: newMessages.filter(function(m, idx) { return m.role !== 'assistant' || idx > 0 }).map(function(m) { return { role: m.role, content: m.content } }),
+          messages: newMessages.map(function(m) { return { role: m.role, content: m.content } }),
           imageBase64: imagem,
         }),
       })
@@ -300,7 +306,7 @@ export default function ChatPage() {
 
   function clearHistory() {
     setMenu(false)
-    setMessages([buildWelcome(firstName)])
+    setMessages([])
     try { localStorage.removeItem(STORAGE_KEY) } catch (e) {}
   }
 
@@ -310,11 +316,13 @@ export default function ChatPage() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.header} style={{ position: 'relative' }}>
-        <img src={FOTO} alt="Júnior" className={styles.headerFoto} />
-        <div className={styles.headerInfo}>
-          <div className={styles.headerNome}>Júnior</div>
-          <div className={styles.headerStatus}>{textoStatus}</div>
+      <div className={styles.header}>
+        <div className={styles.pilula}>
+          <img src={FOTO} alt={NOME} className={styles.headerFoto} />
+          <div className={styles.headerInfo}>
+            <div className={styles.headerNome}>{NOME}</div>
+            <div className={styles.headerStatus + ' ' + (status !== 'online' ? styles.headerStatusAtivo : '')}>{textoStatus}</div>
+          </div>
         </div>
         <button className={styles.headerBtn} aria-label="Mais opções" onClick={function() { setMenu(!menu) }}><i className="ti ti-dots-vertical" /></button>
         {menu && (
@@ -326,27 +334,28 @@ export default function ChatPage() {
 
       <div className={styles.mensagens}>
         <div className={styles.dia}>Hoje</div>
-        <div className={styles.aviso}>🔒 Conversa do suporte da Mentoria Cristão Próspero. Pode mandar texto, áudio ou print da tela.</div>
         {humanActive && <div className={styles.aviso}>Um atendente da equipe está cuidando da sua conversa. Pode mandar sua mensagem por aqui.</div>}
         {messages.map(function(msg, i) {
           const saida = msg.role === 'user'
           const anterior = messages[i - 1]
+          const proximo = messages[i + 1]
           const primeiro = !anterior || anterior.role !== msg.role
+          const ultimo = !proximo || proximo.role !== msg.role
           return (
             <div key={i} className={styles.linha + ' ' + (saida ? styles.linhaOut : '') + ' ' + (primeiro ? styles.linhaNova : '')}>
-              <div className={styles.balao + ' ' + (saida ? styles.balaoOut : styles.balaoIn) + ' ' + (primeiro ? styles.rabo : '')}>
+              <div className={styles.balao + ' ' + (saida ? styles.balaoOut : styles.balaoIn) + ' ' + (ultimo ? styles.rabo : '')}>
                 {msg.human && primeiro && <div className={styles.equipe}>Equipe</div>}
                 {msg.imageUrl && <img src={msg.imageUrl} alt="Print enviado" className={styles.foto} />}
                 {msg.audio
                   ? <>
-                      <Audio url={msg.audioUrl} foto={FOTO} saida={saida} />
+                      <Audio url={msg.audioUrl} foto={FOTO} saida={saida} hora={hhmm(msg.hora)} />
                       {saida && msg.content && <div className={styles.transcricao}>“{msg.content}”</div>}
                     </>
                   : (msg.content ? <TextoComLinks texto={msg.content} /> : null)}
-                <span className={styles.meta}>
+                {!msg.audio && <span className={styles.meta}>
                   {hhmm(msg.hora)}
                   {saida && <i className={'ti ti-checks ' + styles.tick + ' ' + (msg.lido ? styles.tickLido : '')} />}
-                </span>
+                </span>}
               </div>
             </div>
           )
@@ -363,7 +372,7 @@ export default function ChatPage() {
         <div className={styles.anexo}>
           <img src={pendingImage} alt="Print anexado" />
           <span style={{ flex: 1 }}>Print anexado</span>
-          <button className={styles.clipe} onClick={function() { setPendingImage(null) }} aria-label="Remover imagem"><i className="ti ti-x" /></button>
+          <button onClick={function() { setPendingImage(null) }} aria-label="Remover imagem"><i className="ti ti-x" /></button>
         </div>
       )}
       {erroAudio && <div className={styles.anexo} style={{ color: '#f15c6d' }}>{erroAudio}</div>}
@@ -380,19 +389,23 @@ export default function ChatPage() {
           </>
         ) : (
           <>
+            <button className={styles.mais} onClick={function() { fileInputRef.current?.click() }} aria-label="Anexar" title="Anexar um print"><i className="ti ti-plus" /></button>
             <div className={styles.campo}>
               <textarea
                 value={input}
                 rows={1}
                 onChange={function(e) { setInput(e.target.value) }}
                 onKeyDown={function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
-                placeholder="Mensagem"
+                aria-label="Mensagem"
               />
-              <button className={styles.clipe} onClick={function() { fileInputRef.current?.click() }} aria-label="Anexar print" title="Anexar um print da tela"><i className="ti ti-paperclip" /></button>
+              <button className={styles.figurinha} onClick={function() { fileInputRef.current?.click() }} aria-label="Anexar imagem"><i className="ti ti-sticker" /></button>
             </div>
             {temTexto
               ? <button className={styles.enviar} onClick={send} disabled={loading} aria-label="Enviar"><i className="ti ti-send" /></button>
-              : <button className={styles.enviar} onClick={comecarGravar} disabled={loading} aria-label="Gravar áudio" title="Gravar áudio"><i className="ti ti-microphone" /></button>}
+              : <>
+                  <button className={styles.camera} onClick={function() { fileInputRef.current?.click() }} aria-label="Enviar foto ou print"><i className="ti ti-camera" /></button>
+                  <button className={styles.enviar} onClick={comecarGravar} disabled={loading} aria-label="Gravar áudio" title="Gravar áudio"><i className="ti ti-microphone" /></button>
+                </>}
           </>
         )}
       </div>

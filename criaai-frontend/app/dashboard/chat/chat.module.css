@@ -1,94 +1,105 @@
-/* Chat do Suporte (Junior) no visual do WhatsApp. Cores proprias aqui (claro e escuro), como no app de mensagens. */
+/* Chat do Suporte no visual do WhatsApp do iPhone (claro e escuro). Cores proprias aqui, como no app de mensagens. */
 .page {
-  --wa-header: #008069; --wa-header-txt: #fff; --wa-bg: #efeae2; --wa-doodle: rgba(0,0,0,.055);
-  --wa-in: #ffffff; --wa-out: #d9fdd3; --wa-txt: #111b21; --wa-meta: #667781; --wa-tick: #53bdeb;
-  --wa-bar: #f0f2f5; --wa-field: #ffffff; --wa-send: #00a884; --wa-chip: #ffffff; --wa-chip-txt: #54656f;
-  display: flex; flex-direction: column; height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; background: var(--wa-bg);
+  --wa-bg: #efe7dd; --wa-papel: url('/chat/papel-claro.svg');
+  --wa-in: #ffffff; --wa-out: #dcf8c6; --wa-txt: #111b21; --wa-meta: #8a9399; --wa-tick: #34b7f1;
+  --wa-topo: rgba(246,246,246,.94); --wa-pilula: #ffffff; --wa-bar: #f6f6f6; --wa-field: #ffffff; --wa-borda: #e3e3e3;
+  --wa-verde: #25d366; --wa-icone: #1f1f1f; --wa-chip: rgba(255,255,255,.95); --wa-chip-txt: #1f1f1f;
+  display: flex; flex-direction: column; height: 100vh; height: 100dvh; min-height: 0; overflow: hidden;
+  background: var(--wa-papel), var(--wa-bg); background-size: 420px 420px, auto;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 :global(:root[data-theme="dark"]) .page {
-  --wa-header: #202c33; --wa-header-txt: #e9edef; --wa-bg: #0b141a; --wa-doodle: rgba(255,255,255,.035);
-  --wa-in: #202c33; --wa-out: #005c4b; --wa-txt: #e9edef; --wa-meta: #8696a0; --wa-tick: #53bdeb;
-  --wa-bar: #202c33; --wa-field: #2a3942; --wa-send: #00a884; --wa-chip: #182229; --wa-chip-txt: #8696a0;
+  --wa-bg: #0b141a; --wa-papel: url('/chat/papel-escuro.svg');
+  --wa-in: #1f2c34; --wa-out: #005c4b; --wa-txt: #e9edef; --wa-meta: #8696a0; --wa-tick: #53bdeb;
+  --wa-topo: rgba(17,27,33,.94); --wa-pilula: #1f2c34; --wa-bar: #111b21; --wa-field: #1f2c34; --wa-borda: #2a3942;
+  --wa-icone: #e9edef; --wa-chip: #1f2c34; --wa-chip-txt: #e9edef;
 }
 
-.header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: var(--wa-header); color: var(--wa-header-txt); flex-shrink: 0; min-height: 60px; box-sizing: border-box; }
-.headerFoto { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; display: block; flex-shrink: 0; background: #ccc; }
-.headerInfo { flex: 1; min-width: 0; }
-.headerNome { font-size: 16.5px; font-weight: 600; line-height: 1.2; }
-.headerStatus { font-size: 13px; opacity: .85; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.headerBtn { background: none; border: 0; color: inherit; font-size: 21px; cursor: pointer; padding: 6px; border-radius: 50%; display: flex; }
-.headerBtn:hover { background: rgba(255,255,255,.12); }
-.menu { position: absolute; right: 12px; top: 54px; background: var(--wa-in); color: var(--wa-txt); border-radius: 6px; box-shadow: 0 4px 16px rgba(0,0,0,.2); padding: 6px 0; z-index: 20; min-width: 170px; }
-.menu button { display: block; width: 100%; text-align: left; background: none; border: 0; color: inherit; padding: 10px 18px; font-size: 14.5px; cursor: pointer; }
+/* Topo: pilula branca com foto, nome e status */
+.header { position: relative; display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: transparent; flex-shrink: 0; z-index: 2; }
+.pilula { display: flex; align-items: center; gap: 10px; background: var(--wa-pilula); border-radius: 999px; padding: 5px 18px 5px 5px; box-shadow: 0 1px 3px rgba(0,0,0,.12); min-width: 0; color: var(--wa-txt); }
+.headerFoto { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; display: block; flex-shrink: 0; background: #ccc; }
+.headerInfo { min-width: 0; }
+.headerNome { font-size: 17px; font-weight: 600; line-height: 1.2; white-space: nowrap; }
+.headerStatus { font-size: 13.5px; color: var(--wa-meta); line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.headerStatusAtivo { color: #128c7e; }
+:global(:root[data-theme="dark"]) .headerStatusAtivo { color: #25d366; }
+.headerBtn { margin-left: auto; width: 50px; height: 50px; border-radius: 50%; border: 0; background: var(--wa-pilula); color: var(--wa-icone); font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.menu { position: absolute; right: 14px; top: 66px; background: var(--wa-pilula); color: var(--wa-txt); border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,.18); padding: 6px 0; z-index: 20; min-width: 180px; }
+.menu button { display: block; width: 100%; text-align: left; background: none; border: 0; color: inherit; padding: 11px 18px; font-size: 15px; cursor: pointer; }
 .menu button:hover { background: rgba(0,0,0,.05); }
 
-.mensagens {
-  flex: 1; overflow-y: auto; overflow-x: hidden; padding: 12px 6% 8px; display: flex; flex-direction: column; gap: 2px;
-  background-color: var(--wa-bg);
-  background-image: radial-gradient(var(--wa-doodle) 1.2px, transparent 1.3px), radial-gradient(var(--wa-doodle) 1.2px, transparent 1.3px);
-  background-size: 26px 26px; background-position: 0 0, 13px 13px;
-}
-.dia { align-self: center; background: var(--wa-chip); color: var(--wa-chip-txt); font-size: 12.5px; padding: 5px 12px; border-radius: 8px; margin: 8px 0; box-shadow: 0 1px .5px rgba(11,20,26,.13); }
-.aviso { align-self: center; background: #ffeecd; color: #54656f; font-size: 12.5px; padding: 6px 12px; border-radius: 8px; margin: 4px 0 10px; text-align: center; max-width: 90%; }
+.mensagens { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 6px 18px 10px; display: flex; flex-direction: column; gap: 4px; }
+.dia { align-self: center; background: var(--wa-chip); color: var(--wa-chip-txt); font-size: 14px; font-weight: 600; padding: 4px 22px; border-radius: 8px; margin: 10px 0 12px; box-shadow: 0 1px .5px rgba(11,20,26,.1); }
+.aviso { align-self: center; background: #fdf4c5; color: #54656f; font-size: 13px; padding: 6px 12px; border-radius: 8px; margin: 2px 0 8px; text-align: center; max-width: 90%; }
 :global(:root[data-theme="dark"]) .aviso { background: #182229; color: #ffd279; }
 
 .linha { display: flex; width: 100%; }
 .linhaOut { justify-content: flex-end; }
-.linhaNova { margin-top: 8px; }
+.linhaNova { margin-top: 6px; }
 .balao {
-  position: relative; max-width: min(65%, 520px); padding: 6px 8px 8px 9px; border-radius: 8px; color: var(--wa-txt);
-  font-size: 14.6px; line-height: 1.38; box-shadow: 0 1px .5px rgba(11,20,26,.13); word-break: break-word; white-space: pre-wrap;
+  position: relative; max-width: min(75%, 560px); padding: 8px 12px 9px 14px; border-radius: 20px; color: var(--wa-txt);
+  font-size: 16.5px; line-height: 1.32; box-shadow: 0 1px .5px rgba(11,20,26,.1); word-break: break-word; white-space: pre-wrap;
   animation: entra .18s ease-out;
 }
 .balaoIn { background: var(--wa-in); }
 .balaoOut { background: var(--wa-out); }
-/* rabinho do balao (so no primeiro de cada sequencia) */
-.rabo.balaoIn { border-top-left-radius: 0; }
-.rabo.balaoOut { border-top-right-radius: 0; }
-.rabo.balaoIn::before, .rabo.balaoOut::before { content: ''; position: absolute; top: 0; width: 8px; height: 13px; }
-.rabo.balaoIn::before { left: -8px; background: var(--wa-in); clip-path: polygon(0 0, 100% 0, 100% 100%); }
-.rabo.balaoOut::before { right: -8px; background: var(--wa-out); clip-path: polygon(0 0, 100% 0, 0 100%); }
-.equipe { font-size: 12.5px; font-weight: 600; color: #06cf9c; margin-bottom: 2px; }
-.meta { float: right; margin: 6px 0 -4px 10px; font-size: 11px; color: var(--wa-meta); display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; line-height: 15px; }
-.tick { font-size: 15px; color: var(--wa-meta); }
+/* rabinho (ultimo balao de cada sequencia, embaixo, como no iPhone) */
+.rabo.balaoIn { border-bottom-left-radius: 6px; }
+.rabo.balaoOut { border-bottom-right-radius: 6px; }
+.rabo.balaoIn::after, .rabo.balaoOut::after { content: ''; position: absolute; bottom: 0; width: 12px; height: 16px; }
+.rabo.balaoIn::after { left: -6px; background: var(--wa-in); clip-path: path('M12 0 C12 9 9 14 0 16 L12 16 Z'); }
+.rabo.balaoOut::after { right: -6px; background: var(--wa-out); clip-path: path('M0 0 C0 9 3 14 12 16 L0 16 Z'); }
+.equipe { font-size: 13px; font-weight: 600; color: #128c7e; margin-bottom: 2px; }
+.meta { float: right; margin: 8px -2px -5px 12px; font-size: 12.5px; color: var(--wa-meta); display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; line-height: 16px; }
+.tick { font-size: 17px; color: var(--wa-meta); }
 .tickLido { color: var(--wa-tick); }
-.foto { display: block; max-width: 100%; max-height: 320px; border-radius: 6px; margin: -2px -4px 4px; }
+.foto { display: block; max-width: 100%; max-height: 320px; border-radius: 14px; margin: -2px -6px 4px; }
 .balao a { color: #027eb5; text-decoration: underline; }
 :global(:root[data-theme="dark"]) .balao a { color: #53bdeb; }
 
-.audio { display: flex; align-items: center; gap: 10px; min-width: 240px; padding: 2px 0; }
-.audioFoto { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
-.audioPlay { background: none; border: 0; color: var(--wa-meta); font-size: 30px; cursor: pointer; padding: 0; display: flex; flex-shrink: 0; }
-.audioBarra { flex: 1; height: 4px; border-radius: 2px; background: rgba(134,150,160,.35); position: relative; }
-.audioBarra span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; background: var(--wa-tick); }
-.audioBarra i { position: absolute; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--wa-tick); }
-.audioTempo { font-size: 11px; color: var(--wa-meta); margin-top: 2px; }
-.transcricao { font-size: 12.5px; color: var(--wa-meta); margin-top: 4px; font-style: italic; }
+/* Audio (igual ao do WhatsApp: play, ondinhas, tempo e a foto com microfone) */
+.audio { display: flex; align-items: center; gap: 10px; min-width: 260px; padding: 4px 0 2px; }
+.audioPlay { background: none; border: 0; color: #5a6268; font-size: 30px; cursor: pointer; padding: 0; display: flex; flex-shrink: 0; }
+:global(:root[data-theme="dark"]) .audioPlay { color: #aebac1; }
+.audioMeio { flex: 1; min-width: 0; }
+.ondas { display: flex; align-items: center; gap: 2px; height: 28px; position: relative; }
+.ondas span { width: 3px; border-radius: 2px; background: #b6bcc0; flex-shrink: 0; }
+.ondas span.tocado { background: var(--wa-tick); }
+.ondaBola { position: absolute; top: 50%; width: 13px; height: 13px; margin: -6.5px 0 0 -6.5px; border-radius: 50%; background: var(--wa-tick); }
+.audioRodape { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--wa-meta); margin-top: 2px; }
+.audioFotoBox { position: relative; flex-shrink: 0; }
+.audioFoto { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; display: block; }
+.audioMic { position: absolute; left: -6px; bottom: -2px; color: var(--wa-tick); font-size: 18px; }
+.transcricao { font-size: 13px; color: var(--wa-meta); margin-top: 4px; font-style: italic; }
 
-.digitando { display: flex; gap: 4px; padding: 6px 4px; }
-.digitando span { width: 7px; height: 7px; border-radius: 50%; background: var(--wa-meta); animation: pula 1.3s infinite; }
+.digitando { display: flex; gap: 4px; padding: 6px 2px; }
+.digitando span { width: 8px; height: 8px; border-radius: 50%; background: var(--wa-meta); animation: pula 1.3s infinite; }
 .digitando span:nth-child(2) { animation-delay: .18s; }
 .digitando span:nth-child(3) { animation-delay: .36s; }
 @keyframes pula { 0%,70%,100% { transform: translateY(0); opacity: .5 } 35% { transform: translateY(-4px); opacity: 1 } }
 @keyframes entra { from { transform: translateY(4px); opacity: 0 } to { transform: none; opacity: 1 } }
 
-.barra { display: flex; align-items: flex-end; gap: 8px; padding: 8px 12px; background: var(--wa-bar); flex-shrink: 0; }
-.campo { flex: 1; min-width: 0; display: flex; align-items: flex-end; gap: 4px; background: var(--wa-field); border-radius: 22px; padding: 4px 6px 4px 14px; }
-.campo textarea { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--wa-txt); resize: none; font-size: 15px; line-height: 1.4; padding: 8px 0; max-height: 120px; font-family: inherit; }
-.campo textarea::placeholder { color: var(--wa-meta); }
-.clipe { background: none; border: 0; color: var(--wa-meta); font-size: 22px; cursor: pointer; padding: 6px; display: flex; flex-shrink: 0; }
-.enviar { width: 46px; height: 46px; border-radius: 50%; border: 0; background: var(--wa-send); color: #fff; font-size: 21px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+/* Barra de baixo: +, campo com figurinha, camera e microfone verde */
+.barra { display: flex; align-items: center; gap: 12px; padding: 8px 14px 12px; background: var(--wa-bar); flex-shrink: 0; }
+.mais { background: none; border: 0; color: var(--wa-icone); font-size: 30px; cursor: pointer; padding: 0; display: flex; flex-shrink: 0; }
+.campo { flex: 1; min-width: 0; display: flex; align-items: flex-end; gap: 4px; background: var(--wa-field); border: 1px solid var(--wa-borda); border-radius: 22px; padding: 2px 8px 2px 16px; }
+.campo textarea { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--wa-txt); resize: none; font-size: 16.5px; line-height: 1.35; padding: 9px 0; max-height: 120px; font-family: inherit; }
+.figurinha { background: none; border: 0; color: var(--wa-icone); font-size: 23px; cursor: pointer; padding: 7px 2px; display: flex; flex-shrink: 0; }
+.camera { background: none; border: 0; color: var(--wa-icone); font-size: 27px; cursor: pointer; padding: 0; display: flex; flex-shrink: 0; }
+.enviar { width: 46px; height: 46px; border-radius: 50%; border: 0; background: var(--wa-verde); color: #fff; font-size: 23px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .enviar:disabled { opacity: .5; cursor: default; }
-.gravando { flex: 1; display: flex; align-items: center; gap: 10px; background: var(--wa-field); border-radius: 22px; padding: 0 14px; height: 46px; color: var(--wa-txt); font-size: 15px; }
+.gravando { flex: 1; display: flex; align-items: center; gap: 10px; background: var(--wa-field); border: 1px solid var(--wa-borda); border-radius: 22px; padding: 0 14px; height: 44px; color: var(--wa-txt); font-size: 16px; }
 .gravando b { width: 10px; height: 10px; border-radius: 50%; background: #f15c6d; animation: pisca 1s infinite; }
 .cancelar { background: none; border: 0; color: #f15c6d; font-size: 22px; cursor: pointer; display: flex; margin-left: auto; }
 @keyframes pisca { 50% { opacity: .2 } }
-.anexo { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--wa-bar); color: var(--wa-txt); font-size: 13px; border-top: 1px solid rgba(134,150,160,.2); }
-.anexo img { width: 48px; height: 48px; border-radius: 6px; object-fit: cover; }
+.anexo { display: flex; align-items: center; gap: 10px; padding: 8px 14px; background: var(--wa-bar); color: var(--wa-txt); font-size: 14px; border-top: 1px solid var(--wa-borda); }
+.anexo img { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; }
+.anexo button { background: none; border: 0; color: var(--wa-meta); font-size: 20px; cursor: pointer; }
 
 @media (max-width: 700px) {
   .header { padding-left: 64px; }
-  .mensagens { padding: 10px 10px 6px; }
-  .balao { max-width: 82%; }
-  .audio { min-width: 200px; }
+  .mensagens { padding: 4px 12px 8px; }
+  .balao { max-width: 84%; }
+  .audio { min-width: 220px; }
 }
