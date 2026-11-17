@@ -161,7 +161,7 @@ async function responder() {
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session ? session.access_token : '') },
-      body: JSON.stringify({ messages: lista.filter(function(m) { return !(m.role === 'assistant' && /^Minha internet oscilou aqui/.test(m.content)) }).map(function(m) { return { role: m.role, content: m.content } }), imageBase64: imagem }),
+      body: JSON.stringify({ messages: lista.filter(function(m) { return !(m.role === 'assistant' && /^Minha internet oscilou aqui/.test(m.content)) }).map(function(m) { return { role: m.role, content: m.content } }), imageBase64: imagem, enviadaEm: pendentes[0].hora || null }),
     })
     const data = await res.json()
     falhas = 0
