@@ -1,7 +1,8 @@
 'use client'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useSyncExternalStore } from 'react'
+import { assinarChat, estadoChat, iniciarChat } from '@/lib/chatSuporte'
 import { createClient } from '@/lib/supabase-browser'
 import { statusAnuncios, ANUNCIOS_MENU_VISIVEL_PARA_TODOS } from '@/lib/acessoAnuncios'
 import { podeVerSazonais } from '@/lib/acessoSazonais'
@@ -10,6 +11,9 @@ import styles from './Sidebar.module.css'
 
 export default function Sidebar({ profile, user }: { profile: any, user: any }) {
   const pathname = usePathname()
+  // Mensagens do Suporte (Junior) que o aluno ainda nao viu: bolinha vermelha no menu, como no WhatsApp
+  const naoLidasSuporte = useSyncExternalStore(assinarChat, function() { return estadoChat().naoLidas }, function() { return 0 })
+  useEffect(function() { iniciarChat() }, [])
   const router = useRouter()
   // Carrega a tela antes do clique (ao passar o mouse ou encostar o dedo no item): o menu abre bem mais rapido.
   // Nao e automatico para todos os itens de uma vez, para nao gastar a internet do aluno a toa.
@@ -183,6 +187,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
     <>
       {pathname !== '/dashboard/chat' && <button className={styles.mobileToggle} onClick={function() { setMobileOpen(!mobileOpen) }} aria-label="Menu">
         <i className={mobileOpen ? 'ti ti-x' : 'ti ti-menu-2'} />
+        {!mobileOpen && naoLidasSuporte > 0 && <span style={{ position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 999, background: '#ef4444', color: '#fff', fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 0 2px #fff', boxSizing: 'border-box' }}>{naoLidasSuporte}</span>}
       </button>}
 
       {mobileOpen && <div className={styles.overlay} onClick={function() { setMobileOpen(false) }} />}
@@ -283,7 +288,8 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
                 <i className={'ti ' + item.icon} />
                 {item.label}
                 {(item as any).lockHint && <i className="ti ti-lock" title="Exige plano" style={{ marginLeft: 'auto', width: 'auto', fontSize: 14, opacity: 0.6 }} />}
-                {(item as any).badge && <span style={{ marginLeft: (item as any).lockHint ? 6 : 'auto', background: '#fff', color: (item as any).tone === 'whatsapp' ? '#128c7e' : (item as any).tone === 'green' ? '#15803d' : (item as any).tone === 'blue' ? '#1d4ed8' : '#ea580c', fontSize: 9.5, fontWeight: 800, letterSpacing: 0.4, borderRadius: 999, padding: '2px 7px' }}>{(item as any).badge}</span>}
+                {item.href === '/dashboard/chat' && naoLidasSuporte > 0 && <span aria-label={naoLidasSuporte + ' mensagem(ns) nao lida(s)'} style={{ marginLeft: 'auto', minWidth: 20, height: 20, padding: '0 6px', borderRadius: 999, background: '#ef4444', color: '#fff', fontSize: 11.5, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 0 2px #fff', boxSizing: 'border-box' }}>{naoLidasSuporte > 99 ? '99+' : naoLidasSuporte}</span>}
+                {(item as any).badge && !(item.href === '/dashboard/chat' && naoLidasSuporte > 0) && <span style={{ marginLeft: (item as any).lockHint ? 6 : 'auto', background: '#fff', color: (item as any).tone === 'whatsapp' ? '#128c7e' : (item as any).tone === 'green' ? '#15803d' : (item as any).tone === 'blue' ? '#1d4ed8' : '#ea580c', fontSize: 9.5, fontWeight: 800, letterSpacing: 0.4, borderRadius: 999, padding: '2px 7px' }}>{(item as any).badge}</span>}
               </Link>
             )
           })}
