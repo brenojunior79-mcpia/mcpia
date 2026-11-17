@@ -417,7 +417,7 @@ export default function ConversasAdminPage() {
         </div>
       </div>
 
-      {recent.length > 0 && (
+      {false && recent.length > 0 && ( /* carrossel "Conversas mais recentes" escondido a pedido do Breno */
         <div className="cv-carousel">
           <div className="cv-carousel-top">
             <div className="cv-carousel-label">Conversas mais recentes</div>
