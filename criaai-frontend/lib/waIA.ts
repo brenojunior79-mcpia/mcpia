@@ -804,6 +804,23 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     // Trava: nunca mandar varios passos de uma vez. Fica so o passo 1 e pergunta se pode mandar o proximo.
     texto = soUmPasso(semLinkHostinger(texto, hostInfo.link))
     let passaParaHumano = texto.indexOf(MARCA_HUMANO) >= 0
+    // Trava (ordem do Breno): "cancelamento" sem dizer do que -> pergunta primeiro se e do plano ou da mentoria, e espera.
+    // So passa quando a pessoa ainda nao disse do que e (plano, assinatura, mentoria, reembolso...) e o Junior ainda nao perguntou.
+    {
+      let iUltOut = -1
+      for (let k = linhas.length - 1; k >= 0; k--) { if (linhas[k].direction === 'out' && linhas[k].type !== 'system') { iUltOut = k; break } }
+      const novas = linhas.slice(iUltOut + 1).filter(function(m: any) { return m.direction === 'in' }).map(function(m: any) { return String(m.body || '') }).join(' \n ')
+      const recentes = linhas.filter(function(m: any) { return m.direction === 'in' }).slice(-6).map(function(m: any) { return String(m.body || '') }).join(' \n ')
+      const falouCancel = /cancel/i.test(novas)
+      const deixouClaro = /\b(plano|assinatura|mensalidade|mensal|starter|premium|mentoria|reembols|estorn|devolu|curso|estrutura\s+express|cart[aã]o)/i.test(recentes)
+      const jaPerguntou = linhas.some(function(m: any) { return m.direction === 'out' && /cancelamento\s+de\s+qu/i.test(String(m.body || '')) })
+      if (falouCancel && !deixouClaro && !jaPerguntou) {
+        texto = esconderPlanos
+          ? 'Cancelamento de quê' + (primeiro && primeiro !== 'voce' ? ', ' + primeiro : '') + '? Me conta o que aconteceu?'
+          : 'Cancelamento de quê' + (primeiro && primeiro !== 'voce' ? ', ' + primeiro : '') + '? Do plano mensal da plataforma ou da mentoria Cristão Próspero?'
+        passaParaHumano = false
+      }
+    }
     const jaComprou = texto.indexOf(MARCA_COMPROU) >= 0
     const querVideo = texto.indexOf(MARCA_VIDEO) >= 0 && canal === 'recuperacao' && !jaVideo
     texto = texto.split(MARCA_COMPROU).join('').split(MARCA_VIDEO).join('').split(MARCA_HUMANO).join('').trim()
