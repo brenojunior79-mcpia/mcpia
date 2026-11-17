@@ -99,7 +99,7 @@
 .anexo button { background: none; border: 0; color: var(--wa-meta); font-size: 20px; cursor: pointer; }
 
 @media (max-width: 700px) {
-  .header { padding-left: 64px; }
+  .header { padding: 8px 10px; gap: 8px; }
   .mensagens { padding: 4px 12px 8px; }
   .balao { max-width: 84%; }
   .audio { min-width: 220px; }

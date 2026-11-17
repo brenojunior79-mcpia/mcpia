@@ -181,9 +181,9 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
 
   return (
     <>
-      <button className={styles.mobileToggle} onClick={function() { setMobileOpen(!mobileOpen) }} aria-label="Menu">
+      {pathname !== '/dashboard/chat' && <button className={styles.mobileToggle} onClick={function() { setMobileOpen(!mobileOpen) }} aria-label="Menu">
         <i className={mobileOpen ? 'ti ti-x' : 'ti ti-menu-2'} />
-      </button>
+      </button>}
 
       {mobileOpen && <div className={styles.overlay} onClick={function() { setMobileOpen(false) }} />}
 
