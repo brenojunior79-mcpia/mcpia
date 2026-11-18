@@ -15,6 +15,7 @@ export interface MsgChat {
   audioUrl?: string    // so existe enquanto a pagina esta aberta (nao vai para o historico)
   hora?: string
   lido?: boolean
+  pendente?: boolean   // audio ja na tela, esperando o texto (transcricao)
 }
 export type StatusChat = 'online' | 'digitando' | 'gravando'
 
@@ -36,7 +37,7 @@ function esperar(ms: number) { return new Promise(function(r) { setTimeout(r, Ma
 
 function salvar() {
   try {
-    const leve = estado.mensagens.map(function(m) { const c: any = { ...m }; delete c.audioUrl; return c })
+    const leve = estado.mensagens.filter(function(m) { return !m.pendente }).map(function(m) { const c: any = { ...m }; delete c.audioUrl; return c })
     localStorage.setItem(STORAGE_KEY, JSON.stringify(leve.slice(-200)))
     localStorage.setItem(NAO_LIDAS_KEY, String(estado.naoLidas))
   } catch (e) { /* sem armazenamento */ }
@@ -71,7 +72,7 @@ export function adicionarMensagem(m: MsgChat) {
 }
 
 function marcarLido() {
-  mudar({ mensagens: estado.mensagens.map(function(m) { return m.role === 'user' && !m.lido ? { ...m, lido: true } : m }) })
+  mudar({ mensagens: estado.mensagens.map(function(m) { return m.role === 'user' && !m.lido && !m.pendente ? { ...m, lido: true } : m }) })
 }
 
 // Tira a antiga mensagem automatica de boas-vindas do historico salvo no aparelho
@@ -152,7 +153,7 @@ async function responder() {
   let retentar = false
   try {
     const lista = estado.mensagens
-    const pendentes = lista.filter(function(m) { return m.role === 'user' && !m.lido })
+    const pendentes = lista.filter(function(m) { return m.role === 'user' && !m.lido && !m.pendente })
     if (!pendentes.length) return
     const imagem = pendentes.slice().reverse().find(function(m) { return !!m.imageUrl })?.imageUrl || null
     const veioAudio = !!pendentes[pendentes.length - 1].audio
@@ -161,7 +162,7 @@ async function responder() {
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session ? session.access_token : '') },
-      body: JSON.stringify({ messages: lista.filter(function(m) { return !(m.role === 'assistant' && /^Minha internet oscilou aqui/.test(m.content)) }).map(function(m) { return { role: m.role, content: m.content } }), imageBase64: imagem, enviadaEm: pendentes[0].hora || null }),
+      body: JSON.stringify({ messages: lista.filter(function(m) { return !m.pendente && !(m.role === 'assistant' && /^Minha internet oscilou aqui/.test(m.content)) }).map(function(m) { return { role: m.role, content: m.content } }), imageBase64: imagem, enviadaEm: pendentes[0].hora || null }),
     })
     const data = await res.json()
     falhas = 0
@@ -210,6 +211,20 @@ async function responder() {
 export function enviarAoChat(conteudo: string, imagem: string | null, audioUrl?: string) {
   mudar({ mensagens: [...estado.mensagens, { role: 'user', content: conteudo, imageUrl: imagem || undefined, audio: !!audioUrl, audioUrl, hora: agora(), lido: false }] })
   agendarResposta()
+}
+
+// Audio do aluno: aparece na hora; quando o texto (transcricao) chega, segue para o Junior
+export function audioNaTela(audioUrl: string): string {
+  const id = 'a-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)
+  mudar({ mensagens: [...estado.mensagens, { id, role: 'user', content: '', audio: true, audioUrl, hora: agora(), lido: false, pendente: true }] })
+  return id
+}
+export function confirmarAudio(id: string, texto: string) {
+  mudar({ mensagens: estado.mensagens.map(function(m) { return m.id === id ? { ...m, content: texto, pendente: false } : m }) })
+  agendarResposta()
+}
+export function tirarAudio(id: string) {
+  mudar({ mensagens: estado.mensagens.filter(function(m) { return m.id !== id }) })
 }
 
 export function limparChat() {

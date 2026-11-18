@@ -40,7 +40,7 @@
 .linhaNova { margin-top: 6px; }
 .balao {
   position: relative; max-width: min(75%, 560px); padding: 8px 12px 9px 14px; border-radius: 20px; color: var(--wa-txt);
-  font-size: 16.5px; line-height: 1.32; box-shadow: 0 1px .5px rgba(11,20,26,.1); word-break: break-word; white-space: pre-wrap;
+  font-size: 15px; line-height: 1.32; box-shadow: 0 1px .5px rgba(11,20,26,.1); word-break: break-word; white-space: pre-wrap;
   animation: entra .18s ease-out;
 }
 .balaoIn { background: var(--wa-in); }
@@ -85,7 +85,7 @@
 .barra { display: flex; align-items: center; gap: 12px; padding: 8px 14px 12px; background: var(--wa-bar); flex-shrink: 0; }
 .mais { background: none; border: 0; color: var(--wa-icone); font-size: 30px; cursor: pointer; padding: 0; display: flex; flex-shrink: 0; }
 .campo { flex: 1; min-width: 0; display: flex; align-items: flex-end; gap: 4px; background: var(--wa-field); border: 1px solid var(--wa-borda); border-radius: 22px; padding: 2px 8px 2px 16px; }
-.campo textarea { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--wa-txt); resize: none; font-size: 16.5px; line-height: 1.35; padding: 9px 0; max-height: 120px; font-family: inherit; }
+.campo textarea { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--wa-txt); resize: none; font-size: 16px; line-height: 1.35; padding: 9px 0; max-height: 120px; font-family: inherit; }
 .figurinha { background: none; border: 0; color: var(--wa-icone); font-size: 23px; cursor: pointer; padding: 7px 2px; display: flex; flex-shrink: 0; }
 .camera { background: none; border: 0; color: var(--wa-icone); font-size: 27px; cursor: pointer; padding: 0; display: flex; flex-shrink: 0; }
 .enviar { width: 46px; height: 46px; border-radius: 50%; border: 0; background: var(--wa-verde); color: #fff; font-size: 23px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -108,3 +108,27 @@
 /* Enquadramento: o chat ocupa a tela toda que sobra (sem a barra de cima), e a barra do microfone fica sempre visivel */
 .page { position: fixed; top: 0; right: 0; bottom: 0; left: 240px; z-index: 40; height: auto; padding-bottom: env(safe-area-inset-bottom); }
 @media (max-width: 768px) { .page { left: 0; z-index: 60; padding-top: env(safe-area-inset-top); } }
+
+/* Audio igual ao WhatsApp (ordem do Breno): foto + microfone, play, bolinha e ondas; tempo e hora embaixo */
+.audio { display: flex; align-items: center; gap: 8px; min-width: 0; width: 250px; max-width: 100%; padding: 2px 0 0; }
+.audioFotoBox { position: relative; flex-shrink: 0; width: 46px; height: 46px; }
+.audioFoto { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; display: block; }
+.audioSemFoto { background: #cfd4d7; color: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.audioMic { position: absolute; right: -5px; bottom: -3px; color: #5f6f62; display: flex; }
+.balaoIn .audioMic { color: var(--wa-tick); }
+.audioPlay { background: none; border: 0; color: #5f6f62; cursor: pointer; padding: 0; display: flex; flex-shrink: 0; width: 26px; }
+.balaoIn .audioPlay { color: #6b7378; }
+.audioPlay:disabled { opacity: .55; }
+.audioMeio { flex: 1; min-width: 0; padding-top: 12px; }
+.ondas { display: flex; align-items: center; gap: 2px; height: 24px; position: relative; overflow: visible; }
+.ondas span { width: 2.5px; border-radius: 2px; background: #9aa89c; flex-shrink: 0; }
+.balaoIn .ondas span { background: #c3c8cb; }
+.ondas span.tocado { background: #5f6f62; }
+.balaoIn .ondas span.tocado { background: var(--wa-tick); }
+.ondaBola { position: absolute; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -2px; border-radius: 50%; background: #1f2c22; z-index: 1; }
+.balaoIn .ondaBola { background: var(--wa-tick); }
+.audioRodape { display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; color: var(--wa-meta); margin-top: 1px; }
+.audioHora { display: inline-flex; align-items: center; gap: 3px; }
+.audioMic { left: auto; font-size: 0; }
+.balaoIn .audioFotoBox { order: 3; }
+.balaoIn .audioMic { right: auto; left: -5px; }

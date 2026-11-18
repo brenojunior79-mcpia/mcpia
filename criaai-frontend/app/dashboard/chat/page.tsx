@@ -1,6 +1,6 @@
 'use client'
 import { useState, useRef, useEffect, useSyncExternalStore } from 'react'
-import { MsgChat, assinarChat, estadoChat, iniciarChat, telaDoChat, adicionarMensagem, enviarAoChat, limparChat } from '@/lib/chatSuporte'
+import { MsgChat, assinarChat, estadoChat, iniciarChat, telaDoChat, adicionarMensagem, enviarAoChat, audioNaTela, confirmarAudio, tirarAudio, limparChat } from '@/lib/chatSuporte'
 import TextoComLinks from '@/components/layout/TextoComLinks'
 import { createClient } from '@/lib/supabase-browser'
 import styles from './chat.module.css'
@@ -25,29 +25,44 @@ const NOME = 'Breno/Suporte'
 // Altura das ondinhas do audio (sempre a mesma)
 const ONDAS = Array.from({ length: 34 }, function(_v, i) { return 5 + Math.round(Math.abs(Math.sin(i * 1.7) * 13 + Math.cos(i * 0.6) * 6)) })
 
-// Player de áudio no jeito do WhatsApp (play, ondinhas, tempo e a foto com microfone)
-function Audio({ url, foto, saida, hora }: { url?: string; foto?: string; saida: boolean; hora: string }) {
+// Icones desenhados direto (a fonte de icones nao carrega alguns no iPhone)
+const IcPlay = <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor" /></svg>
+const IcPause = <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="4.5" width="4" height="15" rx="1" fill="currentColor" /><rect x="14" y="4.5" width="4" height="15" rx="1" fill="currentColor" /></svg>
+const IcMic = <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><rect x="8.5" y="2.5" width="7" height="12" rx="3.5" fill="currentColor" /><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" /></svg>
+function Ticks({ lido }: { lido?: boolean }) {
+  return <svg width="17" height="11" viewBox="0 0 17 11" aria-hidden="true" style={{ color: lido ? 'var(--wa-tick)' : 'var(--wa-meta)', flexShrink: 0 }}><path d="M1 6l3 3.2L10.5 1.5M6.5 9.2l.9.9L15.5 1.5" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+}
+
+// Player de áudio igual ao WhatsApp: foto com microfone, play, bolinha e ondinhas; embaixo o tempo e a hora com os tiques
+function Audio({ url, foto, saida, hora, lido, enviando }: { url?: string; foto?: string; saida: boolean; hora: string; lido?: boolean; enviando?: boolean }) {
   const ref = useRef<HTMLAudioElement>(null)
   const [tocando, setTocando] = useState(false)
   const [pos, setPos] = useState(0)
   const [dur, setDur] = useState(0)
   function fmt(s: number) { if (!isFinite(s) || s <= 0) return '0:00'; const m = Math.floor(s / 60); const r = Math.floor(s % 60); return m + ':' + (r < 10 ? '0' : '') + r }
-  const pct = dur > 0 ? Math.min(100, (pos / dur) * 100) : 0
+  const pct = dur > 0 && isFinite(dur) ? Math.min(100, (pos / dur) * 100) : 0
   return (
     <div className={styles.audio}>
+      <div className={styles.audioFotoBox}>
+        {foto ? <img src={foto} alt="" className={styles.audioFoto} /> : <div className={styles.audioFoto + ' ' + styles.audioSemFoto}><svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="9" r="4.2" fill="currentColor" /><path d="M3.5 21a8.5 8.5 0 0 1 17 0z" fill="currentColor" /></svg></div>}
+        <span className={styles.audioMic}>{IcMic}</span>
+      </div>
       <button className={styles.audioPlay} aria-label={tocando ? 'Pausar' : 'Ouvir'} disabled={!url} onClick={function() { const a = ref.current; if (!a) return; if (a.paused) a.play(); else a.pause() }}>
-        <i className={'ti ' + (tocando ? 'ti-player-pause-filled' : 'ti-player-play-filled')} />
+        {tocando ? IcPause : IcPlay}
       </button>
       <div className={styles.audioMeio}>
         <div className={styles.ondas}>
-          {ONDAS.map(function(h, i) { return <span key={i} className={(i / ONDAS.length) * 100 < pct ? styles.tocado : ''} style={{ height: h }} /> })}
           <i className={styles.ondaBola} style={{ left: pct + '%' }} />
+          {ONDAS.map(function(h, k) { return <span key={k} className={(k / ONDAS.length) * 100 < pct ? styles.tocado : ''} style={{ height: h }} /> })}
         </div>
-        <div className={styles.audioRodape}><span>{url ? fmt(tocando || pos > 0 ? pos : dur) : 'Mensagem de voz'}</span><span>{hora}</span></div>
+        <div className={styles.audioRodape}>
+          <span>{fmt(tocando || pos > 0 ? pos : dur)}</span>
+          <span className={styles.audioHora}>{hora}{saida && (enviando ? <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="2" fill="none" /><path d="M12 7.5V12l3 2" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" /></svg> : <Ticks lido={lido} />)}</span>
+        </div>
       </div>
-      {!saida && foto && <div className={styles.audioFotoBox}><img src={foto} alt="" className={styles.audioFoto} /><i className={'ti ti-microphone-filled ' + styles.audioMic} /></div>}
       {url && <audio ref={ref} src={url} preload="metadata"
-        onLoadedMetadata={function(e) { setDur((e.target as HTMLAudioElement).duration) }}
+        onLoadedMetadata={function(e) { const d = (e.target as HTMLAudioElement).duration; if (isFinite(d)) setDur(d) }}
+        onDurationChange={function(e) { const d = (e.target as HTMLAudioElement).duration; if (isFinite(d)) setDur(d) }}
         onTimeUpdate={function(e) { setPos((e.target as HTMLAudioElement).currentTime) }}
         onPlay={function() { setTocando(true) }} onPause={function() { setTocando(false) }}
         onEnded={function() { setTocando(false); setPos(0) }} />}
@@ -156,14 +171,17 @@ export default function ChatPage() {
   }
   async function mandarAudio(blob: Blob) {
     const url = URL.createObjectURL(blob)
+    // Aparece no chat na hora (como no WhatsApp); o texto do audio chega por tras
+    const idAudio = audioNaTela(url)
     try {
       const fd = new FormData()
       fd.append('audio', blob, 'audio')
       const r = await fetch('/api/chat/audio', { method: 'POST', body: fd })
       const d = await r.json()
-      if (!r.ok || !d.texto) { setErroAudio(d.error || 'Não consegui entender o áudio. Tente de novo ou escreva.'); return }
-      enviar(String(d.texto), null, url)
+      if (!r.ok || !d.texto) { tirarAudio(idAudio); setErroAudio(d.error || 'Não consegui entender o áudio. Tente de novo ou escreva.'); return }
+      confirmarAudio(idAudio, String(d.texto))
     } catch (e) {
+      tirarAudio(idAudio)
       setErroAudio('Não consegui enviar o áudio. Tente de novo.')
     }
   }
@@ -220,13 +238,12 @@ export default function ChatPage() {
                 {msg.imageUrl && <img src={msg.imageUrl} alt="Print enviado" className={styles.foto} />}
                 {msg.audio
                   ? <>
-                      <Audio url={msg.audioUrl} foto={FOTO} saida={saida} hora={hhmm(msg.hora)} />
-                      {saida && msg.content && <div className={styles.transcricao}>“{msg.content}”</div>}
+                      <Audio url={msg.audioUrl} foto={saida ? undefined : FOTO} saida={saida} hora={hhmm(msg.hora)} lido={msg.lido} enviando={!!msg.pendente} />
                     </>
                   : (msg.content ? <TextoComLinks texto={msg.content} /> : null)}
                 {!msg.audio && <span className={styles.meta}>
                   {hhmm(msg.hora)}
-                  {saida && <i className={'ti ti-checks ' + styles.tick + ' ' + (msg.lido ? styles.tickLido : '')} />}
+                  {saida && <Ticks lido={msg.lido} />}
                 </span>}
               </div>
             </div>
