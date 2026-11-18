@@ -3,6 +3,15 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import styles from './planos.module.css'
 import CheckoutCartao from '@/components/CheckoutCartao'
+
+// Pagamento dos planos (ordem do Breno, 18/11/2026): volta para a Hubla. O Mercado Pago recusava todos os cartoes (CC_VAL_433).
+// Para voltar ao checkout do Mercado Pago dentro da plataforma, mude para true.
+const PAGAR_PELO_MERCADO_PAGO = false
+const HUBLA_LINKS: Record<string, string> = {
+  Starter: 'https://pay.hub.la/0AueQQcwJxUeV9BE1ax7',
+  Pro: 'https://pay.hub.la/16HkQulcBTksGN8AEnow',
+  Premium: 'https://pay.hub.la/TwrkZegsChmWcaJ9LO4z',
+}
 import EventosPagamento from '@/components/EventosPagamento'
 
 
@@ -111,6 +120,13 @@ export default function PlanosPage() {
   }
 
   function checkout(planName: string) {
+    if (!PAGAR_PELO_MERCADO_PAGO) {
+      const link = HUBLA_LINKS[planName]
+      if (!link) { alert('Plano nao configurado. Tente novamente mais tarde.'); return }
+      setLoading(planName)
+      window.location.href = link
+      return
+    }
     const p = plans.find(function(x) { return x.name === planName })
     if (!p) return
     setSucesso(''); setCancelMsg('')
@@ -311,7 +327,7 @@ export default function PlanosPage() {
                   onClick={function() { checkout(p.name) }}
                   disabled={loading === p.name}
                 >
-                  {showTimer ? 'Assinar e ganhar +5 creditos' : 'Assinar agora'}
+                  {loading === p.name ? 'Abrindo o pagamento...' : showTimer ? 'Assinar e ganhar +5 creditos' : 'Assinar agora'}
                 </button>
               </div>
             )

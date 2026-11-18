@@ -98,4 +98,6 @@ com um assistente de IA chamado **Júnior**.
 - Os fluxos antigos por evento (`wa_auto_flows`: "Pix Gerado" e "Aprovada") continuam separados e rodando em `lib/waAuto.ts`.
 - Produtos para filtrar fluxos: aba "Produtos" (`components/whatsapp/Produtos.tsx`, rota `app/api/whatsapp/produtos`), guardados em `wa_settings` chave `produtos`. No fluxo escolhe-se o produto numa lista (`SeletorProduto.tsx`); o motor confere se o nome do produto da Hubla CONTEM o nome escolhido.
 
+**Pagamento dos planos: voltou para a Hubla (18/11/2026).** O Mercado Pago recusava todos os cartões (CC_VAL_433), então `PAGAR_PELO_MERCADO_PAGO = false` em `app/dashboard/planos/page.tsx` e o botão abre os links da Hubla. O código abaixo continua lá, desligado.
+
 **Planos pelo Mercado Pago (cartão):** a tela Planos abre o checkout transparente do Mercado Pago (`components/CheckoutCartao.tsx`) e cria uma assinatura mensal (preapproval) em `app/api/mp/assinar`. O plano é liberado na hora quando a assinatura fica "authorized"; o aviso `app/api/mp/webhook` mantém ou tira o plano (cancelada/pausada). Cancelar: `app/api/mp/cancelar`. Campo `profiles.mp_preapproval_id` e `payment_provider = 'mercadopago'`. Chaves na Vercel: `NEXT_PUBLIC_MP_PUBLIC_KEY`, `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`. Quem assinou pela Hubla continua pela Hubla. O Júnior manda o link https://www.mcpia.site/dashboard/planos.
