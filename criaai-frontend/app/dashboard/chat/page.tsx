@@ -200,12 +200,8 @@ export default function ChatPage() {
             <div className={styles.headerStatus + ' ' + (status !== 'online' ? styles.headerStatusAtivo : '')}>{textoStatus}</div>
           </div>
         </div>
-        <button className={styles.headerBtn} aria-label="Mais opções" onClick={function() { setMenu(!menu) }}><i className="ti ti-dots-vertical" /></button>
-        {menu && (
-          <div className={styles.menu} onMouseLeave={function() { setMenu(false) }}>
-            <button onClick={clearHistory}>Limpar conversa</button>
-          </div>
-        )}
+        {/* Camera: abre a galeria para mandar uma foto (print da tela, por exemplo) */}
+        <button className={styles.headerBtn} aria-label="Mandar uma foto da galeria" onClick={function() { if (fileInputRef.current) fileInputRef.current.click() }}><i className="ti ti-camera" /></button>
       </div>
 
       <div className={styles.mensagens}>
