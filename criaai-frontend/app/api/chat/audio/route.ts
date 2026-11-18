@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
+import { createClient as createAdmin } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 // Audio que o aluno gravou no chat do Suporte: vira texto (Whisper) para o Junior entender.
-// O audio nao fica guardado no servidor.
+// O audio fica guardado numa pasta privada (chat-audios) para tocar igual em todos os aparelhos.
 export async function POST(req: NextRequest) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -18,14 +19,24 @@ export async function POST(req: NextRequest) {
     const fd = new FormData()
     const tipo = arquivo.type || 'audio/webm'
     const ext = tipo.indexOf('mp4') >= 0 ? 'mp4' : tipo.indexOf('ogg') >= 0 ? 'ogg' : tipo.indexOf('mpeg') >= 0 ? 'mp3' : 'webm'
-    fd.append('file', new Blob([await arquivo.arrayBuffer()], { type: tipo }), 'audio.' + ext)
+    const bytes = await arquivo.arrayBuffer()
+    // Guarda o audio (para aparecer como audio no computador e no celular)
+    let path = ''
+    try {
+      const admin: any = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } })
+      const p = user.id + '/' + Date.now() + '.' + ext
+      const up = await admin.storage.from('chat-audios').upload(p, Buffer.from(bytes), { contentType: tipo.split(';')[0], upsert: false })
+      if (!up.error) path = p
+      else console.error('[chat-audio] nao guardou o audio')
+    } catch (e) {}
+    fd.append('file', new Blob([bytes], { type: tipo }), 'audio.' + ext)
     fd.append('model', 'whisper-1')
     fd.append('language', 'pt')
     const r = await fetch('https://api.openai.com/v1/audio/transcriptions', { method: 'POST', headers: { Authorization: 'Bearer ' + process.env.OPENAI_API_KEY }, body: fd, signal: AbortSignal.timeout(40000) })
     const d = await r.json().catch(function() { return null })
     const texto = String(d?.text || '').trim()
     if (!r.ok || !texto) { console.error('[chat-audio] transcricao falhou', r.status); return NextResponse.json({ error: 'Não consegui entender o áudio. Tente de novo ou escreva.' }, { status: 400 }) }
-    return NextResponse.json({ texto })
+    return NextResponse.json({ texto, path })
   } catch (e) {
     console.error('[chat-audio] erro')
     return NextResponse.json({ error: 'Não consegui entender o áudio. Tente de novo ou escreva.' }, { status: 500 })

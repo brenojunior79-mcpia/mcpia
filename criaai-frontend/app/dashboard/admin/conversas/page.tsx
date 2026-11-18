@@ -271,7 +271,7 @@ export default function ConversasAdminPage() {
 
   // Gera links temporarios (1 hora) para os prints guardados na pasta privada
   async function loadShots(list: any[]) {
-    const paths = list.map(function(m) { return m.image_path }).filter(function(p) { return !!p })
+    const paths = list.map(function(m) { return m.image_path }).filter(function(p) { return !!p && String(p).indexOf('audio:') !== 0 })
     if (paths.length === 0) return
     const res = await supabase.storage.from('chat-prints').createSignedUrls(paths, 3600)
     if (res.data) {

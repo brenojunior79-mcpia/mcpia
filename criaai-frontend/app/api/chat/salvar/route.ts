@@ -11,7 +11,8 @@ export async function POST(req: NextRequest) {
     const corpo = await req.json()
     const content = String(corpo?.content || '').trim().slice(0, 4000)
     if (!content) return NextResponse.json({ error: 'Mensagem vazia' }, { status: 400 })
-    const row: any = { user_id: user.id, role: 'user', content, image_path: null }
+    const audio = String(corpo?.audioPath || '')
+    const row: any = { user_id: user.id, role: 'user', content, image_path: audio && audio.indexOf(user.id + '/') === 0 && audio.indexOf('..') < 0 ? 'audio:' + audio : null }
     const t = Date.parse(String(corpo?.hora || ''))
     if (t && t <= Date.now() && Date.now() - t < 30 * 60 * 1000) row.created_at = new Date(t).toISOString()
     const r = await supabase.from('chat_messages').insert(row).select('id').single()

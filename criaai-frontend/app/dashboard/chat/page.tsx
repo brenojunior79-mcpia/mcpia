@@ -97,6 +97,9 @@ export default function ChatPage() {
   const bottomRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const recRef = useRef<MediaRecorder | null>(null)
+  const micRef = useRef<MediaStream | null>(null)
+  // Ao sair da tela do chat, desliga o microfone de vez
+  useEffect(function() { return function() { try { micRef.current?.getTracks().forEach(function(t) { t.stop() }) } catch (e) {} } }, [])
   const pedacosRef = useRef<Blob[]>([])
   const timerRef = useRef<any>(null)
   const cancelouRef = useRef(false)
@@ -152,14 +155,21 @@ export default function ChatPage() {
   async function comecarGravar() {
     setErroAudio('')
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      // Reaproveita o microfone ja liberado: pedir de novo fazia o celular perguntar a permissao toda vez
+      let stream = micRef.current
+      if (!stream || !stream.getAudioTracks().some(function(t) { return t.readyState === 'live' })) {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        micRef.current = stream
+      }
+      stream.getAudioTracks().forEach(function(t) { t.enabled = true })
       const tipo = typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
       const rec = new MediaRecorder(stream, { mimeType: tipo })
       pedacosRef.current = []
       cancelouRef.current = false
       rec.ondataavailable = function(e) { if (e.data && e.data.size) pedacosRef.current.push(e.data) }
       rec.onstop = function() {
-        stream.getTracks().forEach(function(t) { t.stop() })
+        // nao desliga o microfone (so silencia): assim o celular nao pede permissao de novo
+        stream.getAudioTracks().forEach(function(t) { t.enabled = false })
         clearInterval(timerRef.current)
         setGravando(false)
         if (cancelouRef.current) return
@@ -190,7 +200,7 @@ export default function ChatPage() {
       const r = await fetch('/api/chat/audio', { method: 'POST', body: fd })
       const d = await r.json()
       if (!r.ok || !d.texto) { tirarAudio(idAudio); setErroAudio(d.error || 'Não consegui entender o áudio. Tente de novo ou escreva.'); return }
-      confirmarAudio(idAudio, String(d.texto))
+      confirmarAudio(idAudio, String(d.texto), String(d.path || ''))
     } catch (e) {
       tirarAudio(idAudio)
       setErroAudio('Não consegui enviar o áudio. Tente de novo.')
