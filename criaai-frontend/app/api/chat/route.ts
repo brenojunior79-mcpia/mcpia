@@ -28,6 +28,14 @@ export async function POST(req: NextRequest) {
     // A conversa tem que terminar numa fala do aluno: mensagens do Junior no fim (ex.: aviso de erro do aparelho) saem daqui
     while (messages.length && messages[messages.length - 1].role === 'assistant') messages.pop()
     if (!messages.length) return NextResponse.json({ reply: null })
+    // Outro aparelho do mesmo aluno ja pediu a resposta desta mensagem: nao responde duas vezes
+    {
+      const desde = Date.parse(String(corpo?.enviadaEm || ''))
+      if (desde) {
+        const ja = await supabase.from('chat_messages').select('id').eq('user_id', user.id).eq('role', 'assistant').gt('created_at', new Date(desde).toISOString()).limit(1)
+        if (ja.data && ja.data.length) return NextResponse.json({ reply: null, jaRespondido: true })
+      }
+    }
 
     const profileResult = await supabase.from('profiles').select('full_name, created_at, subscription_status, is_admin').eq('id', user.id).single()
     const firstName = ((profileResult.data?.full_name || '').split(' ')[0]) || ''

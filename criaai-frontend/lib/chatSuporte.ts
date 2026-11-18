@@ -143,6 +143,10 @@ async function doServidor(local: MsgChat[]): Promise<{ lista: MsgChat[]; novas: 
   for (const m of local) {
     if (m.role === 'user' && !m.lido && !lista.some(function(x) { return x.id === m.id }) && (m.pendente || !m.hora || new Date(m.hora).getTime() > ultimo - 1000)) lista.push(m)
   }
+  // Mensagem do aluno que ficou sem resposta (ex.: mandou pelo celular e fechou o app): este aparelho assume e pede a resposta
+  let iUltJunior = -1
+  for (let k = lista.length - 1; k >= 0; k--) { if (lista[k].role === 'assistant') { iUltJunior = k; break } }
+  for (let k = iUltJunior + 1; k < lista.length; k++) { if (lista[k].role === 'user' && !lista[k].pendente) lista[k] = { ...lista[k], lido: false, salvo: true } }
   // Audios mandados por outro aparelho: busca o link para tocar aqui tambem
   const faltam = lista.filter(function(m) { return m.audio && !m.audioUrl && m.audioPath }).map(function(m) { return m.audioPath as string })
   if (faltam.length) {
@@ -165,7 +169,10 @@ export async function sincronizarChat() {
   sincronizando = true
   try {
     const r = await doServidor(estado.mensagens)
-    if (r && !ocupado) mudar({ mensagens: r.lista, naoLidas: vendoAgora() ? 0 : estado.naoLidas + r.novas })
+    if (r && !ocupado) {
+      mudar({ mensagens: r.lista, naoLidas: vendoAgora() ? 0 : estado.naoLidas + r.novas })
+      if (r.lista.some(function(m) { return m.role === 'user' && !m.lido && !m.pendente })) agendarResposta(true)
+    }
   } catch (e) {} finally { sincronizando = false }
 }
 
@@ -227,6 +234,8 @@ async function responder() {
     })
     const data = await res.json()
     falhas = 0
+    // Outro aparelho ja respondeu esta mensagem: so traz a resposta do servidor
+    if (data && data.jaRespondido) { marcarLido(); setTimeout(function() { sincronizarChat() }, 500); return }
     marcarLido() // "visualizou": tiques azuis
     await esperar(2500 + Math.random() * 3000)
     if (data.human) return
