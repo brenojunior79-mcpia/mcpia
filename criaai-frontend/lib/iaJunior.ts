@@ -89,7 +89,9 @@ export async function responderJunior(p: { system: string; msgs: MsgJunior[]; ma
       }
     } catch (e: any) {
       const st = e instanceof Anthropic.APIError ? e.status : 0
-      console.error('[junior-ia] Claude falhou (' + st + '); usando OpenAI')
+      // So o tipo e a mensagem de erro da Anthropic (nunca o conteudo da conversa)
+      const det = e instanceof Anthropic.APIError ? String((e as any).error?.error?.type || '') + ': ' + String((e as any).error?.error?.message || '').slice(0, 160) : ''
+      console.error('[junior-ia] Claude falhou (' + st + ') ' + det + '; usando OpenAI')
     }
   }
   return viaOpenAI(p.system, p.msgs, maxTokens, p.variar ? 0.7 : 0.2, timeoutMs)
