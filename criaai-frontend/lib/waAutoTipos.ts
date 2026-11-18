@@ -17,7 +17,7 @@ export type FluxoAuto = {
 
 // Eventos da Hubla que podem iniciar um fluxo
 export const EVENTOS: { k: string; nome: string; desc: string; filtroMetodo?: boolean }[] = [
-  { k: 'lead.abandoned_checkout', nome: 'Carrinho abandonado', desc: 'A pessoa entrou no checkout e não finalizou (a Hubla avisa após ~20 min).' },
+  { k: 'lead.abandoned_checkout', nome: 'Carrinho abandonado', desc: 'A pessoa preencheu os dados no checkout, mas saiu sem finalizar a compra (a Hubla avisa cerca de 20 minutos depois).' },
   { k: 'invoice.created', nome: 'Cobrança gerada (Pix, boleto ou cartão)', desc: 'A pessoa gerou a cobrança. Você pode filtrar só Pix gerado, só boleto ou só cartão.', filtroMetodo: true },
   { k: 'invoice.payment_failed', nome: 'Pagamento recusado', desc: 'O cartão foi recusado ou o pagamento falhou.', filtroMetodo: true },
   { k: 'invoice.expired', nome: 'Pix/boleto expirado', desc: 'A cobrança venceu sem pagamento.', filtroMetodo: true },

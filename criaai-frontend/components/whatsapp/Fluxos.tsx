@@ -301,7 +301,7 @@ export default function Fluxos() {
         {seqs.map(function(f) {
           const cn = seqConexoes.find(function(c) { return c.id === f.connection_id })
           const g = f.trigger
-          const gat = g.tipo === 'palavra' ? 'Palavra: ' + (g.palavras.length ? g.palavras.join(', ') : '…') : 'Evento: ' + nomeEvento(g.evento) + (g.metodo ? ' · ' + g.metodo : '')
+          const gat = g.tipo === 'palavra' ? 'Palavra: ' + (g.palavras.length ? g.palavras.join(', ') : '…') : 'Evento: ' + (g.eventos && g.eventos.length ? g.eventos : [g.evento]).map(nomeEvento).join(' ou ') + (g.metodo ? ' · ' + g.metodo : '')
           // Conta quem JA RECEBEU o fluxo: o maior numero de pessoas que receberam algum bloco de mensagem (nao so quem terminou todos os blocos)
           const porBloco: Record<string, number> = {}
           const sendsF = (seqStats[f.id] || { sends: [] }).sends || []

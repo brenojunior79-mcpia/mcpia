@@ -20,7 +20,7 @@ export type PassoSeq = (
 
 export type GatilhoSeq = (
   | { tipo: 'palavra'; palavras: string[]; match: 'contem' | 'igual' }
-  | { tipo: 'evento'; evento: string; metodo?: Metodo; produto?: string }
+  | { tipo: 'evento'; evento: string; eventos?: string[]; metodo?: Metodo; produto?: string }
 ) & { pos?: Pos }
 
 export function lePos(p: any): Pos | undefined {

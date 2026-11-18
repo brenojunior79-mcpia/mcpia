@@ -435,7 +435,21 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
   }, [])
 
   const g = seq.trigger
-  const evento = g.tipo === 'evento' ? EVENTOS.find(function(x) { return x.k === g.evento }) : null
+  const evSel: string[] = g.tipo === 'evento' ? (g.eventos && g.eventos.length ? g.eventos : [g.evento]) : []
+  const evObjs = EVENTOS.filter(function(x) { return evSel.indexOf(x.k) >= 0 })
+  const evento = evObjs[0] || null
+  function alternarEvento(k: string) {
+    mudar(function(s) {
+      if (s.trigger.tipo !== 'evento') return s
+      const atual = s.trigger.eventos && s.trigger.eventos.length ? s.trigger.eventos : [s.trigger.evento]
+      let nova = atual.indexOf(k) >= 0 ? atual.filter(function(x) { return x !== k }) : atual.concat(k)
+      if (!nova.length) nova = [k]
+      nova = EVENTOS.filter(function(x) { return nova.indexOf(x.k) >= 0 }).map(function(x) { return x.k })
+      const t: any = { ...s.trigger, evento: nova[0], eventos: nova }
+      if (!EVENTOS.some(function(x) { return nova.indexOf(x.k) >= 0 && (x as any).filtroMetodo })) delete t.metodo
+      return { ...s, trigger: t }
+    })
+  }
   const nGatilho = (stats ? stats.runs : []).reduce(function(a, r) { return a + r.n }, 0)
 
   function comecarLigacao(e: React.PointerEvent, k: number) {
@@ -476,7 +490,7 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
     if (!p) {
       corpo = g.tipo === 'palavra'
         ? <div style={caixa}><b>O contato interagiu</b><div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 2 }}>{g.match === 'igual' ? 'A mensagem é ' : 'A mensagem contém '}<b>{g.palavras.length ? g.palavras.join(', ') : '…'}</b></div></div>
-        : <div style={caixa}><b>{evento ? evento.nome : 'Evento da compra'}</b>{g.metodo ? <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 2 }}>Só {g.metodo}</div> : null}</div>
+        : <div style={caixa}><b>{evObjs.length ? evObjs.map(function(x) { return x.nome }).join(' ou ') : 'Evento da compra'}</b>{g.metodo ? <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 2 }}>Só {g.metodo}</div> : null}</div>
     } else if (p.tipo === 'atraso') corpo = <div style={caixa}>⏱ {textoAtraso(p)}</div>
     else if (p.tipo === 'ia') corpo = <div style={caixa}>🤖 A IA (Júnior) continua a conversa daqui</div>
     else if (p.tipo === 'resposta') corpo = <div style={caixa}>↩️ Espera a pessoa responder{p.valor > 0 ? ' por até ' + p.valor + ' ' + p.unidade + ' (depois ' + (p.aoExpirar === 'continuar' ? 'continua' : 'encerra') + ')' : ''}</div>
@@ -557,12 +571,20 @@ export default function ConstrutorFluxo({ inicial, conexoes, stats, onVoltar }: 
           )}
           {g.tipo === 'evento' && (
             <div>
-              <label style={lab}>Evento</label>
-              <select className="at-input" value={g.evento} onChange={function(e) { const v = e.target.value; mudar(function(s) { return { ...s, trigger: { tipo: 'evento', evento: v } } }) }}>
-                {EVENTOS.map(function(x) { return <option key={x.k} value={x.k}>{x.nome}</option> })}
-              </select>
-              {evento && <div style={{ fontSize: 12, color: 'var(--muted2)', margin: '4px 0 10px' }}>{evento.desc}</div>}
-              {evento && evento.filtroMetodo && (
+              <label style={lab}>Eventos (marque um ou mais)</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
+                {EVENTOS.map(function(x) {
+                  const on = evSel.indexOf(x.k) >= 0
+                  return (
+                    <label key={x.k} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '8px 10px', borderRadius: 10, border: '1px solid ' + (on ? 'var(--accent)' : 'var(--border)'), background: on ? 'var(--surface2, var(--surface))' : 'transparent', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={on} onChange={function() { alternarEvento(x.k) }} style={{ width: 16, height: 16, marginTop: 2, flexShrink: 0 }} />
+                      <span><b style={{ fontSize: 13.5, color: 'var(--text)' }}>{x.nome}</b><span style={{ display: 'block', fontSize: 12, color: 'var(--muted2)', marginTop: 2, lineHeight: 1.4 }}>{x.desc}</span></span>
+                    </label>
+                  )
+                })}
+              </div>
+              {evSel.length > 1 && <div style={{ fontSize: 12, color: 'var(--muted2)', margin: '-4px 0 10px', lineHeight: 1.5 }}>O fluxo começa com qualquer um desses eventos. Quem já está dentro dele não entra de novo por outro evento.</div>}
+              {evObjs.some(function(x) { return (x as any).filtroMetodo }) && (
                 <div>
                   <label style={lab}>Forma de pagamento</label>
                   <select className="at-input" value={g.metodo || ''} onChange={function(e) { const v = e.target.value as any; mudar(function(s) { return s.trigger.tipo === 'evento' ? { ...s, trigger: { ...s.trigger, metodo: v } } : s }) }}>

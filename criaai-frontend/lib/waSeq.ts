@@ -19,12 +19,15 @@ export function validarSeq(input: any): { ok: true; seq: Sequencia } | { ok: fal
   const g = input?.trigger || {}
   let trigger: Sequencia['trigger']
   if (g.tipo === 'evento') {
-    const evento = String(g.evento || '')
-    if (!EVENTOS.some(function(e) { return e.k === evento })) return { ok: false, erro: 'Escolha o evento que inicia o fluxo.' }
+    // Varios eventos no mesmo fluxo (ordem do Breno); 'evento' fica com o primeiro para os fluxos antigos
+    const lista: string[] = (Array.isArray(g.eventos) && g.eventos.length ? g.eventos : [g.evento]).map(function(x: any) { return String(x || '') })
+    const eventos = EVENTOS.filter(function(e) { return lista.indexOf(e.k) >= 0 }).map(function(e) { return e.k })
+    if (!eventos.length) return { ok: false, erro: 'Escolha pelo menos um evento que inicia o fluxo.' }
+    const evento = eventos[0]
     const m = String(g.metodo || '')
     const metodo: Metodo = m === 'pix' || m === 'boleto' || m === 'cartao' ? m : ''
     const produto = String(g.produto || '').trim().slice(0, 80)
-    trigger = { tipo: 'evento', evento, ...(metodo ? { metodo } : {}), ...(produto ? { produto } : {}) }
+    trigger = { tipo: 'evento', evento, ...(eventos.length > 1 ? { eventos } : {}), ...(metodo ? { metodo } : {}), ...(produto ? { produto } : {}) }
   } else {
     const palavras: string[] = (Array.isArray(g.palavras) ? g.palavras : []).map(function(x: any) { return String(x || '').trim().slice(0, 60) }).filter(Boolean).slice(0, 20)
     trigger = { tipo: 'palavra', palavras, match: g.match === 'igual' ? 'igual' : 'contem' }
@@ -212,8 +215,14 @@ export async function tratarEventoSequencias(admin: any, eventType: string, payl
     const agora = Date.now()
     for (const s of (sq.data || []) as any[]) {
       const g = s.trigger || {}
-      if (g.tipo !== 'evento' || g.evento !== eventType) continue
+      const evs: string[] = Array.isArray(g.eventos) && g.eventos.length ? g.eventos : [g.evento]
+      if (g.tipo !== 'evento' || evs.indexOf(eventType) < 0) continue
       if (!passaFiltro({ metodo: g.metodo, produto: g.produto }, info)) continue
+      // Fluxo com varios eventos: quem ja esta dentro dele nao entra de novo por outro evento (ex.: carrinho abandonado e depois Pix gerado)
+      if (evs.length > 1) {
+        const dentro = await admin.from('wa_seq_runs').select('id').eq('seq_id', s.id).eq('wa_id', info.wa).eq('is_test', false).eq('status', 'ativo').limit(1)
+        if (dentro.data && dentro.data.length > 0) continue
+      }
       // Cobranca gerada ou paga: a mesma pessoa nao entra duas vezes no mesmo fluxo em 24 h (gerou duas cobrancas = recebia a mesma mensagem em dobro)
       if (eventType === 'invoice.payment_succeeded' || eventType === 'invoice.created') {
         const desde = new Date(agora - 24 * 3600 * 1000).toISOString()
