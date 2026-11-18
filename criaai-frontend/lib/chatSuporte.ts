@@ -23,8 +23,8 @@ const STORAGE_KEY = 'mcpia_chat_history'
 const NAO_LIDAS_KEY = 'mcpia_chat_nao_lidas'
 const LIMPO_EM_KEY = 'mcpia_chat_limpo_em'
 
-type Estado = { mensagens: MsgChat[]; status: StatusChat; naoLidas: number; carregado: boolean }
-let estado: Estado = { mensagens: [], status: 'online', naoLidas: 0, carregado: false }
+type Estado = { mensagens: MsgChat[]; status: StatusChat; naoLidas: number; carregado: boolean; foto: string }
+let estado: Estado = { mensagens: [], status: 'online', naoLidas: 0, carregado: false, foto: '' }
 const ouvintes = new Set<() => void>()
 let telaAberta = false
 let iniciando: Promise<void> | null = null
@@ -62,6 +62,7 @@ if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', function() {
     if (vendoAgora() && estado.naoLidas) mudar({ naoLidas: 0 })
     if (document.visibilityState === 'visible' && estado.carregado && !ocupado && estado.mensagens.some(function(m) { return m.role === 'user' && !m.lido })) agendarResposta(true)
+    else if (document.visibilityState === 'visible') sincronizarChat()
   })
 }
 
@@ -94,6 +95,66 @@ export function partes(texto: string): string[] {
 
 // Carrega a conversa (uma vez por visita): historico do aparelho + respostas do Junior que ficaram guardadas no servidor
 // (por exemplo, se a pagina foi recarregada durante a espera). Se tiver mensagem do aluno sem resposta, responde.
+// A conversa vem do servidor (a mesma no celular, no aplicativo e no computador).
+// O aparelho so guarda o que ainda nao chegou no servidor (mensagem do aluno esperando resposta) e marca quais eram audio.
+async function doServidor(local: MsgChat[]): Promise<{ lista: MsgChat[]; novas: number } | null> {
+  const supabase = createClient()
+  const u = (await supabase.auth.getUser()).data.user
+  if (!u) return null
+  try {
+    const pf = await supabase.from('profiles').select('avatar_url').eq('id', u.id).maybeSingle()
+    const foto = String((pf.data as any)?.avatar_url || '')
+    if (foto !== estado.foto) estado = { ...estado, foto }
+  } catch (e) {}
+  let desde = 0
+  try { desde = Number(localStorage.getItem(LIMPO_EM_KEY) || 0) } catch (e) {}
+  let q = supabase.from('chat_messages').select('id, role, content, created_at').eq('user_id', u.id).order('created_at', { ascending: false }).limit(120)
+  if (desde) q = q.gt('created_at', new Date(desde).toISOString())
+  const r = await q
+  if (r.error) return null
+  const rows = ((r.data || []) as any[]).slice().reverse()
+  const lista: MsgChat[] = []
+  let novas = 0
+  let ultimo = 0
+  for (const row of rows) {
+    const hora = String(row.created_at)
+    const t = new Date(hora).getTime()
+    if (t > ultimo) ultimo = t
+    const content = String(row.content || '').replace(/\s*\[imagem anexada\]\s*$/, '').trim()
+    if (row.role === 'user') {
+      const loc = local.find(function(m) { return m.role === 'user' && m.audio && m.content && content.indexOf(m.content) >= 0 })
+      lista.push({ id: 'db-' + row.id, role: 'user', content: content || '📷 Imagem', hora, lido: true, ...(loc ? { audio: true, audioUrl: loc.audioUrl } : {}) })
+    } else {
+      const ps = partes(content)
+      for (let k = 0; k < ps.length; k++) {
+        const ja = local.some(function(m) { return m.role === 'assistant' && !!m.content && (m.content === ps[k] || ps[k].indexOf(m.content.slice(0, 40)) >= 0) })
+        if (!ja) novas++
+        const loc = local.find(function(m) { return m.role === 'assistant' && m.audio && m.content === content })
+        if (loc && ps.length === 1) lista.push({ id: 'db-' + row.id, role: 'assistant', content, hora, audio: true, audioUrl: loc.audioUrl })
+        else lista.push({ id: 'db-' + row.id + '-' + k, role: 'assistant', content: ps[k], hora })
+      }
+    }
+  }
+  // O que o aluno mandou e ainda nao foi respondido (ainda nao esta no servidor) continua na tela
+  for (const m of local) {
+    if (m.role === 'user' && !m.lido && !m.pendente && (!m.hora || new Date(m.hora).getTime() > ultimo - 1000)) lista.push(m)
+  }
+  // Conversa nova (servidor vazio): mantem o que esta no aparelho
+  if (!rows.length) return { lista: local, novas: 0 }
+  return { lista, novas }
+}
+
+// Voltou para a tela (ou trocou de aparelho): busca de novo no servidor
+let sincronizando = false
+export async function sincronizarChat() {
+  if (sincronizando || ocupado || timerResp || !estado.carregado) return
+  sincronizando = true
+  try {
+    const r = await doServidor(estado.mensagens)
+    if (r && !ocupado) mudar({ mensagens: r.lista, naoLidas: vendoAgora() ? 0 : estado.naoLidas + r.novas })
+  } catch (e) {} finally { sincronizando = false }
+}
+
 export function iniciarChat(): Promise<void> {
   if (iniciando) return iniciando
   iniciando = (async function() {
@@ -105,22 +166,8 @@ export function iniciarChat(): Promise<void> {
       naoLidas = Number(localStorage.getItem(NAO_LIDAS_KEY) || 0) || 0
     } catch (e) {}
     try {
-      const supabase = createClient()
-      const u = (await supabase.auth.getUser()).data.user
-      if (u) {
-        const ultAssist = lista.filter(function(m) { return m.role === 'assistant' && !m.human && m.hora }).map(function(m) { return new Date(m.hora as string).getTime() })
-        let desde = ultAssist.length ? Math.max.apply(null, ultAssist) : Date.now() - 24 * 3600 * 1000
-        try { const limpo = Number(localStorage.getItem(LIMPO_EM_KEY) || 0); if (limpo > desde) desde = limpo } catch (e) {}
-        const r = await supabase.from('chat_messages').select('id, content, created_at').eq('user_id', u.id).eq('role', 'assistant').gt('created_at', new Date(desde + 1000).toISOString()).order('created_at', { ascending: true }).limit(20)
-        for (const row of (r.data || []) as any[]) {
-          const t = new Date(row.created_at).getTime()
-          // so entra resposta que ainda nao esta na tela (as que ja apareceram tem hora depois da gravacao no servidor)
-          if (lista.some(function(m) { return m.role === 'assistant' && m.content && String(row.content || '').indexOf(m.content.slice(0, 40)) >= 0 })) continue
-          lista = lista.map(function(m) { return m.role === 'user' && m.hora && new Date(m.hora).getTime() <= t ? { ...m, lido: true } : m })
-          lista.push({ id: 'db-' + row.id, role: 'assistant', content: String(row.content || ''), hora: row.created_at })
-          naoLidas++
-        }
-      }
+      const r = await doServidor(lista)
+      if (r) { lista = r.lista; naoLidas += r.novas }
     } catch (e) {}
     estado = { ...estado, mensagens: lista, naoLidas: vendoAgora() ? 0 : naoLidas, carregado: true }
     salvar()

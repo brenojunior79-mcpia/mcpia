@@ -238,7 +238,7 @@ export default function ChatPage() {
                 {msg.imageUrl && <img src={msg.imageUrl} alt="Print enviado" className={styles.foto} />}
                 {msg.audio
                   ? <>
-                      <Audio url={msg.audioUrl} foto={saida ? undefined : FOTO} saida={saida} hora={hhmm(msg.hora)} lido={msg.lido} enviando={!!msg.pendente} />
+                      <Audio url={msg.audioUrl} foto={saida ? (chat.foto || undefined) : FOTO} saida={saida} hora={hhmm(msg.hora)} lido={msg.lido} enviando={!!msg.pendente} />
                     </>
                   : (msg.content ? <TextoComLinks texto={msg.content} /> : null)}
                 {!msg.audio && <span className={styles.meta}>
