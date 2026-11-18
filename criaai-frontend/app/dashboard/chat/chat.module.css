@@ -104,3 +104,7 @@
   .balao { max-width: 84%; }
   .audio { min-width: 220px; }
 }
+
+/* Enquadramento: o chat ocupa a tela toda que sobra (sem a barra de cima), e a barra do microfone fica sempre visivel */
+.page { position: fixed; top: 0; right: 0; bottom: 0; left: 240px; z-index: 40; height: auto; padding-bottom: env(safe-area-inset-bottom); }
+@media (max-width: 768px) { .page { left: 0; z-index: 60; padding-top: env(safe-area-inset-top); } }
