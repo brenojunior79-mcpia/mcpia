@@ -369,8 +369,9 @@
   animation: formIn 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
+/* sem comecar invisivel: em celular lento a animacao travava e a tela de Criar conta ficava em branco */
 @keyframes formIn {
-  from { opacity: 0; transform: translate3d(0, 10px, 0); }
+  from { transform: translate3d(0, 6px, 0); }
   to { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 
@@ -717,4 +718,9 @@
   .draw { animation: none; stroke-dashoffset: 0; }
   .submit, .submit::after, .tabPill { transition: none; }
   .card::before { --ang: 200deg; }
+}
+
+/* Celular: fundo parado (as manchas animadas pesavam e deixavam a troca de abas lenta) */
+@media (max-width: 760px) {
+  .blobA, .blobB, .blobC, .blobD { animation: none; }
 }
