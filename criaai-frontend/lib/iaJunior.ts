@@ -12,8 +12,11 @@ export type MsgJunior = { role: 'user' | 'assistant'; content: any }
 export type RespostaJunior = { ok: boolean; texto: string; status: number; motivo: string; via: 'claude' | 'openai' }
 
 let cliente: Anthropic | null = null
+// Ordem do Breno (18/11/2026): o Junior volta a usar SO a OpenAI. Para voltar ao Claude, mude para true.
+const USAR_CLAUDE = false
+
 function claude(): Anthropic | null {
-  if (!process.env.ANTHROPIC_API_KEY) return null
+  if (!USAR_CLAUDE || !process.env.ANTHROPIC_API_KEY) return null
   if (!cliente) cliente = new Anthropic({ maxRetries: 1 })
   return cliente
 }
