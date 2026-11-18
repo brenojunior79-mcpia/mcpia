@@ -105,7 +105,13 @@ export async function POST(req: NextRequest) {
 
       if (userContentToSave.trim()) {
         // A mensagem do aluno ja foi guardada na hora em que ele enviou (api/chat/salvar): aqui so entra a resposta
-        const rows: any[] = corpo?.jaSalvo && !imageBase64 ? [] : [{ user_id: user!.id, role: 'user', content: userContentToSave.trim(), image_path: imagePath }]
+        // Trava: so confia no "ja salvo" se a fala do aluno estiver mesmo no servidor (senao a resposta ficava sem a pergunta)
+        let jaNoServidor = false
+        if (corpo?.jaSalvo && !imageBase64) {
+          const ult = await supabase.from('chat_messages').select('role').eq('user_id', user!.id).order('created_at', { ascending: false }).limit(1)
+          jaNoServidor = !!(ult.data && ult.data[0] && ult.data[0].role === 'user')
+        }
+        const rows: any[] = jaNoServidor ? [] : [{ user_id: user!.id, role: 'user', content: userContentToSave.trim(), image_path: imagePath }]
         // Hora real em que o aluno mandou (o painel mostrava a mesma hora da resposta, parecendo que o Junior respondeu na hora)
         const enviadaEm = Date.parse(String(corpo?.enviadaEm || ''))
         if (enviadaEm && enviadaEm < Date.now() && Date.now() - enviadaEm < 30 * 60 * 1000) rows[0].created_at = new Date(enviadaEm).toISOString()
