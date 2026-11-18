@@ -16,6 +16,7 @@ export interface MsgChat {
   hora?: string
   lido?: boolean
   pendente?: boolean   // audio ja na tela, esperando o texto (transcricao)
+  salvo?: boolean      // ja esta guardada no servidor
 }
 export type StatusChat = 'online' | 'digitando' | 'gravando'
 
@@ -106,8 +107,7 @@ async function doServidor(local: MsgChat[]): Promise<{ lista: MsgChat[]; novas: 
     const foto = String((pf.data as any)?.avatar_url || '')
     if (foto !== estado.foto) estado = { ...estado, foto }
   } catch (e) {}
-  let desde = 0
-  try { desde = Number(localStorage.getItem(LIMPO_EM_KEY) || 0) } catch (e) {}
+  const desde = 0 // a conversa e a mesma em todos os aparelhos
   let q = supabase.from('chat_messages').select('id, role, content, created_at').eq('user_id', u.id).order('created_at', { ascending: false }).limit(120)
   if (desde) q = q.gt('created_at', new Date(desde).toISOString())
   const r = await q
@@ -122,6 +122,8 @@ async function doServidor(local: MsgChat[]): Promise<{ lista: MsgChat[]; novas: 
     if (t > ultimo) ultimo = t
     const content = String(row.content || '').replace(/\s*\[imagem anexada\]\s*$/, '').trim()
     if (row.role === 'user') {
+      const mesmo = local.find(function(m) { return m.id === 'db-' + row.id })
+      if (mesmo) { lista.push({ ...mesmo, lido: mesmo.lido !== false, hora }); continue }
       const loc = local.find(function(m) { return m.role === 'user' && m.audio && m.content && content.indexOf(m.content) >= 0 })
       lista.push({ id: 'db-' + row.id, role: 'user', content: content || '📷 Imagem', hora, lido: true, ...(loc ? { audio: true, audioUrl: loc.audioUrl } : {}) })
     } else {
@@ -137,7 +139,7 @@ async function doServidor(local: MsgChat[]): Promise<{ lista: MsgChat[]; novas: 
   }
   // O que o aluno mandou e ainda nao foi respondido (ainda nao esta no servidor) continua na tela
   for (const m of local) {
-    if (m.role === 'user' && !m.lido && !m.pendente && (!m.hora || new Date(m.hora).getTime() > ultimo - 1000)) lista.push(m)
+    if (m.role === 'user' && !m.lido && !lista.some(function(x) { return x.id === m.id }) && (m.pendente || !m.hora || new Date(m.hora).getTime() > ultimo - 1000)) lista.push(m)
   }
   // Conversa nova (servidor vazio): mantem o que esta no aparelho
   if (!rows.length) return { lista: local, novas: 0 }
@@ -209,7 +211,7 @@ async function responder() {
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session ? session.access_token : '') },
-      body: JSON.stringify({ messages: lista.filter(function(m) { return !m.pendente && !(m.role === 'assistant' && /^Minha internet oscilou aqui/.test(m.content)) }).map(function(m) { return { role: m.role, content: m.content } }), imageBase64: imagem, enviadaEm: pendentes[0].hora || null }),
+      body: JSON.stringify({ messages: lista.filter(function(m) { return !m.pendente && !(m.role === 'assistant' && /^Minha internet oscilou aqui/.test(m.content)) }).map(function(m) { return { role: m.role, content: m.content } }), imageBase64: imagem, enviadaEm: pendentes[0].hora || null, jaSalvo: pendentes.every(function(m) { return !!m.salvo }) }),
     })
     const data = await res.json()
     falhas = 0
@@ -256,8 +258,20 @@ async function responder() {
 }
 
 export function enviarAoChat(conteudo: string, imagem: string | null, audioUrl?: string) {
-  mudar({ mensagens: [...estado.mensagens, { role: 'user', content: conteudo, imageUrl: imagem || undefined, audio: !!audioUrl, audioUrl, hora: agora(), lido: false }] })
+  const id = 'l-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)
+  const hora = agora()
+  mudar({ mensagens: [...estado.mensagens, { id, role: 'user', content: conteudo, imageUrl: imagem || undefined, audio: !!audioUrl, audioUrl, hora, lido: false }] })
+  if (!imagem) salvarNoServidor(id, conteudo, hora)
   agendarResposta()
+}
+
+// Guarda a fala do aluno no servidor na hora (aparece nos outros aparelhos); o id passa a ser o do servidor
+async function salvarNoServidor(id: string, content: string, hora: string) {
+  try {
+    const r = await fetch('/api/chat/salvar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content, hora }) })
+    const d = await r.json()
+    if (r.ok && d.id) mudar({ mensagens: estado.mensagens.map(function(m) { return m.id === id ? { ...m, id: 'db-' + d.id, salvo: true } : m }) })
+  } catch (e) {}
 }
 
 // Audio do aluno: aparece na hora; quando o texto (transcricao) chega, segue para o Junior
@@ -268,6 +282,8 @@ export function audioNaTela(audioUrl: string): string {
 }
 export function confirmarAudio(id: string, texto: string) {
   mudar({ mensagens: estado.mensagens.map(function(m) { return m.id === id ? { ...m, content: texto, pendente: false } : m }) })
+  const m = estado.mensagens.find(function(x) { return x.id === id })
+  if (m) salvarNoServidor(id, texto, m.hora || agora())
   agendarResposta()
 }
 export function tirarAudio(id: string) {

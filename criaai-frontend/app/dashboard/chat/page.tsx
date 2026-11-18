@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef, useEffect, useSyncExternalStore } from 'react'
+import { useState, useRef, useEffect, useSyncExternalStore , Fragment } from 'react'
 import { MsgChat, assinarChat, estadoChat, iniciarChat, telaDoChat, adicionarMensagem, enviarAoChat, audioNaTela, confirmarAudio, tirarAudio, limparChat } from '@/lib/chatSuporte'
 import TextoComLinks from '@/components/layout/TextoComLinks'
 import { createClient } from '@/lib/supabase-browser'
@@ -15,6 +15,17 @@ const ADMIN_SEEN_KEY = 'mcpia_chat_admin_seen'
 const FOTO = '/avatar-junior/junior.jpg'
 
 function agora() { return new Date().toISOString() }
+// Separador de dia como no WhatsApp: Hoje, Ontem ou a data
+function nomeDia(iso?: string) {
+  const d = iso ? new Date(iso) : new Date()
+  if (isNaN(d.getTime())) return 'Hoje'
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0)
+  const dia = new Date(d); dia.setHours(0, 0, 0, 0)
+  const dif = Math.round((hoje.getTime() - dia.getTime()) / 86400000)
+  if (dif <= 0) return 'Hoje'
+  if (dif === 1) return 'Ontem'
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
 function hhmm(iso?: string) {
   if (!iso) return ''
   try { return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) } catch (e) { return '' }
@@ -223,7 +234,6 @@ export default function ChatPage() {
       </div>
 
       <div className={styles.mensagens}>
-        <div className={styles.dia}>Hoje</div>
         {humanActive && <div className={styles.aviso}>Um atendente da equipe está cuidando da sua conversa. Pode mandar sua mensagem por aqui.</div>}
         {messages.map(function(msg, i) {
           const saida = msg.role === 'user'
@@ -231,8 +241,12 @@ export default function ChatPage() {
           const proximo = messages[i + 1]
           const primeiro = !anterior || anterior.role !== msg.role
           const ultimo = !proximo || proximo.role !== msg.role
+          const diaAqui = nomeDia(msg.hora)
+          const novoDia = i === 0 || nomeDia(anterior && anterior.hora) !== diaAqui
           return (
-            <div key={i} className={styles.linha + ' ' + (saida ? styles.linhaOut : '') + ' ' + (primeiro ? styles.linhaNova : '')}>
+            <Fragment key={i}>
+            {novoDia && <div className={styles.dia}>{diaAqui}</div>}
+            <div className={styles.linha + ' ' + (saida ? styles.linhaOut : '') + ' ' + (primeiro ? styles.linhaNova : '')}>
               <div className={styles.balao + ' ' + (saida ? styles.balaoOut : styles.balaoIn) + ' ' + (ultimo ? styles.rabo : '')}>
                 {msg.human && primeiro && <div className={styles.equipe}>Equipe</div>}
                 {msg.imageUrl && <img src={msg.imageUrl} alt="Print enviado" className={styles.foto} />}
@@ -247,6 +261,7 @@ export default function ChatPage() {
                 </span>}
               </div>
             </div>
+            </Fragment>
           )
         })}
         {status === 'digitando' && (

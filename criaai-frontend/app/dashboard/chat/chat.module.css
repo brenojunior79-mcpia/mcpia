@@ -132,3 +132,6 @@
 .audioMic { left: auto; font-size: 0; }
 .balaoIn .audioFotoBox { order: 3; }
 .balaoIn .audioMic { right: auto; left: -5px; }
+
+/* Por cima da barra de cima da plataforma tambem no computador (o topo do chat ficava escondido) */
+.page { z-index: 60; }

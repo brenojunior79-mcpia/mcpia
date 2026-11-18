@@ -96,12 +96,13 @@ export async function POST(req: NextRequest) {
       }
 
       if (userContentToSave.trim()) {
-        const rows: any[] = [{ user_id: user!.id, role: 'user', content: userContentToSave.trim(), image_path: imagePath }]
+        // A mensagem do aluno ja foi guardada na hora em que ele enviou (api/chat/salvar): aqui so entra a resposta
+        const rows: any[] = corpo?.jaSalvo && !imageBase64 ? [] : [{ user_id: user!.id, role: 'user', content: userContentToSave.trim(), image_path: imagePath }]
         // Hora real em que o aluno mandou (o painel mostrava a mesma hora da resposta, parecendo que o Junior respondeu na hora)
         const enviadaEm = Date.parse(String(corpo?.enviadaEm || ''))
         if (enviadaEm && enviadaEm < Date.now() && Date.now() - enviadaEm < 30 * 60 * 1000) rows[0].created_at = new Date(enviadaEm).toISOString()
         if (replyText) rows.push({ user_id: user!.id, role: 'assistant', content: replyText, image_path: null })
-        await supabase.from('chat_messages').insert(rows)
+        if (rows.length) await supabase.from('chat_messages').insert(rows)
       }
     }
 
