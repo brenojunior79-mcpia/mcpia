@@ -201,7 +201,7 @@ export default function ChatPage() {
           </div>
         </div>
         {/* Camera: abre a galeria para mandar uma foto (print da tela, por exemplo) */}
-        <button className={styles.headerBtn} aria-label="Mandar uma foto da galeria" onClick={function() { if (fileInputRef.current) fileInputRef.current.click() }}><i className="ti ti-camera" /></button>
+        <button className={styles.headerBtn} aria-label="Mandar uma foto da galeria" onClick={function() { if (fileInputRef.current) fileInputRef.current.click() }}><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.6l1.3-1.8A1.5 1.5 0 0 1 10.6 3.6h2.8a1.5 1.5 0 0 1 1.2.6L15.9 6h1.6A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5z" /><circle cx="12" cy="12.4" r="3.6" /></svg></button>
       </div>
 
       <div className={styles.mensagens}>
@@ -275,7 +275,7 @@ export default function ChatPage() {
             {temTexto
               ? <button className={styles.enviar} onClick={send} aria-label="Enviar"><i className="ti ti-send" /></button>
               : <>
-                  <button className={styles.camera} onClick={function() { fileInputRef.current?.click() }} aria-label="Enviar foto ou print"><i className="ti ti-camera" /></button>
+                  <button className={styles.camera} onClick={function() { fileInputRef.current?.click() }} aria-label="Enviar foto ou print"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.6l1.3-1.8A1.5 1.5 0 0 1 10.6 3.6h2.8a1.5 1.5 0 0 1 1.2.6L15.9 6h1.6A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5z" /><circle cx="12" cy="12.4" r="3.6" /></svg></button>
                   <button className={styles.enviar} onClick={comecarGravar} aria-label="Gravar áudio" title="Gravar áudio"><i className="ti ti-microphone" /></button>
                 </>}
           </>
