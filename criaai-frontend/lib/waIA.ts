@@ -1003,7 +1003,16 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     }
     // Mudanca do suporte para dentro da plataforma (ordem do Breno): uma vez por dia em cada conversa de aluno,
     // depois da resposta, vai uma mensagem separada avisando que este WhatsApp vai encerrar e mandando o link do menu Suporte.
-    if (!passaParaHumano && ehAluna && texto.trim()) {
+    // Aluno novo (sem conta na plataforma ou conta com menos de 7 dias) NAO recebe esse aviso (ordem do Breno)
+    let alunoAntigo = false
+    if (!passaParaHumano && ehAluna && texto.trim() && conv.profile_id) {
+      try {
+        const pf = await admin.from('profiles').select('created_at').eq('id', conv.profile_id).maybeSingle()
+        const criado = pf.data && pf.data.created_at ? new Date(pf.data.created_at).getTime() : 0
+        alunoAntigo = !!criado && Date.now() - criado >= 7 * 24 * 3600 * 1000
+      } catch (e) { alunoAntigo = false }
+    }
+    if (!passaParaHumano && ehAluna && alunoAntigo && texto.trim()) {
       const hojeBr = diaBrasilia(new Date())
       const avisouHoje = linhas.some(function(m: any) { return m.direction === 'out' && m.created_at && diaBrasilia(new Date(m.created_at)) === hojeBr && String(m.body || '').indexOf(MARCA_AVISO_SUPORTE) >= 0 })
       if (!avisouHoje) texto = texto.trim() + '[[PARTE]]' + AVISO_SUPORTE_PLATAFORMA
