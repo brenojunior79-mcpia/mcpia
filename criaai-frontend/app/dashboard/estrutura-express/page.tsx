@@ -263,7 +263,7 @@ export default function EstruturaExpressPage() {
   return (
     <div style={wrap}><style>{CSS}</style>
       <div style={{ maxWidth: 1180, margin: '0 auto' }}>
-        <BlackFridayExpress modo="faixa" />
+        {/* Quem ja tem a Estrutura Express nao ve a Black Friday (ordem do Breno) */}
 
         <div className="ee-hero ee-up" style={{ position: 'relative', overflow: 'hidden', borderRadius: 24, padding: '28px 28px', color: '#fff', marginBottom: 20, border: '1px solid rgba(255,255,255,0.14)', boxShadow: '0 18px 50px rgba(124,45,18,0.30)' }}>
           <div className="ee-orb" style={{ width: 220, height: 220, background: '#f97316', top: -90, right: 30 }} />

@@ -18,11 +18,17 @@ export default function PopupBlackFriday({ user }: { user: any }) {
       const ultimo = Number(localStorage.getItem(chave) || 0)
       if (ultimo && numeroDoDia(Date.now()) === numeroDoDia(ultimo)) return
     } catch (e) { /* sem armazenamento: mostra mesmo assim */ }
-    const t = setTimeout(function() {
-      setAberto(true)
-      try { localStorage.setItem(chave, String(Date.now())) } catch (e) { /* ignora */ }
-    }, 1500)
-    return function() { clearTimeout(t) }
+    // So para quem AINDA NAO tem a Estrutura Express (ordem do Breno): quem ja comprou nunca ve a oferta
+    let vivo = true
+    let t: any = null
+    fetch('/api/estrutura', { cache: 'no-store' }).then(function(r) { return r.json() }).then(function(j) {
+      if (!vivo || !j || j.acesso !== false) return
+      t = setTimeout(function() {
+        setAberto(true)
+        try { localStorage.setItem(chave, String(Date.now())) } catch (e) { /* ignora */ }
+      }, 1500)
+    }).catch(function() {})
+    return function() { vivo = false; if (t) clearTimeout(t) }
   }, [chave])
 
   useEffect(function() {
