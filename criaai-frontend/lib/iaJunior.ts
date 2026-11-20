@@ -12,11 +12,12 @@ export type MsgJunior = { role: 'user' | 'assistant'; content: any }
 export type RespostaJunior = { ok: boolean; texto: string; status: number; motivo: string; via: 'claude' | 'openai' }
 
 let cliente: Anthropic | null = null
-// Ordem do Breno (18/11/2026): o Junior volta a usar SO a OpenAI. Para voltar ao Claude, mude para true.
+// Ordem do Breno: a OpenAI e a principal (18/11/2026) e o Claude fica de RESERVA (20/11/2026): so responde quando a OpenAI falhar
+// (sem credito, fora do ar). Para o Claude voltar a ser o principal, mude USAR_CLAUDE para true.
 const USAR_CLAUDE = false
 
 function claude(): Anthropic | null {
-  if (!USAR_CLAUDE || !process.env.ANTHROPIC_API_KEY) return null
+  if (!process.env.ANTHROPIC_API_KEY) return null
   if (!cliente) cliente = new Anthropic({ maxRetries: 1 })
   return cliente
 }
@@ -69,33 +70,44 @@ async function viaOpenAI(system: string, msgs: MsgJunior[], maxTokens: number, t
   }
 }
 
+async function viaClaude(system: string, msgs: MsgJunior[], maxTokens: number, timeoutMs: number): Promise<RespostaJunior | null> {
+  const c = claude()
+  if (!c) return null
+  try {
+    const resp = await c.messages.create({
+      model: MODELO_JUNIOR,
+      max_tokens: Math.max(maxTokens, 1500), // folga para o raciocinio interno; o tamanho da resposta e controlado pelo prompt
+      system,
+      messages: arrumar(msgs),
+      output_config: { effort: 'low' },
+    }, { timeout: timeoutMs })
+    if (resp.stop_reason === 'refusal') { console.error('[junior-ia] Claude recusou'); return null }
+    const texto = resp.content.map(function(b) { return b.type === 'text' ? b.text : '' }).join('').trim()
+    if (texto) { console.log('[junior-ia] respondeu via Claude ' + MODELO_JUNIOR); return { ok: true, texto, status: 200, motivo: '', via: 'claude' } }
+    console.error('[junior-ia] Claude sem texto (' + resp.stop_reason + ')')
+  } catch (e: any) {
+    const st = e instanceof Anthropic.APIError ? e.status : 0
+    // So o tipo e a mensagem de erro da Anthropic (nunca o conteudo da conversa)
+    const det = e instanceof Anthropic.APIError ? String((e as any).error?.error?.type || '') + ': ' + String((e as any).error?.error?.message || '').slice(0, 160) : ''
+    console.error('[junior-ia] Claude falhou (' + st + ') ' + det)
+  }
+  return null
+}
+
 // variar = true quando a primeira resposta saiu repetida e queremos outras palavras
 export async function responderJunior(p: { system: string; msgs: MsgJunior[]; maxTokens?: number; variar?: boolean; timeoutMs?: number }): Promise<RespostaJunior> {
   const maxTokens = p.maxTokens || 800
   const timeoutMs = p.timeoutMs || 30000
-  const c = claude()
-  if (c) {
-    try {
-      const resp = await c.messages.create({
-        model: MODELO_JUNIOR,
-        max_tokens: Math.max(maxTokens, 1500), // folga para o raciocinio interno; o tamanho da resposta e controlado pelo prompt
-        system: p.system,
-        messages: arrumar(p.msgs),
-        output_config: { effort: 'low' },
-      }, { timeout: timeoutMs })
-      if (resp.stop_reason === 'refusal') {
-        console.error('[junior-ia] Claude recusou; usando OpenAI')
-      } else {
-        const texto = resp.content.map(function(b) { return b.type === 'text' ? b.text : '' }).join('').trim()
-        if (texto) { console.log('[junior-ia] respondeu via Claude ' + MODELO_JUNIOR); return { ok: true, texto, status: 200, motivo: '', via: 'claude' } }
-        console.error('[junior-ia] Claude sem texto (' + resp.stop_reason + '); usando OpenAI')
-      }
-    } catch (e: any) {
-      const st = e instanceof Anthropic.APIError ? e.status : 0
-      // So o tipo e a mensagem de erro da Anthropic (nunca o conteudo da conversa)
-      const det = e instanceof Anthropic.APIError ? String((e as any).error?.error?.type || '') + ': ' + String((e as any).error?.error?.message || '').slice(0, 160) : ''
-      console.error('[junior-ia] Claude falhou (' + st + ') ' + det + '; usando OpenAI')
-    }
+  const temperatura = p.variar ? 0.7 : 0.2
+  if (USAR_CLAUDE) {
+    const c = await viaClaude(p.system, p.msgs, maxTokens, timeoutMs)
+    if (c) return c
+    return viaOpenAI(p.system, p.msgs, maxTokens, temperatura, timeoutMs)
   }
-  return viaOpenAI(p.system, p.msgs, maxTokens, p.variar ? 0.7 : 0.2, timeoutMs)
+  // OpenAI principal; se falhar (ex.: sem credito), o Claude responde de reserva
+  const o = await viaOpenAI(p.system, p.msgs, maxTokens, temperatura, timeoutMs)
+  if (o.ok) return o
+  console.error('[junior-ia] OpenAI falhou (' + o.status + '); usando o Claude de reserva')
+  const c = await viaClaude(p.system, p.msgs, maxTokens, timeoutMs)
+  return c || o
 }
