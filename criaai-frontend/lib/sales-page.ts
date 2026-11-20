@@ -105,12 +105,18 @@ export function formatPrice(p: any): string {
 
 // ---------- video ----------
 
-function videoEmbed(url: string): { kind: 'iframe' | 'file'; src: string } | null {
+// A pagina publicada roda isolada (sandbox) por seguranca, e o isolamento tambem trava o player do YouTube/Vimeo
+// dentro dela (ficava uma caixa preta). Por isso YouTube e Vimeo aparecem como capa do video com o botao de play:
+// ao tocar, o video abre no proprio YouTube/Vimeo. Arquivo .mp4 continua tocando dentro da pagina.
+function videoEmbed(url: string): { kind: 'link' | 'file'; src: string; thumb?: string; vertical?: boolean } | null {
   const u = String(url || '').trim()
   const yt = u.match(/(?:youtube\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([\w-]{11})/)
-  if (yt) return { kind: 'iframe', src: 'https://www.youtube-nocookie.com/embed/' + yt[1] + '?rel=0&modestbranding=1' }
+  if (yt) {
+    const curto = /youtube\.com\/shorts\//.test(u)
+    return { kind: 'link', src: curto ? 'https://www.youtube.com/shorts/' + yt[1] : 'https://www.youtube.com/watch?v=' + yt[1], thumb: 'https://i.ytimg.com/vi/' + yt[1] + '/hqdefault.jpg', vertical: curto }
+  }
   const vm = u.match(/vimeo\.com\/(?:video\/)?(\d+)/)
-  if (vm) return { kind: 'iframe', src: 'https://player.vimeo.com/video/' + vm[1] + '?title=0&byline=0&portrait=0&dnt=1' }
+  if (vm) return { kind: 'link', src: 'https://vimeo.com/' + vm[1] }
   if (/^https?:\/\/[^\s"'<>]+\.(mp4|webm|mov)(\?[^\s"'<>]*)?$/i.test(u)) return { kind: 'file', src: u }
   return null
 }
@@ -198,9 +204,14 @@ function renderSection(s: Section, ctx: { firstCta: { label: string; url: string
       if (d.mode === 'video') {
         const v = videoEmbed(d.videoUrl)
         if (!v) return ''
-        const player = v.kind === 'iframe'
-          ? '<iframe src="' + esc(v.src) + '" title="Vídeo" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'
-          : '<video src="' + esc(v.src) + '" controls playsinline preload="metadata"></video>'
+        if (v.kind === 'link') {
+          const capa = '<a class="vlink" href="' + esc(v.src) + '" target="_blank" rel="noopener">' +
+            (v.thumb ? '<img src="' + esc(v.thumb) + '" alt="Assistir ao vídeo" loading="lazy"/>' : '') +
+            '<span class="vplay" aria-hidden="true"><svg viewBox="0 0 24 24" width="34" height="34"><path d="M8 5v14l11-7z" fill="#fff"/></svg></span>' +
+            '<span class="vtxt">▶ Toque para assistir ao vídeo</span></a>'
+          return '<section class="s s-media"><div class="wrap"><div class="video rv' + (v.vertical ? ' vvert' : '') + '">' + capa + '</div>' + cap + '</div></section>'
+        }
+        const player = '<video src="' + esc(v.src) + '" controls playsinline preload="metadata"></video>'
         return '<section class="s s-media"><div class="wrap"><div class="video rv">' + player + '</div>' + cap + '</div></section>'
       }
       const img = safeImg(d.image)
@@ -411,7 +422,7 @@ h2{font-size:clamp(26px,4vw,40px);line-height:1.15;font-weight:900;letter-spacin
 .shot img{width:100%;border-radius:24px;box-shadow:0 34px 80px rgba(var(--ar),.32);border:1px solid var(--l)}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
 .video{position:relative;max-width:820px;margin:0 auto;aspect-ratio:16/9;border-radius:22px;overflow:hidden;background:#000;box-shadow:0 34px 80px rgba(var(--ar),.3);border:1px solid var(--l)}
-.video iframe,.video video{position:absolute;inset:0;width:100%;height:100%;border:0}
+.video iframe,.video video{position:absolute;inset:0;width:100%;height:100%;border:0}\n.vlink{position:absolute;inset:0;display:block;color:#fff;text-decoration:none;background:#000}.vlink img{width:100%;height:100%;object-fit:cover;opacity:.85}.vplay{position:absolute;left:50%;top:50%;width:76px;height:76px;margin:-38px 0 0 -38px;border-radius:50%;background:rgb(var(--ar));display:flex;align-items:center;justify-content:center;box-shadow:0 10px 30px rgba(0,0,0,.45)}.vtxt{position:absolute;left:0;right:0;bottom:14px;text-align:center;font-weight:800;font-size:15px;text-shadow:0 2px 8px rgba(0,0,0,.7)}.video.vvert{max-width:360px;aspect-ratio:9/16}
 .cap{text-align:center;color:var(--m);font-size:14px;margin-top:14px}
 .s-media{padding:14px 0 64px}
 

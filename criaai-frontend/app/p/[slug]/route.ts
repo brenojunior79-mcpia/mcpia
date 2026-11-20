@@ -29,7 +29,25 @@ export async function GET(_req: NextRequest, { params }: { params: { slug: strin
     .eq('slug', params.slug)
     .then(() => {})
 
-  return new Response(page.html, {
+  // Paginas antigas: o player do YouTube/Vimeo dentro da pagina isolada ficava preto. Troca pela capa com botao de play (abre o video no YouTube/Vimeo).
+  let html = String(page.html || '')
+  if (html.indexOf('<iframe') >= 0) {
+    let trocou = false
+    html = html.replace(/<iframe[^>]*src="https:\/\/www\.youtube(?:-nocookie)?\.com\/embed\/([\w-]{11})[^"]*"[^>]*><\/iframe>/g, function(_m: string, id: string) {
+      trocou = true
+      return '<a class="vlink" href="https://www.youtube.com/watch?v=' + id + '" target="_blank" rel="noopener"><img src="https://i.ytimg.com/vi/' + id + '/hqdefault.jpg" alt="Assistir ao vídeo" loading="lazy"/><span class="vplay" aria-hidden="true"><svg viewBox="0 0 24 24" width="34" height="34"><path d="M8 5v14l11-7z" fill="#fff"/></svg></span><span class="vtxt">▶ Toque para assistir ao vídeo</span></a>'
+    })
+    html = html.replace(/<iframe[^>]*src="https:\/\/player\.vimeo\.com\/video\/(\d+)[^"]*"[^>]*><\/iframe>/g, function(_m: string, id: string) {
+      trocou = true
+      return '<a class="vlink" href="https://vimeo.com/' + id + '" target="_blank" rel="noopener"><span class="vplay" aria-hidden="true"><svg viewBox="0 0 24 24" width="34" height="34"><path d="M8 5v14l11-7z" fill="#fff"/></svg></span><span class="vtxt">▶ Toque para assistir ao vídeo</span></a>'
+    })
+    if (trocou && html.indexOf('.vlink{') < 0) {
+      const css = '<style>.vlink{position:absolute;inset:0;display:block;color:#fff;text-decoration:none;background:#000}.vlink img{width:100%;height:100%;object-fit:cover;opacity:.85}.vplay{position:absolute;left:50%;top:50%;width:76px;height:76px;margin:-38px 0 0 -38px;border-radius:50%;background:rgb(var(--ar,22,163,74));display:flex;align-items:center;justify-content:center;box-shadow:0 10px 30px rgba(0,0,0,.45)}.vtxt{position:absolute;left:0;right:0;bottom:14px;text-align:center;font-weight:800;font-size:15px;text-shadow:0 2px 8px rgba(0,0,0,.7)}</style>'
+      html = html.indexOf('</head>') >= 0 ? html.replace('</head>', css + '</head>') : css + html
+    }
+  }
+
+  return new Response(html, {
     status: 200,
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
