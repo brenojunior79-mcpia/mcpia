@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { bloqueioAnuncios } from '@/lib/acessoAnunciosServidor'
+import { createClient as createAdmin } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,6 +28,23 @@ export async function GET() {
   )
   const user = (await supabase.auth.getUser()).data.user
   if (!user) return NextResponse.json({ status: 'erro' }, { status: 401 })
+  // Admin (Breno): vendas da Hubla de hoje (pagas) e as pendentes (Pix/boleto gerado e ainda nao pago)
+  const pf = await supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle()
+  if (pf.data && (pf.data as any).is_admin) {
+    try {
+      const admin: any = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } })
+      const hoje = new Date(Date.now() - 3 * 3600 * 1000).toISOString().slice(0, 10) // dia em Brasilia
+      const inicio = new Date(hoje + 'T03:00:00.000Z').toISOString()
+      const [pagas, pend] = await Promise.all([
+        admin.from('sales_ledger').select('amount').eq('provider', 'hubla').gte('paid_at', inicio),
+        admin.from('hubla_faturas').select('valor').eq('status', 'pendente').gte('criado_em', inicio),
+      ])
+      const soma = function(l: any[], k: string) { return (l || []).reduce(function(a: number, r: any) { return a + (Number(r[k]) || 0) }, 0) }
+      return NextResponse.json({ status: 'ok', fonte: 'hubla', valor: soma(pagas.data, 'amount'), pendente: soma(pend.data, 'valor') })
+    } catch (e) {
+      return NextResponse.json({ status: 'erro' })
+    }
+  }
   const bloqueio = await bloqueioAnuncios(user)
   if (bloqueio) return NextResponse.json({ status: 'sem_acesso' })
 

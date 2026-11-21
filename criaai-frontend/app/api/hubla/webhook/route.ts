@@ -58,6 +58,24 @@ async function findUserIdByEmail(email: string): Promise<string | null> {
 }
 
 // Guarda um historico simples do que a Hubla avisou e do que fizemos (para o admin conferir).
+// Cobrancas da Hubla com valor, para o card "Comissoes de hoje" do admin (pagas e pendentes)
+async function registrarFatura(eventType: string, payload: any): Promise<void> {
+  try {
+    const inv = payload.event?.invoice || {}
+    if (!inv.id) return
+    const cents = Number(inv.amount?.totalCents ?? inv.amount?.subtotalCents)
+    const valor = isFinite(cents) && cents > 0 ? cents / 100 : null
+    const products: any[] = payload.event?.products || (payload.event?.product ? [payload.event.product] : [])
+    const produto = String((products[0] && products[0].name) || '').slice(0, 120) || null
+    const status = eventType === 'invoice.payment_succeeded' ? 'pago' : eventType === 'invoice.created' ? 'pendente' : eventType === 'invoice.expired' ? 'expirado' : eventType === 'invoice.refunded' ? 'reembolsado' : eventType === 'invoice.payment_failed' ? 'recusado' : ''
+    if (!status) return
+    const agora = new Date().toISOString()
+    const ja = await admin.from('hubla_faturas').select('id, status').eq('id', String(inv.id)).maybeSingle()
+    if (!ja.data) await admin.from('hubla_faturas').insert({ id: String(inv.id), valor, status, produto, criado_em: agora, atualizado_em: agora })
+    else if (!(ja.data.status === 'pago' && status === 'pendente')) await admin.from('hubla_faturas').update({ status, ...(valor !== null ? { valor } : {}), atualizado_em: agora }).eq('id', String(inv.id))
+  } catch (e) {}
+}
+
 async function logEvent(eventType: string, plano: string | null, email: string | null, userId: string | null, action: string, note: string): Promise<void> {
   try {
     await admin.from('hubla_events').insert({ event_type: eventType, email, user_id: userId, action, note: note.slice(0, 300), plano })
@@ -146,6 +164,7 @@ export async function POST(req: NextRequest) {
     const planoDoAviso = resolvePlanName(payload) // Starter/Pro/Premium (vazio quando o aviso e de outro produto)
 
     await trackSale(admin, eventType, payload, email)
+    await registrarFatura(eventType, payload)
     if (eventType === 'invoice.payment_succeeded') await avisarVendaHubla(payload, email)
 
     // Reembolso da Estrutura Express (upsell): so tira o acesso ao menu Estrutura Express.

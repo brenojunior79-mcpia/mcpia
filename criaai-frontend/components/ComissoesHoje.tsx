@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 
-type Resp = { status: 'ok' | 'conectar' | 'sem_acesso' | 'erro'; valor?: number }
+type Resp = { status: 'ok' | 'conectar' | 'sem_acesso' | 'erro'; valor?: number; pendente?: number; fonte?: string }
 
 function reais(v: number) {
   return 'R$ ' + (v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -33,7 +33,7 @@ export default function ComissoesHoje() {
       {d && d.status === 'conectar' && (
         <Link href="/dashboard/anuncios" className="ch-dica">Conecte o seu Facebook em "Gerenciando seus anúncios" para ver as suas vendas aqui →</Link>
       )}
-      {d && d.status === 'ok' && <div className="ch-dica">Vendas que o Facebook registrou hoje nos seus anúncios</div>}
+      {d && d.status === 'ok' && d.fonte === 'hubla' && <div className="ch-dica">⏳ {reais(d.pendente || 0)} em vendas pendentes</div>}
       {d && d.status === 'erro' && <div className="ch-dica">Não foi possível ler as vendas agora. Tente mais tarde.</div>}
       <style>{`
         .ch-card { position: relative; overflow: hidden; border-radius: 22px; padding: 20px 22px; margin-bottom: 20px; color: #fff;
