@@ -1,6 +1,7 @@
 'use client'
 import RankingCard from '@/components/RankingCard'
 import JornadaMapa from '@/components/JornadaMapa'
+import ComissoesHoje from '@/components/ComissoesHoje'
 import CarrosselResultados from '@/components/CarrosselResultados'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-browser'
@@ -94,6 +95,9 @@ export default function DashboardPage() {
             Aqui esta um resumo da sua conta no MCP.IA
           </div>
         </div>
+
+        {/* COMISSOES DE HOJE: vendas que o Facebook registrou hoje (ordem do Breno) */}
+        <ComissoesHoje />
 
         {/* MAPA DA JORNADA: 3 passos com mapa ilustrado */}
         <JornadaMapa />
