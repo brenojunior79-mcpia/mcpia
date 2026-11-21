@@ -37,12 +37,12 @@ export default function ComissoesHoje() {
       {d && d.status === 'erro' && <div className="ch-dica">Não foi possível ler as vendas agora. Tente mais tarde.</div>}
       <style>{`
         .ch-card { position: relative; overflow: hidden; border-radius: 22px; padding: 20px 22px; margin-bottom: 20px; color: #fff;
-          background: linear-gradient(135deg, #2a1d16 0%, #4a3428 55%, #2a1d16 100%); box-shadow: 0 14px 36px rgba(42,29,22,.28); animation: fadeUp .5s ease both; }
-        .ch-brilho { position: absolute; top: -60px; right: -40px; width: 200px; height: 200px; border-radius: 50%; background: radial-gradient(circle, rgba(249,115,22,.35), transparent 70%); pointer-events: none; }
-        .ch-rotulo { position: relative; font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: #fdba74; margin-bottom: 6px; }
+          background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 55%, #4c1d95 100%); box-shadow: 0 14px 36px rgba(124,58,237,.30); animation: fadeUp .5s ease both; }
+        .ch-brilho { position: absolute; top: -60px; right: -40px; width: 200px; height: 200px; border-radius: 50%; background: radial-gradient(circle, rgba(196,181,253,.45), transparent 70%); pointer-events: none; }
+        .ch-rotulo { position: relative; font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: #ddd6fe; margin-bottom: 6px; }
         .ch-valor { position: relative; font-family: Syne, sans-serif; font-size: 38px; font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; }
         .ch-dica { position: relative; display: block; margin-top: 8px; font-size: 13px; color: rgba(255,255,255,.75); text-decoration: none; line-height: 1.45; }
-        a.ch-dica { color: #fdba74; font-weight: 700; }
+        a.ch-dica { color: #fff; text-decoration: underline; font-weight: 700; }
       `}</style>
     </div>
   )
