@@ -29,8 +29,10 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
   const videosUsed = profile?.credits_videos_used || 0
   const videosExtra = profile?.credits_videos_extra || 0
   const ebooksUsed = profile?.credits_ebooks_used || 0
-  const videosLimit = plan?.is_unlimited ? 999 : ((plan?.credits_videos || 0) + videosExtra)
-  const ebooksLimit = plan?.is_unlimited ? 999 : ((plan?.credits_ebooks || 0) + (profile?.credits_ebooks_extra || 0))
+  // So conta os creditos do plano quando a assinatura esta ativa (antes mostrava creditos de plano cancelado e o gerador pedia plano)
+  const planoAtivoMenu = profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing'
+  const videosLimit = planoAtivoMenu && plan?.is_unlimited ? 999 : ((planoAtivoMenu ? (plan?.credits_videos || 0) : 0) + videosExtra)
+  const ebooksLimit = planoAtivoMenu && plan?.is_unlimited ? 999 : ((planoAtivoMenu ? (plan?.credits_ebooks || 0) : 0) + (profile?.credits_ebooks_extra || 0))
   const creditPct = plan?.is_unlimited ? 50 : (videosLimit ? Math.round((videosUsed / videosLimit) * 100) : 0)
   const [mobileOpen, setMobileOpen] = useState(false)
   // Menu "Notificacoes" (agrupa os envios). Abre/fecha com a setinha.
@@ -219,7 +221,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
             </div>
             {(profile?.email || user?.email) && <div className={styles.logoUserEmail} title={profile?.email || user?.email}>{profile?.email || user?.email}</div>}
             <div className={styles.logoUserCredits} style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-              {!hidePlans && <span>{plan?.is_unlimited ? '∞' : videosRestantes} Créditos</span>}
+              {!hidePlans && <span>{planoAtivoMenu && plan?.is_unlimited ? '∞' : videosRestantes} Créditos</span>}
               <button
                 onClick={toggleTheme}
                 title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
@@ -341,7 +343,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
               <div className={styles.userName}>{profile?.full_name || 'Usuario'}</div>
               {fotoErro && <div style={{ fontSize: 10.5, color: '#dc2626', lineHeight: 1.2 }}>{fotoErro}</div>}
               {!hidePlans && <div className={styles.userPlan}>{plan?.name || 'Starter'}</div>}
-              {!hidePlans && <div className={styles.userCredits}>{plan?.is_unlimited ? '∞' : videosRestantes} Créditos</div>}
+              {!hidePlans && <div className={styles.userCredits}>{planoAtivoMenu && plan?.is_unlimited ? '∞' : videosRestantes} Créditos</div>}
             </div>
             <button className={styles.logoutBtn} onClick={logout} title="Sair">
               <i className="ti ti-logout" />
