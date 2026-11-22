@@ -1,7 +1,7 @@
 // Disparo em massa: quem recebe, e como o numero e' ajustado para o WhatsApp
 import { adminClient } from '@/lib/whatsapp'
 
-export type Segmento = 'todos' | 'plano' | 'sem_plano' | 'sem_plano_250' | 'sem_express' | 'contatos'
+export type Segmento = 'todos' | 'plano' | 'sem_plano' | 'sem_plano_250' | 'sem_express' | 'contatos' | 'base'
 export const TAMANHO_LOTE = 250
 export const SEGMENTOS: { k: Segmento; nome: string }[] = [
   { k: 'todos', nome: 'Todos os alunos' },
@@ -10,6 +10,7 @@ export const SEGMENTOS: { k: Segmento; nome: string }[] = [
   { k: 'sem_plano_250', nome: 'Sem plano: próximos 250 que ainda não receberam este modelo' },
   { k: 'sem_express', nome: 'Só quem não tem a Estrutura Express' },
   { k: 'contatos', nome: 'Contatos importados (que não são alunos)' },
+  { k: 'base', nome: 'Contatos: toda a base (alunos, conversas e compradores)' },
 ]
 
 // Devolve o numero no formato do WhatsApp (55 + DDD + numero) ou null se nao der para usar
@@ -34,7 +35,7 @@ export function primeiroNome(nome: any): string {
   return n.charAt(0).toUpperCase() + n.slice(1).toLowerCase()
 }
 
-export type Aluno = { id: string | null; nome: string; wa: string; plano: boolean; express?: boolean }
+export type Aluno = { id: string | null; nome: string; wa: string; plano: boolean; express?: boolean; origem?: string }
 export type Publico = {
   total: number          // alunos cadastrados (sem administradores)
   semNumero: number      // sem WhatsApp salvo ou numero invalido
@@ -45,6 +46,7 @@ export type Publico = {
   podem: number          // numeros unicos que recebem em "Todos"
   contatos: number       // contatos importados que nao sao alunos
   semExpress: number     // alunos que NAO tem a Estrutura Express
+  base: number           // toda a base: alunos + conversas do WhatsApp + compradores (Hubla, Cakto, Kiwify, Greenn...) + importados
   restantes: number      // sem plano que ainda NAO receberam o modelo escolhido (so quando o modelo e informado)
   lote: number           // quantos entram no proximo lote de 250
   lista: Aluno[]         // quem recebe, ja filtrado pelo segmento
@@ -87,11 +89,12 @@ export async function montarPublico(seg: Segmento, template?: string): Promise<P
   }
   let semNumero = 0, reembolsados = 0, repetidos = 0
   const vistos = new Set<string>()
+  const reembolsoNum = new Set<string>()
   const todos: Aluno[] = []
   for (const x of alunos) {
     const wa = normalizarNumero(x.whatsapp)
     if (!wa) { semNumero++; continue }
-    if (x.refunded_at && !(x.subscription_status === 'active' || x.subscription_status === 'trialing')) { reembolsados++; vistos.add(wa); continue }
+    if (x.refunded_at && !(x.subscription_status === 'active' || x.subscription_status === 'trialing')) { reembolsados++; vistos.add(wa); reembolsoNum.add(wa); continue }
     if (vistos.has(wa)) { repetidos++; continue }
     vistos.add(wa)
     todos.push({ id: x.id, nome: primeiroNome(x.full_name), wa, plano: x.subscription_status === 'active' || x.subscription_status === 'trialing', express: temExpress(x) })
@@ -110,6 +113,32 @@ export async function montarPublico(seg: Segmento, template?: string): Promise<P
     if (!r.data || r.data.length < 1000) break
   }
   const comPlano = todos.filter(function(a) { return a.plano }).length
+  // Toda a base (aba Contatos): so monta quando pedida, porque le varias tabelas
+  const baseLista: Aluno[] = []
+  if (seg === 'base' || seg === 'todos') {
+    const ja = new Set<string>()
+    const por = function(a: Aluno, origem: string) { if (ja.has(a.wa)) return; ja.add(a.wa); baseLista.push({ ...a, origem: a.origem || origem }) }
+    for (const a of todos) por(a, a.plano ? 'Aluno com plano' : 'Aluno')
+    for (let from = 0; from < 50000; from += 1000) {
+      const r = await admin.from('wa_conversations').select('wa_id, name').order('created_at', { ascending: true }).range(from, from + 999)
+      if (r.error) break
+      for (const c of (r.data || []) as any[]) { const wa = normalizarNumero(c.wa_id); if (wa && !reembolsoNum.has(wa)) por({ id: null, nome: primeiroNome(c.name), wa, plano: false }, 'Conversa no WhatsApp') }
+      if (!r.data || r.data.length < 1000) break
+    }
+    for (let from = 0; from < 50000; from += 1000) {
+      const r = await admin.from('hubla_compras').select('wa, nome_norm, reembolsado').order('paid_at', { ascending: true }).range(from, from + 999)
+      if (r.error) break
+      for (const c of (r.data || []) as any[]) { if (c.reembolsado) continue; const wa = normalizarNumero(c.wa); if (wa && !reembolsoNum.has(wa)) por({ id: null, nome: primeiroNome(c.nome_norm), wa, plano: false }, 'Comprador (Hubla)') }
+      if (!r.data || r.data.length < 1000) break
+    }
+    for (let from = 0; from < 50000; from += 1000) {
+      const r = await admin.from('compras_externas').select('tel, plataformas, reembolsada').range(from, from + 999)
+      if (r.error) break
+      for (const c of (r.data || []) as any[]) { if (c.reembolsada) continue; const wa = normalizarNumero(c.tel); if (wa && !reembolsoNum.has(wa)) por({ id: null, nome: '', wa, plano: false }, 'Comprador (' + (String(c.plataformas || '').trim() || 'relatório de vendas') + ')') }
+      if (!r.data || r.data.length < 1000) break
+    }
+    for (const c of contatos) por(c, 'Contato importado')
+  }
   const semPlanoLista = todos.filter(function(a) { return !a.plano })
   // Quem ja recebeu (ou esta na fila de) este mesmo modelo em disparos anteriores nao entra no proximo lote
   let jaRecebeu = new Set<string>()
@@ -128,8 +157,8 @@ export async function montarPublico(seg: Segmento, template?: string): Promise<P
   const restantesLista = semPlanoLista.filter(function(a) { return !jaRecebeu.has(a.wa.slice(-8)) })
   const lote = restantesLista.slice(0, TAMANHO_LOTE)
   const semExpressLista = todos.filter(function(a) { return !a.express })
-  const lista = seg === 'sem_express' ? semExpressLista : seg === 'contatos' ? contatos : seg === 'plano' ? todos.filter(function(a) { return a.plano }) : seg === 'sem_plano' ? semPlanoLista : seg === 'sem_plano_250' ? lote : todos
-  return { total: alunos.length, semNumero, reembolsados, repetidos, comPlano, semPlano: todos.length - comPlano, podem: todos.length, contatos: contatos.length, semExpress: semExpressLista.length, restantes: restantesLista.length, lote: lote.length, lista }
+  const lista = seg === 'base' ? baseLista : seg === 'sem_express' ? semExpressLista : seg === 'contatos' ? contatos : seg === 'plano' ? todos.filter(function(a) { return a.plano }) : seg === 'sem_plano' ? semPlanoLista : seg === 'sem_plano_250' ? lote : todos
+  return { total: alunos.length, semNumero, reembolsados, repetidos, comPlano, semPlano: todos.length - comPlano, podem: todos.length, contatos: contatos.length, semExpress: semExpressLista.length, base: baseLista.length, restantes: restantesLista.length, lote: lote.length, lista }
 }
 
 // Monta o corpo do modelo: cada variavel pode ser o primeiro nome do aluno ou um texto fixo

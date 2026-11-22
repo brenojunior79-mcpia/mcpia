@@ -2,7 +2,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { renderTpl, type Tpl } from './Modelos'
 
-type Publico = { restantes?: number; lote?: number; total: number; podem: number; comPlano: number; semPlano: number; semNumero: number; contatos: number; semExpress?: number; reembolsados: number; repetidos: number }
+type Publico = { restantes?: number; lote?: number; total: number; podem: number; comPlano: number; semPlano: number; semNumero: number; contatos: number; semExpress?: number; base?: number; reembolsados: number; repetidos: number }
 type Cont = Record<string, number>
 type Camp = { id: string; created_at: string; template_name: string; preview: string | null; segment: string; status: string; pause_reason: string | null; total: number; contagem: Cont; detalhe?: Detalhe | null }
 type Detalhe = { responderam: number; erros: { erro: string; qtd: number }[]; falhas: { nome: string | null; wa: string; erro: string | null }[] }
@@ -15,7 +15,7 @@ const h1: React.CSSProperties = { fontFamily: 'Syne, sans-serif', fontSize: 18, 
 const h3: React.CSSProperties = { fontWeight: 800, fontSize: 15, color: 'var(--text)', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }
 const tab: React.CSSProperties = { fontVariantNumeric: 'tabular-nums' }
 const lab: React.CSSProperties = { fontSize: 12.5, fontWeight: 700, color: 'var(--text)', marginBottom: 4, display: 'block' }
-const SEG_NOME: Record<string, string> = { todos: 'Todos os alunos', plano: 'Alunos com plano', sem_plano: 'Alunos sem plano', sem_express: 'Alunos sem a Estrutura Express', sem_plano_250: 'Sem plano · lote de 250', contatos: 'Contatos importados', teste: 'Teste' }
+const SEG_NOME: Record<string, string> = { todos: 'Todos os alunos', plano: 'Alunos com plano', sem_plano: 'Alunos sem plano', sem_express: 'Alunos sem a Estrutura Express', base: 'Contatos (toda a base)', sem_plano_250: 'Sem plano · lote de 250', contatos: 'Contatos importados', teste: 'Teste' }
 
 function enviadas(c: Cont) { return (c.sent || 0) + (c.delivered || 0) + (c.read || 0) }
 function faltam(c: Cont) { return (c.pending || 0) + (c.sending || 0) }
@@ -311,6 +311,7 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
                   ['Sem WhatsApp válido', pub.semNumero, '#b45309'],
                   ['Reembolsados (ficam de fora)', pub.reembolsados, '#b45309'],
                   ['Contatos importados (não alunos)', pub.contatos, 'var(--text)'],
+                  ['Contatos (toda a base)', pub.base || 0, '#7c3aed'],
                 ] as const).map(function(x) {
                   return <div key={x[0]} style={{ flex: '1 1 150px', background: 'var(--surface2)', borderRadius: 10, padding: '8px 10px' }}><div style={{ fontSize: 20, fontWeight: 800, color: x[2], ...tab }}>{num(x[1])}</div><div style={{ fontSize: 12, color: 'var(--muted2)' }}>{x[0]}</div></div>
                 })}
@@ -353,8 +354,10 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
             <option value="sem_plano">Só quem não tem plano ({num(pub?.semPlano)})</option>
             <option value="sem_plano_250">Sem plano · próximos 250 que ainda não receberam este modelo ({t ? num(pub?.lote) + ' agora, restam ' + num(pub?.restantes) : 'escolha o modelo'})</option>
             <option value="sem_express">Só quem não tem a Estrutura Express ({num(pub?.semExpress)})</option>
+            <option value="base">Contatos: toda a base, alunos, conversas e compradores ({num(pub?.base)})</option>
             <option value="contatos">Contatos importados que não são alunos ({num(pub?.contatos)})</option>
           </select>
+          <a className="at-b" href={'/api/whatsapp/broadcast?view=exportar&seg=' + encodeURIComponent(seg)} download style={{ marginBottom: 12, display: 'inline-flex', textDecoration: 'none' }}><i className="ti ti-download" />Exportar contatos desta lista (CSV)</a>
 
           <label style={lab}>2. Modelo de mensagem</label>
           {tpls && aprovados.length === 0 && <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start', fontSize: 13, color: 'var(--muted2)', marginBottom: 8 }}><i className="ti ti-info-circle" style={{ fontSize: 15, marginTop: 1 }} />Nenhum modelo aprovado ainda. Crie um na aba Modelos e espere a aprovação da Meta.</div>}

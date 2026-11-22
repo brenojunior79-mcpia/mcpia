@@ -14,7 +14,7 @@ function maxVar(text: string): number {
 }
 
 function segmento(v: any): Segmento {
-  return v === 'plano' || v === 'sem_plano' || v === 'sem_plano_250' || v === 'sem_express' || v === 'contatos' ? v : 'todos'
+  return v === 'plano' || v === 'sem_plano' || v === 'sem_plano_250' || v === 'sem_express' || v === 'contatos' || v === 'base' ? v : 'todos'
 }
 
 function lerParams(v: any): ParamCfg[] {
@@ -53,7 +53,17 @@ export async function GET(req: NextRequest) {
   if (view === 'publico') {
     try {
       const p = await montarPublico('todos', req.nextUrl.searchParams.get('template') || undefined)
-      return NextResponse.json({ restantes: p.restantes, lote: p.lote, total: p.total, podem: p.podem, comPlano: p.comPlano, semPlano: p.semPlano, semExpress: p.semExpress, semNumero: p.semNumero, contatos: p.contatos, reembolsados: p.reembolsados, repetidos: p.repetidos })
+      return NextResponse.json({ restantes: p.restantes, lote: p.lote, total: p.total, podem: p.podem, comPlano: p.comPlano, semPlano: p.semPlano, semExpress: p.semExpress, base: p.base, semNumero: p.semNumero, contatos: p.contatos, reembolsados: p.reembolsados, repetidos: p.repetidos })
+    } catch (e: any) { return NextResponse.json({ error: e?.message || 'Erro.' }, { status: 500 }) }
+  }
+  // Exportar a lista de um publico (CSV com nome, WhatsApp e origem)
+  if (view === 'exportar') {
+    try {
+      const seg = segmento(req.nextUrl.searchParams.get('seg'))
+      const p = await montarPublico(seg)
+      const esc = function(v: any) { const t = String(v == null ? '' : v); return /[;"\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t }
+      const linhas = ['Nome;WhatsApp;Origem'].concat(p.lista.map(function(a) { return [esc(a.nome), esc(a.wa), esc(a.origem || (a.plano ? 'Aluno com plano' : 'Aluno'))].join(';') }))
+      return new NextResponse('\ufeff' + linhas.join('\n'), { headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="contatos-' + seg + '.csv"', 'Cache-Control': 'no-store' } })
     } catch (e: any) { return NextResponse.json({ error: e?.message || 'Erro.' }, { status: 500 }) }
   }
   if (view === 'campanha') {
