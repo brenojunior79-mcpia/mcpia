@@ -1,0 +1,380 @@
+[
+  {
+    "slug": "fit-house",
+    "nome": "Fit House",
+    "pasta": "https://drive.google.com/drive/folders/1UujUGhNcxob24NEvKj_MJLNkb9G7QiDk",
+    "capa": "/express/capas/fit-house.jpg",
+    "nicho": "Saúde",
+    "itens": [
+      {
+        "titulo": "Produto",
+        "link": "https://drive.google.com/drive/folders/19h64Zzf16SBUEs8bauyuKiIuMEQRrIW_",
+        "arquivos": 1,
+        "tipo": "produto"
+      },
+      {
+        "titulo": "Pagina de Vendas",
+        "link": "https://drive.google.com/drive/folders/1FyAa2g_vptpvqf1SSw7kkLlKGoubptk7",
+        "arquivos": 1,
+        "tipo": "pagina"
+      },
+      {
+        "titulo": "Criativos",
+        "link": "https://drive.google.com/drive/folders/1XqPruTC7cfWkfOWOTC-BHWCTDT0fAyNq",
+        "arquivos": 3,
+        "tipo": "criativos"
+      }
+    ],
+    "totalArquivos": 5,
+    "temVideo": false
+  },
+  {
+    "slug": "abc-facil",
+    "nome": "ABC Fácil",
+    "pasta": "https://drive.google.com/drive/folders/1Pz5e0KQNSCNXURiqMAh4jrdbUGJIzJ-4",
+    "capa": "/express/capas/abc-facil.jpg",
+    "nicho": "Educação",
+    "itens": [
+      {
+        "titulo": "Produto",
+        "link": "https://drive.google.com/drive/folders/1Xs9weumqswOo-ldkVsZhhB8MFPgqngEt",
+        "arquivos": 7,
+        "tipo": "produto"
+      },
+      {
+        "titulo": "Pagina de Vendas",
+        "link": "https://drive.google.com/drive/folders/1j-wvQU6erKdGHLx7jsUG1icUjgf9CrJR",
+        "arquivos": 1,
+        "tipo": "pagina"
+      },
+      {
+        "titulo": "Criativos",
+        "link": "https://drive.google.com/drive/folders/1awvBvm0SSSbaxHN92YWQ4rcdkQib9UsS",
+        "arquivos": 4,
+        "tipo": "criativos"
+      }
+    ],
+    "totalArquivos": 12,
+    "temVideo": true
+  },
+  {
+    "slug": "kit-pedagogico",
+    "nome": "Kit Pedagógico",
+    "pasta": "https://drive.google.com/drive/folders/1_7NVibXDFRRB2VQO83Nt0ICLYMUgGpip",
+    "capa": "/express/capas/kit-pedagogico.jpg",
+    "nicho": "Educação",
+    "itens": [
+      {
+        "titulo": "Produtos",
+        "link": "https://drive.google.com/drive/folders/1gy8r-WDOlHDWqahZFWReVchsXvw4jC69",
+        "arquivos": 4,
+        "tipo": "produto"
+      },
+      {
+        "titulo": "Pagina de Vendas",
+        "link": "https://drive.google.com/drive/folders/1G9ckXqlXtzHnrAo9GKv5riq2dcjv4XGU",
+        "arquivos": 1,
+        "tipo": "pagina"
+      },
+      {
+        "titulo": "Criativos",
+        "link": "https://drive.google.com/drive/folders/1NelDBb1C02P-3SNP8JEAl_7IKwq40OgZ",
+        "arquivos": 4,
+        "tipo": "criativos"
+      }
+    ],
+    "totalArquivos": 9,
+    "temVideo": false
+  },
+  {
+    "slug": "play-kids",
+    "nome": "Play Kids",
+    "pasta": "https://drive.google.com/drive/folders/1r00HeJ7JhH3CtJtT9UG1XUCjDku7hsph",
+    "capa": "/express/capas/play-kids.jpg",
+    "nicho": "Cristão",
+    "itens": [
+      {
+        "titulo": "Produto",
+        "link": "https://drive.google.com/drive/folders/1MNKapsxMswBrBvs86ZBVUY-NjrCeaCgm",
+        "arquivos": 1,
+        "tipo": "produto"
+      },
+      {
+        "titulo": "Pagina de Vendas",
+        "link": "https://drive.google.com/drive/folders/1uODEThV4FL-Qd9KIl2NNYWHkOIaS52D7",
+        "arquivos": 1,
+        "tipo": "pagina"
+      },
+      {
+        "titulo": "Imagens",
+        "link": "https://drive.google.com/drive/folders/1aASwwFOcAFZ38McT2dC3VuceGxMG0WKL",
+        "arquivos": 16,
+        "tipo": "outro"
+      }
+    ],
+    "totalArquivos": 18,
+    "temVideo": false
+  },
+  {
+    "slug": "jogando-e-lendo",
+    "nome": "Jogando e Lendo",
+    "pasta": "https://drive.google.com/drive/folders/12tMlZpvqSJ39CSj7g3c6J31ecDG3QmFg",
+    "capa": "",
+    "nicho": "Educação",
+    "itens": [
+      {
+        "titulo": "Jogo",
+        "link": "https://drive.google.com/drive/folders/1Mtakc3fZF3lCeQv0f7VjlNlYZxtGJG1t",
+        "arquivos": 1,
+        "tipo": "produto"
+      },
+      {
+        "titulo": "Pagina de Vendas",
+        "link": "https://drive.google.com/drive/folders/1Mlk8K64VmJAOlqUhFIsbUDrYfBQ_fQ28",
+        "arquivos": 1,
+        "tipo": "pagina"
+      },
+      {
+        "titulo": "Criativos",
+        "link": "https://drive.google.com/drive/folders/1spdy14Q_P28_YMF9yqaFfCtk5sRHVq05",
+        "arquivos": 1,
+        "tipo": "criativos"
+      }
+    ],
+    "totalArquivos": 3,
+    "temVideo": true
+  },
+  {
+    "slug": "renda-com-caldo",
+    "nome": "Renda com Caldo",
+    "pasta": "https://drive.google.com/drive/folders/1tMzB6nOf2bbOYd3B4Kw3xMr8E_xtnfX8",
+    "capa": "/express/capas/renda-com-caldo.jpg",
+    "nicho": "Renda extra",
+    "itens": [
+      {
+        "titulo": "Produto",
+        "link": "https://drive.google.com/drive/folders/1Tru5V43jC6ljyWh168eSZEaGpcNJkCSk",
+        "arquivos": 1,
+        "tipo": "produto"
+      },
+      {
+        "titulo": "Página de vendas",
+        "link": "https://drive.google.com/drive/folders/1qaBTsXiSoTZYSisbE8INiA16iiyjhiKc",
+        "arquivos": 1,
+        "tipo": "pagina"
+      },
+      {
+        "titulo": "Criativos",
+        "link": "https://drive.google.com/drive/folders/1hLBvm4MZduz6Hf16A2un90bCJ2rImlX-",
+        "arquivos": 5,
+        "tipo": "criativos"
+      },
+      {
+        "titulo": "Imagens",
+        "link": "https://drive.google.com/drive/folders/1_45rrkYqaonw1zVp__S9q4PwCVVmqHnS",
+        "arquivos": 0,
+        "tipo": "outro"
+      }
+    ],
+    "totalArquivos": 7,
+    "temVideo": true
+  },
+  {
+    "slug": "rotina-magica",
+    "nome": "Rotina Mágica",
+    "pasta": "https://drive.google.com/drive/folders/1VSdPjh_XTtlk2TZbmZ3rEpwUL7-os3o-",
+    "capa": "/express/capas/rotina-magica.jpg",
+    "nicho": "Infantil",
+    "itens": [
+      {
+        "titulo": "Produto",
+        "link": "https://drive.google.com/drive/folders/1iJ8RvSZw8lTjycatV3dBqh63bgW9dYw7",
+        "arquivos": 1,
+        "tipo": "produto"
+      },
+      {
+        "titulo": "Pagina",
+        "link": "https://drive.google.com/drive/folders/1na_u3nQEnTneJ8xkzJ2RJgvFCA4hIVTA",
+        "arquivos": 1,
+        "tipo": "pagina"
+      },
+      {
+        "titulo": "Criativos",
+        "link": "https://drive.google.com/drive/folders/1IIKUb46N0UBeb6ffBUHgmPab7heq-hpy",
+        "arquivos": 4,
+        "tipo": "criativos"
+      },
+      {
+        "titulo": "Imagens",
+        "link": "https://drive.google.com/drive/folders/1ZLFPOf9pfKlZxwptNKDL057gjWVvf_aY",
+        "arquivos": 24,
+        "tipo": "outro"
+      }
+    ],
+    "totalArquivos": 30,
+    "temVideo": false
+  },
+  {
+    "slug": "recursos-pedagogicos",
+    "nome": "Recursos Pedagógicos",
+    "pasta": "https://drive.google.com/drive/folders/1f2w7ypjt-VwAkrlEV8uPVAYQyUKqdSUg",
+    "capa": "/express/capas/recursos-pedagogicos.jpg",
+    "nicho": "Educação",
+    "itens": [
+      {
+        "titulo": "Produto",
+        "link": "https://drive.google.com/drive/folders/10pqHhfFTYvGPp-HxjpGcYW9LLgG2hyPh",
+        "arquivos": 4,
+        "tipo": "produto"
+      },
+      {
+        "titulo": "Paginas de Vendas",
+        "link": "https://drive.google.com/drive/folders/1AUh2mFvemTShiD0yJMdW-M3DNn7yfVza",
+        "arquivos": 1,
+        "tipo": "pagina"
+      },
+      {
+        "titulo": "Criativos",
+        "link": "https://drive.google.com/drive/folders/1_84wSAuICfNVd9KQ17B67XyL7XGARMMU",
+        "arquivos": 4,
+        "tipo": "criativos"
+      },
+      {
+        "titulo": "Imagens",
+        "link": "https://drive.google.com/drive/folders/1Jz5EWILgxEz8g3qorJh3UHBc6uExuFEb",
+        "arquivos": 0,
+        "tipo": "outro"
+      }
+    ],
+    "totalArquivos": 9,
+    "temVideo": false
+  },
+  {
+    "slug": "pascoa-lucrativa",
+    "nome": "Páscoa Lucrativa",
+    "pasta": "https://drive.google.com/drive/folders/18zniIgp_f9-EJqwSY_LZbEo_IELrazo6",
+    "capa": "/express/capas/pascoa-lucrativa.jpg",
+    "nicho": "Datas comemorativas",
+    "itens": [
+      {
+        "titulo": "Produto",
+        "link": "https://drive.google.com/drive/folders/15jA9cs69SHrVdSAXG1aD9boRIKQvHYm6",
+        "arquivos": 2,
+        "tipo": "produto"
+      },
+      {
+        "titulo": "Pagina de vendas",
+        "link": "https://drive.google.com/drive/folders/1RD98gg-eJL1bwPZY9LEG3R3-i9sEWggK",
+        "arquivos": 1,
+        "tipo": "pagina"
+      },
+      {
+        "titulo": "Criativos",
+        "link": "https://drive.google.com/drive/folders/15gv8rLPlsumqngzitBO_gE2DtJji6xkX",
+        "arquivos": 5,
+        "tipo": "criativos"
+      },
+      {
+        "titulo": "Imagens",
+        "link": "https://drive.google.com/drive/folders/1affFRN0SOCoQCeZfqIFjyhR-exx1aG6f",
+        "arquivos": 17,
+        "tipo": "outro"
+      }
+    ],
+    "totalArquivos": 25,
+    "temVideo": false
+  },
+  {
+    "slug": "kit-de-festa",
+    "nome": "Kit de Festa",
+    "pasta": "https://drive.google.com/drive/folders/1LjbDiUEOuBk8zHzelJChWL3GtZJ3VzHY",
+    "capa": "/express/capas/kit-de-festa.jpg",
+    "nicho": "Datas comemorativas",
+    "itens": [
+      {
+        "titulo": "Produto",
+        "link": "https://drive.google.com/drive/folders/1NKQ0pRE-6NAi985EFhA5tHASh2HKOS3w",
+        "arquivos": 1,
+        "tipo": "produto"
+      },
+      {
+        "titulo": "Pagina de vendas",
+        "link": "https://drive.google.com/drive/folders/1wgVNjJGfrMR3QnVaCMF4Y3OKfw4Bx5DR",
+        "arquivos": 1,
+        "tipo": "pagina"
+      },
+      {
+        "titulo": "Criativos",
+        "link": "https://drive.google.com/drive/folders/1fg7i8LzVeEobXiEWjO_ItywpQB77ldZa",
+        "arquivos": 4,
+        "tipo": "criativos"
+      },
+      {
+        "titulo": "Imagens",
+        "link": "https://drive.google.com/drive/folders/10n6pvN70cYhhQbFnstC68Q4fmDCzclDT",
+        "arquivos": 32,
+        "tipo": "outro"
+      }
+    ],
+    "totalArquivos": 38,
+    "temVideo": false
+  },
+  {
+    "slug": "protocolo-idoso-ativo",
+    "nome": "Protocolo Idoso Ativo",
+    "pasta": "https://drive.google.com/drive/folders/1EtlXi3BcdSzkpjoz4umOmvNj7js272_2",
+    "capa": "/express/capas/protocolo-idoso-ativo.jpg",
+    "nicho": "Saúde",
+    "itens": [
+      {
+        "titulo": "Produto",
+        "link": "https://drive.google.com/drive/folders/1-3v07sjvawsE8rc0UgkEpxR4mMz77u4c",
+        "arquivos": 2,
+        "tipo": "produto"
+      },
+      {
+        "titulo": "Pagina de vendas",
+        "link": "https://drive.google.com/drive/folders/1Wj-Jsg3ed3EuEGBjABmvA2NziaUXUHvY",
+        "arquivos": 1,
+        "tipo": "pagina"
+      },
+      {
+        "titulo": "Criativos",
+        "link": "https://drive.google.com/drive/folders/1A-IQUMgnOnBKvoYkaQKRg_JJDHb-ke12",
+        "arquivos": 3,
+        "tipo": "criativos"
+      }
+    ],
+    "totalArquivos": 6,
+    "temVideo": false
+  },
+  {
+    "slug": "bobbie-cristao",
+    "nome": "Bobbie Cristão",
+    "pasta": "https://drive.google.com/drive/folders/1i0YgcdMYSdAO7GlV4KGnioIkxlqsu1BJ",
+    "capa": "/express/capas/bobbie-cristao.jpg",
+    "nicho": "Cristão",
+    "itens": [
+      {
+        "titulo": "Produto",
+        "link": "https://drive.google.com/drive/folders/17Zz51tSZf4mh48X3VThl5K1VPTMXlaAa",
+        "arquivos": 2,
+        "tipo": "produto"
+      },
+      {
+        "titulo": "Pagina de Vendas",
+        "link": "https://drive.google.com/drive/folders/1CapF3XvcbKO8Pw5P9jXQO-onNDCUoXoT",
+        "arquivos": 1,
+        "tipo": "pagina"
+      },
+      {
+        "titulo": "Criativos",
+        "link": "https://drive.google.com/drive/folders/1JqIBfJ3jy1R7SVqIy1vy0DG2hMIxXo9q",
+        "arquivos": 5,
+        "tipo": "criativos"
+      }
+    ],
+    "totalArquivos": 8,
+    "temVideo": true
+  }
+]

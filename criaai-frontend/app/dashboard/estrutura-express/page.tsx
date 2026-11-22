@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import BlackFridayExpress from '@/components/BlackFridayExpress'
+import BibliotecaExpress from '@/components/BibliotecaExpress'
 import PlayerVimeo from '@/components/PlayerVimeo'
 
 type Aula = { id: string; ordem: number; titulo: string; descricao: string | null; video_id: string; material_label: string | null; material_url: string | null; material_aviso: string | null }
@@ -364,6 +365,9 @@ export default function EstruturaExpressPage() {
             </div>
           </div>
         )}
+
+        {/* Biblioteca de produtos da Express 2.0, embaixo das aulas */}
+        <BibliotecaExpress />
 
         {podeLiberar && (
           <div className="ee-up" style={{ animationDelay: '0.3s', marginTop: 26, background: 'var(--surface)', border: '1px dashed var(--border2)', borderRadius: 18, padding: '18px 18px' }}>
