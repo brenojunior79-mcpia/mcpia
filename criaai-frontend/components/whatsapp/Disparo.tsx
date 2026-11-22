@@ -163,9 +163,10 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
   const [key, setKey] = useState('')
   const [cfg, setCfg] = useState<Cfg[]>([])
   const [teste, setTeste] = useState('')
-  const [abertura, setAbertura] = useState(ABERTURA_PADRAO)
-  const [novidade, setNovidade] = useState(NOVIDADE_PADRAO)
-  const instrucaoIA = novidade.trim() || abertura.trim() ? JSON.stringify({ abertura: abertura.trim(), novidade: novidade.trim() }) : ''
+  // Mensagens que o Junior manda, em ordem, cada vez que a pessoa responde (ordem do Breno: adicionar, editar e remover)
+  const [passos, setPassos] = useState<string[]>([ABERTURA_PADRAO, NOVIDADE_PADRAO])
+  const passosOk = passos.map(function(x) { return x.trim() }).filter(Boolean)
+  const instrucaoIA = passosOk.length ? JSON.stringify({ passos: passosOk }) : ''
   const [msg, setMsg] = useState('')
   const [ok, setOk] = useState('')
   const [ocupado, setOcupado] = useState(false)
@@ -425,11 +426,23 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
 
           {t && (
             <>
-              <label style={lab}>3a. 1ª resposta do Júnior (quando a pessoa responder o disparo)</label>
-              <textarea className="at-input" rows={2} value={abertura} onChange={function(e) { setAbertura(e.target.value) }} style={{ width: '100%', resize: 'vertical', marginBottom: 8 }} />
-              <label style={lab}>3b. Depois que ela responder a 1ª, o Júnior manda a novidade</label>
-              <textarea className="at-input" rows={4} value={novidade} onChange={function(e) { setNovidade(e.target.value) }} style={{ width: '100%', resize: 'vertical', marginBottom: 4 }} />
-              <div style={{ fontSize: 12, color: 'var(--muted2)', lineHeight: 1.5, marginBottom: 14 }}>Vale só para quem receber ESTE disparo (por 4 dias). Passo 1: a pessoa responde o disparo (oi, estou) e o Júnior manda a 1ª resposta. Passo 2: ela responde e o Júnior manda a novidade. Depois ele conduz: se ela não tiver plano, oferece o Pro de R$ 49,90 e, após o pagamento, orienta a integrar o Facebook. Quem não recebeu o disparo continua normal. Deixe os dois campos vazios para o Júnior não fazer nada especial.</div>
+              <label style={lab}>3. Respostas do Júnior quando a pessoa responder o disparo</label>
+              {passos.map(function(txt, n) {
+                return (
+                  <div key={n} style={{ border: '1px solid var(--border)', borderRadius: 12, padding: 10, marginBottom: 8, background: 'var(--surface2)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+                      <span style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text)' }}>Mensagem {n + 1} <span style={{ fontWeight: 500, color: 'var(--muted2)' }}>· {n === 0 ? 'quando ela responder o disparo' : 'quando ela responder a mensagem ' + n}</span></span>
+                      <span style={{ display: 'flex', gap: 4 }}>
+                        {n > 0 && <button type="button" className="at-b" title="Subir" onClick={function() { const c = passos.slice(); const x = c[n - 1]; c[n - 1] = c[n]; c[n] = x; setPassos(c) }} style={{ padding: '4px 8px' }}><i className="ti ti-arrow-up" /></button>}
+                        <button type="button" className="at-b" title="Remover mensagem" onClick={function() { setPassos(passos.filter(function(_x, m) { return m !== n })) }} style={{ padding: '4px 8px', color: '#dc2626' }}><i className="ti ti-trash" /></button>
+                      </span>
+                    </div>
+                    <textarea className="at-input" rows={3} value={txt} placeholder="Escreva a mensagem..." onChange={function(e) { const c = passos.slice(); c[n] = e.target.value; setPassos(c) }} style={{ width: '100%', resize: 'vertical' }} />
+                  </div>
+                )
+              })}
+              <button type="button" className="at-b" onClick={function() { setPassos(passos.concat('')) }} style={{ marginBottom: 8 }}><i className="ti ti-plus" />Adicionar mensagem</button>
+              <div style={{ fontSize: 12, color: 'var(--muted2)', lineHeight: 1.5, marginBottom: 14 }}>Vale só para quem receber ESTE disparo (por 4 dias). Cada vez que a pessoa responde, o Júnior manda a próxima mensagem da lista, na ordem. Depois da última, ele conduz a conversa normalmente. Para o Júnior não fazer nada especial, remova todas as mensagens. Use {'{nome}'} para colocar o primeiro nome da pessoa.</div>
               <label style={lab}>4. Teste primeiro (recomendado)</label>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
                 <input className="at-input" placeholder="Seu WhatsApp com DDD, ex: 37 99999-9999" value={teste} onChange={function(e) { setTeste(e.target.value) }} style={{ flex: '1 1 220px', width: 'auto', minWidth: 0 }} />

@@ -693,25 +693,39 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
           }
           if (podeFalar) {
             // A instrucao tem dois passos: abertura (como ela esta indo) e novidade. Instrucao antiga (so um texto) = so a novidade.
-            let abertura = ''
-            let novidade = String(b0.instrucao_ia).trim()
-            try { const j = JSON.parse(novidade); if (j && typeof j === 'object') { abertura = String(j.abertura || '').trim(); novidade = String(j.novidade || '').trim() } } catch (e) { /* texto simples */ }
+            // Formatos: { passos: [...] } (lista de mensagens em ordem), { abertura, novidade } (antigo) ou texto simples (so a novidade)
+            let passos: string[] = []
+            const bruto = String(b0.instrucao_ia).trim()
+            try {
+              const j = JSON.parse(bruto)
+              if (j && Array.isArray(j.passos)) passos = j.passos.map(function(x: any) { return String(x || '').trim() }).filter(Boolean)
+              else if (j && typeof j === 'object') passos = [String(j.abertura || '').trim(), String(j.novidade || '').trim()].filter(Boolean)
+            } catch (e) { passos = bruto ? [bruto] : [] }
+            const abertura = passos.length > 1 ? passos[0] : ''
+            let novidade = passos.length > 1 ? passos[passos.length - 1] : (passos[0] || '')
             const desdeODisparo = linhas.filter(function(m: any) { return new Date(m.created_at).getTime() >= new Date(r0.sent_at).getTime() - 5000 })
             const jaDisse = function(txt: string) { const k = chaveDisparo(txt); return !!k && desdeODisparo.some(function(m: any) { return m.direction === 'out' && m.type === 'text' && normalizarDisparo(String(m.body || '')).indexOf(k) >= 0 }) }
-            const jaContou = !novidade || jaDisse(novidade)
-            const jaAbriu = !abertura || jaDisse(abertura)
+            // Proxima mensagem da lista que ainda nao foi mandada (a primeira so vale se a conversa nao estava rolando antes)
+            let proxima = -1
+            for (let k = 0; k < passos.length; k++) { if (!jaDisse(passos[k])) { proxima = k; break } }
+            const jaContou = proxima < 0
+            const jaAbriu = proxima !== 0 || passos.length === 1 // com uma mensagem so, ela e a novidade (vem depois do acolhimento)
             // Conversa que ja estava rolando ANTES do disparo: pula a abertura
             const antes = linhas.filter(function(m: any) { return m.type !== 'system' && new Date(m.created_at).getTime() >= new Date(r0.sent_at).getTime() - 12 * 3600000 && new Date(m.created_at).getTime() < new Date(r0.sent_at).getTime() }).length
             const emAndamento = antes > 0 && b0.segment !== 'teste' // o teste do formulario sempre mostra o passo a passo limpo
             const cabeca = 'DISPARO QUE ESTA PESSOA RECEBEU (REGRA DO BRENO, PRIORIDADE MAXIMA): ela recebeu uma mensagem em massa ("' + String(b0.preview || '').replace(/\s+/g, ' ').slice(0, 200) + '") e esta respondendo a ela. A resposta pode ser qualquer coisa (oi, estou, sim, quem e).\n'
             if (jaContou) {
-              instrucaoDisparo = cabeca + 'Voce JA contou a novidade nesta conversa; NAO repita. Siga a conversa respondendo o que ela disse, com as regras de plano e integracao deste prompt (se ela nao sabia, explique com carinho; se nao tem plano, guie para o plano Pro; so mande o link do plano Pro depois que ela disser que quer; depois do pagamento, oriente a integrar o Facebook).' + (novidade ? '\nNOVIDADE QUE VOCE JA CONTOU: ' + novidade : '')
+              instrucaoDisparo = cabeca + 'Voce JA mandou todas as mensagens deste disparo nesta conversa; NAO repita nenhuma. Siga a conversa respondendo o que ela disse, com as regras de plano e integracao deste prompt (se ela nao sabia, explique com carinho; se nao tem plano, guie para o plano Pro; so mande o link do plano Pro depois que ela disser que quer; depois do pagamento, oriente a integrar o Facebook).' + (passos.length ? '\nMENSAGENS QUE VOCE JA MANDOU: ' + passos.join(' | ') : '')
             } else if (!jaAbriu && !emAndamento) {
               etapaDisparo = 'abrir'; textoAbertura = abertura
-              instrucaoDisparo = cabeca + 'PASSO 1 DE 2: sua PRIMEIRA resposta desta conversa deve ser EXATAMENTE a mensagem abaixo, sem mudar o sentido e sem acrescentar outro assunto, MESMO que a pessoa tenha escrito outra coisa. A novidade so vem DEPOIS que ela responder a esta mensagem.\nMENSAGEM EXATA: ' + abertura
+              instrucaoDisparo = cabeca + 'PASSO 1 DE ' + passos.length + ': sua PRIMEIRA resposta desta conversa deve ser EXATAMENTE a mensagem abaixo, sem mudar o sentido e sem acrescentar outro assunto, MESMO que a pessoa tenha escrito outra coisa. A proxima mensagem so vem DEPOIS que ela responder a esta.\nMENSAGEM EXATA: ' + abertura
             } else {
+              let alvo = proxima
+              if (alvo === 0 && passos.length > 1) { alvo = -1; for (let k = 1; k < passos.length; k++) { if (!jaDisse(passos[k])) { alvo = k; break } } }
+              if (alvo < 0) alvo = passos.length - 1
+              novidade = passos[alvo]
               etapaDisparo = 'novidade'; textoNovidade = novidade
-              instrucaoDisparo = cabeca + 'PASSO 2 DE 2: agora que ela respondeu, acolha em UMA frase curta o que ela disse (sem fazer outra pergunta) e em seguida conte a novidade com estas palavras: ' + novidade + '\nSe ela vier com um problema (acesso, pagamento, duvida), resolva primeiro e coloque a novidade no fim.'
+              instrucaoDisparo = cabeca + 'PASSO ' + (alvo + 1) + ' DE ' + passos.length + ': agora que ela respondeu, acolha em UMA frase curta o que ela disse (sem fazer outra pergunta) e em seguida conte a novidade com estas palavras: ' + novidade + '\nSe ela vier com um problema (acesso, pagamento, duvida), resolva primeiro e coloque a novidade no fim.'
             }
           }
         }
