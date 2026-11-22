@@ -1276,6 +1276,16 @@ export default function AtendimentoPage() {
                         })()}
                         <Midia m={m} onFoto={setFoto} />
                         {m.type !== 'audio' && m.body && <div><Texto t={m.body} /></div>}
+                        {m.type === 'template' && m.template && m.template.name && (function() {
+                          // O botão do modelo não vem na mensagem salva: busca na lista de modelos e mostra igual ao WhatsApp
+                          const mt = (tplsDaConversa || []).find(function(x) { return x.name === m.template!.name })
+                          if (!mt || !mt.buttons || mt.buttons.length === 0) return null
+                          return (
+                            <div style={{ marginTop: 6, borderTop: '1px solid rgba(0,0,0,0.12)' }}>
+                              {mt.buttons.map(function(bt, k) { return <div key={k} style={{ textAlign: 'center', padding: '8px 4px', fontWeight: 700, fontSize: 14, color: '#0b6fb8', borderTop: k > 0 ? '1px solid rgba(0,0,0,0.08)' : 'none' }}><i className="ti ti-external-link" style={{ marginRight: 6 }} />{bt}</div> })}
+                            </div>
+                          )
+                        })()}
                         {m.type !== 'audio' && acharLinks(m.body).map(function(u) { return <LinkPrev key={u} url={u} /> })}
                         {!m.media_path && m.type !== 'text' && m.type !== 'template' && !m.body && <div style={{ opacity: 0.7 }}>[{m.type}]</div>}
                         <div style={{ fontSize: 10.5, opacity: 0.65, textAlign: 'right', marginTop: 2 }}>{horaMsg(m.created_at)} {meu && <Tick s={m.status} />}</div>
