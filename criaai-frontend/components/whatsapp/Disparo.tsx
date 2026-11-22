@@ -311,7 +311,6 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
                   ['Sem WhatsApp válido', pub.semNumero, '#b45309'],
                   ['Reembolsados (ficam de fora)', pub.reembolsados, '#b45309'],
                   ['Contatos importados (não alunos)', pub.contatos, 'var(--text)'],
-                  ['Contatos (toda a base)', pub.base || 0, '#7c3aed'],
                 ] as const).map(function(x) {
                   return <div key={x[0]} style={{ flex: '1 1 150px', background: 'var(--surface2)', borderRadius: 10, padding: '8px 10px' }}><div style={{ fontSize: 20, fontWeight: 800, color: x[2], ...tab }}>{num(x[1])}</div><div style={{ fontSize: 12, color: 'var(--muted2)' }}>{x[0]}</div></div>
                 })}

@@ -56,6 +56,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ restantes: p.restantes, lote: p.lote, total: p.total, podem: p.podem, comPlano: p.comPlano, semPlano: p.semPlano, semExpress: p.semExpress, base: p.base, semNumero: p.semNumero, contatos: p.contatos, reembolsados: p.reembolsados, repetidos: p.repetidos })
     } catch (e: any) { return NextResponse.json({ error: e?.message || 'Erro.' }, { status: 500 }) }
   }
+  // Aba Contatos: toda a base em JSON
+  if (view === 'contatos') {
+    try {
+      const p = await montarPublico('base')
+      return NextResponse.json({ contatos: p.lista.map(function(a) { return { nome: a.nome, wa: a.wa, origem: a.origem || (a.plano ? 'Aluno com plano' : 'Aluno') } }) })
+    } catch (e: any) { return NextResponse.json({ error: e?.message || 'Erro.' }, { status: 500 }) }
+  }
   // Exportar a lista de um publico (CSV com nome, WhatsApp e origem)
   if (view === 'exportar') {
     try {
