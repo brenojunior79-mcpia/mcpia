@@ -188,6 +188,9 @@ function NovoModelo({ connection, onClose, onCriado }: { connection: string; onC
   const [cab, setCab] = useState('')
   const [corpo, setCorpo] = useState('')
   const [rod, setRod] = useState('')
+  const [comBotao, setComBotao] = useState(false)
+  const [btnTxt, setBtnTxt] = useState('')
+  const [btnUrl, setBtnUrl] = useState('')
   const [ex, setEx] = useState<string[]>([])
   const [msg, setMsg] = useState('')
   const [salvando, setSalvando] = useState(false)
@@ -200,7 +203,7 @@ function NovoModelo({ connection, onClose, onCriado }: { connection: string; onC
     setMsg('')
     setSalvando(true)
     try {
-      const r = await fetch('/api/whatsapp/templates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ connection, name: nome, category: cat, language: lang, header: cab, body: corpo, footer: rod, examples: exemplos }) })
+      const r = await fetch('/api/whatsapp/templates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ connection, name: nome, category: cat, language: lang, header: cab, body: corpo, footer: rod, examples: exemplos, botaoTexto: comBotao ? btnTxt : '', botaoUrl: comBotao ? btnUrl : '' }) })
       const j = await r.json().catch(function() { return {} })
       if (!r.ok) setMsg(j.error || 'Não foi possível criar o modelo.')
       else onCriado()
@@ -262,10 +265,29 @@ function NovoModelo({ connection, onClose, onCriado }: { connection: string; onC
         <label style={lab}>Rodapé (opcional)</label>
         <input className="at-input" value={rod} maxLength={60} placeholder="ex: Plataforma do Cristão Próspero" onChange={function(e) { setRod(e.target.value) }} style={{ marginBottom: 12 }} />
 
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', marginBottom: comBotao ? 8 : 12 }}>
+          <input type="checkbox" checked={comBotao} onChange={function(e) { setComBotao(e.target.checked) }} style={{ width: 16, height: 16 }} />
+          Adicionar botão com link
+        </label>
+        {comBotao && (
+          <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: 12, marginBottom: 12 }}>
+            <label style={lab}>Texto do botão</label>
+            <input className="at-input" value={btnTxt} maxLength={25} placeholder="ex: GARANTIR MINHA VAGA" onChange={function(e) { setBtnTxt(e.target.value) }} style={{ marginBottom: 8 }} />
+            <label style={lab}>Link do botão</label>
+            <input className="at-input" type="url" value={btnUrl} placeholder="https://..." onChange={function(e) { setBtnUrl(e.target.value) }} />
+            <div style={{ fontSize: 11.5, color: 'var(--muted2)', marginTop: 4 }}>Até 25 letras no botão. Ao tocar, a pessoa abre esse link.</div>
+            {btnTxt.trim() && (
+              <div style={{ marginTop: 10, background: '#1f2c34', color: '#53bdeb', borderRadius: 10, padding: '10px 12px', textAlign: 'center', fontWeight: 700, fontSize: 14 }}>
+                <i className="ti ti-external-link" /> {btnTxt.trim()}
+              </div>
+            )}
+          </div>
+        )}
+
         {msg && <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#b91c1c', fontWeight: 700, marginBottom: 10 }}><i className="ti ti-alert-triangle" />{msg}</div>}
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
           <button className="at-b" onClick={onClose}>Cancelar</button>
-          <button className="at-b at-b-ok" onClick={salvar} disabled={salvando || !nome || !corpo.trim()}><i className={'ti ' + (salvando ? 'ti-loader' : 'ti-send')} />{salvando ? 'Enviando…' : 'Enviar para aprovação'}</button>
+          <button className="at-b at-b-ok" onClick={salvar} disabled={salvando || !nome || !corpo.trim() || (comBotao && (!btnTxt.trim() || !/^https?:\/\/\S+\.\S+/.test(btnUrl.trim())))}><i className={'ti ' + (salvando ? 'ti-loader' : 'ti-send')} />{salvando ? 'Enviando…' : 'Enviar para aprovação'}</button>
         </div>
         <div style={{ fontSize: 11.5, color: 'var(--muted2)', marginTop: 10 }}>A Meta analisa o modelo (de minutos a algumas horas). Quando ficar <b>Aprovado</b>, ele aparece para enviar na conversa.</div>
       </div>

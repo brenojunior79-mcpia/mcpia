@@ -84,6 +84,8 @@ export async function POST(req: NextRequest) {
   const header = String(input?.header || '').trim()
   const body = String(input?.body || '').trim()
   const footer = String(input?.footer || '').trim()
+  const botaoTexto = String(input?.botaoTexto || '').trim()
+  const botaoUrl = String(input?.botaoUrl || '').trim()
   const examples: string[] = Array.isArray(input?.examples) ? input.examples.map(function(x: any) { return String(x || '').trim() }) : []
 
   if (!/^[a-z0-9_]{1,100}$/.test(name)) return NextResponse.json({ error: 'O nome so pode ter letras minusculas, numeros e _ (sem espacos).' }, { status: 400 })
@@ -95,6 +97,12 @@ export async function POST(req: NextRequest) {
   if (/\{\{/.test(header)) return NextResponse.json({ error: 'O titulo nao pode ter variaveis.' }, { status: 400 })
   if (footer.length > 60) return NextResponse.json({ error: 'O rodape passa de 60 caracteres.' }, { status: 400 })
   if (/\{\{/.test(footer)) return NextResponse.json({ error: 'O rodape nao pode ter variaveis.' }, { status: 400 })
+
+  if (botaoTexto || botaoUrl) {
+    if (!botaoTexto) return NextResponse.json({ error: 'Escreva o texto do botao.' }, { status: 400 })
+    if (botaoTexto.length > 25) return NextResponse.json({ error: 'O texto do botao passa de 25 letras.' }, { status: 400 })
+    if (!/^https?:\/\/\S+\.\S+$/.test(botaoUrl) || botaoUrl.length > 2000) return NextResponse.json({ error: 'Coloque um link valido no botao (comecando com https://).' }, { status: 400 })
+  }
 
   const n = maxVar(body)
   for (let i = 1; i <= n; i++) {
@@ -109,6 +117,7 @@ export async function POST(req: NextRequest) {
   if (header) components.push({ type: 'HEADER', format: 'TEXT', text: header })
   components.push(n > 0 ? { type: 'BODY', text: body, example: { body_text: [examples.slice(0, n)] } } : { type: 'BODY', text: body })
   if (footer) components.push({ type: 'FOOTER', text: footer })
+  if (botaoTexto && botaoUrl) components.push({ type: 'BUTTONS', buttons: [{ type: 'URL', text: botaoTexto, url: botaoUrl }] })
 
   const r = await graphFetch(waba + '/message_templates', { method: 'POST', json: { name, language, category, components } })
   if (!r.ok) return NextResponse.json({ error: graphError(r.data) }, { status: 400 })
