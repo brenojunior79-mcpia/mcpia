@@ -14,7 +14,7 @@ function maxVar(text: string): number {
 }
 
 function segmento(v: any): Segmento {
-  return v === 'plano' || v === 'sem_plano' || v === 'sem_plano_250' || v === 'contatos' ? v : 'todos'
+  return v === 'plano' || v === 'sem_plano' || v === 'sem_plano_250' || v === 'sem_express' || v === 'contatos' ? v : 'todos'
 }
 
 function lerParams(v: any): ParamCfg[] {
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
   if (view === 'publico') {
     try {
       const p = await montarPublico('todos', req.nextUrl.searchParams.get('template') || undefined)
-      return NextResponse.json({ restantes: p.restantes, lote: p.lote, total: p.total, podem: p.podem, comPlano: p.comPlano, semPlano: p.semPlano, semNumero: p.semNumero, contatos: p.contatos, reembolsados: p.reembolsados, repetidos: p.repetidos })
+      return NextResponse.json({ restantes: p.restantes, lote: p.lote, total: p.total, podem: p.podem, comPlano: p.comPlano, semPlano: p.semPlano, semExpress: p.semExpress, semNumero: p.semNumero, contatos: p.contatos, reembolsados: p.reembolsados, repetidos: p.repetidos })
     } catch (e: any) { return NextResponse.json({ error: e?.message || 'Erro.' }, { status: 500 }) }
   }
   if (view === 'campanha') {
