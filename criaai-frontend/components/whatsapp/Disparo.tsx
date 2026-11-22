@@ -170,6 +170,15 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
   const [ok, setOk] = useState('')
   const [ocupado, setOcupado] = useState(false)
   const [camps, setCamps] = useState<Camp[]>([])
+  // Opcoes de "Quem vai receber" que o Breno removeu da lista (fica guardado neste navegador)
+  const [escondidos, setEscondidos] = useState<string[]>([])
+  useEffect(function() { try { const v = JSON.parse(localStorage.getItem('mcpia_disparo_escondidos') || '[]'); if (Array.isArray(v)) setEscondidos(v) } catch (e) {} }, [])
+  function esconder(k: string) {
+    const novo = escondidos.indexOf(k) >= 0 ? escondidos : escondidos.concat(k)
+    setEscondidos(novo)
+    try { localStorage.setItem('mcpia_disparo_escondidos', JSON.stringify(novo)) } catch (e) {}
+    if (k === seg) { const ficou = ['todos', 'plano', 'sem_plano', 'sem_plano_250', 'sem_express', 'base', 'contatos'].find(function(x) { return novo.indexOf(x) < 0 }); if (ficou) setSeg(ficou) }
+  }
   const [rodando, setRodando] = useState(false)
   const [imp, setImp] = useState('')
   const rodRef = useRef(false)
@@ -347,15 +356,33 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
           <h3 style={{ ...h3, marginBottom: 14 }}><i className="ti ti-speakerphone" style={{ color: '#15803d' }} />Novo disparo</h3>
 
           <label style={lab}>1. Quem vai receber</label>
-          <select className="at-input" value={seg} onChange={function(e) { setSeg(e.target.value); setOk('') }} style={{ marginBottom: 12 }}>
-            <option value="todos">Todos os alunos ({num(pub?.podem)})</option>
-            <option value="plano">Só quem tem plano ativo ({num(pub?.comPlano)})</option>
-            <option value="sem_plano">Só quem não tem plano ({num(pub?.semPlano)})</option>
-            <option value="sem_plano_250">Sem plano · próximos 250 que ainda não receberam este modelo ({t ? num(pub?.lote) + ' agora, restam ' + num(pub?.restantes) : 'escolha o modelo'})</option>
-            <option value="sem_express">Só quem não tem a Estrutura Express ({num(pub?.semExpress)})</option>
-            <option value="base">Contatos: toda a base, alunos, conversas e compradores ({num(pub?.base)})</option>
-            <option value="contatos">Contatos importados que não são alunos ({num(pub?.contatos)})</option>
-          </select>
+          {(function() {
+            const opcoes: [string, string][] = [
+              ['todos', 'Todos os alunos (' + num(pub?.podem) + ')'],
+              ['plano', 'Só quem tem plano ativo (' + num(pub?.comPlano) + ')'],
+              ['sem_plano', 'Só quem não tem plano (' + num(pub?.semPlano) + ')'],
+              ['sem_plano_250', 'Sem plano · próximos 250 que ainda não receberam este modelo (' + (t ? num(pub?.lote) + ' agora, restam ' + num(pub?.restantes) : 'escolha o modelo') + ')'],
+              ['sem_express', 'Só quem não tem a Estrutura Express (' + num(pub?.semExpress) + ')'],
+              ['base', 'Contatos: toda a base, alunos, conversas e compradores (' + num(pub?.base) + ')'],
+              ['contatos', 'Contatos importados que não são alunos (' + num(pub?.contatos) + ')'],
+            ]
+            const visiveis = opcoes.filter(function(o) { return escondidos.indexOf(o[0]) < 0 || o[0] === seg })
+            return (
+              <div style={{ border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', marginBottom: 8 }}>
+                {visiveis.map(function(o) {
+                  const on = o[0] === seg
+                  return (
+                    <div key={o[0]} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderTop: '1px solid var(--border)', background: on ? 'rgba(22,163,74,.08)' : 'transparent', cursor: 'pointer' }} onClick={function() { setSeg(o[0]); setOk('') }}>
+                      <span style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid ' + (on ? '#16a34a' : 'var(--border)'), background: on ? 'radial-gradient(circle, #16a34a 45%, transparent 50%)' : 'transparent', flexShrink: 0 }} />
+                      <span style={{ flex: 1, fontSize: 13.5, fontWeight: on ? 700 : 500, color: 'var(--text)' }}>{o[1]}</span>
+                      <button type="button" title="Remover esta opção da lista" aria-label={'Remover ' + o[1]} onClick={function(e) { e.stopPropagation(); esconder(o[0]) }} style={{ border: 0, background: 'transparent', color: '#dc2626', fontWeight: 800, fontSize: 15, cursor: 'pointer', padding: '0 4px' }}>✕</button>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })()}
+          {escondidos.length > 0 && <button type="button" className="at-b" onClick={function() { setEscondidos([]); try { localStorage.removeItem('mcpia_disparo_escondidos') } catch (e) {} }} style={{ marginBottom: 10 }}><i className="ti ti-eye" />Mostrar opções removidas ({escondidos.length})</button>}
           <a className="at-b" href={'/api/whatsapp/broadcast?view=exportar&seg=' + encodeURIComponent(seg)} download style={{ marginBottom: 12, display: 'inline-flex', textDecoration: 'none' }}><i className="ti ti-download" />Exportar contatos desta lista (CSV)</a>
 
           <label style={lab}>2. Modelo de mensagem</label>
