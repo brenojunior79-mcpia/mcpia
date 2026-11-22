@@ -396,6 +396,10 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
             <option value="">{tpls ? 'Escolha um modelo aprovado…' : 'Carregando modelos…'}</option>
             {aprovados.map(function(x) { return <option key={x.name + x.language} value={x.name + '|' + x.language} disabled={!semMidia(x)}>{x.name} ({x.category === 'MARKETING' ? 'marketing' : 'utilidade'}){!semMidia(x) ? ' — com mídia, não suportado' : ''}</option> })}
           </select>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(22,163,74,0.10)', border: '1px solid rgba(22,163,74,0.35)', borderRadius: 10, padding: '8px 10px', fontSize: 13, color: 'var(--text)', marginBottom: 12 }}>
+            <i className="ti ti-brand-whatsapp" style={{ fontSize: 18, color: '#16a34a' }} />
+            <span>Este disparo sai pelo <b>WhatsApp de Suporte</b> (não é o de Recuperação). As respostas caem no chat de Suporte.</span>
+          </div>
 
           {t && t.vars > 0 && (
             <div style={{ marginBottom: 10 }}>

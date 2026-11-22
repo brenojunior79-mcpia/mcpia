@@ -73,6 +73,20 @@ export async function GET(req: NextRequest) {
       return new NextResponse('\ufeff' + linhas.join('\n'), { headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="contatos-' + seg + '.csv"', 'Cache-Control': 'no-store' } })
     } catch (e: any) { return NextResponse.json({ error: e?.message || 'Erro.' }, { status: 500 }) }
   }
+  // Aba Disparos do chat: quem recebeu cada disparo (com o id da conversa, se a pessoa ja tem uma)
+  if (view === 'enviados') {
+    const id = req.nextUrl.searchParams.get('id') || ''
+    const rs = await admin.from('wa_broadcast_recipients').select('wa_id, name, status, sent_at, error').eq('broadcast_id', id).order('sent_at', { ascending: false, nullsFirst: false }).limit(2000)
+    const fim = function(w: string) { return String(w || '').replace(/\D/g, '').slice(-8) }
+    const mapa = new Map<string, string>()
+    for (let de = 0; de < 10000; de += 1000) {
+      const cv = await admin.from('wa_conversations').select('id, wa_id').range(de, de + 999)
+      for (const c of (cv.data || []) as any[]) mapa.set(fim(c.wa_id), c.id)
+      if ((cv.data || []).length < 1000) break
+    }
+    const lista = ((rs.data || []) as any[]).map(function(r) { return { wa_id: r.wa_id, nome: r.name, status: r.status, sent_at: r.sent_at, erro: r.error, conversa: mapa.get(fim(r.wa_id)) || null } })
+    return NextResponse.json({ destinatarios: lista })
+  }
   if (view === 'campanha') {
     const id = req.nextUrl.searchParams.get('id') || ''
     const b = await admin.from('wa_broadcasts').select('*').eq('id', id).maybeSingle()
