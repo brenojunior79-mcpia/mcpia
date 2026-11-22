@@ -12,6 +12,7 @@ import Conexoes from '@/components/whatsapp/Conexoes'
 import Eventos from '@/components/whatsapp/Eventos'
 import Disparo from '@/components/whatsapp/Disparo'
 import DisparosLista from '@/components/whatsapp/DisparosLista'
+import Webhooks from '@/components/whatsapp/Webhooks'
 import Contatos from '@/components/whatsapp/Contatos'
 import EditorImagem from '@/components/whatsapp/EditorImagem'
 import GerenciarRapidas, { type Rapida } from '@/components/whatsapp/GerenciarRapidas'
@@ -216,7 +217,7 @@ export default function AtendimentoPage() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [iaGeral, setIaGeral] = useState(false)
   const [iaAgenda, setIaAgenda] = useState<{ agenda: boolean; inicio: string; fim: string; resumo?: string }>({ agenda: false, inicio: '09:00', fim: '18:00', resumo: '' })
-  const [tab, setTab] = useState<'conversas' | 'atendentes' | 'modelos' | 'disparo' | 'contatos' | 'fluxos' | 'produtos' | 'conhecimento' | 'eventos' | 'conexoes'>('conversas')
+  const [tab, setTab] = useState<'conversas' | 'atendentes' | 'modelos' | 'disparo' | 'contatos' | 'fluxos' | 'produtos' | 'conhecimento' | 'eventos' | 'webhooks' | 'conexoes'>('conversas')
   const [tpls, setTpls] = useState<Tpl[] | null>(null)
   const [disparoAberto, setDisparoAberto] = useState(false)
   const [tplErro, setTplErro] = useState('')
@@ -1016,7 +1017,7 @@ export default function AtendimentoPage() {
 
       {/* Abas */}
       <div className="at-tabs" role="tablist">
-        {([['conversas', 'Conversas', 'messages'], ['modelos', 'Modelos', 'template'], ['disparo', 'Disparo', 'speakerphone'], ['contatos', 'Contatos', 'address-book'], ['fluxos', 'Fluxos', 'bolt'], ['produtos', 'Produtos', 'shopping-cart'], ['conhecimento', 'Base de conhecimento', 'brain'], ['eventos', 'Eventos', 'bell'], ['conexoes', 'Conexões', 'plug-connected']] as const).filter(function(t) { return (t[0] !== 'fluxos' && t[0] !== 'produtos' && t[0] !== 'conhecimento' && t[0] !== 'disparo' && t[0] !== 'contatos' && t[0] !== 'eventos' && t[0] !== 'conexoes') || isAdmin }).map(function(t) {
+        {([['conversas', 'Conversas', 'messages'], ['modelos', 'Modelos', 'template'], ['disparo', 'Disparo', 'speakerphone'], ['contatos', 'Contatos', 'address-book'], ['fluxos', 'Fluxos', 'bolt'], ['produtos', 'Produtos', 'shopping-cart'], ['conhecimento', 'Base de conhecimento', 'brain'], ['eventos', 'Eventos', 'bell'], ['webhooks', 'Webhooks', 'webhook'], ['conexoes', 'Conexões', 'plug-connected']] as const).filter(function(t) { return (t[0] !== 'fluxos' && t[0] !== 'produtos' && t[0] !== 'conhecimento' && t[0] !== 'disparo' && t[0] !== 'contatos' && t[0] !== 'eventos' && t[0] !== 'webhooks' && t[0] !== 'conexoes') || isAdmin }).map(function(t) {
           const on = tab === t[0]
           return <button key={t[0]} role="tab" aria-selected={on} className={'at-tab' + (on ? ' on' : '')} onClick={function() { setTab(t[0]); if (t[0] === 'modelos') carregarTpls(); if (t[0] === 'disparo') setDisparoAberto(true) }}><i className={'ti ti-' + t[2]} />{t[1]}{t[0] === 'conversas' && totalNaoLidas > 0 && <span className="at-n">{totalNaoLidas}</span>}</button>
         })}
@@ -1038,6 +1039,7 @@ export default function AtendimentoPage() {
       {tab === 'conhecimento' && isAdmin && <BaseConhecimento />}
       {tab === 'eventos' && isAdmin && <Eventos onAbrir={abrirDeEvento} />}
       {tab === 'contatos' && isAdmin && <Contatos onVoltar={function() { setTab('conversas') }} />}
+      {tab === 'webhooks' && isAdmin && <Webhooks />}
       {tab === 'conexoes' && isAdmin && <Conexoes />}
 
       <div className="at-wrap" style={tab === 'conversas' ? undefined : { display: 'none' }}>
