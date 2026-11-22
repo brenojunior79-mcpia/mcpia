@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { renderTpl, type Tpl } from './Modelos'
 
 type Publico = { restantes?: number; lote?: number; total: number; podem: number; comPlano: number; semPlano: number; semNumero: number; contatos: number; semExpress?: number; reembolsados: number; repetidos: number }
@@ -89,6 +89,68 @@ function Resultados({ c }: { c: Camp }) {
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+// Circulo de porcentagem (como na tabela de broadcasts)
+function Anel({ v, cor }: { v: number; cor: string }) {
+  const r = 16, c = 2 * Math.PI * r
+  const p = Math.max(0, Math.min(100, Math.round(v)))
+  return (
+    <svg width="40" height="40" viewBox="0 0 40 40" aria-label={p + '%'} style={{ display: 'block', margin: '0 auto' }}>
+      <circle cx="20" cy="20" r={r} fill="none" stroke="var(--border)" strokeWidth="3" />
+      <circle cx="20" cy="20" r={r} fill="none" stroke={cor} strokeWidth="3" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - p / 100)} transform="rotate(-90 20 20)" />
+      <text x="20" y="23.5" textAnchor="middle" fontSize="9.5" fontWeight="800" fill={cor}>{p}%</text>
+    </svg>
+  )
+}
+
+// Tabela "Resultado dos disparos": nome, data, base, enviado, entregue, lido, falha e acoes (detalhes)
+function TabelaDisparos({ camps }: { camps: Camp[] }) {
+  const [aberto, setAberto] = useState<string | null>(null)
+  const th: React.CSSProperties = { padding: '12px 10px', fontSize: 11.5, fontWeight: 700, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '.03em', textAlign: 'left', whiteSpace: 'nowrap' }
+  const td: React.CSSProperties = { padding: '12px 10px', fontSize: 13.5, color: 'var(--text)', borderTop: '1px solid var(--border)', verticalAlign: 'middle' }
+  return (
+    <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 12 }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 760 }}>
+        <thead style={{ background: 'var(--surface2)' }}>
+          <tr>
+            <th style={th}>Nome</th><th style={th}>Enviado</th><th style={th}>Base de contatos</th>
+            <th style={{ ...th, textAlign: 'center' }}>Enviado</th><th style={{ ...th, textAlign: 'center' }}>Entregue</th><th style={{ ...th, textAlign: 'center' }}>Lido</th>
+            <th style={{ ...th, textAlign: 'center' }}>Falha</th><th style={{ ...th, textAlign: 'center' }}>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {camps.map(function(c) {
+            const ct = c.contagem || {}
+            const base = c.total || 0
+            const env = enviadas(ct)
+            const ent = (ct.delivered || 0) + (ct.read || 0)
+            const lid = ct.read || 0
+            const fal = ct.failed || 0
+            const p = function(n: number) { return base > 0 ? (n / base) * 100 : 0 }
+            const open = aberto === c.id
+            return (
+              <Fragment key={c.id}>
+                <tr>
+                  <td style={td}><div style={{ fontWeight: 700, wordBreak: 'break-word' }}>{c.template_name}</div><div style={{ fontSize: 11.5, color: 'var(--muted2)' }}>{SEG_NOME[c.segment] || c.segment}{c.status === 'cancelado' ? ' · cancelado' : ''}</div></td>
+                  <td style={{ ...td, whiteSpace: 'nowrap', ...tab }}>{new Date(c.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+                  <td style={{ ...td, ...tab }}>{num(base)}</td>
+                  <td style={td}><Anel v={p(env)} cor="#16a34a" /></td>
+                  <td style={td}><Anel v={p(ent)} cor="#16a34a" /></td>
+                  <td style={td}><Anel v={p(lid)} cor="#16a34a" /></td>
+                  <td style={{ ...td, textAlign: 'center', fontWeight: 700, color: fal > 0 ? '#dc2626' : 'var(--muted2)', ...tab }}>{Math.round(p(fal))}%</td>
+                  <td style={{ ...td, textAlign: 'center' }}><button type="button" onClick={function() { setAberto(open ? null : c.id) }} aria-expanded={open} title="Ver detalhes" style={{ border: 0, background: 'transparent', cursor: 'pointer', fontSize: 20, color: 'var(--muted2)', padding: '2px 8px', lineHeight: 1 }}>⋮</button></td>
+                </tr>
+                {open && (
+                  <tr><td colSpan={8} style={{ ...td, background: 'var(--surface2)' }}><Resultados c={c} /></td></tr>
+                )}
+              </Fragment>
+            )
+          })}
+        </tbody>
+      </table>
     </div>
   )
 }
@@ -358,14 +420,7 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
         {camps.filter(function(c) { return c !== ativa }).length > 0 && (
           <div style={card}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}><h3 style={h3}><i className="ti ti-chart-bar" style={{ color: '#15803d' }} />Resultado dos disparos</h3><button className="at-b" onClick={carregarCamps}><i className="ti ti-refresh" />Atualizar</button></div>
-            {camps.filter(function(c) { return c !== ativa }).map(function(c) {
-              return (
-                <div key={c.id} style={{ padding: '12px 0', borderTop: '1px solid var(--border)', fontSize: 13, color: 'var(--text)' }}>
-                  <div style={{ fontWeight: 700, wordBreak: 'break-word' }}>{c.template_name} <span style={{ fontWeight: 400, color: 'var(--muted2)', ...tab }}>· {new Date(c.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })} · {SEG_NOME[c.segment] || c.segment}{c.status === 'cancelado' ? ' · cancelado' : ''}</span></div>
-                  <Resultados c={c} />
-                </div>
-              )
-            })}
+            <TabelaDisparos camps={camps.filter(function(c) { return c !== ativa })} />
           </div>
         )}
 
