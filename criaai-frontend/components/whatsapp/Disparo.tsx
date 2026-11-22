@@ -212,7 +212,7 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
   const aprovados = (tpls || []).filter(function(t) { return t.status === 'APPROVED' })
   const t = aprovados.find(function(x) { return x.name + '|' + x.language === key }) || null
   const semMidia = function(x: Tpl) { return !x.header || x.header.charAt(0) !== '[' }
-  const quantos = pub ? (seg === 'sem_plano_250' ? (pub.lote || 0) : seg === 'plano' ? pub.comPlano : seg === 'sem_plano' ? pub.semPlano : seg === 'contatos' ? pub.contatos : pub.podem) : 0
+  const quantos = pub ? (seg === 'sem_plano_250' ? (pub.lote || 0) : seg === 'plano' ? pub.comPlano : seg === 'sem_plano' ? pub.semPlano : seg === 'contatos' ? pub.contatos : seg === 'sem_express' ? (pub.semExpress || 0) : seg === 'sem_express_1' ? (pub.semExpressPartes?.[0] || 0) : seg === 'sem_express_2' ? (pub.semExpressPartes?.[1] || 0) : seg === 'sem_express_3' ? (pub.semExpressPartes?.[2] || 0) : seg === 'sem_express_4' ? (pub.semExpressPartes?.[3] || 0) : seg === 'base' ? (pub.base || 0) : pub.podem) : 0
   const ativa = camps.find(function(c) { return c.status === 'rodando' || c.status === 'pausado' }) || null
 
   function escolher(k: string) {
