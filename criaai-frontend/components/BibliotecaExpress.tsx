@@ -84,9 +84,9 @@ export default function BibliotecaExpress() {
       )}
 
       <style>{`
-        .bx { margin-top: 28px; background: #0f0b1d; border-radius: 24px; padding: 24px; color: #fff; }
+        .bx { margin-top: 28px; background: linear-gradient(120deg,#0f172a,#1e1b4b 35%,#7c2d12 70%,#0f172a); background-size: 200% 200%; animation: eeShine 9s linear infinite alternate; border-radius: 24px; padding: 24px; color: #fff; }
         .bx-topo { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
-        .bx-titulo { font-family: Syne, sans-serif; font-size: 24px; font-weight: 800; margin: 0 0 4px; }
+        .bx-titulo { color: #fff; font-family: Syne, sans-serif; font-size: 24px; font-weight: 800; margin: 0 0 4px; }
         .bx-sub { margin: 0; font-size: 13.5px; color: rgba(255,255,255,.62); line-height: 1.5; }
         .bx-conta { font-size: 12.5px; font-weight: 700; color: #c4b5fd; background: rgba(124,58,237,.18); border: 1px solid rgba(124,58,237,.35); padding: 6px 12px; border-radius: 99px; }
         .bx-filtros { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
@@ -97,7 +97,7 @@ export default function BibliotecaExpress() {
         .bx-chip { border: 1px solid rgba(255,255,255,.14); background: transparent; color: rgba(255,255,255,.8); border-radius: 99px; padding: 6px 13px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
         .bx-chip.on { background: #7c3aed; border-color: #7c3aed; color: #fff; }
         .bx-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; }
-        .bx-card { text-align: left; background: #181229; border: 1px solid rgba(255,255,255,.08); border-radius: 16px; overflow: hidden; padding: 0; cursor: pointer; color: #fff; font-family: inherit; transition: transform .15s, border-color .15s; }
+        .bx-card { text-align: left; background: rgba(15,23,42,.72); border: 1px solid rgba(255,255,255,.08); border-radius: 16px; overflow: hidden; padding: 0; cursor: pointer; color: #fff; font-family: inherit; transition: transform .15s, border-color .15s; }
         .bx-card:hover { transform: translateY(-3px); border-color: rgba(124,58,237,.6); }
         .bx-capa { position: relative; aspect-ratio: 1 / 1; background: #241b3d; }
         .bx-capa img { width: 100%; height: 100%; object-fit: cover; display: block; }
