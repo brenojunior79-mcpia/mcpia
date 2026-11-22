@@ -117,6 +117,7 @@ export default function EstruturaExpressPage() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [podeLiberar, setPodeLiberar] = useState(false)
   const [liberados, setLiberados] = useState<Liberado[]>([])
+  const [verTodosLib, setVerTodosLib] = useState(false)
   const [atual, setAtual] = useState(0)
   const [tocando, setTocando] = useState<string | null>(null)
   const [feitas, setFeitas] = useState<Record<string, boolean>>({})
@@ -381,7 +382,7 @@ export default function EstruturaExpressPage() {
             {adminMsg && <div style={{ marginTop: 8, fontSize: 13, fontWeight: 700, color: adminMsg.indexOf('⚠') === 0 ? '#b91c1c' : '#15803d' }}>{adminMsg}</div>}
             {liberados.length > 0 && (
               <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {liberados.map(function(l) {
+                {(verTodosLib ? liberados : liberados.slice(0, 2)).map(function(l) {
                   return (
                     <div key={l.email} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface2)', borderRadius: 10, padding: '8px 12px', fontSize: 13.5 }}>
                       <span style={{ fontWeight: 700, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.email}</span>
@@ -391,6 +392,11 @@ export default function EstruturaExpressPage() {
                     </div>
                   )
                 })}
+                {liberados.length > 2 && (
+                  <button type="button" onClick={function() { setVerTodosLib(!verTodosLib) }} style={{ alignSelf: 'flex-start', marginTop: 4, cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--accent)', fontWeight: 700, fontSize: 13, borderRadius: 10, padding: '7px 14px', fontFamily: 'inherit' }}>
+                    {verTodosLib ? 'Ver menos' : 'Ver mais (' + (liberados.length - 2) + ')'}
+                  </button>
+                )}
               </div>
             )}
           </div>
