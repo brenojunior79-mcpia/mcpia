@@ -1036,7 +1036,7 @@ export default function AtendimentoPage() {
       {tab === 'produtos' && isAdmin && <Produtos />}
       {tab === 'conhecimento' && isAdmin && <BaseConhecimento />}
       {tab === 'eventos' && isAdmin && <Eventos onAbrir={abrirDeEvento} />}
-      {tab === 'contatos' && isAdmin && <Contatos />}
+      {tab === 'contatos' && isAdmin && <Contatos onVoltar={function() { setTab('disparo') }} />}
       {tab === 'conexoes' && isAdmin && <Conexoes />}
 
       <div className="at-wrap" style={tab === 'conversas' ? undefined : { display: 'none' }}>

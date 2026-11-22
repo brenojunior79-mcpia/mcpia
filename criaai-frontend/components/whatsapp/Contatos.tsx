@@ -12,7 +12,7 @@ function fone(wa: string) {
   return wa
 }
 
-export default function Contatos() {
+export default function Contatos({ onVoltar }: { onVoltar?: () => void }) {
   const [lista, setLista] = useState<Contato[] | null>(null)
   const [erro, setErro] = useState('')
   const [busca, setBusca] = useState('')
@@ -45,7 +45,10 @@ export default function Contatos() {
   return (
     <div style={{ maxWidth: 1000, margin: '0 auto', padding: '18px 16px' }}>
       <div style={{ marginBottom: 14 }}>
-        <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 20, fontWeight: 800, margin: 0, color: 'var(--text)' }}>Contatos</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {onVoltar && <button type="button" className="at-b" onClick={onVoltar} aria-label="Voltar" title="Voltar" style={{ padding: '6px 10px' }}><i className="ti ti-arrow-left" /></button>}
+          <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 20, fontWeight: 800, margin: 0, color: 'var(--text)' }}>Contatos</h2>
+        </div>
         <div style={{ fontSize: 13.5, color: 'var(--muted2)', marginTop: 4 }}>Toda a base num lugar só: alunos, conversas do WhatsApp (suporte e recuperação) e compradores de todas as plataformas. Sem números repetidos e sem reembolsados.</div>
       </div>
 
