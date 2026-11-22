@@ -84,7 +84,7 @@ export default function BibliotecaExpress() {
       )}
 
       <style>{`
-        .bx { margin-top: 28px; background: linear-gradient(120deg,#0f172a,#1e1b4b 35%,#7c2d12 70%,#0f172a); background-size: 200% 200%; animation: eeShine 9s linear infinite alternate; border-radius: 24px; padding: 24px; color: #fff; }
+        .bx { margin-top: 28px; background: radial-gradient(120% 60% at 0% 0%, rgba(124,45,18,.85), transparent 60%), radial-gradient(120% 60% at 100% 100%, rgba(124,45,18,.55), transparent 60%), linear-gradient(160deg,#0f172a 0%,#1e1b4b 50%,#0f172a 100%); border-radius: 24px; padding: 24px; color: #fff; }
         .bx-topo { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
         .bx-titulo { color: #fff; font-family: Syne, sans-serif; font-size: 24px; font-weight: 800; margin: 0 0 4px; }
         .bx-sub { margin: 0; font-size: 13.5px; color: rgba(255,255,255,.62); line-height: 1.5; }
