@@ -1032,7 +1032,7 @@ export default function AtendimentoPage() {
       )}
 
       {tab === 'modelos' && <Modelos isAdmin={isAdmin} tpls={tpls} erro={tplErro} carregando={tplCarregando} onReload={function() { carregarTpls(true) }} canais={canais} escopo={escopo} />}
-      {disparoAberto && isAdmin && <div style={tab === 'disparo' ? { display: 'contents' } : { display: 'none' }}><Disparo tpls={tpls} onLoadTpls={carregarTpls} /></div>}
+      {disparoAberto && isAdmin && <div style={tab === 'disparo' ? { display: 'contents' } : { display: 'none' }}><Disparo tpls={tpls} onLoadTpls={carregarTpls} canais={canais} /></div>}
       {tab === 'fluxos' && isAdmin && <Fluxos />}
       {tab === 'produtos' && isAdmin && <Produtos />}
       {tab === 'conhecimento' && isAdmin && <BaseConhecimento />}
@@ -1168,7 +1168,7 @@ export default function AtendimentoPage() {
             })()}
           </div>
           <div style={{ flex: 1, overflowY: 'auto' }}>
-            {aba === 'disparos' && <DisparosLista onAbrir={abrirDeEvento} />}
+            {aba === 'disparos' && <DisparosLista onAbrir={abrirDeEvento} canais={canais} />}
             {aba !== 'disparos' && lista.length === 0 && <div style={{ padding: '36px 20px', fontSize: 13.5, color: 'var(--muted2)', textAlign: 'center', lineHeight: 1.5 }}><i className={'ti ti-' + (buscaAtiva ? 'search' : 'inbox')} style={{ display: 'block', fontSize: 30, marginBottom: 8, opacity: 0.6 }} />{buscaAtiva ? (buscando ? 'Buscando…' : 'Nenhuma conversa encontrada para “' + termo + '”.') : aba === 'abertas' ? 'Nenhuma conversa aberta.' : aba === 'naolidas' ? 'Nenhuma mensagem não lida.' : 'Nenhuma conversa finalizada.'}</div>}
             {aba !== 'disparos' && lista.map(function(c) {
               const on = c.id === sel

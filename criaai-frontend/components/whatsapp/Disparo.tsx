@@ -4,7 +4,7 @@ import { renderTpl, type Tpl } from './Modelos'
 
 type Publico = { restantes?: number; lote?: number; total: number; podem: number; comPlano: number; semPlano: number; semNumero: number; contatos: number; semExpress?: number; semExpressPartes?: number[]; base?: number; reembolsados: number; repetidos: number }
 type Cont = Record<string, number>
-type Camp = { id: string; created_at: string; template_name: string; preview: string | null; segment: string; status: string; pause_reason: string | null; total: number; contagem: Cont; detalhe?: Detalhe | null }
+type Camp = { id: string; created_at: string; template_name: string; preview: string | null; segment: string; status: string; pause_reason: string | null; total: number; connection_id?: string | null; contagem: Cont; detalhe?: Detalhe | null }
 type Detalhe = { responderam: number; erros: { erro: string; qtd: number }[]; falhas: { nome: string | null; wa: string; erro: string | null }[] }
 const ABERTURA_PADRAO = 'Oi! Tudo bem? Como você está indo lá na plataforma? Como estão indo as aulas? 🙏'
 const NOVIDADE_PADRAO = 'Você viu a novidade que lançamos lá na plataforma? Agora você pode integrar o seu Facebook com a plataforma e eu analiso essas campanhas para você vender no automático. Eu vou te orientar e ver as suas campanhas pela plataforma.'
@@ -107,7 +107,8 @@ function Anel({ v, cor }: { v: number; cor: string }) {
 }
 
 // Tabela "Resultado dos disparos": nome, data, base, enviado, entregue, lido, falha e acoes (detalhes)
-function TabelaDisparos({ camps }: { camps: Camp[] }) {
+type Canal = { id: string; nome: string; numero: string | null }
+function TabelaDisparos({ camps, canais }: { camps: Camp[]; canais: Canal[] }) {
   const [aberto, setAberto] = useState<string | null>(null)
   const th: React.CSSProperties = { padding: '12px 10px', fontSize: 11.5, fontWeight: 700, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '.03em', textAlign: 'left', whiteSpace: 'nowrap' }
   const td: React.CSSProperties = { padding: '12px 10px', fontSize: 13.5, color: 'var(--text)', borderTop: '1px solid var(--border)', verticalAlign: 'middle' }
@@ -134,7 +135,7 @@ function TabelaDisparos({ camps }: { camps: Camp[] }) {
             return (
               <Fragment key={c.id}>
                 <tr>
-                  <td style={td}><div style={{ fontWeight: 700, wordBreak: 'break-word' }}>{c.template_name}</div><div style={{ fontSize: 11.5, color: 'var(--muted2)' }}>{SEG_NOME[c.segment] || c.segment}{c.status === 'cancelado' ? ' · cancelado' : ''}</div></td>
+                  <td style={td}><div style={{ fontWeight: 700, wordBreak: 'break-word' }}>{c.template_name}</div><div style={{ fontSize: 11.5, color: 'var(--muted2)' }}>{SEG_NOME[c.segment] || c.segment} · WhatsApp {c.connection_id ? ((canais.find(function(x) { return x.id === c.connection_id }) || { nome: 'Recuperação' }).nome) : 'Suporte'}{c.status === 'cancelado' ? ' · cancelado' : ''}</div></td>
                   <td style={{ ...td, whiteSpace: 'nowrap', ...tab }}>{new Date(c.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
                   <td style={{ ...td, ...tab }}>{num(base)}</td>
                   <td style={td}><Anel v={p(env)} cor="#16a34a" /></td>
@@ -156,7 +157,11 @@ function TabelaDisparos({ camps }: { camps: Camp[] }) {
 }
 
 // Admin: total de alunos + disparo em massa de um modelo aprovado
-export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLoadTpls: () => void }) {
+export default function Disparo({ tpls, onLoadTpls, canais }: { tpls: Tpl[] | null; onLoadTpls: () => void; canais?: Canal[] }) {
+  const listaCanais = canais || []
+  const [conexao, setConexao] = useState('') // '' = WhatsApp de Suporte; senao o id do numero (ex.: Recuperacao)
+  const [tplsCon, setTplsCon] = useState<Tpl[] | null>(null)
+  const nomeCanal = conexao ? ((listaCanais.find(function(x) { return x.id === conexao }) || { nome: 'Recuperação' }).nome) : 'Suporte'
   const [pub, setPub] = useState<Publico | null>(null)
   const [pubErro, setPubErro] = useState('')
   const [seg, setSeg] = useState('todos')
@@ -209,12 +214,19 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
     return function() { clearInterval(timer); window.removeEventListener('beforeunload', aviso); paraRef.current = true }
   }, [])
 
-  const aprovados = (tpls || []).filter(function(t) { return t.status === 'APPROVED' })
+  const tplsAtuais = conexao ? tplsCon : tpls
+  const aprovados = (tplsAtuais || []).filter(function(t) { return t.status === 'APPROVED' })
   const t = aprovados.find(function(x) { return x.name + '|' + x.language === key }) || null
   const semMidia = function(x: Tpl) { return !x.header || x.header.charAt(0) !== '[' }
   const quantos = pub ? (seg === 'sem_plano_250' ? (pub.lote || 0) : seg === 'plano' ? pub.comPlano : seg === 'sem_plano' ? pub.semPlano : seg === 'contatos' ? pub.contatos : seg === 'sem_express' ? (pub.semExpress || 0) : seg === 'sem_express_1' ? (pub.semExpressPartes?.[0] || 0) : seg === 'sem_express_2' ? (pub.semExpressPartes?.[1] || 0) : seg === 'sem_express_3' ? (pub.semExpressPartes?.[2] || 0) : seg === 'sem_express_4' ? (pub.semExpressPartes?.[3] || 0) : seg === 'base' ? (pub.base || 0) : pub.podem) : 0
   const ativa = camps.find(function(c) { return c.status === 'rodando' || c.status === 'pausado' }) || null
 
+  function trocarCanal(id: string) {
+    setConexao(id); setKey(''); setCfg([]); setOk(''); setMsg('')
+    if (!id) { setTplsCon(null); return }
+    setTplsCon(null)
+    fetch('/api/whatsapp/templates?connection=' + encodeURIComponent(id), { cache: 'no-store' }).then(function(r) { return r.json().then(function(j) { return { ok: r.ok, j: j } }) }).then(function(x) { if (x.ok) setTplsCon(x.j.templates || []); else { setTplsCon([]); setMsg(x.j.error || 'Não foi possível listar os modelos desse número.') } }).catch(function() { setTplsCon([]); setMsg('Sem conexão.') })
+  }
   function escolher(k: string) {
     setKey(k); setOk(''); setMsg(''); carregarPub(k.split('|')[0])
     const x = aprovados.find(function(y) { return y.name + '|' + y.language === k })
@@ -224,7 +236,7 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
   const preenchido = !!t && cfg.every(function(c) { return c.mode === 'nome' || c.value.trim().length > 0 })
 
   function corpoBase() {
-    return { template: { name: t!.name, language: t!.language, preview: renderTpl(t!.body, cfg.map(function(c) { return c.mode === 'nome' ? 'Maria' : c.value })) }, params: cfg }
+    return { template: { name: t!.name, language: t!.language, preview: renderTpl(t!.body, cfg.map(function(c) { return c.mode === 'nome' ? 'Maria' : c.value })) }, params: cfg, connection: conexao }
   }
 
   async function post(url: string, body: any) {
@@ -390,15 +402,24 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
           {escondidos.length > 0 && <button type="button" className="at-b" onClick={function() { setEscondidos([]); try { localStorage.removeItem('mcpia_disparo_escondidos') } catch (e) {} }} style={{ marginBottom: 10 }}><i className="ti ti-eye" />Mostrar opções removidas ({escondidos.length})</button>}
           <a className="at-b" href={'/api/whatsapp/broadcast?view=exportar&seg=' + encodeURIComponent(seg)} download style={{ marginBottom: 12, display: 'inline-flex', textDecoration: 'none' }}><i className="ti ti-download" />Exportar contatos desta lista (CSV)</a>
 
+          {listaCanais.length > 0 && (
+            <>
+              <label style={lab}>Enviar por qual WhatsApp</label>
+              <select className="at-input" value={conexao} onChange={function(e) { trocarCanal(e.target.value) }} style={{ marginBottom: 12 }}>
+                <option value="">WhatsApp de Suporte</option>
+                {listaCanais.map(function(x) { return <option key={x.id} value={x.id}>WhatsApp de {x.nome}{x.numero ? ' · ' + x.numero : ''}</option> })}
+              </select>
+            </>
+          )}
           <label style={lab}>2. Modelo de mensagem</label>
-          {tpls && aprovados.length === 0 && <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start', fontSize: 13, color: 'var(--muted2)', marginBottom: 8 }}><i className="ti ti-info-circle" style={{ fontSize: 15, marginTop: 1 }} />Nenhum modelo aprovado ainda. Crie um na aba Modelos e espere a aprovação da Meta.</div>}
+          {tplsAtuais && aprovados.length === 0 && <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start', fontSize: 13, color: 'var(--muted2)', marginBottom: 8 }}><i className="ti ti-info-circle" style={{ fontSize: 15, marginTop: 1 }} />Nenhum modelo aprovado ainda. Crie um na aba Modelos e espere a aprovação da Meta.</div>}
           <select className="at-input" value={key} onChange={function(e) { escolher(e.target.value) }} style={{ marginBottom: 10 }}>
-            <option value="">{tpls ? 'Escolha um modelo aprovado…' : 'Carregando modelos…'}</option>
+            <option value="">{tplsAtuais ? 'Escolha um modelo aprovado…' : 'Carregando modelos…'}</option>
             {aprovados.map(function(x) { return <option key={x.name + x.language} value={x.name + '|' + x.language} disabled={!semMidia(x)}>{x.name} ({x.category === 'MARKETING' ? 'marketing' : 'utilidade'}){!semMidia(x) ? ' — com mídia, não suportado' : ''}</option> })}
           </select>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(22,163,74,0.10)', border: '1px solid rgba(22,163,74,0.35)', borderRadius: 10, padding: '8px 10px', fontSize: 13, color: 'var(--text)', marginBottom: 12 }}>
             <i className="ti ti-brand-whatsapp" style={{ fontSize: 18, color: '#16a34a' }} />
-            <span>Este disparo sai pelo <b>WhatsApp de Suporte</b> (não é o de Recuperação). As respostas caem no chat de Suporte.</span>
+            <span>Este disparo sai pelo <b>WhatsApp de {nomeCanal}</b>{listaCanais.length > 0 ? (conexao ? ' (não é o de Suporte)' : ' (não é o de Recuperação)') : ''}. As respostas caem no chat de {nomeCanal}.</span>
           </div>
 
           {t && t.vars > 0 && (
@@ -470,7 +491,7 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
         {camps.filter(function(c) { return c !== ativa }).length > 0 && (
           <div style={card}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}><h3 style={h3}><i className="ti ti-chart-bar" style={{ color: '#15803d' }} />Resultado dos disparos</h3><button className="at-b" onClick={carregarCamps}><i className="ti ti-refresh" />Atualizar</button></div>
-            <TabelaDisparos camps={camps.filter(function(c) { return c !== ativa })} />
+            <TabelaDisparos camps={camps.filter(function(c) { return c !== ativa })} canais={listaCanais} />
           </div>
         )}
 

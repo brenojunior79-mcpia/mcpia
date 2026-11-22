@@ -23,8 +23,17 @@ function lerParams(v: any): ParamCfg[] {
 }
 
 // Confere na Meta se o modelo esta aprovado e se da para usar no disparo
-async function conferirModelo(name: string, language: string, params: ParamCfg[]): Promise<{ ok: true; body: string; vars: number } | { ok: false; erro: string }> {
-  const waba = await wabaId()
+// Numero que vai enviar: sem id = WhatsApp de Suporte; com id = o numero cadastrado em wa_connections (ex.: Recuperacao)
+async function canalDoDisparo(connId: string): Promise<{ ok: true; phoneId: string; waba: string; connectionId: string | null } | { ok: false; erro: string }> {
+  if (!connId) return { ok: true, phoneId: waConfig().phoneId, waba: await wabaId(), connectionId: null }
+  const c = await adminClient().from('wa_connections').select('id, phone_number_id, waba_id, active').eq('id', connId).maybeSingle()
+  if (!c.data || !c.data.phone_number_id || !c.data.waba_id) return { ok: false, erro: 'Nao achei esse numero de WhatsApp.' }
+  if (c.data.active === false) return { ok: false, erro: 'Esse numero de WhatsApp esta desligado.' }
+  return { ok: true, phoneId: String(c.data.phone_number_id), waba: String(c.data.waba_id), connectionId: String(c.data.id) }
+}
+
+async function conferirModelo(name: string, language: string, params: ParamCfg[], wabaEscolhida?: string): Promise<{ ok: true; body: string; vars: number } | { ok: false; erro: string }> {
+  const waba = wabaEscolhida || await wabaId()
   if (!waba) return { ok: false, erro: 'Nao achei a conta do WhatsApp (WHATSAPP_WABA_ID).' }
   const r = await graphFetch(waba + '/message_templates?name=' + encodeURIComponent(name) + '&fields=name,language,status,components&limit=50')
   if (!r.ok) return { ok: false, erro: graphError(r.data) }
@@ -95,7 +104,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ campanha: b.data, contagem: c.data || {} })
   }
   // lista
-  const l = await admin.from('wa_broadcasts').select('id, created_at, template_name, preview, segment, status, pause_reason, total').order('created_at', { ascending: false }).limit(20)
+  const l = await admin.from('wa_broadcasts').select('id, created_at, template_name, preview, segment, status, pause_reason, total, connection_id').order('created_at', { ascending: false }).limit(20)
   const out: any[] = []
   for (const b of (l.data || [])) {
     const c = await admin.rpc('wa_broadcast_counts', { p_id: b.id })
@@ -144,19 +153,21 @@ export async function POST(req: NextRequest) {
   const preview = String(input?.template?.preview || '').slice(0, 1500)
   const params = lerParams(input?.params)
   if (!name) return NextResponse.json({ error: 'Escolha um modelo.' }, { status: 400 })
-  const ck = await conferirModelo(name, language, params)
+  const canal = await canalDoDisparo(String(input?.connection || ''))
+  if (!canal.ok) return NextResponse.json({ error: canal.erro }, { status: 400 })
+  const ck = await conferirModelo(name, language, params, canal.waba)
   if (!ck.ok) return NextResponse.json({ error: ck.erro }, { status: 400 })
 
   if (action === 'teste') {
     const to = normalizarNumero(input?.numero)
     if (!to) return NextResponse.json({ error: 'Numero invalido. Use DDD + numero, ex: 37 99999-9999.' }, { status: 400 })
-    const r = await postMessage(payloadModelo(to, name, language, montarParams(params, 'Teste')))
+    const r = await postMessage(payloadModelo(to, name, language, montarParams(params, 'Teste')), canal.phoneId)
     if (!r.ok) return NextResponse.json({ error: graphError(r.data) }, { status: 400 })
     // O teste tambem vale como disparo de 1 pessoa: assim o Junior responde a sua resposta como responderia a quem recebeu o disparo
     try {
       const instr = String(input?.instrucaoIA || '').trim().slice(0, 1500)
       if (instr) {
-        const nb = await admin.from('wa_broadcasts').insert({ created_by: staff, template_name: name, template_language: language, preview, params, segment: 'teste', status: 'concluido', total: 1, instrucao_ia: instr }).select('id').single()
+        const nb = await admin.from('wa_broadcasts').insert({ created_by: staff, template_name: name, template_language: language, preview, params, segment: 'teste', status: 'concluido', total: 1, instrucao_ia: instr, connection_id: canal.connectionId }).select('id').single()
         if (nb.data) await admin.from('wa_broadcast_recipients').insert({ broadcast_id: nb.data.id, name: 'Teste', wa_id: to, status: 'sent', wa_message_id: r.data?.messages?.[0]?.id || null, sent_at: new Date().toISOString() })
       }
     } catch (e) { /* o teste foi enviado; o registro e so para testar a resposta do Junior */ }
@@ -173,7 +184,7 @@ export async function POST(req: NextRequest) {
     // O que a pessoa viu na tela precisa bater com o que vai ser enviado
     if (Number(input?.esperado) !== pub.lista.length) return NextResponse.json({ error: 'O numero de alunos mudou (agora sao ' + pub.lista.length + '). Confira e confirme de novo.', total: pub.lista.length }, { status: 409 })
 
-    const b = await admin.from('wa_broadcasts').insert({ created_by: staff, template_name: name, template_language: language, preview, params, segment: seg, status: 'rodando', total: pub.lista.length, instrucao_ia: String(input?.instrucaoIA || '').trim().slice(0, 1500) || null }).select('id').single()
+    const b = await admin.from('wa_broadcasts').insert({ created_by: staff, template_name: name, template_language: language, preview, params, segment: seg, status: 'rodando', total: pub.lista.length, instrucao_ia: String(input?.instrucaoIA || '').trim().slice(0, 1500) || null, connection_id: canal.connectionId }).select('id').single()
     if (b.error || !b.data) return NextResponse.json({ error: 'Nao foi possivel criar o disparo.' }, { status: 500 })
     for (let i = 0; i < pub.lista.length; i += 500) {
       const chunk = pub.lista.slice(i, i + 500).map(function(a) { return { broadcast_id: b.data!.id, user_id: a.id, name: a.nome, wa_id: a.wa, status: 'pending' } })

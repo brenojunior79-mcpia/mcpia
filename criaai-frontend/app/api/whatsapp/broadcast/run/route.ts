@@ -26,6 +26,13 @@ export async function POST(req: NextRequest) {
   if (camp.status === 'cancelado' || camp.status === 'concluido') return NextResponse.json({ ok: true, status: camp.status, contagem: (await admin.rpc('wa_broadcast_counts', { p_id: id })).data || {} })
   if (camp.status === 'pausado') await admin.from('wa_broadcasts').update({ status: 'rodando', pause_reason: null }).eq('id', id)
 
+  // Numero que envia este disparo: o de Suporte ou o escolhido (ex.: Recuperacao)
+  let phoneId = cfg.phoneId
+  if (camp.connection_id) {
+    const cn = await admin.from('wa_connections').select('phone_number_id').eq('id', camp.connection_id).maybeSingle()
+    if (!cn.data?.phone_number_id) return NextResponse.json({ error: 'Nao achei o numero de WhatsApp deste disparo.' }, { status: 400 })
+    phoneId = String(cn.data.phone_number_id)
+  }
   const params: ParamCfg[] = Array.isArray(camp.params) ? camp.params : []
   const claim = await admin.rpc('wa_broadcast_claim', { p_id: id, p_n: 60 })
   const lote: any[] = (claim.data as any[]) || []
@@ -38,7 +45,7 @@ export async function POST(req: NextRequest) {
     if (est.parar) { volta.push(r.id); return }
     let res: { ok: boolean; status: number; data: any }
     try {
-      res = await graphFetch(cfg.phoneId + '/messages', { method: 'POST', json: payloadModelo(r.wa_id, camp.template_name, camp.template_language, montarParams(params, r.name || '')) })
+      res = await graphFetch(phoneId + '/messages', { method: 'POST', json: payloadModelo(r.wa_id, camp.template_name, camp.template_language, montarParams(params, r.name || '')) })
     } catch (e) {
       volta.push(r.id); return
     }
