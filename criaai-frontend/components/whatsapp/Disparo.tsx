@@ -2,7 +2,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { renderTpl, type Tpl } from './Modelos'
 
-type Publico = { restantes?: number; lote?: number; total: number; podem: number; comPlano: number; semPlano: number; semNumero: number; contatos: number; semExpress?: number; base?: number; reembolsados: number; repetidos: number }
+type Publico = { restantes?: number; lote?: number; total: number; podem: number; comPlano: number; semPlano: number; semNumero: number; contatos: number; semExpress?: number; semExpressPartes?: number[]; base?: number; reembolsados: number; repetidos: number }
 type Cont = Record<string, number>
 type Camp = { id: string; created_at: string; template_name: string; preview: string | null; segment: string; status: string; pause_reason: string | null; total: number; contagem: Cont; detalhe?: Detalhe | null }
 type Detalhe = { responderam: number; erros: { erro: string; qtd: number }[]; falhas: { nome: string | null; wa: string; erro: string | null }[] }
@@ -15,7 +15,7 @@ const h1: React.CSSProperties = { fontFamily: 'Syne, sans-serif', fontSize: 18, 
 const h3: React.CSSProperties = { fontWeight: 800, fontSize: 15, color: 'var(--text)', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }
 const tab: React.CSSProperties = { fontVariantNumeric: 'tabular-nums' }
 const lab: React.CSSProperties = { fontSize: 12.5, fontWeight: 700, color: 'var(--text)', marginBottom: 4, display: 'block' }
-const SEG_NOME: Record<string, string> = { todos: 'Todos os alunos', plano: 'Alunos com plano', sem_plano: 'Alunos sem plano', sem_express: 'Alunos sem a Estrutura Express', base: 'Contatos (toda a base)', sem_plano_250: 'Sem plano · lote de 250', contatos: 'Contatos importados', teste: 'Teste' }
+const SEG_NOME: Record<string, string> = { todos: 'Todos os alunos', plano: 'Alunos com plano', sem_plano: 'Alunos sem plano', sem_express: 'Alunos sem a Estrutura Express', sem_express_1: 'Sem a Express · Lista 1', sem_express_2: 'Sem a Express · Lista 2', sem_express_3: 'Sem a Express · Lista 3', sem_express_4: 'Sem a Express · Lista 4', base: 'Contatos (toda a base)', sem_plano_250: 'Sem plano · lote de 250', contatos: 'Contatos importados', teste: 'Teste' }
 
 function enviadas(c: Cont) { return (c.sent || 0) + (c.delivered || 0) + (c.read || 0) }
 function faltam(c: Cont) { return (c.pending || 0) + (c.sending || 0) }
@@ -177,7 +177,7 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
     const novo = escondidos.indexOf(k) >= 0 ? escondidos : escondidos.concat(k)
     setEscondidos(novo)
     try { localStorage.setItem('mcpia_disparo_escondidos', JSON.stringify(novo)) } catch (e) {}
-    if (k === seg) { const ficou = ['todos', 'plano', 'sem_plano', 'sem_plano_250', 'sem_express', 'base', 'contatos'].find(function(x) { return novo.indexOf(x) < 0 }); if (ficou) setSeg(ficou) }
+    if (k === seg) { const ficou = ['todos', 'plano', 'sem_plano', 'sem_plano_250', 'sem_express', 'sem_express_1', 'sem_express_2', 'sem_express_3', 'sem_express_4', 'base', 'contatos'].find(function(x) { return novo.indexOf(x) < 0 }); if (ficou) setSeg(ficou) }
   }
   const [rodando, setRodando] = useState(false)
   const [imp, setImp] = useState('')
@@ -363,6 +363,10 @@ export default function Disparo({ tpls, onLoadTpls }: { tpls: Tpl[] | null; onLo
               ['sem_plano', 'Só quem não tem plano (' + num(pub?.semPlano) + ')'],
               ['sem_plano_250', 'Sem plano · próximos 250 que ainda não receberam este modelo (' + (t ? num(pub?.lote) + ' agora, restam ' + num(pub?.restantes) : 'escolha o modelo') + ')'],
               ['sem_express', 'Só quem não tem a Estrutura Express (' + num(pub?.semExpress) + ')'],
+              ['sem_express_1', 'Sem a Estrutura Express · Lista 1 (' + num(pub?.semExpressPartes?.[0]) + ')'],
+              ['sem_express_2', 'Sem a Estrutura Express · Lista 2 (' + num(pub?.semExpressPartes?.[1]) + ')'],
+              ['sem_express_3', 'Sem a Estrutura Express · Lista 3 (' + num(pub?.semExpressPartes?.[2]) + ')'],
+              ['sem_express_4', 'Sem a Estrutura Express · Lista 4 (' + num(pub?.semExpressPartes?.[3]) + ')'],
               ['base', 'Contatos: toda a base, alunos, conversas e compradores (' + num(pub?.base) + ')'],
               ['contatos', 'Contatos importados que não são alunos (' + num(pub?.contatos) + ')'],
             ]

@@ -14,7 +14,7 @@ function maxVar(text: string): number {
 }
 
 function segmento(v: any): Segmento {
-  return v === 'plano' || v === 'sem_plano' || v === 'sem_plano_250' || v === 'sem_express' || v === 'contatos' || v === 'base' ? v : 'todos'
+  return v === 'plano' || v === 'sem_plano' || v === 'sem_plano_250' || v === 'sem_express' || v === 'sem_express_1' || v === 'sem_express_2' || v === 'sem_express_3' || v === 'sem_express_4' || v === 'contatos' || v === 'base' ? v : 'todos'
 }
 
 function lerParams(v: any): ParamCfg[] {
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
   if (view === 'publico') {
     try {
       const p = await montarPublico('todos', req.nextUrl.searchParams.get('template') || undefined)
-      return NextResponse.json({ restantes: p.restantes, lote: p.lote, total: p.total, podem: p.podem, comPlano: p.comPlano, semPlano: p.semPlano, semExpress: p.semExpress, base: p.base, semNumero: p.semNumero, contatos: p.contatos, reembolsados: p.reembolsados, repetidos: p.repetidos })
+      return NextResponse.json({ restantes: p.restantes, lote: p.lote, total: p.total, podem: p.podem, comPlano: p.comPlano, semPlano: p.semPlano, semExpress: p.semExpress, semExpressPartes: p.semExpressPartes, base: p.base, semNumero: p.semNumero, contatos: p.contatos, reembolsados: p.reembolsados, repetidos: p.repetidos })
     } catch (e: any) { return NextResponse.json({ error: e?.message || 'Erro.' }, { status: 500 }) }
   }
   // Aba Contatos: toda a base em JSON

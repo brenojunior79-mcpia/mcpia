@@ -1,7 +1,7 @@
 // Disparo em massa: quem recebe, e como o numero e' ajustado para o WhatsApp
 import { adminClient } from '@/lib/whatsapp'
 
-export type Segmento = 'todos' | 'plano' | 'sem_plano' | 'sem_plano_250' | 'sem_express' | 'contatos' | 'base'
+export type Segmento = 'todos' | 'plano' | 'sem_plano' | 'sem_plano_250' | 'sem_express' | 'sem_express_1' | 'sem_express_2' | 'sem_express_3' | 'sem_express_4' | 'contatos' | 'base'
 export const TAMANHO_LOTE = 250
 export const SEGMENTOS: { k: Segmento; nome: string }[] = [
   { k: 'todos', nome: 'Todos os alunos' },
@@ -46,6 +46,7 @@ export type Publico = {
   podem: number          // numeros unicos que recebem em "Todos"
   contatos: number       // contatos importados que nao sao alunos
   semExpress: number     // alunos que NAO tem a Estrutura Express
+  semExpressPartes: number[] // a mesma lista dividida em 4 (lista 1 a 4)
   base: number           // toda a base: alunos + conversas do WhatsApp + compradores (Hubla, Cakto, Kiwify, Greenn...) + importados
   restantes: number      // sem plano que ainda NAO receberam o modelo escolhido (so quando o modelo e informado)
   lote: number           // quantos entram no proximo lote de 250
@@ -157,8 +158,12 @@ export async function montarPublico(seg: Segmento, template?: string): Promise<P
   const restantesLista = semPlanoLista.filter(function(a) { return !jaRecebeu.has(a.wa.slice(-8)) })
   const lote = restantesLista.slice(0, TAMANHO_LOTE)
   const semExpressLista = todos.filter(function(a) { return !a.express })
-  const lista = seg === 'base' ? baseLista : seg === 'sem_express' ? semExpressLista : seg === 'contatos' ? contatos : seg === 'plano' ? todos.filter(function(a) { return a.plano }) : seg === 'sem_plano' ? semPlanoLista : seg === 'sem_plano_250' ? lote : todos
-  return { total: alunos.length, semNumero, reembolsados, repetidos, comPlano, semPlano: todos.length - comPlano, podem: todos.length, contatos: contatos.length, semExpress: semExpressLista.length, base: baseLista.length, restantes: restantesLista.length, lote: lote.length, lista }
+  // Divide em 4 listas fixas pelo numero (a mesma pessoa fica sempre na mesma lista, mesmo com alunos novos entrando)
+  const parteDe = function(wa: string) { return parseInt(wa.slice(-4), 10) % 4 }
+  const semExpressPartes = [0, 1, 2, 3].map(function(k) { return semExpressLista.filter(function(a) { return parteDe(a.wa) === k }) })
+  const segParte = /^sem_express_([1-4])$/.exec(seg)
+  const lista = segParte ? semExpressPartes[Number(segParte[1]) - 1] : seg === 'base' ? baseLista : seg === 'sem_express' ? semExpressLista : seg === 'contatos' ? contatos : seg === 'plano' ? todos.filter(function(a) { return a.plano }) : seg === 'sem_plano' ? semPlanoLista : seg === 'sem_plano_250' ? lote : todos
+  return { total: alunos.length, semNumero, reembolsados, repetidos, comPlano, semPlano: todos.length - comPlano, podem: todos.length, contatos: contatos.length, semExpress: semExpressLista.length, semExpressPartes: semExpressPartes.map(function(l) { return l.length }), base: baseLista.length, restantes: restantesLista.length, lote: lote.length, lista }
 }
 
 // Monta o corpo do modelo: cada variavel pode ser o primeiro nome do aluno ou um texto fixo
