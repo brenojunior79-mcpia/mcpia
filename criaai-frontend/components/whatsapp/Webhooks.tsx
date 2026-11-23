@@ -9,7 +9,7 @@ function num(n: number) { return n.toLocaleString('pt-BR') }
 
 // Aba "Webhooks": todas as integrações que mandam avisos para a plataforma (Hubla, Cakto, WhatsApp, Stripe, Mercado Pago),
 // com o endereço de cada uma, o que cada evento faz e o último aviso recebido. Cada cartão tem o link para criar um webhook novo.
-export default function Webhooks() {
+export default function Webhooks({ onVoltar }: { onVoltar?: () => void }) {
   const [lista, setLista] = useState<Integ[] | null>(null)
   const [erro, setErro] = useState('')
   const [aberto, setAberto] = useState('hubla')
@@ -34,7 +34,10 @@ export default function Webhooks() {
     <div style={{ maxWidth: 920, margin: '0 auto', padding: '14px 12px 40px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
         <div>
-          <div style={{ fontWeight: 800, fontSize: 18, color: 'var(--text)' }}><i className="ti ti-webhook" style={{ marginRight: 6 }} />Webhooks</div>
+          <div style={{ fontWeight: 800, fontSize: 18, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            {onVoltar && <button type="button" className="at-b" onClick={onVoltar} aria-label="Voltar" title="Voltar" style={{ padding: '6px 10px' }}><i className="ti ti-arrow-left" /></button>}
+            <span><i className="ti ti-webhook" style={{ marginRight: 6 }} />Webhooks</span>
+          </div>
           <div style={{ fontSize: 13.5, color: 'var(--muted2)', lineHeight: 1.5, maxWidth: 640, marginTop: 4 }}>
             Webhook é o aviso que outra plataforma manda para a nossa quando algo acontece (uma compra, um pagamento recusado, uma mensagem). Aqui estão todas as integrações que já funcionam e o que cada aviso faz.
           </div>

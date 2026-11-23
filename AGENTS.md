@@ -86,6 +86,7 @@ com um assistente de IA chamado **Júnior**.
 
 - Visual: variáveis CSS do tema em `app/globals.css` (`--accent`, `--surface`, `--border` etc.), com modo claro e escuro. Títulos em Syne. Use as variáveis, não cores fixas.
 - Textos para alunos: simples, curtos, sem termos técnicos em inglês (se precisar de um, explique).
+- **Toda tela ou aba nova precisa de uma setinha de voltar** (botão `className="at-b"` com o ícone `ti ti-arrow-left`, `aria-label="Voltar"`, no canto de cima à esquerda do título), que leva para a tela anterior. Pedido do Breno. Exemplos: `components/whatsapp/Contatos.tsx` e `Webhooks.tsx` (aba do Atendimento volta para Conversas).
 - Dados dos alunos são pessoais: não registre tokens, senhas ou conteúdo de conversas em logs.
 - Alterações no banco (Supabase) devem ser pedidas ao Breno ou feitas por migração revisada; nunca apague dados sem confirmação.
 

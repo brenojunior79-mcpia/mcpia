@@ -1039,7 +1039,7 @@ export default function AtendimentoPage() {
       {tab === 'conhecimento' && isAdmin && <BaseConhecimento />}
       {tab === 'eventos' && isAdmin && <Eventos onAbrir={abrirDeEvento} />}
       {tab === 'contatos' && isAdmin && <Contatos onVoltar={function() { setTab('conversas') }} />}
-      {tab === 'webhooks' && isAdmin && <Webhooks />}
+      {tab === 'webhooks' && isAdmin && <Webhooks onVoltar={function() { setTab('conversas') }} />}
       {tab === 'conexoes' && isAdmin && <Conexoes />}
 
       <div className="at-wrap" style={tab === 'conversas' ? undefined : { display: 'none' }}>
