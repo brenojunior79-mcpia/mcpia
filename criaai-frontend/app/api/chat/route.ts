@@ -10,7 +10,7 @@ import { REGRA_ASSINATURA_CHAT, pediuVerificarAssinatura, removerMarcaAssinatura
 import { blocoAnunciosDoAluno } from '@/lib/juniorCampanhas'
 import { responderJunior } from '@/lib/iaJunior'
 import { tirarRepetido } from '@/lib/juniorHumano'
-import { JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno, REGRAS_ESTILO_CHAT, limparRespostaChat, tipoFinalConversa, situacaoFinalConversa } from '@/lib/junior'
+import { regraPrecoBlack, JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno, REGRAS_ESTILO_CHAT, limparRespostaChat, tipoFinalConversa, situacaoFinalConversa } from '@/lib/junior'
 
 export async function POST(req: NextRequest) {
   try {
@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
     const firstName = ((profileResult.data?.full_name || '').split(' ')[0]) || ''
     let systemContent = JUNIOR_PROMPT.split('{{firstName}}').join(firstName || 'você')
     systemContent = systemContent + '\n\n' + FINAL_REMINDER + '\n\n' + REGRAS_ESTILO_CHAT
+    systemContent = systemContent + '\n\n' + regraPrecoBlack()
     // Conversa ja em andamento (o Junior ja respondeu nesta conversa): sem nova saudacao e sem repetir "como posso te ajudar?"
     const jaConversando = messages.slice(0, -1).some(function(m) { return m.role === 'assistant' && String(m.content || '').trim() })
     if (jaConversando) systemContent = systemContent + '\n\n# CONVERSA EM ANDAMENTO (PRIORIDADE MAXIMA)\nVoce JA esta conversando com esta pessoa. NAO cumprimente de novo (nada de "Ola", "Oi", "Opa", "A paz do Senhor", "Bom dia") e NAO pergunte "como posso te ajudar?". Se ela mandou so "oi", "voce esta ai?" ou parecido, responda "Estou aqui sim!" e continue o assunto que estava pendente nas ultimas mensagens.'

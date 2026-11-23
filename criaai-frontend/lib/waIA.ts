@@ -11,7 +11,7 @@ import { humanizarResposta, REGRA_ESTILO_HUMANO, tirarRepetido } from '@/lib/jun
 import { MARCA_PRINT_RE, PRINTS_LEAD, printPorSlug, printsJaEnviados, regraDePrints, regraExplicacaoLead } from '@/lib/juniorPrints'
 import { statusAnuncios } from '@/lib/acessoAnuncios'
 import { contasDoTelefone, blocoContasDoNumero, resumoContasDoNumero, type ContaDoNumero } from '@/lib/juniorContas'
-import { semLinkHostinger, REGRA_RESPONSAVEL, JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno, soUmPasso, tirarLinkMarkdown, linkClicavel, tirarFrasesDeAjuda, tipoFinalConversa, situacaoFinalConversa } from '@/lib/junior'
+import { regraPrecoBlack, semLinkHostinger, REGRA_RESPONSAVEL, JUNIOR_PROMPT, FINAL_REMINDER, NEW_STUDENT_RULE, situacaoPlanoAluno, soUmPasso, tirarLinkMarkdown, linkClicavel, tirarFrasesDeAjuda, tipoFinalConversa, situacaoFinalConversa } from '@/lib/junior'
 import { phoneIdDaConversa, postMessage } from '@/lib/whatsapp'
 import { AVISO_ENCERRAR_INICIO, MIN_AVISO_NA_RESPOSTA, avisoEncerramento, avisouEncerramentoHoje, horaFalada } from '@/lib/waAvisoFim'
 import { agoraNoFuso, abertoAgora as abertoAgoraEm, normalizar as normalizarHorario, DIAS as DIAS_SEMANA, type Horario } from '@/lib/waHours'
@@ -631,7 +631,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     const REGRA_NOME = jaFalou
       ? 'REGRA DO NOME (PRIORIDADE MAXIMA): voce ja falou com esta pessoa nesta conversa. NAO cite o nome dela em NENHUMA mensagem daqui para frente (nada de "Entendi, Maria.", "Perfeito, Maria.", "Maria, ..."). Responda direto, sem nome. Isso vale mais que qualquer exemplo com {{firstName}} da base.'
       : 'REGRA DO NOME (PRIORIDADE MAXIMA): esta e a PRIMEIRA mensagem sua nesta conversa: cite o primeiro nome da pessoa UMA vez, na saudacao (ex.: "A paz do Senhor, Maria!", "Bom dia, Maria!"). Depois desta mensagem o nome nunca mais e citado.'
-    let system = REGRA_RESPONSAVEL + '\n\n' + baseTexto + '\n\n' + FINAL_REMINDER + '\n\n' + REGRA_EXPRESS_WHATSAPP + '\n\n' + REGRA_ASSINATURA_WHATSAPP + '\n\n' + REGRA_COMPRA_WHATSAPP + '\n\n' + REGRA_NOME + (jaFalou ? '' : '\n\nNome da pessoa: ' + (nome || 'desconhecido'))
+    let system = REGRA_RESPONSAVEL + '\n\n' + baseTexto + '\n\n' + FINAL_REMINDER + '\n\n' + regraPrecoBlack() + '\n\n' + REGRA_EXPRESS_WHATSAPP + '\n\n' + REGRA_ASSINATURA_WHATSAPP + '\n\n' + REGRA_COMPRA_WHATSAPP + '\n\n' + REGRA_NOME + (jaFalou ? '' : '\n\nNome da pessoa: ' + (nome || 'desconhecido'))
     if (esconderPlanos) system = NEW_STUDENT_RULE + '\n\n' + system + '\n\n' + NEW_STUDENT_RULE
     const sitPlano = situacaoPlanoAluno(temPlano, esconderPlanos)
     if (sitPlano) system = system + '\n\n' + sitPlano
