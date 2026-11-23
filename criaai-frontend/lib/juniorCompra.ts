@@ -67,7 +67,7 @@ function mascarar(email: string): string {
   return u.slice(0, Math.min(2, u.length)) + '***@' + d
 }
 
-const NOME_PROD: Record<string, string> = { m: 'Mentoria', e: 'Estrutura Express', c: 'Créditos da plataforma', p: 'Plano da plataforma', o: 'outro produto' }
+const NOME_PROD: Record<string, string> = { m: 'Mentoria', e: 'Estrutura Express', c: 'Créditos da plataforma', p: 'Plano da plataforma', v: 'Grupo VIP de network (Black)', o: 'outro produto' }
 const NOME_PLAT: Record<string, string> = { h: 'Hubla', k: 'Cakto' }
 
 function mesBR(aamm: string | null | undefined): string {

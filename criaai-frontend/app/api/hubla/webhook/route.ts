@@ -207,6 +207,12 @@ export async function POST(req: NextRequest) {
         const base = { email: info.email || null, wa: info.wa || null, produto: info.produto || null, paid_at: new Date().toISOString(), nome_norm: nomeNorm || null, tokens: nomeNorm ? nomeNorm.split(' ') : null, origem: 'webhook' }
         await admin.from('hubla_compras').upsert({ ...base, chave, cat, plano: cat === 'p' ? resolvePlanName(payload) : null }, { onConflict: 'chave', ignoreDuplicates: true })
         if (ehBlack) await admin.from('hubla_compras').upsert({ ...base, chave: chave + ':express', cat: 'e', plano: null }, { onConflict: 'chave', ignoreDuplicates: true })
+        // Grupo VIP de network (order bump da Black, R$ 29,90): guarda a compra para o Junior conferir antes de mandar o link do grupo
+        const todosProds: any[] = payload.event?.products || (payload.event?.product ? [payload.event.product] : [])
+        const nomesProds = todosProds.map(function(pr: any) { return String(pr?.name || '').toLowerCase() }).concat([prodTxt])
+        if (eventType === 'invoice.payment_succeeded' && nomesProds.some(function(n) { return n.indexOf('vip') >= 0 })) {
+          await admin.from('hubla_compras').upsert({ ...base, chave: chave + ':vip', cat: 'v', plano: null }, { onConflict: 'chave', ignoreDuplicates: true })
+        }
       } catch (e) { console.error('[hubla-webhook] compra:', e) }
     }
 
