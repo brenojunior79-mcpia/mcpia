@@ -356,15 +356,52 @@ export default function AtendimentoPage() {
       if (tm) return
       tm = setTimeout(function() { tm = null; if (selRef.current) carregarMsgs(selRef.current) }, 300)
     }
+    // Otimizacao: em vez de recarregar 600 conversas e 500 mensagens a cada aviso do banco,
+    // atualiza SO o item que mudou (status entregue/lido, mensagem nova, conversa nova). So recarrega tudo quando algo e apagado.
     const ch = supabase.channel('wa-inbox')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'wa_messages' }, function(p: any) {
-        const cid = (p && (p.new?.conversation_id || p.old?.conversation_id)) || ''
-        if (!cid || cid === selRef.current) abertas()
+        const n: any = p && p.new
+        const cid = (n && n.conversation_id) || (p && p.old && p.old.conversation_id) || ''
+        if (!cid || cid !== selRef.current) return
+        if (p.eventType === 'UPDATE' && n && n.id) {
+          setMsgs(function(old) {
+            let achou = false
+            const novo = old.map(function(m) { if (m.id === n.id) { achou = true; return { ...m, ...n } } return m })
+            return achou ? novo : old
+          })
+          return
+        }
+        if (p.eventType === 'INSERT' && n && n.id) {
+          setMsgs(function(old) {
+            if (old.some(function(m) { return m.id === n.id })) return old
+            // tira a mensagem provisoria ("enviando") que corresponde a esta
+            let tirou = false
+            const semTmp = old.filter(function(m) {
+              if (tirou || m.id.indexOf('tmp-') !== 0 || n.direction !== 'out' || n.type !== 'text' || m.body !== n.body) return true
+              tirou = true; return false
+            })
+            const lista2 = semTmp.concat([n as Msg])
+            cacheMsgs.current[cid] = lista2.filter(function(m) { return m.id.indexOf('tmp-') !== 0 })
+            return lista2
+          })
+          return
+        }
+        abertas()
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'wa_conversations' }, function(p: any) {
+        const n: any = p && p.new
+        if ((p.eventType === 'UPDATE' || p.eventType === 'INSERT') && n && n.id) {
+          setConvs(function(old) {
+            const resto = old.filter(function(c) { return c.id !== n.id })
+            const antiga = old.find(function(c) { return c.id === n.id })
+            const nova = antiga ? { ...antiga, ...n } : (n as Conv)
+            const lista2 = resto.concat([nova])
+            lista2.sort(function(x: any, y: any) { return new Date(y.last_message_at || 0).getTime() - new Date(x.last_message_at || 0).getTime() })
+            return lista2
+          })
+          return
+        }
         lista()
-        const cid = (p && (p.new?.id || p.old?.id)) || ''
-        if (cid && cid === selRef.current) abertas()
       })
       .subscribe()
     const tudo = function() { lista(); abertas() }

@@ -176,6 +176,7 @@ export default function Disparo({ tpls, onLoadTpls, canais }: { tpls: Tpl[] | nu
   const [ok, setOk] = useState('')
   const [ocupado, setOcupado] = useState(false)
   const [camps, setCamps] = useState<Camp[]>([])
+  const raizRef = useRef<HTMLDivElement | null>(null)
   // Opcoes de "Quem vai receber" que o Breno removeu da lista (fica guardado neste navegador)
   const [escondidos, setEscondidos] = useState<string[]>([])
   useEffect(function() { try { const v = JSON.parse(localStorage.getItem('mcpia_disparo_escondidos') || '[]'); if (Array.isArray(v)) setEscondidos(v) } catch (e) {} }, [])
@@ -208,7 +209,8 @@ export default function Disparo({ tpls, onLoadTpls, canais }: { tpls: Tpl[] | nu
   }
   useEffect(function() {
     carregarPub(); carregarCamps(); onLoadTpls()
-    const timer = setInterval(function() { if (!rodRef.current) carregarCamps() }, 30000)
+    // So atualiza a lista com a aba Disparo aparecendo na tela (antes atualizava mesmo escondida, deixando o Atendimento lento)
+    const timer = setInterval(function() { if (!rodRef.current && document.visibilityState === 'visible' && raizRef.current && raizRef.current.offsetParent !== null) carregarCamps() }, 30000)
     function aviso(e: BeforeUnloadEvent) { if (rodRef.current) { e.preventDefault(); e.returnValue = '' } }
     window.addEventListener('beforeunload', aviso)
     return function() { clearInterval(timer); window.removeEventListener('beforeunload', aviso); paraRef.current = true }
@@ -310,7 +312,7 @@ export default function Disparo({ tpls, onLoadTpls, canais }: { tpls: Tpl[] | nu
 
 
   return (
-    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 20 }}>
+    <div ref={raizRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 20 }}>
       <div style={{ maxWidth: 860, margin: '0 auto' }}>
         <div style={{ marginBottom: 16 }}>
           <h2 style={h1}>Disparo em massa</h2>

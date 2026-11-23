@@ -13,6 +13,9 @@ function maxVar(text: string): number {
   return n
 }
 
+// Numeros do publico guardados por 3 minutos (a leitura completa e pesada)
+const cachePublico = new Map<string, { t: number; p: any }>()
+
 function segmento(v: any): Segmento {
   return v === 'plano' || v === 'sem_plano' || v === 'sem_plano_250' || v === 'sem_express' || v === 'sem_express_1' || v === 'sem_express_2' || v === 'sem_express_3' || v === 'sem_express_4' || v === 'contatos' || v === 'base' ? v : 'todos'
 }
@@ -61,7 +64,11 @@ export async function GET(req: NextRequest) {
   const admin = adminClient()
   if (view === 'publico') {
     try {
-      const p = await montarPublico('todos', req.nextUrl.searchParams.get('template') || undefined)
+      const tplQ = req.nextUrl.searchParams.get('template') || ''
+      const chaveCache = 'publico:' + tplQ
+      const guardado = cachePublico.get(chaveCache)
+      const p = guardado && Date.now() - guardado.t < 3 * 60 * 1000 && !req.nextUrl.searchParams.get('fresh') ? guardado.p : await montarPublico('todos', tplQ || undefined)
+      if (!guardado || guardado.p !== p) cachePublico.set(chaveCache, { t: Date.now(), p })
       return NextResponse.json({ restantes: p.restantes, lote: p.lote, total: p.total, podem: p.podem, comPlano: p.comPlano, semPlano: p.semPlano, semExpress: p.semExpress, semExpressPartes: p.semExpressPartes, base: p.base, semNumero: p.semNumero, contatos: p.contatos, reembolsados: p.reembolsados, repetidos: p.repetidos })
     } catch (e: any) { return NextResponse.json({ error: e?.message || 'Erro.' }, { status: 500 }) }
   }
