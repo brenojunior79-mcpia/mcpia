@@ -4,7 +4,17 @@ import { adminClient, graphError, graphFetch, requireAdmin, wabaId, waConfig } f
 export const maxDuration = 30
 export const dynamic = 'force-dynamic'
 
-const LIMITE: Record<string, string> = { TIER_50: '50', TIER_250: '250', TIER_1K: '1.000', TIER_10K: '10.000', TIER_100K: '100.000', TIER_UNLIMITED: 'Ilimitadas' }
+// Texto do limite de conversas novas por dia. Aceita qualquer faixa que a Meta mandar (nao deixa em branco)
+function limiteTexto(tier: string): string {
+  const t = String(tier || '').toUpperCase()
+  if (!t) return 'A Meta não informou o limite deste número'
+  if (t === 'TIER_NOT_SET') return 'Ainda não definido pela Meta (começa em 250 conversas / 24 horas)'
+  if (LIMITE[t]) return LIMITE[t] + (t === 'TIER_UNLIMITED' ? '' : ' conversas / 24 horas')
+  const m = t.match(/^TIER_(\d+)(K?)$/)
+  if (m) return (m[2] ? Number(m[1]).toLocaleString('pt-BR') + '.000' : m[1]) + ' conversas / 24 horas'
+  return t
+}
+const LIMITE: Record<string, string> = { TIER_50: '50', TIER_250: '250', TIER_1K: '1.000', TIER_2K: '2.000', TIER_10K: '10.000', TIER_100K: '100.000', TIER_UNLIMITED: 'Ilimitadas' }
 
 // Le um objeto da Meta tentando primeiro todos os campos e, se algum nao for permitido, os mais basicos
 async function lerCampos(id: string, listas: string[]): Promise<any> {
@@ -64,7 +74,7 @@ export async function GET(req: NextRequest) {
     extras.push({
       principal: false, id: c.id, phoneId: c.phone_number_id, waba: c.waba_id, apelido: c.name, ativo: c.active,
       nome: String(ph?.verified_name || ''), wabaNome: String(ct?.name || ''), numero: String(ph?.display_phone_number || ''),
-      limite: LIMITE[String(ph?.messaging_limit_tier || '')] ? LIMITE[String(ph?.messaging_limit_tier || '')] + ' conversas / 24 horas' : '',
+      limite: limiteTexto(String(ph?.messaging_limit_tier || '')),
       verificacao: v2 === 'verified' ? 'verificada' : v2 === 'rejected' || v2 === 'failed' ? 'rejeitada' : v2 ? 'pendente' : '',
       status: rev === 'REJECTED' || (st && st !== 'CONNECTED') ? 'atencao' : rev === 'PENDING' ? 'analise' : 'ok',
       numStatus: st, qualidade: String(ph?.quality_rating || '').toUpperCase(),
@@ -81,7 +91,7 @@ export async function GET(req: NextRequest) {
       nome: String(phone.verified_name || ''),
       wabaNome: String(conta?.name || ''),
       numero: String(phone.display_phone_number || ''),
-      limite: LIMITE[tier] ? LIMITE[tier] + ' conversas / 24 horas' : '',
+      limite: limiteTexto(tier),
       verificacao: verif === 'verified' ? 'verificada' : verif === 'rejected' || verif === 'failed' ? 'rejeitada' : verif ? 'pendente' : '',
       status,
       numStatus,
