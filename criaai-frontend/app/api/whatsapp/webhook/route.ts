@@ -179,6 +179,10 @@ export async function POST(req: NextRequest) {
             const st = String(s.status || '')
             if (!id) continue
             const agora = new Date().toISOString()
+            // Disparos em massa enviados por este numero: acompanha entregue / lido / falha de cada pessoa
+            if (st === 'delivered') await admin.from('wa_broadcast_recipients').update({ status: 'delivered' }).eq('wa_message_id', id).eq('status', 'sent')
+            else if (st === 'read') await admin.from('wa_broadcast_recipients').update({ status: 'read' }).eq('wa_message_id', id).in('status', ['sent', 'delivered'])
+            else if (st === 'failed') { const eb = s.errors?.[0]; await admin.from('wa_broadcast_recipients').update({ status: 'failed', error: String(eb?.error_data?.details || eb?.message || eb?.title || 'Falha no envio').slice(0, 300) }).eq('wa_message_id', id).in('status', ['sent', 'delivered']) }
             if (st === 'sent') await admin.from('wa_auto_sends').update({ status: 'sent', updated_at: agora }).eq('wa_message_id', id).in('status', ['sent'])
             else if (st === 'delivered') await admin.from('wa_auto_sends').update({ status: 'delivered', updated_at: agora }).eq('wa_message_id', id).eq('status', 'sent')
             else if (st === 'read') await admin.from('wa_auto_sends').update({ status: 'read', updated_at: agora }).eq('wa_message_id', id).in('status', ['sent', 'delivered'])
