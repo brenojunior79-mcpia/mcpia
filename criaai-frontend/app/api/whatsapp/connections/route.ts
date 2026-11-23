@@ -11,7 +11,7 @@ function limiteTexto(tier: string): string {
   if (t === 'TIER_NOT_SET') return 'Ainda não definido pela Meta (começa em 250 conversas / 24 horas)'
   if (LIMITE[t]) return LIMITE[t] + (t === 'TIER_UNLIMITED' ? '' : ' conversas / 24 horas')
   const m = t.match(/^TIER_(\d+)(K?)$/)
-  if (m) return (m[2] ? Number(m[1]).toLocaleString('pt-BR') + '.000' : m[1]) + ' conversas / 24 horas'
+  if (m) return (m[2] ? Number(m[1]).toLocaleString('pt-BR') + '.000' : Number(m[1]).toLocaleString('pt-BR')) + ' conversas / 24 horas'
   return t
 }
 const LIMITE: Record<string, string> = { TIER_50: '50', TIER_250: '250', TIER_1K: '1.000', TIER_2K: '2.000', TIER_10K: '10.000', TIER_100K: '100.000', TIER_UNLIMITED: 'Ilimitadas' }
@@ -35,6 +35,7 @@ export async function GET(req: NextRequest) {
   const waba = await wabaId()
   const [phone, conta, apps] = await Promise.all([
     lerCampos(cfg.phoneId, [
+      'verified_name,display_phone_number,quality_rating,status,whatsapp_business_manager_messaging_limit,messaging_limit_tier,name_status,account_mode',
       'verified_name,display_phone_number,quality_rating,status,messaging_limit_tier,name_status,account_mode',
       'verified_name,display_phone_number,quality_rating,status,messaging_limit_tier',
       'verified_name,display_phone_number,quality_rating',
@@ -45,7 +46,7 @@ export async function GET(req: NextRequest) {
   if (!phone) return NextResponse.json({ conexoes: [], webhookUrl, erro: 'Nao consegui falar com a Meta. Confira o token e o Phone Number ID na Vercel.' })
 
   const appsLigados: string[] = apps && apps.ok ? (apps.data?.data || []).map(function(x: any) { return String(x.whatsapp_business_api_data?.name || x.name || x.id || '') }).filter(Boolean) : []
-  const tier = String(phone.messaging_limit_tier || '')
+  const tier = String(phone.whatsapp_business_manager_messaging_limit || phone.messaging_limit_tier || '')
   const verif = String(conta?.business_verification_status || '').toLowerCase()
   const revisao = String(conta?.account_review_status || '').toUpperCase()
   const numStatus = String(phone.status || '').toUpperCase()
@@ -61,6 +62,7 @@ export async function GET(req: NextRequest) {
   for (const c of (lista.data || [])) {
     const [ph, ct, ap] = await Promise.all([
       lerCampos(c.phone_number_id, [
+        'verified_name,display_phone_number,quality_rating,status,whatsapp_business_manager_messaging_limit,messaging_limit_tier',
         'verified_name,display_phone_number,quality_rating,status,messaging_limit_tier',
         'verified_name,display_phone_number,quality_rating',
       ]),
@@ -74,7 +76,7 @@ export async function GET(req: NextRequest) {
     extras.push({
       principal: false, id: c.id, phoneId: c.phone_number_id, waba: c.waba_id, apelido: c.name, ativo: c.active,
       nome: String(ph?.verified_name || ''), wabaNome: String(ct?.name || ''), numero: String(ph?.display_phone_number || ''),
-      limite: limiteTexto(String(ph?.messaging_limit_tier || '')),
+      limite: limiteTexto(String(ph?.whatsapp_business_manager_messaging_limit || ph?.messaging_limit_tier || '')),
       verificacao: v2 === 'verified' ? 'verificada' : v2 === 'rejected' || v2 === 'failed' ? 'rejeitada' : v2 ? 'pendente' : '',
       status: rev === 'REJECTED' || (st && st !== 'CONNECTED') ? 'atencao' : rev === 'PENDING' ? 'analise' : 'ok',
       numStatus: st, qualidade: String(ph?.quality_rating || '').toUpperCase(),
