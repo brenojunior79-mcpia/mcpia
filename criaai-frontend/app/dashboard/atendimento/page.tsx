@@ -11,7 +11,6 @@ import BaseConhecimento from '@/components/whatsapp/BaseConhecimento'
 import Conexoes from '@/components/whatsapp/Conexoes'
 import Eventos from '@/components/whatsapp/Eventos'
 import Disparo from '@/components/whatsapp/Disparo'
-import DisparosLista from '@/components/whatsapp/DisparosLista'
 import Webhooks from '@/components/whatsapp/Webhooks'
 import Contatos from '@/components/whatsapp/Contatos'
 import EditorImagem from '@/components/whatsapp/EditorImagem'
@@ -203,7 +202,7 @@ export default function AtendimentoPage() {
   const [convs, setConvs] = useState<Conv[]>([])
   const [sel, setSel] = useState<string | null>(null)
   const [msgs, setMsgs] = useState<Msg[]>([])
-  const [aba, setAba] = useState<'abertas' | 'naolidas' | 'resolvidas' | 'disparos'>('abertas')
+  const [aba, setAba] = useState<'abertas' | 'naolidas' | 'resolvidas'>('abertas')
   const [busca, setBusca] = useState('')
   // Busca em TODAS as conversas (nome, numero e frases das mensagens enviadas ou recebidas), alem das 600 mais recentes da lista
   const [achadas, setAchadas] = useState<Conv[]>([])
@@ -1111,16 +1110,16 @@ export default function AtendimentoPage() {
             })()}
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <div className="at-seg" style={{ flex: 1 }}>
-              {(['abertas', 'naolidas', 'resolvidas', ...(isAdmin ? ['disparos' as const] : [])] as ('abertas' | 'naolidas' | 'resolvidas' | 'disparos')[]).map(function(a) {
+              {(['abertas', 'naolidas', 'resolvidas'] as const).map(function(a) {
                 const on = aba === a
                 const qtdNaoLidas = convs.filter(function(c) { return canalDaConv(c) === canal && c.status !== 'resolvida' && c.unread > 0 }).length
                 return <button key={a} className={on ? 'on' : ''} onClick={function() { setAba(a) }}>
-                  {a === 'abertas' ? 'Abertas' : a === 'resolvidas' ? 'Finalizadas' : a === 'disparos' ? 'Disparos' : 'Não lidas'}
+                  {a === 'abertas' ? 'Abertas' : a === 'resolvidas' ? 'Finalizadas' : 'Não lidas'}
                   {a === 'naolidas' && qtdNaoLidas > 0 && <span className="at-n">{qtdNaoLidas}</span>}
                 </button>
               })}
               </div>
-              {aba !== 'disparos' && lista.length > 0 && (function() {
+              {lista.length > 0 && (function() {
                 const n = lista.filter(function(c) { return marcadas[c.id] }).length
                 const todas = n === lista.length
                 const algumas = n > 0 && !todas
@@ -1170,9 +1169,8 @@ export default function AtendimentoPage() {
             })()}
           </div>
           <div style={{ flex: 1, overflowY: 'auto' }}>
-            {aba === 'disparos' && <DisparosLista onAbrir={abrirDeEvento} canais={canais} />}
-            {aba !== 'disparos' && lista.length === 0 && <div style={{ padding: '36px 20px', fontSize: 13.5, color: 'var(--muted2)', textAlign: 'center', lineHeight: 1.5 }}><i className={'ti ti-' + (buscaAtiva ? 'search' : 'inbox')} style={{ display: 'block', fontSize: 30, marginBottom: 8, opacity: 0.6 }} />{buscaAtiva ? (buscando ? 'Buscando…' : 'Nenhuma conversa encontrada para “' + termo + '”.') : aba === 'abertas' ? 'Nenhuma conversa aberta.' : aba === 'naolidas' ? 'Nenhuma mensagem não lida.' : 'Nenhuma conversa finalizada.'}</div>}
-            {aba !== 'disparos' && lista.map(function(c) {
+            {lista.length === 0 && <div style={{ padding: '36px 20px', fontSize: 13.5, color: 'var(--muted2)', textAlign: 'center', lineHeight: 1.5 }}><i className={'ti ti-' + (buscaAtiva ? 'search' : 'inbox')} style={{ display: 'block', fontSize: 30, marginBottom: 8, opacity: 0.6 }} />{buscaAtiva ? (buscando ? 'Buscando…' : 'Nenhuma conversa encontrada para “' + termo + '”.') : aba === 'abertas' ? 'Nenhuma conversa aberta.' : aba === 'naolidas' ? 'Nenhuma mensagem não lida.' : 'Nenhuma conversa finalizada.'}</div>}
+            {lista.map(function(c) {
               const on = c.id === sel
               return (
                 <div key={c.id} className={'at-item' + (on ? ' at-on' : '')} onClick={function() { if (modoSel) setMarcadas(function(m) { const n = { ...m }; if (n[c.id]) delete n[c.id]; else n[c.id] = true; return n }); else { if (buscaAtiva && canalDaConv(c) !== canal) setCanal(canalDaConv(c)); abrir(c) } }} style={{ display: 'flex', gap: 12, padding: '12px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border)', background: modoSel && marcadas[c.id] ? 'rgba(22,163,74,0.10)' : undefined, alignItems: modoSel ? 'center' : undefined }}>
