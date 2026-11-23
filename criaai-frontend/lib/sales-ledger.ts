@@ -11,6 +11,7 @@ function plain(s: any): string {
 // Mesma regra usada na importacao do historico
 export function classifyProduct(name: any): SaleProduct | null {
   const n = plain(name)
+  if (n.indexOf('black 2026') >= 0) return 'mentoria' // Black 2026 = Mentoria + Estrutura Express
   if (n.indexOf('estrutura express') >= 0) return 'express'
   if (n.indexOf('mentoria') >= 0 && n.indexOf('prosper') >= 0 && n.indexOf('individual') < 0) return 'mentoria'
   return null

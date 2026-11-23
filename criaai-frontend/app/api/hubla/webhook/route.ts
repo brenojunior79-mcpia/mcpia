@@ -172,6 +172,15 @@ export async function POST(req: NextRequest) {
     if (eventType === 'invoice.refunded') {
       const prods: any[] = payload.event?.products || (payload.event?.product ? [payload.event.product] : [])
       const soExpress = prods.length > 0 && prods.every(function(pr: any) { return String(pr?.name || '').toLowerCase().includes('express') })
+      // Reembolso do Black 2026 (Mentoria + Express): tira as duas liberacoes desta compra
+      const ehBlackR = prods.length > 0 && prods.every(function(pr: any) { return String(pr?.name || '').toLowerCase().includes('black 2026') })
+      if (ehBlackR) {
+        try {
+          const info = lerEvento(eventType, payload)
+          if (info.email) await admin.from('hubla_compras').update({ reembolsado: true }).in('cat', ['m', 'e']).ilike('produto', '%black 2026%').eq('email', info.email.toLowerCase())
+          if (info.wa) await admin.from('hubla_compras').update({ reembolsado: true }).in('cat', ['m', 'e']).ilike('produto', '%black 2026%').eq('wa', info.wa)
+        } catch (e) { console.error('[hubla-webhook] reembolso black:', e) }
+      }
       if (soExpress) {
         try {
           const info = lerEvento(eventType, payload)
@@ -192,8 +201,12 @@ export async function POST(req: NextRequest) {
         const nomeCompleto = String(u.fullName || u.name || ((u.firstName || '') + ' ' + (u.lastName || '')) || '').trim()
         const nomeNorm = nomeCompleto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
         const prodTxt = String(info.produto || '').toLowerCase()
-        const cat = prodTxt.startsWith('mentoria') ? 'm' : prodTxt.includes('express') ? 'e' : 'p'
-        await admin.from('hubla_compras').upsert({ email: info.email || null, wa: info.wa || null, produto: info.produto || null, chave, paid_at: new Date().toISOString(), cat, nome_norm: nomeNorm || null, tokens: nomeNorm ? nomeNorm.split(' ') : null, origem: 'webhook', plano: cat === 'p' ? resolvePlanName(payload) : null }, { onConflict: 'chave', ignoreDuplicates: true })
+        // Black 2026 (ordem do Breno, 23/11/2026) = Mentoria + Estrutura Express: libera as duas coisas
+        const ehBlack = prodTxt.includes('black 2026')
+        const cat = ehBlack ? 'm' : prodTxt.startsWith('mentoria') ? 'm' : prodTxt.includes('express') ? 'e' : 'p'
+        const base = { email: info.email || null, wa: info.wa || null, produto: info.produto || null, paid_at: new Date().toISOString(), nome_norm: nomeNorm || null, tokens: nomeNorm ? nomeNorm.split(' ') : null, origem: 'webhook' }
+        await admin.from('hubla_compras').upsert({ ...base, chave, cat, plano: cat === 'p' ? resolvePlanName(payload) : null }, { onConflict: 'chave', ignoreDuplicates: true })
+        if (ehBlack) await admin.from('hubla_compras').upsert({ ...base, chave: chave + ':express', cat: 'e', plano: null }, { onConflict: 'chave', ignoreDuplicates: true })
       } catch (e) { console.error('[hubla-webhook] compra:', e) }
     }
 
