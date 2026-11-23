@@ -34,6 +34,21 @@ function isProPremium(prof: any) {
   return n === 'pro' || n === 'premium'
 }
 
+// Tabela de envios no mesmo visual do resultado dos disparos do WhatsApp (circulo de porcentagem)
+const thN: React.CSSProperties = { padding: '12px 14px', fontSize: 11.5, fontWeight: 700, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '.03em', textAlign: 'left', whiteSpace: 'nowrap' }
+const tdN: React.CSSProperties = { padding: '12px 14px', fontSize: 13.5, color: 'var(--text)', borderTop: '1px solid var(--border)', verticalAlign: 'middle' }
+function AnelPush({ v }: { v: number }) {
+  const r = 16, c = 2 * Math.PI * r
+  const p = Math.max(0, Math.min(100, Math.round(v)))
+  return (
+    <svg width="40" height="40" viewBox="0 0 40 40" aria-label={p + '%'} style={{ display: 'block', margin: '0 auto' }}>
+      <circle cx="20" cy="20" r={r} fill="none" stroke="var(--border)" strokeWidth="3" />
+      <circle cx="20" cy="20" r={r} fill="none" stroke="#16a34a" strokeWidth="3" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - p / 100)} transform="rotate(-90 20 20)" />
+      <text x="20" y="23.5" textAnchor="middle" fontSize="9.5" fontWeight="800" fill="#16a34a">{p}%</text>
+    </svg>
+  )
+}
+
 export default function NotificacoesPage() {
   const supabase = createClient()
   const router = useRouter()
@@ -239,24 +254,28 @@ export default function NotificacoesPage() {
             <div style={{ padding: 24, textAlign: 'center', color: 'var(--muted2)', fontSize: 13 }}>Nenhum envio ainda.</div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ textAlign: 'left', color: 'var(--muted2)' }}>
-                    <th style={{ padding: '10px 18px' }}>Quando</th>
-                    <th style={{ padding: '10px 18px' }}>Título</th>
-                    <th style={{ padding: '10px 18px' }}>Público</th>
-                    <th style={{ padding: '10px 18px' }}>Entregues</th>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
+                <thead style={{ background: 'var(--surface2)' }}>
+                  <tr>
+                    {['Nome', 'Enviado', 'Base de contatos'].map(function(t) { return <th key={t} style={thN}>{t}</th> })}
+                    {['Entregue', 'Falha'].map(function(t) { return <th key={t} style={{ ...thN, textAlign: 'center' }}>{t}</th> })}
                   </tr>
                 </thead>
                 <tbody>
                   {history.map(function(h: any) {
                     const aud = AUDIENCES.filter(function(a) { return a.value === h.audience })[0]
+                    const base = Number(h.total || 0)
+                    const ent = Number(h.sent_count || 0)
+                    const fal = Number(h.failed_count || 0)
+                    const pEnt = base > 0 ? (ent / base) * 100 : 0
+                    const pFal = base > 0 ? Math.round((fal / base) * 100) : 0
                     return (
-                      <tr key={h.id} style={{ borderTop: '1px solid var(--border)' }}>
-                        <td style={{ padding: '10px 18px', whiteSpace: 'nowrap' }}>{fmt(h.created_at)}</td>
-                        <td style={{ padding: '10px 18px' }}>{h.title}</td>
-                        <td style={{ padding: '10px 18px' }}>{aud ? aud.label : h.audience}</td>
-                        <td style={{ padding: '10px 18px' }}>{h.sent_count} de {h.total}{h.failed_count ? ' (' + h.failed_count + ' falharam)' : ''}</td>
+                      <tr key={h.id}>
+                        <td style={tdN}><div style={{ fontWeight: 700 }}>{h.title}</div><div style={{ fontSize: 11.5, color: 'var(--muted2)' }}>{aud ? aud.label : h.audience}</div></td>
+                        <td style={{ ...tdN, whiteSpace: 'nowrap' }}>{fmt(h.created_at)}</td>
+                        <td style={tdN}>{base.toLocaleString('pt-BR')}</td>
+                        <td style={tdN}><AnelPush v={pEnt} /></td>
+                        <td style={{ ...tdN, textAlign: 'center', fontWeight: 700, color: fal > 0 ? '#dc2626' : 'var(--muted2)' }}>{pFal}%</td>
                       </tr>
                     )
                   })}
