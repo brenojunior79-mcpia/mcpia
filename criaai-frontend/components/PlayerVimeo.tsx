@@ -34,6 +34,9 @@ export default function PlayerVimeo({ videoId, title, radius, frameRef, autoplay
   const [ampliado, setAmpliado] = useState(false)
   const [pronto, setPronto] = useState(false)
   const [vel, setVel] = useState(1)
+  // O iframe nasce com o primeiro video; trocar de aula troca o video DENTRO do mesmo player (nao abre outro)
+  const primeiro = useRef(videoId)
+  const atualId = useRef(videoId)
 
   useEffect(function() {
     let vivo = true
@@ -64,6 +67,16 @@ export default function PlayerVimeo({ videoId, title, radius, frameRef, autoplay
       try { if (pl) { pl.off('play'); pl.off('pause'); pl.off('ended'); pl.off('volumechange'); pl.pause().catch(function() {}) } } catch (e) {}
       try { f.src = 'about:blank' } catch (e) {}
     }
+  }, [])
+
+  // Trocou de aula: carrega o novo video no mesmo player
+  useEffect(function() {
+    if (atualId.current === videoId) return
+    atualId.current = videoId
+    const pl = player.current
+    if (!pl) return
+    setPronto(false); setVel(1)
+    pl.loadVideo(videoId).then(function() { setPronto(true); pl.disableTextTrack().catch(function() {}); return pl.play() }).catch(function() {})
   }, [videoId])
 
   // Fecha a tela ampliada com a tecla Esc
@@ -126,7 +139,7 @@ export default function PlayerVimeo({ videoId, title, radius, frameRef, autoplay
       <div style={caixaVideo}>
         <iframe
           ref={ref}
-          src={'https://player.vimeo.com/video/' + videoId + '?title=0&byline=0&portrait=0&dnt=1&autoplay=1&muted=0&playsinline=1'}
+          src={'https://player.vimeo.com/video/' + primeiro.current + '?title=0&byline=0&portrait=0&dnt=1&autoplay=1&muted=0&playsinline=1'}
           style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
           allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media"
           allowFullScreen

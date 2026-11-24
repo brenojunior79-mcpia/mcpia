@@ -206,7 +206,7 @@ export default function EstruturaExpressPage() {
 
   function irPara(i: number) {
     if (i < 0 || i >= aulas.length) return
-    setAtual(i); setTocando(null)
+    setAtual(i); if (tocando) setTocando(aulas[i].id) // com uma aula aberta, a nova entra no mesmo player (a anterior fecha)
     if (playerRef.current && window.innerWidth < 900) playerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
@@ -305,8 +305,8 @@ export default function EstruturaExpressPage() {
           <div className="ee-grid">
             <div ref={playerRef} className="ee-up" style={{ animationDelay: '0.1s', minWidth: 0 }}>
               <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20, overflow: 'hidden' }}>
-                {tocando === aula.id ? (
-                  <PlayerVimeo key={aula.id} videoId={aula.video_id} title={aula.titulo} radius={0} />
+                {tocando ? (
+                  <PlayerVimeo videoId={aula.video_id} title={aula.titulo} radius={0} />
                 ) : (
                 <div className="ee-poster" style={{ position: 'relative', width: '100%', paddingBottom: '56.25%', height: 0, background: 'linear-gradient(135deg,#1e1b4b,#7c2d12)' }}>
                     <div onClick={function() { setTocando(aula.id) }} role="button" aria-label={'Assistir ' + aula.titulo} style={{ position: 'absolute', inset: 0, cursor: 'pointer', backgroundImage: th ? 'url(' + th.img + ')' : undefined, backgroundSize: 'cover', backgroundPosition: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
