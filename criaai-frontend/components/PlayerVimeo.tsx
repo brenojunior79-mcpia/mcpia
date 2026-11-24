@@ -33,6 +33,7 @@ export default function PlayerVimeo({ videoId, title, radius, frameRef, autoplay
   const [mudo, setMudo] = useState(false)
   const [ampliado, setAmpliado] = useState(false)
   const [pronto, setPronto] = useState(false)
+  const [vel, setVel] = useState(1)
 
   useEffect(function() {
     let vivo = true
@@ -49,12 +50,20 @@ export default function PlayerVimeo({ videoId, title, radius, frameRef, autoplay
       pl.ready().then(function() {
         if (!vivo) return
         setPronto(true)
+        setVel(1)
         pl.disableTextTrack().catch(function() {})
         pl.getMuted().then(function(m: boolean) { if (vivo) setMudo(!!m) }).catch(function() {})
         pl.getPaused().then(function(p: boolean) { if (vivo) setTocando(!p) }).catch(function() {})
       }).catch(function() {})
     }).catch(function() {})
-    return function() { vivo = false; try { if (player.current) player.current.destroy() } catch (e) {}; player.current = null }
+    return function() {
+      vivo = false
+      // Para o video antigo e tira ele da tela (antes, ao trocar de aula, o video de cima ficava aberto junto com o novo)
+      const pl = player.current
+      player.current = null
+      try { if (pl) { pl.off('play'); pl.off('pause'); pl.off('ended'); pl.off('volumechange'); pl.pause().catch(function() {}) } } catch (e) {}
+      try { f.src = 'about:blank' } catch (e) {}
+    }
   }, [videoId])
 
   // Fecha a tela ampliada com a tecla Esc
@@ -82,6 +91,14 @@ export default function PlayerVimeo({ videoId, title, radius, frameRef, autoplay
     const pl = player.current
     if (!pl) return
     pl.getCurrentTime().then(function(t: number) { return pl.setCurrentTime(Math.max(0, t + seg)) }).catch(function() {})
+  }
+  // Velocidade: cada toque passa para a proxima (1x, 1,25x, 1,5x, 1,7x, 1,8x, 2x e volta para 1x)
+  function acelerar() {
+    const pl = player.current
+    if (!pl) return
+    const lista = [1, 1.25, 1.5, 1.7, 1.8, 2]
+    const prox = lista[(lista.indexOf(vel) + 1) % lista.length]
+    pl.setPlaybackRate(prox).then(function() { setVel(prox) }).catch(function() {})
   }
   function ampliar() {
     // Em muitos celulares a tela cheia de verdade nao abre dentro da pagina: entao a gente amplia o video para ocupar a tela toda
@@ -120,6 +137,7 @@ export default function PlayerVimeo({ videoId, title, radius, frameRef, autoplay
         <button type="button" onClick={alternarPlay} style={b} aria-label={tocando ? 'Pausar' : 'Continuar'}>{tocando ? IPause : IPlay}<span>{tocando ? 'Pausar' : 'Continuar'}</span></button>
         <button type="button" onClick={function() { pular(-10) }} style={b} aria-label="Voltar 10 segundos">{IVolta}<span>Voltar 10s</span></button>
         <button type="button" onClick={function() { pular(10) }} style={b} aria-label="Avançar 10 segundos">{IAvanca}<span>Avançar 10s</span></button>
+        <button type="button" onClick={acelerar} style={b} aria-label={'Velocidade ' + vel + 'x. Toque para mudar'}><span style={{ fontSize: 15, fontWeight: 900 }}>{String(vel).replace('.', ',')}x</span><span>Velocidade</span></button>
         <button type="button" onClick={alternarSom} style={b} aria-label={mudo ? 'Ligar o som' : 'Desligar o som'}>{mudo ? IMudo : ISom}<span>{mudo ? 'Ligar som' : 'Som ligado'}</span></button>
         <button type="button" onClick={ampliar} style={b} aria-label={ampliado ? 'Fechar a tela ampliada' : 'Ampliar o vídeo'}>{ampliado ? IFechar : IAmpliar}<span>{ampliado ? 'Fechar' : 'Ampliar'}</span></button>
       </div>
