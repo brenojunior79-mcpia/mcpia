@@ -26,7 +26,9 @@
       }
     ],
     "totalArquivos": 5,
-    "temVideo": false
+    "temVideo": false,
+    "descricao": "Treinos para fazer em casa, sem academia e sem aparelhos, com exercícios simples e explicados.",
+    "publico": "Mulheres e homens que querem emagrecer ou ganhar disposição sem sair de casa."
   },
   {
     "slug": "abc-facil",
@@ -55,7 +57,9 @@
       }
     ],
     "totalArquivos": 12,
-    "temVideo": true
+    "temVideo": true,
+    "descricao": "Material para ensinar a criança a ler e escrever, com atividades de letras, sílabas e palavras.",
+    "publico": "Mães, pais e professoras de crianças em fase de alfabetização."
   },
   {
     "slug": "kit-pedagogico",
@@ -84,7 +88,9 @@
       }
     ],
     "totalArquivos": 9,
-    "temVideo": false
+    "temVideo": false,
+    "descricao": "Kit de atividades prontas para imprimir e usar em sala de aula ou em casa.",
+    "publico": "Professoras, pedagogas e mães que ensinam os filhos em casa."
   },
   {
     "slug": "play-kids",
@@ -113,7 +119,9 @@
       }
     ],
     "totalArquivos": 18,
-    "temVideo": false
+    "temVideo": false,
+    "descricao": "Atividades e brincadeiras cristãs para ensinar a Bíblia às crianças de um jeito divertido.",
+    "publico": "Pais cristãos, professoras de escola bíblica e ministério infantil."
   },
   {
     "slug": "jogando-e-lendo",
@@ -142,7 +150,9 @@
       }
     ],
     "totalArquivos": 3,
-    "temVideo": true
+    "temVideo": true,
+    "descricao": "Jogos de leitura que ensinam a criança a ler brincando.",
+    "publico": "Mães, pais e professoras de crianças que estão aprendendo a ler."
   },
   {
     "slug": "renda-com-caldo",
@@ -177,7 +187,9 @@
       }
     ],
     "totalArquivos": 7,
-    "temVideo": true
+    "temVideo": true,
+    "descricao": "Receitas e passo a passo para fazer e vender caldos e ganhar uma renda extra.",
+    "publico": "Quem quer começar a vender comida feita em casa."
   },
   {
     "slug": "rotina-magica",
@@ -212,7 +224,9 @@
       }
     ],
     "totalArquivos": 30,
-    "temVideo": false
+    "temVideo": false,
+    "descricao": "Quadros e materiais para criar a rotina da criança: acordar, estudar, brincar e dormir na hora certa.",
+    "publico": "Mães e pais de crianças pequenas que querem mais organização em casa."
   },
   {
     "slug": "recursos-pedagogicos",
@@ -247,7 +261,9 @@
       }
     ],
     "totalArquivos": 9,
-    "temVideo": false
+    "temVideo": false,
+    "descricao": "Coleção de recursos pedagógicos prontos para imprimir e aplicar com as crianças.",
+    "publico": "Professoras da educação infantil e do ensino fundamental."
   },
   {
     "slug": "pascoa-lucrativa",
@@ -282,7 +298,9 @@
       }
     ],
     "totalArquivos": 25,
-    "temVideo": false
+    "temVideo": false,
+    "descricao": "Receitas e ideias de ovos e doces de Páscoa para fazer e vender.",
+    "publico": "Quem quer ganhar dinheiro na época da Páscoa."
   },
   {
     "slug": "kit-de-festa",
@@ -317,7 +335,9 @@
       }
     ],
     "totalArquivos": 38,
-    "temVideo": false
+    "temVideo": false,
+    "descricao": "Kit com artes e personalizados prontos para festas, para usar ou vender.",
+    "publico": "Mães que fazem a festa dos filhos e quem quer vender personalizados."
   },
   {
     "slug": "protocolo-idoso-ativo",
@@ -346,7 +366,9 @@
       }
     ],
     "totalArquivos": 6,
-    "temVideo": false
+    "temVideo": false,
+    "descricao": "Exercícios simples e orientações para o idoso ganhar força, equilíbrio e disposição.",
+    "publico": "Pessoas acima de 60 anos e filhos que cuidam dos pais."
   },
   {
     "slug": "bobbie-cristao",
@@ -375,7 +397,9 @@
       }
     ],
     "totalArquivos": 8,
-    "temVideo": true
+    "temVideo": true,
+    "descricao": "Desenhos e histórias cristãs para as crianças aprenderem os valores da Bíblia.",
+    "publico": "Pais cristãos e professoras de escola bíblica."
   },
   {
     "slug": "celular-sem-golpe",
@@ -422,7 +446,9 @@
       }
     ],
     "totalArquivos": 13,
-    "temVideo": false
+    "temVideo": false,
+    "descricao": "Guia simples para usar o celular com segurança e não cair em golpes no WhatsApp, no banco e na internet.",
+    "publico": "Pessoas mais velhas e quem tem pouca prática com o celular."
   },
   {
     "slug": "croche-passo-a-passo",
@@ -439,7 +465,9 @@
       }
     ],
     "totalArquivos": 5,
-    "temVideo": false
+    "temVideo": false,
+    "descricao": "Aulas de crochê do zero, com o passo a passo de cada ponto e peça.",
+    "publico": "Mulheres que querem aprender crochê para usar ou vender."
   },
   {
     "slug": "clube-devocional",
@@ -486,7 +514,9 @@
       }
     ],
     "totalArquivos": 13,
-    "temVideo": false
+    "temVideo": false,
+    "descricao": "Devocionais e estudos bíblicos prontos para ler todos os dias.",
+    "publico": "Cristãos que querem ter constância na leitura da Bíblia."
   },
   {
     "slug": "kit-natal-lucrativo",
@@ -521,7 +551,9 @@
       }
     ],
     "totalArquivos": 19,
-    "temVideo": true
+    "temVideo": true,
+    "descricao": "Kit de Natal para revender: materiais prontos para entregar às clientes e uma calculadora para formar o preço.",
+    "publico": "Quem quer ganhar uma renda extra vendendo no Natal."
   },
   {
     "slug": "sementinhas",
@@ -544,7 +576,9 @@
       }
     ],
     "totalArquivos": 5,
-    "temVideo": false
+    "temVideo": false,
+    "descricao": "Atividades cristãs para as crianças pequenas conhecerem Deus e a Bíblia.",
+    "publico": "Pais cristãos e ministério infantil."
   },
   {
     "slug": "rotina-60-em-dia",
@@ -573,7 +607,9 @@
       }
     ],
     "totalArquivos": 5,
-    "temVideo": false
+    "temVideo": false,
+    "descricao": "Rotina de cuidados com saúde, exercícios leves e organização do dia para quem tem mais de 60 anos.",
+    "publico": "Pessoas acima de 60 anos e seus filhos."
   },
   {
     "slug": "cardapios-receitas-2027",
@@ -620,7 +656,9 @@
       }
     ],
     "totalArquivos": 15,
-    "temVideo": false
+    "temVideo": false,
+    "descricao": "Cardápios da semana e receitas práticas para o ano inteiro.",
+    "publico": "Donas de casa e famílias que querem comer bem e gastar menos."
   },
   {
     "slug": "doceira-40-em-30-dias",
@@ -655,7 +693,9 @@
       }
     ],
     "totalArquivos": 7,
-    "temVideo": false
+    "temVideo": false,
+    "descricao": "Quarenta receitas de doces para aprender em 30 dias e começar a vender.",
+    "publico": "Quem quer ganhar dinheiro fazendo doces em casa."
   },
   {
     "slug": "clube-tutores-cao-feliz",
@@ -702,7 +742,9 @@
       }
     ],
     "totalArquivos": 14,
-    "temVideo": false
+    "temVideo": false,
+    "descricao": "Dicas de cuidado, adestramento e alimentação para o cachorro viver feliz e saudável.",
+    "publico": "Donos de cachorro."
   },
   {
     "slug": "clube-atividades-infantis",
@@ -749,7 +791,9 @@
       }
     ],
     "totalArquivos": 13,
-    "temVideo": false
+    "temVideo": false,
+    "descricao": "Atividades infantis prontas para imprimir: pintura, letras, números e coordenação.",
+    "publico": "Mães, pais e professoras de crianças de 2 a 8 anos."
   },
   {
     "slug": "gestante-em-dia",
@@ -796,6 +840,8 @@
       }
     ],
     "totalArquivos": 14,
-    "temVideo": false
+    "temVideo": false,
+    "descricao": "Acompanhamento da gravidez semana a semana, com cuidados, alimentação e preparação para o bebê.",
+    "publico": "Gestantes, principalmente as mães de primeira viagem."
   }
 ]

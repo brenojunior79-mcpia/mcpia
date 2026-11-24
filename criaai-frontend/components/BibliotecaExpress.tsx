@@ -6,7 +6,7 @@ import { useMemo, useState } from 'react'
 import produtos from '@/lib/expressProdutos.json'
 
 type Item = { titulo: string; link: string; arquivos: number; tipo: string }
-type Produto = { slug: string; nome: string; pasta: string; capa: string; nicho: string; itens: Item[]; totalArquivos: number; temVideo: boolean }
+type Produto = { slug: string; nome: string; pasta: string; capa: string; nicho: string; itens: Item[]; totalArquivos: number; temVideo: boolean; descricao?: string; publico?: string; faturamento?: string }
 
 const ICONE: Record<string, string> = { produto: '📦', pagina: '🌐', criativos: '🎬', outro: '📁' }
 
@@ -47,6 +47,9 @@ export default function BibliotecaExpress() {
               <div className="bx-info">
                 <div className="bx-nome">{p.nome}</div>
                 <div className="bx-nicho">{p.nicho}</div>
+                {p.descricao && <div className="bx-desc">{p.descricao}</div>}
+                {p.publico && <div className="bx-pub"><b>Para quem:</b> {p.publico}</div>}
+                {p.faturamento && <div className="bx-fat">💰 Média de faturamento: {p.faturamento} por dia</div>}
                 <div className="bx-meta">
                   {p.itens.slice(0, 3).map(function(it) { return <span key={it.titulo}>{ICONE[it.tipo] || '📁'} {it.titulo}</span> })}
                 </div>
@@ -65,6 +68,9 @@ export default function BibliotecaExpress() {
             <div className="bx-mcorpo">
               <div className="bx-nicho">{aberto.nicho}</div>
               <h3 className="bx-mnome">{aberto.nome}</h3>
+              {aberto.descricao && <p className="bx-desc" style={{ fontSize: 14 }}>{aberto.descricao}</p>}
+              {aberto.publico && <p className="bx-pub" style={{ fontSize: 13.5 }}><b>Para quem:</b> {aberto.publico}</p>}
+              {aberto.faturamento && <p className="bx-fat" style={{ fontSize: 14 }}>💰 Média de faturamento: {aberto.faturamento} por dia</p>}
               <p className="bx-sub">Abra cada material no Drive e baixe o que precisar.</p>
               <div className="bx-mitens">
                 {aberto.itens.map(function(it) {
@@ -107,6 +113,10 @@ export default function BibliotecaExpress() {
         .bx-selo { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,.7); color: #86efac; font-size: 11.5px; font-weight: 800; padding: 4px 9px; border-radius: 8px; }
         .bx-info { padding: 12px 14px 14px; }
         .bx-nome { font-weight: 800; font-size: 15.5px; line-height: 1.3; margin-bottom: 3px; }
+        .bx-desc { font-size: 12.5px; color: #f5f5f4; line-height: 1.45; margin-bottom: 6px; }
+        .bx-pub { font-size: 12px; color: #d6d3d1; line-height: 1.4; margin-bottom: 6px; }
+        .bx-pub b { color: #fdba74; }
+        .bx-fat { font-size: 12.5px; font-weight: 800; color: #4ade80; margin-bottom: 8px; }
         .bx-nicho { font-size: 12.5px; color: #fdba74; font-weight: 700; margin-bottom: 8px; }
         .bx-meta { display: flex; flex-wrap: wrap; gap: 6px; font-size: 11.5px; color: rgba(255,255,255,.6); }
         .bx-meta span { background: rgba(255,255,255,.06); border-radius: 6px; padding: 3px 7px; }
