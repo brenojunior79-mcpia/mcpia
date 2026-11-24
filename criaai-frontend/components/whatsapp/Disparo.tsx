@@ -15,7 +15,7 @@ const h1: React.CSSProperties = { fontFamily: 'Syne, sans-serif', fontSize: 18, 
 const h3: React.CSSProperties = { fontWeight: 800, fontSize: 15, color: 'var(--text)', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }
 const tab: React.CSSProperties = { fontVariantNumeric: 'tabular-nums' }
 const lab: React.CSSProperties = { fontSize: 12.5, fontWeight: 700, color: 'var(--text)', marginBottom: 4, display: 'block' }
-const SEG_NOME: Record<string, string> = { todos: 'Todos os alunos', plano: 'Alunos com plano', sem_plano: 'Alunos sem plano', sem_express: 'Alunos sem a Estrutura Express', sem_express_1: 'Sem a Express · Lista 1', sem_express_2: 'Sem a Express · Lista 2', sem_express_3: 'Sem a Express · Lista 3', sem_express_4: 'Sem a Express · Lista 4', base: 'Contatos (toda a base)', sem_plano_250: 'Sem plano · lote de 250', contatos: 'Contatos importados', teste: 'Teste' }
+const SEG_NOME: Record<string, string> = { todos: 'Todos os alunos', plano: 'Alunos com plano', sem_plano: 'Alunos sem plano', sem_express: 'Alunos sem a Estrutura Express', sem_express_1: 'Sem a Express · Lista 1', sem_express_2: 'Sem a Express · Lista 2', sem_express_3: 'Sem a Express · Lista 3', sem_express_4: 'Sem a Express · Lista 4', base: 'Contatos (toda a base)', sem_plano_250: 'Sem plano · lote de 250', contatos: 'Contatos importados', arquivo: 'Lista subida (CSV)', teste: 'Teste' }
 
 function enviadas(c: Cont) { return (c.sent || 0) + (c.delivered || 0) + (c.read || 0) }
 function faltam(c: Cont) { return (c.pending || 0) + (c.sending || 0) }
@@ -35,13 +35,30 @@ function lerCsv(texto: string): { nome: string; wa: string }[] {
     else cel += ch
   }
   if (cel || lin.length) { lin.push(cel.replace(/\r$/, '')); linhas.push(lin) }
-  if (linhas.length < 2) return []
-  const cab = linhas[0].map(function(x) { return x.replace(/^﻿/, '').trim().toLowerCase() })
-  const iw = cab.findIndex(function(x) { return x.indexOf('whatsapp') >= 0 || x.indexOf('telefone') >= 0 || x.indexOf('celular') >= 0 || x.indexOf('phone') >= 0 })
-  const inome = cab.findIndex(function(x) { return x === 'nome' || x === 'name' })
-  if (iw < 0) return []
-  return linhas.slice(1).map(function(l) { return { nome: inome >= 0 ? (l[inome] || '') : '', wa: l[iw] || '' } }).filter(function(x) { return x.wa.trim() })
+  if (linhas.length < 1) return []
+  const cab = linhas[0].map(function(x) { return x.replace(/^\uFEFF/, '').trim().toLowerCase() })
+  let iw = cab.findIndex(function(x) { return x.indexOf('whatsapp') >= 0 || x.indexOf('telefone') >= 0 || x.indexOf('celular') >= 0 || x.indexOf('phone') >= 0 || x.indexOf('numero') >= 0 || x.indexOf('número') >= 0 })
+  let inome = cab.findIndex(function(x) { return x === 'nome' || x === 'name' || x.indexOf('nome') === 0 || x.indexOf('name') >= 0 })
+  let inicio = 1
+  // Sem cabecalho conhecido: acha sozinho a coluna que tem cara de telefone
+  if (iw < 0) {
+    const amostra = linhas.slice(0, 50)
+    let melhor = -1, pontos = 0
+    const cols = Math.max.apply(null, amostra.map(function(l) { return l.length }))
+    for (let c = 0; c < cols; c++) {
+      const n = amostra.filter(function(l) { const d = String(l[c] || '').replace(/\D/g, ''); return d.length >= 10 && d.length <= 13 }).length
+      if (n > pontos) { pontos = n; melhor = c }
+    }
+    if (melhor < 0) return []
+    iw = melhor
+    const d0 = String(linhas[0][iw] || '').replace(/\D/g, '')
+    inicio = d0.length >= 10 ? 0 : 1
+    if (inome < 0) inome = linhas[0].findIndex(function(x, i) { return i !== iw && /[a-zA-Z]/.test(String(x || '')) && String(x || '').replace(/\D/g, '').length < 6 })
+  }
+  return linhas.slice(inicio).map(function(l) { return { nome: inome >= 0 ? String(l[inome] || '').trim() : '', wa: String(l[iw] || '').trim() } }).filter(function(x) { return x.wa })
 }
+
+type Conferencia = { validos: { nome: string; wa: string }[]; invalidos: { nome: string; numero: string }[]; repetidos: number; arquivo: string }
 
 function num(n: number | undefined) { return (n || 0).toLocaleString('pt-BR') }
 function pct(a: number, b: number) { return b > 0 ? Math.round((a / b) * 100) + '%' : '0%' }
@@ -188,6 +205,11 @@ export default function Disparo({ tpls, onLoadTpls, canais }: { tpls: Tpl[] | nu
   }
   const [rodando, setRodando] = useState(false)
   const [imp, setImp] = useState('')
+  // Lista subida so para este disparo (ex.: contatos do grupo), ja conferida
+  const [lista, setLista] = useState<Conferencia | null>(null)
+  const [listaMsg, setListaMsg] = useState('')
+  const [verInv, setVerInv] = useState(false)
+  const listaRef = useRef<HTMLInputElement>(null)
   const rodRef = useRef(false)
   const paraRef = useRef(false)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -220,7 +242,7 @@ export default function Disparo({ tpls, onLoadTpls, canais }: { tpls: Tpl[] | nu
   const aprovados = (tplsAtuais || []).filter(function(t) { return t.status === 'APPROVED' })
   const t = aprovados.find(function(x) { return x.name + '|' + x.language === key }) || null
   const semMidia = function(x: Tpl) { return !x.header || x.header.charAt(0) !== '[' }
-  const quantos = pub ? (seg === 'sem_plano_250' ? (pub.lote || 0) : seg === 'plano' ? pub.comPlano : seg === 'sem_plano' ? pub.semPlano : seg === 'contatos' ? pub.contatos : seg === 'sem_express' ? (pub.semExpress || 0) : seg === 'sem_express_1' ? (pub.semExpressPartes?.[0] || 0) : seg === 'sem_express_2' ? (pub.semExpressPartes?.[1] || 0) : seg === 'sem_express_3' ? (pub.semExpressPartes?.[2] || 0) : seg === 'sem_express_4' ? (pub.semExpressPartes?.[3] || 0) : seg === 'base' ? (pub.base || 0) : pub.podem) : 0
+  const quantos = seg === 'arquivo' ? (lista ? lista.validos.length : 0) : pub ? (seg === 'sem_plano_250' ? (pub.lote || 0) : seg === 'plano' ? pub.comPlano : seg === 'sem_plano' ? pub.semPlano : seg === 'contatos' ? pub.contatos : seg === 'sem_express' ? (pub.semExpress || 0) : seg === 'sem_express_1' ? (pub.semExpressPartes?.[0] || 0) : seg === 'sem_express_2' ? (pub.semExpressPartes?.[1] || 0) : seg === 'sem_express_3' ? (pub.semExpressPartes?.[2] || 0) : seg === 'sem_express_4' ? (pub.semExpressPartes?.[3] || 0) : seg === 'base' ? (pub.base || 0) : pub.podem) : 0
   const ativa = camps.find(function(c) { return c.status === 'rodando' || c.status === 'pausado' }) || null
 
   function trocarCanal(id: string) {
@@ -268,7 +290,7 @@ export default function Disparo({ tpls, onLoadTpls, canais }: { tpls: Tpl[] | nu
     if (!window.confirm('Enviar o modelo "' + t.name + '" para ' + quantos + ' pessoa' + (quantos === 1 ? '' : 's') + ' (' + SEG_NOME[seg] + ')?\n\nIsso não pode ser desfeito depois de enviado.')) return
     setOcupado(true); setMsg(''); setOk('')
     try {
-      const r = await post('/api/whatsapp/broadcast', { action: 'criar', ...corpoBase(), segmento: seg, esperado: quantos, instrucaoIA: instrucaoIA })
+      const r = await post('/api/whatsapp/broadcast', { action: 'criar', ...corpoBase(), segmento: seg, esperado: quantos, instrucaoIA: instrucaoIA, lista: seg === 'arquivo' && lista ? lista.validos : undefined })
       if (!r.ok) { setMsg(r.j.error || 'Não foi possível criar o disparo.'); if (r.j.total) carregarPub(t ? t.name : undefined) }
       else { await carregarCamps(); rodar(r.j.id) }
     } catch (e) { setMsg('Sem conexão.') }
@@ -296,6 +318,21 @@ export default function Disparo({ tpls, onLoadTpls, canais }: { tpls: Tpl[] | nu
     paraRef.current = true
     await post('/api/whatsapp/broadcast', { action: 'cancelar', id })
     carregarCamps()
+  }
+
+  async function subirLista(f: File) {
+    setListaMsg('Conferindo os números…'); setVerInv(false)
+    try {
+      const linhas = lerCsv(await f.text())
+      if (linhas.length === 0) { setListaMsg('Não achei nenhum número de telefone nesse arquivo. Confira se é o arquivo CSV certo.'); return }
+      if (linhas.length > 5000) { setListaMsg('O arquivo tem ' + linhas.length + ' linhas. O máximo é 5.000 por disparo.'); return }
+      const r = await post('/api/whatsapp/broadcast', { action: 'conferir_lista', contatos: linhas })
+      if (!r.ok) { setListaMsg(r.j.error || 'Não consegui conferir a lista.'); return }
+      setLista({ validos: r.j.validos || [], invalidos: r.j.invalidos || [], repetidos: r.j.repetidos || 0, arquivo: f.name })
+      setListaMsg('')
+      if ((r.j.validos || []).length > 0) { setSeg('arquivo'); setOk('') }
+    } catch (e) { setListaMsg('Não foi possível ler o arquivo.') }
+    if (listaRef.current) listaRef.current.value = ''
   }
 
   async function importar(f: File) {
@@ -391,6 +428,7 @@ export default function Disparo({ tpls, onLoadTpls, canais }: { tpls: Tpl[] | nu
               ['base', 'Contatos: toda a base, alunos, conversas e compradores (' + num(pub?.base) + ')'],
               ['contatos', 'Contatos importados que não são alunos (' + num(pub?.contatos) + ')'],
             ]
+            if (lista && lista.validos.length > 0) opcoes.unshift(['arquivo', 'Lista que eu subi: ' + lista.arquivo + ' (' + num(lista.validos.length) + ')'])
             const visiveis = opcoes.filter(function(o) { return escondidos.indexOf(o[0]) < 0 || o[0] === seg })
             return (
               <div style={{ border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', marginBottom: 8 }}>
@@ -409,6 +447,20 @@ export default function Disparo({ tpls, onLoadTpls, canais }: { tpls: Tpl[] | nu
           })()}
           {escondidos.length > 0 && <button type="button" className="at-b" onClick={function() { setEscondidos([]); try { localStorage.removeItem('mcpia_disparo_escondidos') } catch (e) {} }} style={{ marginBottom: 10 }}><i className="ti ti-eye" />Mostrar opções removidas ({escondidos.length})</button>}
           <a className="at-b" href={'/api/whatsapp/broadcast?view=exportar&seg=' + encodeURIComponent(seg)} download style={{ marginBottom: 12, display: 'inline-flex', textDecoration: 'none' }}><i className="ti ti-download" />Exportar contatos desta lista (CSV)</a>
+          <input ref={listaRef} id="disparo-lista" type="file" accept=".csv,text/csv,text/plain" onChange={function(e) { const f = e.target.files?.[0]; if (f) subirLista(f) }} style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }} />
+          <label htmlFor="disparo-lista" className="at-b" style={{ marginBottom: 12, marginLeft: 6, cursor: 'pointer', display: 'inline-flex' }}><i className="ti ti-upload" />Subir lista de contatos (CSV)</label>
+          {listaMsg && <div role="status" style={{ fontSize: 13, fontWeight: 700, margin: '0 0 12px', color: 'var(--text)' }}>{listaMsg}</div>}
+          {lista && (
+            <div style={{ border: '1px solid var(--border)', borderRadius: 12, padding: '12px 14px', marginBottom: 12, background: 'var(--surface2)', fontSize: 13.5, lineHeight: 1.6 }}>
+              <div style={{ fontWeight: 800, marginBottom: 4 }}><i className="ti ti-checklist" /> Conferência da lista "{lista.arquivo}"</div>
+              <div style={{ color: '#15803d', fontWeight: 700 }}>✅ {num(lista.validos.length)} números certos (vão receber)</div>
+              {lista.repetidos > 0 && <div style={{ color: 'var(--muted2)' }}>🔁 {num(lista.repetidos)} repetidos (cada pessoa recebe só uma vez)</div>}
+              {lista.invalidos.length > 0 && <div style={{ color: '#dc2626', fontWeight: 700 }}>❌ {num(lista.invalidos.length)} números com erro (ficam de fora) <button type="button" onClick={function() { setVerInv(!verInv) }} style={{ border: 0, background: 'transparent', color: '#dc2626', textDecoration: 'underline', cursor: 'pointer', fontSize: 13 }}>{verInv ? 'esconder' : 'ver quais'}</button></div>}
+              {verInv && <div style={{ maxHeight: 160, overflowY: 'auto', fontSize: 12.5, color: 'var(--muted2)', marginTop: 4 }}>{lista.invalidos.slice(0, 300).map(function(x, i) { return <div key={i}>{(x.nome ? x.nome + ' · ' : '') + (x.numero || '(vazio)')}</div> })}</div>}
+              <div style={{ fontSize: 12.5, color: 'var(--muted2)', marginTop: 4 }}>Números sem DDD, curtos demais ou de fora do Brasil ficam de fora para não dar erro no disparo.</div>
+              <button type="button" className="at-b" onClick={function() { setLista(null); if (seg === 'arquivo') setSeg('todos') }} style={{ marginTop: 8 }}><i className="ti ti-x" />Tirar esta lista</button>
+            </div>
+          )}
 
           {listaCanais.length > 0 && (
             <>

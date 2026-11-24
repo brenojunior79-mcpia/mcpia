@@ -20,6 +20,24 @@ function segmento(v: any): Segmento {
   return v === 'plano' || v === 'sem_plano' || v === 'sem_plano_250' || v === 'sem_express' || v === 'sem_express_1' || v === 'sem_express_2' || v === 'sem_express_3' || v === 'sem_express_4' || v === 'contatos' || v === 'base' ? v : 'todos'
 }
 
+// Confere a lista do arquivo: ajusta cada numero para o padrao do WhatsApp, tira repetidos e separa os com erro
+function conferirLista(v: any): { validos: { nome: string; wa: string }[]; invalidos: { nome: string; numero: string }[]; repetidos: number } {
+  const linhas: any[] = Array.isArray(v) ? v.slice(0, 5000) : []
+  const vistos = new Set<string>()
+  const validos: { nome: string; wa: string }[] = []
+  const invalidos: { nome: string; numero: string }[] = []
+  let repetidos = 0
+  for (const l of linhas) {
+    const nome = String(l?.nome || '').trim().slice(0, 120)
+    const wa = normalizarNumero(l?.wa)
+    if (!wa) { invalidos.push({ nome, numero: String(l?.wa || '').slice(0, 40) }); continue }
+    if (vistos.has(wa)) { repetidos++; continue }
+    vistos.add(wa)
+    validos.push({ nome, wa })
+  }
+  return { validos, invalidos, repetidos }
+}
+
 function lerParams(v: any): ParamCfg[] {
   if (!Array.isArray(v)) return []
   return v.slice(0, 10).map(function(p: any) { return { mode: p?.mode === 'nome' ? 'nome' : 'texto', value: String(p?.value || '').slice(0, 200) } as ParamCfg })
@@ -146,6 +164,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
+  // Lista subida so para um disparo (ex.: contatos de um grupo): confere e devolve os numeros certos
+  if (action === 'conferir_lista') {
+    return NextResponse.json(conferirLista(input?.contatos))
+  }
+
   if (action === 'importar') {
     const lista: any[] = Array.isArray(input?.contatos) ? input.contatos.slice(0, 1000) : []
     const mapa = new Map<string, { wa_id: string; name: string | null }>()
@@ -190,16 +213,18 @@ export async function POST(req: NextRequest) {
   }
 
   if (action === 'criar') {
+    const porArquivo = input?.segmento === 'arquivo'
     const seg = segmento(input?.segmento)
     const ativa = await admin.from('wa_broadcasts').select('id').in('status', ['rodando', 'pausado']).limit(1)
     if (ativa.data && ativa.data.length > 0) return NextResponse.json({ error: 'Ja existe um disparo em andamento. Termine ou cancele ele antes de criar outro.' }, { status: 409 })
     let pub
-    try { pub = await montarPublico(seg, name) } catch (e: any) { return NextResponse.json({ error: e?.message || 'Erro.' }, { status: 500 }) }
+    if (porArquivo) pub = { lista: conferirLista(input?.lista).validos.map(function(x) { return { id: null as string | null, nome: x.nome, wa: x.wa } }) }
+    else try { pub = await montarPublico(seg, name) } catch (e: any) { return NextResponse.json({ error: e?.message || 'Erro.' }, { status: 500 }) }
     if (pub.lista.length === 0) return NextResponse.json({ error: 'Nenhum aluno com WhatsApp nesse grupo.' }, { status: 400 })
     // O que a pessoa viu na tela precisa bater com o que vai ser enviado
     if (Number(input?.esperado) !== pub.lista.length) return NextResponse.json({ error: 'O numero de alunos mudou (agora sao ' + pub.lista.length + '). Confira e confirme de novo.', total: pub.lista.length }, { status: 409 })
 
-    const b = await admin.from('wa_broadcasts').insert({ created_by: staff, template_name: name, template_language: language, preview, params, segment: seg, status: 'rodando', total: pub.lista.length, instrucao_ia: String(input?.instrucaoIA || '').trim().slice(0, 1500) || null, connection_id: canal.connectionId }).select('id').single()
+    const b = await admin.from('wa_broadcasts').insert({ created_by: staff, template_name: name, template_language: language, preview, params, segment: porArquivo ? 'arquivo' : seg, status: 'rodando', total: pub.lista.length, instrucao_ia: String(input?.instrucaoIA || '').trim().slice(0, 1500) || null, connection_id: canal.connectionId }).select('id').single()
     if (b.error || !b.data) return NextResponse.json({ error: 'Nao foi possivel criar o disparo.' }, { status: 500 })
     for (let i = 0; i < pub.lista.length; i += 500) {
       const chunk = pub.lista.slice(i, i + 500).map(function(a) { return { broadcast_id: b.data!.id, user_id: a.id, name: a.nome, wa_id: a.wa, status: 'pending' } })
