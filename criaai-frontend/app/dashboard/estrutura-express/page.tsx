@@ -36,7 +36,7 @@ const CSS = `
 .ee-up { animation: eeUp .6s cubic-bezier(.2,.8,.2,1) both }
 .ee-in { animation: eeIn .55s cubic-bezier(.2,.8,.2,1) both }
 .ee-float { animation: eeFloat 3.6s ease-in-out infinite }
-.ee-hero { background: linear-gradient(120deg,#0f172a,#1e1b4b 35%,#7c2d12 70%,#0f172a); background-size: 200% 200%; animation: eeShine 9s linear infinite alternate }
+.ee-hero { background: linear-gradient(120deg,#050505,#1a0d02 30%,#c2410c 62%,#f97316 78%,#050505); background-size: 200% 200%; animation: eeShine 9s linear infinite alternate }
 .ee-orb { position: absolute; border-radius: 50%; filter: blur(40px); animation: eeGlow 4s ease-in-out infinite }
 .ee-cta { animation: eePulse 2s infinite; transition: transform .18s ease, filter .18s ease }
 .ee-cta:hover { transform: translateY(-2px) scale(1.03); filter: brightness(1.08) }
@@ -51,6 +51,14 @@ const CSS = `
 .ee-btn:hover { transform: translateY(-2px); filter: brightness(1.08) }
 .ee-burst { position: absolute; width: 8px; height: 8px; border-radius: 50%; pointer-events: none; animation: eeBurst .8s ease-out forwards }
 @media (prefers-reduced-motion: reduce) { .ee-up,.ee-in,.ee-float,.ee-hero,.ee-orb,.ee-cta,.ee-pop,.ee-burst { animation: none !important } }
+/* Visual preto e laranja da Estrutura Express 2.0 (pedido do Breno) */
+.ee-pagina { --bg:#070504; --surface:#120c07; --surface2:#1d140b; --border:rgba(249,115,22,.22); --border2:rgba(249,115,22,.35); --text:#fff7ed; --muted:#fdba74; --muted2:#d6b79a;
+  background: radial-gradient(60% 40% at 0% 0%, rgba(249,115,22,.22), transparent 70%), radial-gradient(60% 40% at 100% 100%, rgba(234,88,12,.18), transparent 70%), linear-gradient(160deg,#050505,#140a03 45%,#2a1205 70%,#050505) !important;
+  background-size: 100% 100%, 100% 100%, 220% 220% !important; animation: eeFundo 14s ease-in-out infinite alternate }
+@keyframes eeFundo { 0% { background-position: 0 0, 0 0, 0% 50% } 100% { background-position: 0 0, 0 0, 100% 50% } }
+.ee-logo { height: 118px; width: auto; display: block; flex-shrink: 0; filter: drop-shadow(0 10px 26px rgba(249,115,22,.45)) }
+@media (max-width: 600px) { .ee-logo { height: 92px } }
+@media (prefers-reduced-motion: reduce) { .ee-pagina { animation: none } }
 .ee-grid { display: grid; grid-template-columns: minmax(0,1.7fr) minmax(280px,1fr); gap: 20px; align-items: start }
 @media (max-width: 900px) { .ee-grid { grid-template-columns: 1fr } }
 `
@@ -217,6 +225,7 @@ export default function EstruturaExpressPage() {
   }
 
   const wrap: React.CSSProperties = { minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', padding: '24px 20px 60px' }
+  const wrapEE: React.CSSProperties = { ...wrap }
 
   if (estado === 'carregando') {
     return (
@@ -263,18 +272,18 @@ export default function EstruturaExpressPage() {
   const th = aula ? thumbs[aula.video_id] : undefined
 
   return (
-    <div style={wrap}><style>{CSS}</style>
+    <div className="ee-pagina" style={wrapEE}><style>{CSS}</style>
       <div style={{ maxWidth: 1180, margin: '0 auto' }}>
         {/* Quem ja tem a Estrutura Express nao ve a Black Friday (ordem do Breno) */}
 
-        <div className="ee-hero ee-up" style={{ position: 'relative', overflow: 'hidden', borderRadius: 24, padding: '28px 28px', color: '#fff', marginBottom: 20, border: '1px solid rgba(255,255,255,0.14)', boxShadow: '0 18px 50px rgba(124,45,18,0.30)' }}>
+        <div className="ee-hero ee-up" style={{ position: 'relative', overflow: 'hidden', borderRadius: 24, padding: '28px 28px', color: '#fff', marginBottom: 20, border: '1px solid rgba(255,255,255,0.14)', boxShadow: '0 18px 50px rgba(249,115,22,0.28)' }}>
           <div className="ee-orb" style={{ width: 220, height: 220, background: '#f97316', top: -90, right: 30 }} />
-          <div className="ee-orb" style={{ width: 200, height: 200, background: '#7c3aed', bottom: -100, left: 20, animationDelay: '1.2s' }} />
+          <div className="ee-orb" style={{ width: 200, height: 200, background: '#ea580c', bottom: -100, left: 20, animationDelay: '1.2s' }} />
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
-            <div className="ee-float" style={{ width: 68, height: 68, borderRadius: 20, background: 'linear-gradient(135deg,#fbbf24,#f97316)', boxShadow: '0 10px 26px rgba(249,115,22,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, flexShrink: 0 }}>⚡</div>
+            <img className="ee-logo ee-float" src="/express/logo-express-2.png" alt="Estrutura Express 2.0" />
             <div style={{ flex: 1, minWidth: 220 }}>
               <div style={{ display: 'inline-block', background: 'rgba(255,255,255,0.16)', border: '1px solid rgba(255,255,255,0.28)', borderRadius: 999, padding: '3px 12px', fontSize: 11.5, fontWeight: 800, letterSpacing: 0.6, marginBottom: 8 }}>✓ ACESSO LIBERADO</div>
-              <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: 'clamp(26px, 4.4vw, 36px)', fontWeight: 800, margin: 0, color: '#fff', lineHeight: 1.1 }}>Estrutura Express</h1>
+              <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: 'clamp(26px, 4.4vw, 36px)', fontWeight: 800, margin: 0, color: '#fff', lineHeight: 1.1 }}>Estrutura Express 2.0</h1>
               <div style={{ fontSize: 14.5, color: 'rgba(255,255,255,0.88)', marginTop: 6, lineHeight: 1.5 }}>Produto pronto, site pronto e criativos prontos. Siga as aulas na ordem e coloque tudo no ar.</div>
             </div>
             <div style={{ minWidth: 200, flex: '0 1 260px', background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.22)', borderRadius: 18, padding: '14px 16px' }}>
