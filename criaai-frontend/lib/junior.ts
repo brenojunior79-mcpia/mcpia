@@ -1433,7 +1433,8 @@ export function tipoFinalConversa(_temExpress: boolean | null, _semente?: string
 
 // temExpress: false = nao tem (recebe o roteiro da Express); true ou null = nao recebe pergunta final.
 export function situacaoFinalConversa(_tipo: 'ranking' | 'express', temExpress: boolean | null = null): string {
-  if (temExpress !== false) return '# FINAL DESTA CONVERSA\nNo encerramento, NAO faca pergunta final: nada de Estrutura Express, R$200 no Pix, ranking, aplicativo ou plano. So uma despedida curta.'
+  // Ordem do Breno (24/11/2026): sem pergunta final da Estrutura Express para ninguem
+  if (true || temExpress !== false) return '# FINAL DESTA CONVERSA\nNo encerramento, NAO faca pergunta final: nada de Estrutura Express, R$200 no Pix, ranking, aplicativo ou plano. So uma despedida curta.'
   return '# FINAL DESTA CONVERSA\nEste aluno NAO tem a Estrutura Express. No encerramento, comece o roteiro da Estrutura Express com cupom (regra 36, passo 1), uma unica vez por conversa. Se voce ja fez o passo 1 nesta conversa, NAO recomece: continue do passo seguinte conforme a resposta dele. NAO pergunte sobre R$200 no Pix, ranking ou aplicativo e NAO ofereca plano.'
 }
 

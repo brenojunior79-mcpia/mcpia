@@ -910,7 +910,8 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     }
     // So alunas que sabidamente NAO tem a Estrutura Express recebem a pergunta final (temExpress null = desconhecido: nao pergunta).
     // A pergunta do R$200 no Pix (ranking) nao e mais anexada (ordem do Breno).
-    if (acabou && !passaParaHumano && ehAluna && tipoFinal === 'express' && temExpress === false && !ofereceuNaConversa(linhas, RE_OFERTA_EXPRESS)) {
+    // Desligado (ordem do Breno, 24/11/2026): o Junior nao pergunta mais dos produtos da Estrutura Express no fim da conversa
+    if (false && acabou && !passaParaHumano && ehAluna && tipoFinal === 'express' && temExpress === false && !ofereceuNaConversa(linhas, RE_OFERTA_EXPRESS)) {
       if (!/produtos que o Breno/i.test(texto)) texto = (texto ? texto + '\n\n' : '') + PERGUNTA_EXPRESS
     }
     // Frases de enrolacao no fim ("Se precisar de ajuda, e so avisar") saem, a nao ser que seja a despedida final da conversa
