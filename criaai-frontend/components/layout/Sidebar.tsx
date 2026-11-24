@@ -150,7 +150,9 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
   const isNewUser = !isAdmin && createdAt > 0 && (Date.now() - createdAt) < HIDDEN_DAYS * 24 * 60 * 60 * 1000
   // Nos 7 primeiros dias, quem ainda nao tem plano nao ve nada sobre planos/creditos
   const hasActivePlan = profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing'
-  const hidePlans = isNewUser && !hasActivePlan
+  // Admin (Breno) apresentando a plataforma ao vivo na Black (24/11/2026): esconde Planos e Creditos na conta dele. Volte para false para mostrar de novo.
+  const ESCONDER_PLANOS_ADMIN = true
+  const hidePlans = (isNewUser && !hasActivePlan) || (!!isAdmin && ESCONDER_PLANOS_ADMIN)
 
   // Gerenciador de Anuncios: liberado para quem tem plano; sem plano so aparece depois de 7 dias (e pede para assinar); admin e conta do revisor da Meta sempre abrem
   const statusAnu = statusAnuncios(!!isAdmin, profile?.email || user?.email, profile?.created_at, profile?.subscription_status, plan?.name)
