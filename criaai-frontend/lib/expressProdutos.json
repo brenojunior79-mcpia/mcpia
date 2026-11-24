@@ -28,7 +28,8 @@
     "totalArquivos": 5,
     "temVideo": false,
     "descricao": "Treinos para fazer em casa, sem academia e sem aparelhos, com exercícios simples e explicados.",
-    "publico": "Mulheres e homens que querem emagrecer ou ganhar disposição sem sair de casa."
+    "publico": "Mulheres e homens que querem emagrecer ou ganhar disposição sem sair de casa.",
+    "faturamento": "R$ 100 a R$ 150"
   },
   {
     "slug": "abc-facil",
@@ -59,7 +60,8 @@
     "totalArquivos": 12,
     "temVideo": true,
     "descricao": "Material para ensinar a criança a ler e escrever, com atividades de letras, sílabas e palavras.",
-    "publico": "Mães, pais e professoras de crianças em fase de alfabetização."
+    "publico": "Mães, pais e professoras de crianças em fase de alfabetização.",
+    "faturamento": "R$ 90 a R$ 140"
   },
   {
     "slug": "kit-pedagogico",
@@ -90,7 +92,8 @@
     "totalArquivos": 9,
     "temVideo": false,
     "descricao": "Kit de atividades prontas para imprimir e usar em sala de aula ou em casa.",
-    "publico": "Professoras, pedagogas e mães que ensinam os filhos em casa."
+    "publico": "Professoras, pedagogas e mães que ensinam os filhos em casa.",
+    "faturamento": "R$ 90 a R$ 140"
   },
   {
     "slug": "play-kids",
@@ -121,7 +124,8 @@
     "totalArquivos": 18,
     "temVideo": false,
     "descricao": "Atividades e brincadeiras cristãs para ensinar a Bíblia às crianças de um jeito divertido.",
-    "publico": "Pais cristãos, professoras de escola bíblica e ministério infantil."
+    "publico": "Pais cristãos, professoras de escola bíblica e ministério infantil.",
+    "faturamento": "R$ 80 a R$ 130"
   },
   {
     "slug": "jogando-e-lendo",
@@ -152,7 +156,8 @@
     "totalArquivos": 3,
     "temVideo": true,
     "descricao": "Jogos de leitura que ensinam a criança a ler brincando.",
-    "publico": "Mães, pais e professoras de crianças que estão aprendendo a ler."
+    "publico": "Mães, pais e professoras de crianças que estão aprendendo a ler.",
+    "faturamento": "R$ 80 a R$ 130"
   },
   {
     "slug": "renda-com-caldo",
@@ -189,7 +194,8 @@
     "totalArquivos": 7,
     "temVideo": true,
     "descricao": "Receitas e passo a passo para fazer e vender caldos e ganhar uma renda extra.",
-    "publico": "Quem quer começar a vender comida feita em casa."
+    "publico": "Quem quer começar a vender comida feita em casa.",
+    "faturamento": "R$ 80 a R$ 120"
   },
   {
     "slug": "rotina-magica",
@@ -226,7 +232,8 @@
     "totalArquivos": 30,
     "temVideo": false,
     "descricao": "Quadros e materiais para criar a rotina da criança: acordar, estudar, brincar e dormir na hora certa.",
-    "publico": "Mães e pais de crianças pequenas que querem mais organização em casa."
+    "publico": "Mães e pais de crianças pequenas que querem mais organização em casa.",
+    "faturamento": "R$ 80 a R$ 130"
   },
   {
     "slug": "recursos-pedagogicos",
@@ -263,7 +270,8 @@
     "totalArquivos": 9,
     "temVideo": false,
     "descricao": "Coleção de recursos pedagógicos prontos para imprimir e aplicar com as crianças.",
-    "publico": "Professoras da educação infantil e do ensino fundamental."
+    "publico": "Professoras da educação infantil e do ensino fundamental.",
+    "faturamento": "R$ 90 a R$ 140"
   },
   {
     "slug": "pascoa-lucrativa",
@@ -300,7 +308,8 @@
     "totalArquivos": 25,
     "temVideo": false,
     "descricao": "Receitas e ideias de ovos e doces de Páscoa para fazer e vender.",
-    "publico": "Quem quer ganhar dinheiro na época da Páscoa."
+    "publico": "Quem quer ganhar dinheiro na época da Páscoa.",
+    "faturamento": "R$ 70 a R$ 120"
   },
   {
     "slug": "kit-de-festa",
@@ -337,7 +346,8 @@
     "totalArquivos": 38,
     "temVideo": false,
     "descricao": "Kit com artes e personalizados prontos para festas, para usar ou vender.",
-    "publico": "Mães que fazem a festa dos filhos e quem quer vender personalizados."
+    "publico": "Mães que fazem a festa dos filhos e quem quer vender personalizados.",
+    "faturamento": "R$ 70 a R$ 110"
   },
   {
     "slug": "protocolo-idoso-ativo",
@@ -368,7 +378,8 @@
     "totalArquivos": 6,
     "temVideo": false,
     "descricao": "Exercícios simples e orientações para o idoso ganhar força, equilíbrio e disposição.",
-    "publico": "Pessoas acima de 60 anos e filhos que cuidam dos pais."
+    "publico": "Pessoas acima de 60 anos e filhos que cuidam dos pais.",
+    "faturamento": "R$ 90 a R$ 140"
   },
   {
     "slug": "bobbie-cristao",
@@ -399,7 +410,8 @@
     "totalArquivos": 8,
     "temVideo": true,
     "descricao": "Desenhos e histórias cristãs para as crianças aprenderem os valores da Bíblia.",
-    "publico": "Pais cristãos e professoras de escola bíblica."
+    "publico": "Pais cristãos e professoras de escola bíblica.",
+    "faturamento": "R$ 80 a R$ 130"
   },
   {
     "slug": "celular-sem-golpe",
@@ -448,7 +460,8 @@
     "totalArquivos": 13,
     "temVideo": false,
     "descricao": "Guia simples para usar o celular com segurança e não cair em golpes no WhatsApp, no banco e na internet.",
-    "publico": "Pessoas mais velhas e quem tem pouca prática com o celular."
+    "publico": "Pessoas mais velhas e quem tem pouca prática com o celular.",
+    "faturamento": "R$ 100 a R$ 150"
   },
   {
     "slug": "croche-passo-a-passo",
@@ -467,7 +480,8 @@
     "totalArquivos": 5,
     "temVideo": false,
     "descricao": "Aulas de crochê do zero, com o passo a passo de cada ponto e peça.",
-    "publico": "Mulheres que querem aprender crochê para usar ou vender."
+    "publico": "Mulheres que querem aprender crochê para usar ou vender.",
+    "faturamento": "R$ 80 a R$ 120"
   },
   {
     "slug": "clube-devocional",
@@ -516,7 +530,8 @@
     "totalArquivos": 13,
     "temVideo": false,
     "descricao": "Devocionais e estudos bíblicos prontos para ler todos os dias.",
-    "publico": "Cristãos que querem ter constância na leitura da Bíblia."
+    "publico": "Cristãos que querem ter constância na leitura da Bíblia.",
+    "faturamento": "R$ 90 a R$ 140"
   },
   {
     "slug": "kit-natal-lucrativo",
@@ -553,7 +568,8 @@
     "totalArquivos": 19,
     "temVideo": true,
     "descricao": "Kit de Natal para revender: materiais prontos para entregar às clientes e uma calculadora para formar o preço.",
-    "publico": "Quem quer ganhar uma renda extra vendendo no Natal."
+    "publico": "Quem quer ganhar uma renda extra vendendo no Natal.",
+    "faturamento": "R$ 100 a R$ 150"
   },
   {
     "slug": "sementinhas",
@@ -578,7 +594,8 @@
     "totalArquivos": 5,
     "temVideo": false,
     "descricao": "Atividades cristãs para as crianças pequenas conhecerem Deus e a Bíblia.",
-    "publico": "Pais cristãos e ministério infantil."
+    "publico": "Pais cristãos e ministério infantil.",
+    "faturamento": "R$ 70 a R$ 110"
   },
   {
     "slug": "rotina-60-em-dia",
@@ -609,7 +626,8 @@
     "totalArquivos": 5,
     "temVideo": false,
     "descricao": "Rotina de cuidados com saúde, exercícios leves e organização do dia para quem tem mais de 60 anos.",
-    "publico": "Pessoas acima de 60 anos e seus filhos."
+    "publico": "Pessoas acima de 60 anos e seus filhos.",
+    "faturamento": "R$ 90 a R$ 140"
   },
   {
     "slug": "cardapios-receitas-2027",
@@ -658,7 +676,8 @@
     "totalArquivos": 15,
     "temVideo": false,
     "descricao": "Cardápios da semana e receitas práticas para o ano inteiro.",
-    "publico": "Donas de casa e famílias que querem comer bem e gastar menos."
+    "publico": "Donas de casa e famílias que querem comer bem e gastar menos.",
+    "faturamento": "R$ 80 a R$ 130"
   },
   {
     "slug": "doceira-40-em-30-dias",
@@ -695,7 +714,8 @@
     "totalArquivos": 7,
     "temVideo": false,
     "descricao": "Quarenta receitas de doces para aprender em 30 dias e começar a vender.",
-    "publico": "Quem quer ganhar dinheiro fazendo doces em casa."
+    "publico": "Quem quer ganhar dinheiro fazendo doces em casa.",
+    "faturamento": "R$ 90 a R$ 140"
   },
   {
     "slug": "clube-tutores-cao-feliz",
@@ -744,7 +764,8 @@
     "totalArquivos": 14,
     "temVideo": false,
     "descricao": "Dicas de cuidado, adestramento e alimentação para o cachorro viver feliz e saudável.",
-    "publico": "Donos de cachorro."
+    "publico": "Donos de cachorro.",
+    "faturamento": "R$ 80 a R$ 120"
   },
   {
     "slug": "clube-atividades-infantis",
@@ -793,7 +814,8 @@
     "totalArquivos": 13,
     "temVideo": false,
     "descricao": "Atividades infantis prontas para imprimir: pintura, letras, números e coordenação.",
-    "publico": "Mães, pais e professoras de crianças de 2 a 8 anos."
+    "publico": "Mães, pais e professoras de crianças de 2 a 8 anos.",
+    "faturamento": "R$ 90 a R$ 140"
   },
   {
     "slug": "gestante-em-dia",
@@ -842,6 +864,7 @@
     "totalArquivos": 14,
     "temVideo": false,
     "descricao": "Acompanhamento da gravidez semana a semana, com cuidados, alimentação e preparação para o bebê.",
-    "publico": "Gestantes, principalmente as mães de primeira viagem."
+    "publico": "Gestantes, principalmente as mães de primeira viagem.",
+    "faturamento": "R$ 80 a R$ 130"
   }
 ]
