@@ -144,6 +144,7 @@ export default function Modelos({ isAdmin, tpls, erro, carregando, onReload, can
                   <span style={{ display: 'block', fontSize: 12, color: 'var(--muted2)', marginTop: 2 }}>{CAT[t.category] || t.category} · {t.language}</span>
                 </span>
                 <Selo status={t.status} />
+                {isAdmin && <span role="button" tabIndex={0} title="Excluir modelo" aria-label={'Excluir ' + t.name} onClick={function(e) { e.stopPropagation(); if (apagando !== t.name) apagar(t) }} onKeyDown={function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); apagar(t) } }} style={{ color: '#dc2626', fontSize: 17, padding: '2px 6px', flexShrink: 0, opacity: apagando === t.name ? 0.4 : 1 }}><i className={apagando === t.name ? 'ti ti-loader' : 'ti ti-trash'} /></span>}
                 <i className="ti ti-chevron-right" style={{ color: 'var(--muted2)', fontSize: 17, flexShrink: 0 }} />
               </button>
             )
