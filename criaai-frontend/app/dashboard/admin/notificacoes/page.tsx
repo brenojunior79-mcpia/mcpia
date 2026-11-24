@@ -63,6 +63,15 @@ export default function NotificacoesPage() {
   const [sending, setSending] = useState(false)
   const [result, setResult] = useState<{ ok: boolean, text: string } | null>(null)
 
+  async function excluirEnvio(id: string, titulo: string) {
+    if (!window.confirm('Excluir o envio "' + titulo + '" da lista de últimos envios?')) return
+    try {
+      const r = await fetch('/api/push/historico', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+      if (!r.ok) { const j = await r.json().catch(function() { return {} }); window.alert(j.error || 'Não consegui excluir.'); return }
+      setHistory(function(l) { return l.filter(function(x: any) { return x.id !== id }) })
+    } catch (e) { window.alert('Sem conexão. Tente de novo.') }
+  }
+
   async function loadAll() {
     let all: any[] = []
     let from = 0
@@ -80,7 +89,7 @@ export default function NotificacoesPage() {
       from += 1000
     }
     setSubs(all)
-    const h = await supabase.from('push_broadcasts').select('*').order('created_at', { ascending: false }).limit(20)
+    const h = await supabase.from('push_broadcasts').select('*').eq('oculto', false).order('created_at', { ascending: false }).limit(20)
     setHistory(h.data || [])
   }
 
@@ -258,7 +267,7 @@ export default function NotificacoesPage() {
                 <thead style={{ background: 'var(--surface2)' }}>
                   <tr>
                     {['Nome', 'Enviado', 'Base de contatos'].map(function(t) { return <th key={t} style={thN}>{t}</th> })}
-                    {['Entregue', 'Falha'].map(function(t) { return <th key={t} style={{ ...thN, textAlign: 'center' }}>{t}</th> })}
+                    {['Entregue', 'Falha', 'Ações'].map(function(t) { return <th key={t} style={{ ...thN, textAlign: 'center' }}>{t}</th> })}
                   </tr>
                 </thead>
                 <tbody>
@@ -276,6 +285,7 @@ export default function NotificacoesPage() {
                         <td style={tdN}>{base.toLocaleString('pt-BR')}</td>
                         <td style={tdN}><AnelPush v={pEnt} /></td>
                         <td style={{ ...tdN, textAlign: 'center', fontWeight: 700, color: fal > 0 ? '#dc2626' : 'var(--muted2)' }}>{pFal}%</td>
+                        <td style={{ ...tdN, textAlign: 'center' }}><button type="button" title="Excluir da lista" aria-label={'Excluir ' + h.title} onClick={function() { excluirEnvio(h.id, h.title) }} style={{ border: 0, background: 'transparent', cursor: 'pointer', fontSize: 16, color: '#dc2626', padding: '2px 6px' }}><i className="ti ti-trash" /></button></td>
                       </tr>
                     )
                   })}
