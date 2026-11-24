@@ -193,6 +193,7 @@ export default function Disparo({ tpls, onLoadTpls, canais }: { tpls: Tpl[] | nu
   const [ok, setOk] = useState('')
   const [ocupado, setOcupado] = useState(false)
   const [camps, setCamps] = useState<Camp[]>([])
+  const [atualizando, setAtualizando] = useState(false)
   const raizRef = useRef<HTMLDivElement | null>(null)
   // Opcoes de "Quem vai receber" que o Breno removeu da lista (fica guardado neste navegador)
   const [escondidos, setEscondidos] = useState<string[]>([])
@@ -550,7 +551,7 @@ export default function Disparo({ tpls, onLoadTpls, canais }: { tpls: Tpl[] | nu
         {/* Histórico */}
         {camps.filter(function(c) { return c !== ativa }).length > 0 && (
           <div style={card}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}><h3 style={h3}><i className="ti ti-chart-bar" style={{ color: '#15803d' }} />Resultado dos disparos</h3><button className="at-b" onClick={carregarCamps}><i className="ti ti-refresh" />Atualizar</button></div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}><h3 style={h3}><i className="ti ti-chart-bar" style={{ color: '#15803d' }} />Resultado dos disparos</h3><button className="at-b" disabled={atualizando} onClick={async function() { setAtualizando(true); const t0 = Date.now(); await carregarCamps(); const resto = 600 - (Date.now() - t0); if (resto > 0) await new Promise(function(r) { setTimeout(r, resto) }); setAtualizando(false) }}><i className="ti ti-refresh" style={atualizando ? { animation: 'spin 0.8s linear infinite', display: 'inline-block' } : undefined} />{atualizando ? 'Atualizando…' : 'Atualizar'}</button></div>
             <TabelaDisparos camps={camps.filter(function(c) { return c !== ativa })} canais={listaCanais} onExcluir={excluirCamp} />
           </div>
         )}
