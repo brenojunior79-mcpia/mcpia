@@ -381,187 +381,421 @@
     "slug": "celular-sem-golpe",
     "nome": "Celular sem Golpe",
     "pasta": "https://drive.google.com/drive/folders/16TIDNFpYzF_DcdFs7AFnn3vlP1OZ1Fb-",
-    "capa": "",
+    "capa": "/express/capas/celular-sem-golpe.jpg",
     "nicho": "Tecnologia",
     "itens": [
       {
-        "titulo": "Todos os materiais",
-        "link": "https://drive.google.com/drive/folders/16TIDNFpYzF_DcdFs7AFnn3vlP1OZ1Fb-",
-        "arquivos": 0,
+        "titulo": "Produto",
+        "link": "https://drive.google.com/drive/folders/17MWkNSuDftSf0ySpZHMsNYAB7g9a5wUL",
+        "arquivos": 2,
         "tipo": "produto"
+      },
+      {
+        "titulo": "Página de Vendas",
+        "link": "https://drive.google.com/drive/folders/1eXH2lddNof-2a_K1AAjEAiDqdaMmX15L",
+        "arquivos": 1,
+        "tipo": "pagina"
+      },
+      {
+        "titulo": "Criativos",
+        "link": "https://drive.google.com/drive/folders/1bBIVzAW_aKwuLTk9EB5XLuSZSAEie79E",
+        "arquivos": 4,
+        "tipo": "criativos"
+      },
+      {
+        "titulo": "Bônus",
+        "link": "https://drive.google.com/drive/folders/1HdORNaBmHZU8uRmtKIdtEjfkfoIFaEmO",
+        "arquivos": 3,
+        "tipo": "bonus"
+      },
+      {
+        "titulo": "Order Bump",
+        "link": "https://drive.google.com/drive/folders/1t6c7zdKCnNnYPCEFMZIl5gY5hMdkbH1U",
+        "arquivos": 1,
+        "tipo": "bonus"
+      },
+      {
+        "titulo": "Upsell",
+        "link": "https://drive.google.com/drive/folders/1uPQlf0MH7tlRc9gxW5UX8t37bscI5P97",
+        "arquivos": 2,
+        "tipo": "bonus"
       }
     ],
-    "totalArquivos": 0,
+    "totalArquivos": 13,
     "temVideo": false
   },
   {
     "slug": "croche-passo-a-passo",
     "nome": "Crochê Passo a Passo",
     "pasta": "https://drive.google.com/drive/folders/1t3WUxojdc0dUKEwTR9_Koic4H6LZ-prV",
-    "capa": "",
+    "capa": "/express/capas/croche-passo-a-passo.jpg",
     "nicho": "Artesanato",
     "itens": [
       {
-        "titulo": "Todos os materiais",
+        "titulo": "Produto",
         "link": "https://drive.google.com/drive/folders/1t3WUxojdc0dUKEwTR9_Koic4H6LZ-prV",
-        "arquivos": 0,
+        "arquivos": 5,
         "tipo": "produto"
       }
     ],
-    "totalArquivos": 0,
+    "totalArquivos": 5,
     "temVideo": false
   },
   {
     "slug": "clube-devocional",
     "nome": "Clube Devocional e Estudo",
     "pasta": "https://drive.google.com/drive/folders/1-ZWiUNKNJcMXaWBFfSxSVw9B13M9MEQh",
-    "capa": "",
+    "capa": "/express/capas/clube-devocional.jpg",
     "nicho": "Cristão",
     "itens": [
       {
-        "titulo": "Todos os materiais",
-        "link": "https://drive.google.com/drive/folders/1-ZWiUNKNJcMXaWBFfSxSVw9B13M9MEQh",
-        "arquivos": 0,
+        "titulo": "Produto",
+        "link": "https://drive.google.com/drive/folders/1h8Av8NU3Erg7rLYxxBzmg09GgwT7Y5j8",
+        "arquivos": 2,
         "tipo": "produto"
+      },
+      {
+        "titulo": "Página de Vendas",
+        "link": "https://drive.google.com/drive/folders/1xDaahXw_DdxvItxJQDru5OChXI0PPX3f",
+        "arquivos": 1,
+        "tipo": "pagina"
+      },
+      {
+        "titulo": "Criativos",
+        "link": "https://drive.google.com/drive/folders/1-JzAMk2eJdvKHOSqUBKBoSEBepWuN5JK",
+        "arquivos": 4,
+        "tipo": "criativos"
+      },
+      {
+        "titulo": "Bônus",
+        "link": "https://drive.google.com/drive/folders/1sym1V-q_K1k_o5HobZN1J-AoJY4O4OxM",
+        "arquivos": 3,
+        "tipo": "bonus"
+      },
+      {
+        "titulo": "Order Bump",
+        "link": "https://drive.google.com/drive/folders/1-FPKisQ9dfKqSpL8AlnImAh-tnqtFpof",
+        "arquivos": 1,
+        "tipo": "bonus"
+      },
+      {
+        "titulo": "Upsell",
+        "link": "https://drive.google.com/drive/folders/1G3kp7SqFwxU2fcdV72PQrSK325A7XDVA",
+        "arquivos": 2,
+        "tipo": "bonus"
       }
     ],
-    "totalArquivos": 0,
+    "totalArquivos": 13,
     "temVideo": false
   },
   {
     "slug": "kit-natal-lucrativo",
     "nome": "Kit Natal Lucrativo (Revenda)",
     "pasta": "https://drive.google.com/drive/folders/1WFn6bKS17K1VJSsufI_DZBFOLbG5JRee",
-    "capa": "",
+    "capa": "/express/capas/kit-natal-lucrativo.jpg",
     "nicho": "Datas especiais",
     "itens": [
       {
-        "titulo": "Todos os materiais",
-        "link": "https://drive.google.com/drive/folders/1WFn6bKS17K1VJSsufI_DZBFOLbG5JRee",
-        "arquivos": 0,
+        "titulo": "Entregáveis para suas clientes",
+        "link": "https://drive.google.com/drive/folders/1rSHd4qFWRVdYzRQ8dvIe6WbRGUPBMWie",
+        "arquivos": 7,
         "tipo": "produto"
+      },
+      {
+        "titulo": "App Calculadora Natalina",
+        "link": "https://drive.google.com/drive/folders/1Twp8jFZc1ITlQYEbpAkdua7uoRIbJiWD",
+        "arquivos": 1,
+        "tipo": "produto"
+      },
+      {
+        "titulo": "Página de Vendas",
+        "link": "https://drive.google.com/drive/folders/1dRyHNSMO4d0jZVGc1UttuSenHpZSXuzk",
+        "arquivos": 3,
+        "tipo": "pagina"
+      },
+      {
+        "titulo": "Materiais de divulgação",
+        "link": "https://drive.google.com/drive/folders/1uy0mr5MgxQFCLAOYNdTrsHf23G2czZdU",
+        "arquivos": 8,
+        "tipo": "criativos"
       }
     ],
-    "totalArquivos": 0,
-    "temVideo": false
+    "totalArquivos": 19,
+    "temVideo": true
   },
   {
     "slug": "sementinhas",
     "nome": "Sementinhas",
     "pasta": "https://drive.google.com/drive/folders/1pxASAWMuXj066afT8OvDqHUZ9PcDnju6",
-    "capa": "",
+    "capa": "/express/capas/sementinhas.jpg",
     "nicho": "Infantil",
     "itens": [
       {
-        "titulo": "Todos os materiais",
-        "link": "https://drive.google.com/drive/folders/1pxASAWMuXj066afT8OvDqHUZ9PcDnju6",
-        "arquivos": 0,
+        "titulo": "Produto",
+        "link": "https://drive.google.com/drive/folders/13Jg_gVaERkgj0Ocd6LXlqbNoAfJfdLPg",
+        "arquivos": 3,
         "tipo": "produto"
+      },
+      {
+        "titulo": "Página de Vendas",
+        "link": "https://drive.google.com/drive/folders/1ynWrrA8Op3dnPOR2zxZB_hSMdnuijpLS",
+        "arquivos": 2,
+        "tipo": "pagina"
       }
     ],
-    "totalArquivos": 0,
+    "totalArquivos": 5,
     "temVideo": false
   },
   {
     "slug": "rotina-60-em-dia",
     "nome": "Rotina 60+ em Dia",
     "pasta": "https://drive.google.com/drive/folders/1Q-y5Zb8pkQh8bJ_OqF2TyvtTkMIDLZ5m",
-    "capa": "",
+    "capa": "/express/capas/rotina-60-em-dia.jpg",
     "nicho": "Saúde",
     "itens": [
       {
-        "titulo": "Todos os materiais",
-        "link": "https://drive.google.com/drive/folders/1Q-y5Zb8pkQh8bJ_OqF2TyvtTkMIDLZ5m",
-        "arquivos": 0,
+        "titulo": "Produto",
+        "link": "https://drive.google.com/drive/folders/1vJg1m0PauiV2MW3cgc9KsUANXXqeJOLr",
+        "arquivos": 3,
         "tipo": "produto"
+      },
+      {
+        "titulo": "Página de Vendas",
+        "link": "https://drive.google.com/drive/folders/1ZS__DOlRo1zMbDByNGzYt6t8HJoRGOdR",
+        "arquivos": 1,
+        "tipo": "pagina"
+      },
+      {
+        "titulo": "Bônus",
+        "link": "https://drive.google.com/drive/folders/1gI64G2fB-IEsYJahO2mnGFwXFIiC8HJ6",
+        "arquivos": 1,
+        "tipo": "bonus"
       }
     ],
-    "totalArquivos": 0,
+    "totalArquivos": 5,
     "temVideo": false
   },
   {
     "slug": "cardapios-receitas-2027",
     "nome": "Cardápios e Receitas 2027",
     "pasta": "https://drive.google.com/drive/folders/17rD32HytILMpxe5kSsI-zX0PlaAbxda8",
-    "capa": "",
+    "capa": "/express/capas/cardapios-receitas-2027.jpg",
     "nicho": "Culinária",
     "itens": [
       {
-        "titulo": "Todos os materiais",
-        "link": "https://drive.google.com/drive/folders/17rD32HytILMpxe5kSsI-zX0PlaAbxda8",
-        "arquivos": 0,
+        "titulo": "Produto",
+        "link": "https://drive.google.com/drive/folders/1dWutrbqsF7bOrSDkPw5hKz-56EoXdJ0Y",
+        "arquivos": 4,
         "tipo": "produto"
+      },
+      {
+        "titulo": "Página de Vendas",
+        "link": "https://drive.google.com/drive/folders/1iUwbHPOzLFnLTmdwhjZoS9IODA2BvOCl",
+        "arquivos": 1,
+        "tipo": "pagina"
+      },
+      {
+        "titulo": "Criativos",
+        "link": "https://drive.google.com/drive/folders/1w-l4yc9LbPDwo1kDV-L-IA4XJ2eWH9sL",
+        "arquivos": 4,
+        "tipo": "criativos"
+      },
+      {
+        "titulo": "Bônus",
+        "link": "https://drive.google.com/drive/folders/1_ur3CDVnIrBL25iaxUUzswjRCQjjieYt",
+        "arquivos": 3,
+        "tipo": "bonus"
+      },
+      {
+        "titulo": "Order Bump",
+        "link": "https://drive.google.com/drive/folders/1PZOrXul8zW4A6ldA3HPWxG_d3ogjsV03",
+        "arquivos": 1,
+        "tipo": "bonus"
+      },
+      {
+        "titulo": "Upsell",
+        "link": "https://drive.google.com/drive/folders/1_plyM5oTm8lBhZzscndbfF1ryou80t55",
+        "arquivos": 2,
+        "tipo": "bonus"
       }
     ],
-    "totalArquivos": 0,
+    "totalArquivos": 15,
     "temVideo": false
   },
   {
     "slug": "doceira-40-em-30-dias",
     "nome": "Doceira 40 em 30 Dias",
     "pasta": "https://drive.google.com/drive/folders/1w49tSz-ESW85svbnq4jZjdYyJvJUsN3i",
-    "capa": "",
+    "capa": "/express/capas/doceira-40-em-30-dias.jpg",
     "nicho": "Culinária",
     "itens": [
       {
-        "titulo": "Todos os materiais",
-        "link": "https://drive.google.com/drive/folders/1w49tSz-ESW85svbnq4jZjdYyJvJUsN3i",
-        "arquivos": 0,
+        "titulo": "Produto",
+        "link": "https://drive.google.com/drive/folders/1evv9Ge5BKLnv1rN3Ze67ON4caB87lTDF",
+        "arquivos": 4,
         "tipo": "produto"
+      },
+      {
+        "titulo": "Página de Vendas",
+        "link": "https://drive.google.com/drive/folders/1CkVY5d5ISTfzVVR2nDb_hVWLQvIq2kMN",
+        "arquivos": 1,
+        "tipo": "pagina"
+      },
+      {
+        "titulo": "Criativos",
+        "link": "https://drive.google.com/drive/folders/1QqIkyKs6gWpVA9RaDRVXmmpu2i09DDS_",
+        "arquivos": 0,
+        "tipo": "criativos"
+      },
+      {
+        "titulo": "Bônus",
+        "link": "https://drive.google.com/drive/folders/17v9hUgJa8fhZEgTBzJ7AihqCqyIGTSay",
+        "arquivos": 2,
+        "tipo": "bonus"
       }
     ],
-    "totalArquivos": 0,
+    "totalArquivos": 7,
     "temVideo": false
   },
   {
     "slug": "clube-tutores-cao-feliz",
     "nome": "Clube de Tutores Cão Feliz",
     "pasta": "https://drive.google.com/drive/folders/1kjq6Ez1fSObZ8JoGbP2ONWf7yD6_9rI-",
-    "capa": "",
+    "capa": "/express/capas/clube-tutores-cao-feliz.jpg",
     "nicho": "Pets",
     "itens": [
       {
-        "titulo": "Todos os materiais",
-        "link": "https://drive.google.com/drive/folders/1kjq6Ez1fSObZ8JoGbP2ONWf7yD6_9rI-",
-        "arquivos": 0,
+        "titulo": "Produto",
+        "link": "https://drive.google.com/drive/folders/1Lza60027NMf5hGcuEIb1BcZ3ShNp1vPc",
+        "arquivos": 4,
         "tipo": "produto"
+      },
+      {
+        "titulo": "Página de Vendas",
+        "link": "https://drive.google.com/drive/folders/1TFXSMa0ESjGJGsMNhEK8LREgbvyk1s_d",
+        "arquivos": 1,
+        "tipo": "pagina"
+      },
+      {
+        "titulo": "Criativos",
+        "link": "https://drive.google.com/drive/folders/1o068LWLFLDQckADRetRp0DEhKcyymObA",
+        "arquivos": 4,
+        "tipo": "criativos"
+      },
+      {
+        "titulo": "Bônus",
+        "link": "https://drive.google.com/drive/folders/1-kv7Pm7fMkTdVctuAx6UvkK5Ti0wUOZn",
+        "arquivos": 2,
+        "tipo": "bonus"
+      },
+      {
+        "titulo": "Order Bump",
+        "link": "https://drive.google.com/drive/folders/1McGixqjab9RtbT_O33RCHiARdlJVqfFM",
+        "arquivos": 1,
+        "tipo": "bonus"
+      },
+      {
+        "titulo": "Upsell",
+        "link": "https://drive.google.com/drive/folders/1P83t8GvcMrfx6u9J-dyIQ5v2e1elRbne",
+        "arquivos": 2,
+        "tipo": "bonus"
       }
     ],
-    "totalArquivos": 0,
+    "totalArquivos": 14,
     "temVideo": false
   },
   {
     "slug": "clube-atividades-infantis",
     "nome": "Clube de Atividades Infantis",
     "pasta": "https://drive.google.com/drive/folders/1SwI6qyGii0ZvmqxaaLFfcgdaskuduQCq",
-    "capa": "",
+    "capa": "/express/capas/clube-atividades-infantis.jpg",
     "nicho": "Infantil",
     "itens": [
       {
-        "titulo": "Todos os materiais",
-        "link": "https://drive.google.com/drive/folders/1SwI6qyGii0ZvmqxaaLFfcgdaskuduQCq",
-        "arquivos": 0,
+        "titulo": "Produto",
+        "link": "https://drive.google.com/drive/folders/1ywi8h_KITyTly6pZy0Ab8VgLiYkzslor",
+        "arquivos": 2,
         "tipo": "produto"
+      },
+      {
+        "titulo": "Página de Vendas",
+        "link": "https://drive.google.com/drive/folders/1bJriW_Z4xp8nrv5zP-gu3yjRxRSK0ZuE",
+        "arquivos": 1,
+        "tipo": "pagina"
+      },
+      {
+        "titulo": "Criativos",
+        "link": "https://drive.google.com/drive/folders/1A1CAPTtIdpTXvXRE3Sjf0Iwo5WvEyb9y",
+        "arquivos": 4,
+        "tipo": "criativos"
+      },
+      {
+        "titulo": "Bônus",
+        "link": "https://drive.google.com/drive/folders/1YlfC8RBSBUCEpPRE8e4fgN6w2tjS21k9",
+        "arquivos": 3,
+        "tipo": "bonus"
+      },
+      {
+        "titulo": "Order Bump",
+        "link": "https://drive.google.com/drive/folders/1QD7Z5Z612iTN06nefcQKSIXHdjEM7TjC",
+        "arquivos": 1,
+        "tipo": "bonus"
+      },
+      {
+        "titulo": "Upsell",
+        "link": "https://drive.google.com/drive/folders/1IidpZjolsG4x_nQy5GxqdkrFr9AYzFCA",
+        "arquivos": 2,
+        "tipo": "bonus"
       }
     ],
-    "totalArquivos": 0,
+    "totalArquivos": 13,
     "temVideo": false
   },
   {
     "slug": "gestante-em-dia",
     "nome": "Gestante em Dia",
     "pasta": "https://drive.google.com/drive/folders/10JzDS25Uf5fS5NIzZ52DkThzEG66tclv",
-    "capa": "",
+    "capa": "/express/capas/gestante-em-dia.jpg",
     "nicho": "Saúde",
     "itens": [
       {
-        "titulo": "Todos os materiais",
-        "link": "https://drive.google.com/drive/folders/10JzDS25Uf5fS5NIzZ52DkThzEG66tclv",
-        "arquivos": 0,
+        "titulo": "Produto",
+        "link": "https://drive.google.com/drive/folders/1EBPYEvDJEcYO0-kkqqrr6Eo8gBm39-cq",
+        "arquivos": 3,
         "tipo": "produto"
+      },
+      {
+        "titulo": "Página de Vendas",
+        "link": "https://drive.google.com/drive/folders/1NoxR_BE3EFb3zBlZUYHnJxNd2Y9AqLpc",
+        "arquivos": 1,
+        "tipo": "pagina"
+      },
+      {
+        "titulo": "Criativos",
+        "link": "https://drive.google.com/drive/folders/1frEsQ3p4OO0rOdOa5lY6aH0vO7ttLJLW",
+        "arquivos": 4,
+        "tipo": "criativos"
+      },
+      {
+        "titulo": "Bônus",
+        "link": "https://drive.google.com/drive/folders/1_5cdGB9KSwdt7_XDJ_Z7DveLyEETPRuS",
+        "arquivos": 3,
+        "tipo": "bonus"
+      },
+      {
+        "titulo": "Order Bump",
+        "link": "https://drive.google.com/drive/folders/1-8cx818NQ0LBYLOij5pzzHZONS91RNpP",
+        "arquivos": 1,
+        "tipo": "bonus"
+      },
+      {
+        "titulo": "Upsell",
+        "link": "https://drive.google.com/drive/folders/1QVWtbaQjHhAC5-spdI6iZDGVdApTZp1c",
+        "arquivos": 2,
+        "tipo": "bonus"
       }
     ],
-    "totalArquivos": 0,
+    "totalArquivos": 14,
     "temVideo": false
   }
 ]
