@@ -188,6 +188,7 @@ export default function EstruturaExpressPage() {
   // Capas e duracao dos videos (Vimeo)
   useEffect(function() {
     aulas.forEach(function(a) {
+      if (!a.video_id) return // aula ainda sem video (data de liberacao)
       fetch('https://vimeo.com/api/oembed.json?width=640&url=' + encodeURIComponent('https://vimeo.com/' + a.video_id))
         .then(function(r) { return r.json() })
         .then(function(j) {
@@ -305,7 +306,9 @@ export default function EstruturaExpressPage() {
           <div className="ee-grid">
             <div ref={playerRef} className="ee-up" style={{ animationDelay: '0.1s', minWidth: 0 }}>
               <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20, overflow: 'hidden' }}>
-                {tocando ? (
+                {!aula.video_id ? (
+                  <div style={{ position: 'relative', width: '100%', paddingBottom: '56.25%', height: 0, background: 'linear-gradient(135deg,#050505,#3b1906 60%,#c2410c)' }}><div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, color: '#fff', textAlign: 'center', padding: 20 }}><div style={{ fontSize: 44 }}>🔒</div><div style={{ fontWeight: 900, fontSize: 'clamp(16px, 2.6vw, 22px)' }}>Aula {atual + 1} · {aula.titulo}</div><div style={{ fontWeight: 700, fontSize: 15, color: '#fdba74' }}>{aula.descricao || 'Em breve'}</div></div></div>
+                ) : tocando ? (
                   <PlayerVimeo videoId={aula.video_id} title={aula.titulo} radius={0} />
                 ) : (
                 <div className="ee-poster" style={{ position: 'relative', width: '100%', paddingBottom: '56.25%', height: 0, background: 'linear-gradient(135deg,#1e1b4b,#7c2d12)' }}>
@@ -365,7 +368,7 @@ export default function EstruturaExpressPage() {
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontWeight: 800, fontSize: 14, lineHeight: 1.25, color: 'var(--text)' }}>{a.titulo}</div>
-                          <div style={{ fontSize: 12, marginTop: 2, color: feitas[a.id] ? '#15803d' : on ? '#c2410c' : 'var(--muted2)', fontWeight: 700 }}>{feitas[a.id] ? 'Concluída' : on ? 'Assistindo agora' : a.material_url ? 'Tem material 📁' : 'Aula'}</div>
+                          <div style={{ fontSize: 12, marginTop: 2, color: feitas[a.id] ? '#15803d' : on ? '#c2410c' : 'var(--muted2)', fontWeight: 700 }}>{feitas[a.id] ? 'Concluída' : on ? 'Assistindo agora' : !a.video_id ? '🔒 ' + (a.descricao || 'Em breve') : a.material_url ? 'Tem material 📁' : 'Aula'}</div>
                         </div>
                       </div>
                     )
