@@ -84,7 +84,7 @@ export default function BibliotecaExpress() {
       )}
 
       <style>{`
-        .bx { margin-top: 28px; background: radial-gradient(120% 60% at 0% 0%, rgba(124,45,18,.85), transparent 60%), radial-gradient(120% 60% at 100% 100%, rgba(124,45,18,.55), transparent 60%), linear-gradient(160deg,#0f172a 0%,#1e1b4b 50%,#0f172a 100%); border-radius: 24px; padding: 24px; color: #fff; }
+        .bx { margin-top: 28px; background: radial-gradient(120% 60% at 0% 0%, rgba(124,111,252,.55), transparent 60%), radial-gradient(120% 60% at 100% 100%, rgba(91,78,248,.45), transparent 60%), linear-gradient(160deg,#1a1650 0%,#2a2380 50%,#1a1650 100%); border-radius: 24px; padding: 24px; color: #fff; }
         .bx-topo { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
         .bx-titulo { color: #fff; font-family: Syne, sans-serif; font-size: 24px; font-weight: 800; margin: 0 0 4px; }
         .bx-sub { margin: 0; font-size: 13.5px; color: rgba(255,255,255,.62); line-height: 1.5; }
@@ -95,7 +95,7 @@ export default function BibliotecaExpress() {
         .bx-busca input { flex: 1; background: transparent; border: 0; outline: 0; color: #fff; font-size: 14.5px; padding: 11px 0; font-family: inherit; }
         .bx-chips { display: flex; gap: 8px; flex-wrap: wrap; }
         .bx-chip { border: 1px solid rgba(255,255,255,.14); background: transparent; color: rgba(255,255,255,.8); border-radius: 99px; padding: 6px 13px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
-        .bx-chip.on { background: #7c3aed; border-color: #7c3aed; color: #fff; }
+        .bx-chip.on { background: #5b4ef8; border-color: #5b4ef8; color: #fff; }
         .bx-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; }
         .bx-card { text-align: left; background: rgba(15,23,42,.72); border: 1px solid rgba(255,255,255,.08); border-radius: 16px; overflow: hidden; padding: 0; cursor: pointer; color: #fff; font-family: inherit; transition: transform .15s, border-color .15s; }
         .bx-card:hover { transform: translateY(-3px); border-color: rgba(124,58,237,.6); }
