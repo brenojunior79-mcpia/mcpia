@@ -1026,7 +1026,8 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
         alunoAntigo = !!criado && Date.now() - criado >= 7 * 24 * 3600 * 1000
       } catch (e) { alunoAntigo = false }
     }
-    if (!passaParaHumano && ehAluna && alunoAntigo && texto.trim()) {
+    // Aviso desligado (ordem do Breno, 23/11/2026): o Junior nao avisa mais que este WhatsApp vai encerrar
+    if (false && !passaParaHumano && ehAluna && alunoAntigo && texto.trim()) {
       const hojeBr = diaBrasilia(new Date())
       const avisouHoje = linhas.some(function(m: any) { return m.direction === 'out' && m.created_at && diaBrasilia(new Date(m.created_at)) === hojeBr && String(m.body || '').indexOf(MARCA_AVISO_SUPORTE) >= 0 })
       if (!avisouHoje) texto = texto.trim() + '[[PARTE]]' + AVISO_SUPORTE_PLATAFORMA
