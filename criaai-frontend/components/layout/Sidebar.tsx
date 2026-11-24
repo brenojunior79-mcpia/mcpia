@@ -152,6 +152,7 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
   const hasActivePlan = profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing'
   // Admin (Breno) apresentando a plataforma ao vivo na Black (24/11/2026): esconde Planos e Creditos na conta dele. Volta ao normal sozinho as 23h30.
   const ESCONDER_PLANOS_ADMIN = Date.now() < Date.parse('2026-11-25T02:30:00Z') // volta sozinho as 23h30 (Brasilia) de 24/11
+  const novoSemPlano = isNewUser && !hasActivePlan
   const hidePlans = (isNewUser && !hasActivePlan) || (!!isAdmin && ESCONDER_PLANOS_ADMIN)
 
   // Gerenciador de Anuncios: liberado para quem tem plano; sem plano so aparece depois de 7 dias (e pede para assinar); admin e conta do revisor da Meta sempre abrem
@@ -172,8 +173,8 @@ export default function Sidebar({ profile, user }: { profile: any, user: any }) 
     { href: '/dashboard/produtos', icon: 'ti-flame', label: 'Produtos em Alta', locked: false },
     { href: '/dashboard/sazonais', icon: 'ti-calendar-event', label: 'Produtos Sazonais', locked: false },
     { href: '/dashboard/ebook', icon: 'ti-book-2', label: 'Gerador de Ebook', locked: false },
-    { href: '/dashboard/paginas', icon: 'ti-layout', label: 'Gerador de Site', locked: hidePlans, lockStatus: 'Em atualizacao' },
-    { href: '/dashboard/criativo', icon: 'ti-sparkles', label: 'Gerador de Criativos', locked: hidePlans && videosUsed >= 2 + videosExtra, lockStatus: 'Em atualizacao' },
+    { href: '/dashboard/paginas', icon: 'ti-layout', label: 'Gerador de Site', locked: novoSemPlano, lockStatus: 'Em atualizacao' },
+    { href: '/dashboard/criativo', icon: 'ti-sparkles', label: 'Gerador de Criativos', locked: novoSemPlano && videosUsed >= 2 + videosExtra, lockStatus: 'Em atualizacao' },
     { href: '/dashboard/criativos-manuais', icon: 'ti-video', label: 'Criativos Manuais', locked: false },
     { href: '/dashboard/indique', icon: 'ti-gift', label: 'Indique e ganhe', locked: false, highlight: true },
     { href: '/dashboard/vendas', icon: 'ti-rocket', label: 'Vendendo no Automatico', locked: false },
