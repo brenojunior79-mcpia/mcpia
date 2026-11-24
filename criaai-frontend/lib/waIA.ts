@@ -457,11 +457,22 @@ function tirarNomeDaResposta(texto: string, primeiro: string): string {
   return t.trim() || texto
 }
 
+// Disparos em que o Junior nao responde quem responder (ex.: lembrete da aula ao vivo de 24/11/2026)
+const DISPAROS_SEM_RESPOSTA = ['f6cd48ae-ac3a-46dd-99bd-8c9a91819586']
+
 export async function tratarIA(admin: any, convId: string, waId: string, msgId: string, tipo: string, nomeContato: string | null): Promise<boolean> {
   try {
     const cv = await admin.from('wa_conversations').select('id, ia_ativa, ia_humano, connection_id, profile_id, name').eq('id', convId).maybeSingle()
     const conv: any = cv.data
     if (!conv || !(await modoIA(admin, conv))) return false
+    // Disparos em que o Junior fica calado (ordem do Breno): quem recebeu nas ultimas 24 h e responde nao recebe resposta automatica
+    try {
+      const fimS = String(waId).replace(/\D/g, '').slice(-8)
+      if (fimS.length === 8) {
+        const ds = await admin.from('wa_broadcast_recipients').select('broadcast_id, sent_at').like('wa_id', '%' + fimS).in('status', ['sent', 'delivered', 'read']).gte('sent_at', new Date(Date.now() - 24 * 3600000).toISOString()).order('sent_at', { ascending: false }).limit(1).maybeSingle()
+        if (ds.data && DISPAROS_SEM_RESPOSTA.indexOf(String((ds.data as any).broadcast_id)) >= 0) return true
+      }
+    } catch (e) { /* se a consulta falhar, segue normal */ }
     // Responde a texto, audio (transcrito antes), imagem/print e PDF (a IA olha o arquivo). Video, figurinha etc. ficam para a equipe ver
     if (tipo !== 'text' && tipo !== 'audio' && tipo !== 'image' && tipo !== 'document') {
       // Figurinha/reacao depois da despedida do assistente (ex.: "Amem" 🙏): nao precisa de resposta, a conversa e lida e finalizada
