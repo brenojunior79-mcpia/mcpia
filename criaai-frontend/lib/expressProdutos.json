@@ -376,5 +376,192 @@
     ],
     "totalArquivos": 8,
     "temVideo": true
+  },
+  {
+    "slug": "celular-sem-golpe",
+    "nome": "Celular sem Golpe",
+    "pasta": "https://drive.google.com/drive/folders/16TIDNFpYzF_DcdFs7AFnn3vlP1OZ1Fb-",
+    "capa": "",
+    "nicho": "Tecnologia",
+    "itens": [
+      {
+        "titulo": "Todos os materiais",
+        "link": "https://drive.google.com/drive/folders/16TIDNFpYzF_DcdFs7AFnn3vlP1OZ1Fb-",
+        "arquivos": 0,
+        "tipo": "produto"
+      }
+    ],
+    "totalArquivos": 0,
+    "temVideo": false
+  },
+  {
+    "slug": "croche-passo-a-passo",
+    "nome": "Crochê Passo a Passo",
+    "pasta": "https://drive.google.com/drive/folders/1t3WUxojdc0dUKEwTR9_Koic4H6LZ-prV",
+    "capa": "",
+    "nicho": "Artesanato",
+    "itens": [
+      {
+        "titulo": "Todos os materiais",
+        "link": "https://drive.google.com/drive/folders/1t3WUxojdc0dUKEwTR9_Koic4H6LZ-prV",
+        "arquivos": 0,
+        "tipo": "produto"
+      }
+    ],
+    "totalArquivos": 0,
+    "temVideo": false
+  },
+  {
+    "slug": "clube-devocional",
+    "nome": "Clube Devocional e Estudo",
+    "pasta": "https://drive.google.com/drive/folders/1-ZWiUNKNJcMXaWBFfSxSVw9B13M9MEQh",
+    "capa": "",
+    "nicho": "Cristão",
+    "itens": [
+      {
+        "titulo": "Todos os materiais",
+        "link": "https://drive.google.com/drive/folders/1-ZWiUNKNJcMXaWBFfSxSVw9B13M9MEQh",
+        "arquivos": 0,
+        "tipo": "produto"
+      }
+    ],
+    "totalArquivos": 0,
+    "temVideo": false
+  },
+  {
+    "slug": "kit-natal-lucrativo",
+    "nome": "Kit Natal Lucrativo (Revenda)",
+    "pasta": "https://drive.google.com/drive/folders/1WFn6bKS17K1VJSsufI_DZBFOLbG5JRee",
+    "capa": "",
+    "nicho": "Datas especiais",
+    "itens": [
+      {
+        "titulo": "Todos os materiais",
+        "link": "https://drive.google.com/drive/folders/1WFn6bKS17K1VJSsufI_DZBFOLbG5JRee",
+        "arquivos": 0,
+        "tipo": "produto"
+      }
+    ],
+    "totalArquivos": 0,
+    "temVideo": false
+  },
+  {
+    "slug": "sementinhas",
+    "nome": "Sementinhas",
+    "pasta": "https://drive.google.com/drive/folders/1pxASAWMuXj066afT8OvDqHUZ9PcDnju6",
+    "capa": "",
+    "nicho": "Infantil",
+    "itens": [
+      {
+        "titulo": "Todos os materiais",
+        "link": "https://drive.google.com/drive/folders/1pxASAWMuXj066afT8OvDqHUZ9PcDnju6",
+        "arquivos": 0,
+        "tipo": "produto"
+      }
+    ],
+    "totalArquivos": 0,
+    "temVideo": false
+  },
+  {
+    "slug": "rotina-60-em-dia",
+    "nome": "Rotina 60+ em Dia",
+    "pasta": "https://drive.google.com/drive/folders/1Q-y5Zb8pkQh8bJ_OqF2TyvtTkMIDLZ5m",
+    "capa": "",
+    "nicho": "Saúde",
+    "itens": [
+      {
+        "titulo": "Todos os materiais",
+        "link": "https://drive.google.com/drive/folders/1Q-y5Zb8pkQh8bJ_OqF2TyvtTkMIDLZ5m",
+        "arquivos": 0,
+        "tipo": "produto"
+      }
+    ],
+    "totalArquivos": 0,
+    "temVideo": false
+  },
+  {
+    "slug": "cardapios-receitas-2027",
+    "nome": "Cardápios e Receitas 2027",
+    "pasta": "https://drive.google.com/drive/folders/17rD32HytILMpxe5kSsI-zX0PlaAbxda8",
+    "capa": "",
+    "nicho": "Culinária",
+    "itens": [
+      {
+        "titulo": "Todos os materiais",
+        "link": "https://drive.google.com/drive/folders/17rD32HytILMpxe5kSsI-zX0PlaAbxda8",
+        "arquivos": 0,
+        "tipo": "produto"
+      }
+    ],
+    "totalArquivos": 0,
+    "temVideo": false
+  },
+  {
+    "slug": "doceira-40-em-30-dias",
+    "nome": "Doceira 40 em 30 Dias",
+    "pasta": "https://drive.google.com/drive/folders/1w49tSz-ESW85svbnq4jZjdYyJvJUsN3i",
+    "capa": "",
+    "nicho": "Culinária",
+    "itens": [
+      {
+        "titulo": "Todos os materiais",
+        "link": "https://drive.google.com/drive/folders/1w49tSz-ESW85svbnq4jZjdYyJvJUsN3i",
+        "arquivos": 0,
+        "tipo": "produto"
+      }
+    ],
+    "totalArquivos": 0,
+    "temVideo": false
+  },
+  {
+    "slug": "clube-tutores-cao-feliz",
+    "nome": "Clube de Tutores Cão Feliz",
+    "pasta": "https://drive.google.com/drive/folders/1kjq6Ez1fSObZ8JoGbP2ONWf7yD6_9rI-",
+    "capa": "",
+    "nicho": "Pets",
+    "itens": [
+      {
+        "titulo": "Todos os materiais",
+        "link": "https://drive.google.com/drive/folders/1kjq6Ez1fSObZ8JoGbP2ONWf7yD6_9rI-",
+        "arquivos": 0,
+        "tipo": "produto"
+      }
+    ],
+    "totalArquivos": 0,
+    "temVideo": false
+  },
+  {
+    "slug": "clube-atividades-infantis",
+    "nome": "Clube de Atividades Infantis",
+    "pasta": "https://drive.google.com/drive/folders/1SwI6qyGii0ZvmqxaaLFfcgdaskuduQCq",
+    "capa": "",
+    "nicho": "Infantil",
+    "itens": [
+      {
+        "titulo": "Todos os materiais",
+        "link": "https://drive.google.com/drive/folders/1SwI6qyGii0ZvmqxaaLFfcgdaskuduQCq",
+        "arquivos": 0,
+        "tipo": "produto"
+      }
+    ],
+    "totalArquivos": 0,
+    "temVideo": false
+  },
+  {
+    "slug": "gestante-em-dia",
+    "nome": "Gestante em Dia",
+    "pasta": "https://drive.google.com/drive/folders/10JzDS25Uf5fS5NIzZ52DkThzEG66tclv",
+    "capa": "",
+    "nicho": "Saúde",
+    "itens": [
+      {
+        "titulo": "Todos os materiais",
+        "link": "https://drive.google.com/drive/folders/10JzDS25Uf5fS5NIzZ52DkThzEG66tclv",
+        "arquivos": 0,
+        "tipo": "produto"
+      }
+    ],
+    "totalArquivos": 0,
+    "temVideo": false
   }
 ]

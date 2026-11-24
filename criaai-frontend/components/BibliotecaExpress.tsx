@@ -71,7 +71,7 @@ export default function BibliotecaExpress() {
                   return (
                     <a key={it.link} className="bx-mitem" href={it.link} target="_blank" rel="noopener noreferrer">
                       <span className="bx-micone">{ICONE[it.tipo] || '📁'}</span>
-                      <span className="bx-mtxt"><b>{it.titulo}</b><small>{it.arquivos} arquivo{it.arquivos === 1 ? '' : 's'}</small></span>
+                      <span className="bx-mtxt"><b>{it.titulo}</b><small>{it.arquivos > 0 ? it.arquivos + ' arquivo' + (it.arquivos === 1 ? '' : 's') : 'Abrir no Drive'}</small></span>
                       <i className="ti ti-external-link" />
                     </a>
                   )
