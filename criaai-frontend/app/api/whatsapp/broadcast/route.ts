@@ -111,7 +111,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ campanha: b.data, contagem: c.data || {} })
   }
   // lista
-  const l = await admin.from('wa_broadcasts').select('id, created_at, template_name, preview, segment, status, pause_reason, total, connection_id').order('created_at', { ascending: false }).limit(20)
+  const l = await admin.from('wa_broadcasts').select('id, created_at, template_name, preview, segment, status, pause_reason, total, connection_id').eq('oculto', false).order('created_at', { ascending: false }).limit(20)
   const out: any[] = []
   for (const b of (l.data || [])) {
     const c = await admin.rpc('wa_broadcast_counts', { p_id: b.id })
@@ -131,6 +131,14 @@ export async function POST(req: NextRequest) {
   const admin = adminClient()
   const action = String(input?.action || '')
 
+  // Excluir da lista de resultados (so esconde: quem recebeu continua registrado para o Junior e para as listas em lote)
+  if (action === 'excluir') {
+    const ids: string[] = (Array.isArray(input?.ids) ? input.ids : [input?.id]).map(function(x: any) { return String(x || '') }).filter(Boolean).slice(0, 100)
+    if (!ids.length) return NextResponse.json({ error: 'Nada para excluir.' }, { status: 400 })
+    const r = await admin.from('wa_broadcasts').update({ oculto: true }).in('id', ids).not('status', 'in', '("rodando","pausado")')
+    if (r.error) return NextResponse.json({ error: 'Nao consegui excluir.' }, { status: 500 })
+    return NextResponse.json({ ok: true })
+  }
   if (action === 'cancelar') {
     const id = String(input?.id || '')
     await admin.from('wa_broadcast_recipients').update({ status: 'cancelled' }).eq('broadcast_id', id).in('status', ['pending', 'sending'])

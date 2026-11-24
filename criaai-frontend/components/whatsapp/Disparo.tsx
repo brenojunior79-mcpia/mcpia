@@ -108,7 +108,7 @@ function Anel({ v, cor }: { v: number; cor: string }) {
 
 // Tabela "Resultado dos disparos": nome, data, base, enviado, entregue, lido, falha e acoes (detalhes)
 type Canal = { id: string; nome: string; numero: string | null }
-function TabelaDisparos({ camps, canais }: { camps: Camp[]; canais: Canal[] }) {
+function TabelaDisparos({ camps, canais, onExcluir }: { camps: Camp[]; canais: Canal[]; onExcluir: (id: string, nome: string) => void }) {
   const [aberto, setAberto] = useState<string | null>(null)
   const th: React.CSSProperties = { padding: '12px 10px', fontSize: 11.5, fontWeight: 700, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '.03em', textAlign: 'left', whiteSpace: 'nowrap' }
   const td: React.CSSProperties = { padding: '12px 10px', fontSize: 13.5, color: 'var(--text)', borderTop: '1px solid var(--border)', verticalAlign: 'middle' }
@@ -142,7 +142,7 @@ function TabelaDisparos({ camps, canais }: { camps: Camp[]; canais: Canal[] }) {
                   <td style={td}><Anel v={p(ent)} cor="#16a34a" /></td>
                   <td style={td}><Anel v={p(lid)} cor="#16a34a" /></td>
                   <td style={{ ...td, textAlign: 'center', fontWeight: 700, color: fal > 0 ? '#dc2626' : 'var(--muted2)', ...tab }}>{Math.round(p(fal))}%</td>
-                  <td style={{ ...td, textAlign: 'center' }}><button type="button" onClick={function() { setAberto(open ? null : c.id) }} aria-expanded={open} title="Ver detalhes" style={{ border: 0, background: 'transparent', cursor: 'pointer', fontSize: 20, color: 'var(--muted2)', padding: '2px 8px', lineHeight: 1 }}>⋮</button></td>
+                  <td style={{ ...td, textAlign: 'center' }}><button type="button" onClick={function() { setAberto(open ? null : c.id) }} aria-expanded={open} title="Ver detalhes" style={{ border: 0, background: 'transparent', cursor: 'pointer', fontSize: 20, color: 'var(--muted2)', padding: '2px 8px', lineHeight: 1 }}>⋮</button>{c.status !== 'rodando' && c.status !== 'pausado' && <button type="button" onClick={function() { onExcluir(c.id, c.template_name) }} title="Excluir da lista" aria-label={'Excluir ' + c.template_name} style={{ border: 0, background: 'transparent', cursor: 'pointer', fontSize: 16, color: '#dc2626', padding: '2px 6px', lineHeight: 1 }}><i className="ti ti-trash" /></button>}</td>
                 </tr>
                 {open && (
                   <tr><td colSpan={8} style={{ ...td, background: 'var(--surface2)' }}><Resultados c={c} /></td></tr>
@@ -241,6 +241,12 @@ export default function Disparo({ tpls, onLoadTpls, canais }: { tpls: Tpl[] | nu
     return { template: { name: t!.name, language: t!.language, preview: renderTpl(t!.body, cfg.map(function(c) { return c.mode === 'nome' ? 'Maria' : c.value })) }, params: cfg, connection: conexao }
   }
 
+  async function excluirCamp(id: string, nome: string) {
+    if (!window.confirm('Excluir o resultado do disparo "' + nome + '" da lista?\n\nIsso só tira da lista. Quem recebeu continua registrado (o Júnior continua sabendo do disparo e as listas em lote não mandam de novo para essas pessoas).')) return
+    const r = await post('/api/whatsapp/broadcast', { action: 'excluir', id })
+    if (!r.ok) { window.alert(r.j.error || 'Não consegui excluir.'); return }
+    setCamps(function(l) { return l.filter(function(c) { return c.id !== id }) })
+  }
   async function post(url: string, body: any) {
     const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     const j = await r.json().catch(function() { return {} })
@@ -493,7 +499,7 @@ export default function Disparo({ tpls, onLoadTpls, canais }: { tpls: Tpl[] | nu
         {camps.filter(function(c) { return c !== ativa }).length > 0 && (
           <div style={card}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}><h3 style={h3}><i className="ti ti-chart-bar" style={{ color: '#15803d' }} />Resultado dos disparos</h3><button className="at-b" onClick={carregarCamps}><i className="ti ti-refresh" />Atualizar</button></div>
-            <TabelaDisparos camps={camps.filter(function(c) { return c !== ativa })} canais={listaCanais} />
+            <TabelaDisparos camps={camps.filter(function(c) { return c !== ativa })} canais={listaCanais} onExcluir={excluirCamp} />
           </div>
         )}
 
