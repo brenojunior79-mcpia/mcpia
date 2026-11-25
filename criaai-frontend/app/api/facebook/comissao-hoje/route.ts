@@ -38,13 +38,13 @@ export async function GET() {
       const inicioOntem = new Date(new Date(inicio).getTime() - 86400000).toISOString()
       const inicio7 = new Date(new Date(inicio).getTime() - 6 * 86400000).toISOString() // hoje + 6 dias antes
       const [pagas, pend, ontem, semana] = await Promise.all([
-        admin.from('sales_ledger').select('amount').eq('provider', 'hubla').gte('paid_at', inicio),
+        admin.from('sales_ledger').select('net').eq('provider', 'hubla').gte('paid_at', inicio),
         admin.from('hubla_faturas').select('valor').eq('status', 'pendente').gte('criado_em', inicio),
-        admin.from('sales_ledger').select('amount').eq('provider', 'hubla').gte('paid_at', inicioOntem).lt('paid_at', inicio),
-        admin.from('sales_ledger').select('amount').eq('provider', 'hubla').gte('paid_at', inicio7),
+        admin.from('sales_ledger').select('net').eq('provider', 'hubla').gte('paid_at', inicioOntem).lt('paid_at', inicio),
+        admin.from('sales_ledger').select('net').eq('provider', 'hubla').gte('paid_at', inicio7),
       ])
       const soma = function(l: any[], k: string) { return (l || []).reduce(function(a: number, r: any) { return a + (Number(r[k]) || 0) }, 0) }
-      return NextResponse.json({ status: 'ok', fonte: 'hubla', valor: soma(pagas.data, 'amount'), pendente: soma(pend.data, 'valor'), ontem: soma(ontem.data, 'amount'), semana: soma(semana.data, 'amount') })
+      return NextResponse.json({ status: 'ok', fonte: 'hubla', valor: soma(pagas.data, 'net'), pendente: soma(pend.data, 'valor'), ontem: soma(ontem.data, 'net'), semana: soma(semana.data, 'net') })
     } catch (e) {
       return NextResponse.json({ status: 'erro' })
     }
