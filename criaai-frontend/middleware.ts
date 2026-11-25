@@ -25,19 +25,15 @@ export async function middleware(request: NextRequest) {
   )
 
   // getSession le o login do cookie e so vai ate o Supabase quando ele esta vencendo (para renovar).
-  // Antes, getUser() consultava o Supabase em TODA requisicao. A conferencia de verdade continua
-  // nas telas do painel (dashboard/layout.tsx) e nas rotas de API.
-  // Nunca deixa a navegacao esperar o Supabase por mais de 3 segundos: se ele demorar, a pagina abre
-  // do mesmo jeito (o login e conferido de verdade no layout do painel e nas rotas de API).
-  // Se a renovacao FALHAR (ex.: Supabase respondeu "muitos pedidos" (429), demorou ou caiu a rede), o login NAO e apagado:
-  // a pagina segue com os cookies que o navegador ja tinha e a renovacao e tentada de novo na proxima pagina.
-  // Antes, um 429 fazia o Supabase limpar a sessao e o aluno caia na tela de login sem motivo.
+  // A conferencia de verdade continua nas telas do painel (dashboard/layout.tsx) e nas rotas de API.
+  // IMPORTANTE: sempre espera a renovacao terminar e devolve os cookies novos. Antes havia um limite de 3 s:
+  // quando o Supabase demorava, a renovacao terminava mesmo assim (o login antigo era trocado), mas o login
+  // novo nao chegava ao navegador. Na pagina seguinte o navegador usava o login antigo, o Supabase achava que
+  // era invasao ("refresh_token_already_used") e desconectava o aluno.
+  // Se a renovacao FALHAR (ex.: 429, rede), o login NAO e apagado: a pagina segue com os cookies que o navegador ja tinha.
   let resultado: any = null
   try {
-    resultado = await Promise.race([
-      supabase.auth.getSession(),
-      new Promise(function(resolve) { setTimeout(function() { resolve(null) }, 3000) }),
-    ])
+    resultado = await supabase.auth.getSession()
   } catch (e) {
     return NextResponse.next()
   }
