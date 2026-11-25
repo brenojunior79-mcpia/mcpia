@@ -85,16 +85,17 @@ const digitalProducts = [
   {
     id: 'receitas-bolos',
     name: '700 Receitas de Bolos e Tortas',
-    platform: 'kiwify',
+    platform: 'cakto',
     category: 'Confeitaria',
     description: '700 receitas exclusivas de bolos, tortas e sobremesas para vender e lucrar imediatamente. Do basico ao avancado, com suporte diario.',
     audience: 'Mulheres empreendedoras, confeiteiras, donas de casa',
     ageRange: '25-55 anos',
     dailySales: 'R$100 - R$300/dia',
-    affiliateUrl: 'https://dashboard.kiwify.com.br/marketplace?product=0q6lmkEh',
-    siteUrl: 'https://vida-nova-oficial.com/?page_id=992',
+    affiliateUrl: 'https://app.cakto.com.br/affiliate/invite/01fca864-3760-432f-af31-c583f05d1508',
+    siteUrl: 'https://www.reinoemfoco.com/700-receitas',
     driveUrl: 'https://drive.google.com/drive/folders/15x3aNoA-rtQFu18oIaDx0ge6QFnfoQT3?usp=drive_link',
-    image: 'https://vida-nova-oficial.com/wp-content/uploads/2024/04/Design_sem_nome__41_-removebg.png',
+    image: '/produtos/receitas-bolos.jpg',
+    imagePosition: 'center',
     color: '#f97316',
     colorBg: 'rgba(249,115,22,0.08)',
   },
@@ -202,7 +203,7 @@ function ProductCard({ product, selected, onToggle }: { product: any; selected: 
           <img
             src={product.image}
             alt={product.name}
-            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: (product as any).imagePosition || 'top' }}
             onError={function(e: any) { e.target.style.display = 'none' }}
           />
         ) : (
