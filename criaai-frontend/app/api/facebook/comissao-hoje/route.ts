@@ -36,13 +36,15 @@ export async function GET() {
       const hoje = new Date(Date.now() - 3 * 3600 * 1000).toISOString().slice(0, 10) // dia em Brasilia
       const inicio = new Date(hoje + 'T03:00:00.000Z').toISOString()
       const inicioOntem = new Date(new Date(inicio).getTime() - 86400000).toISOString()
-      const [pagas, pend, ontem] = await Promise.all([
+      const inicio7 = new Date(new Date(inicio).getTime() - 6 * 86400000).toISOString() // hoje + 6 dias antes
+      const [pagas, pend, ontem, semana] = await Promise.all([
         admin.from('sales_ledger').select('amount').eq('provider', 'hubla').gte('paid_at', inicio),
         admin.from('hubla_faturas').select('valor').eq('status', 'pendente').gte('criado_em', inicio),
         admin.from('sales_ledger').select('amount').eq('provider', 'hubla').gte('paid_at', inicioOntem).lt('paid_at', inicio),
+        admin.from('sales_ledger').select('amount').eq('provider', 'hubla').gte('paid_at', inicio7),
       ])
       const soma = function(l: any[], k: string) { return (l || []).reduce(function(a: number, r: any) { return a + (Number(r[k]) || 0) }, 0) }
-      return NextResponse.json({ status: 'ok', fonte: 'hubla', valor: soma(pagas.data, 'amount'), pendente: soma(pend.data, 'valor'), ontem: soma(ontem.data, 'amount') })
+      return NextResponse.json({ status: 'ok', fonte: 'hubla', valor: soma(pagas.data, 'amount'), pendente: soma(pend.data, 'valor'), ontem: soma(ontem.data, 'amount'), semana: soma(semana.data, 'amount') })
     } catch (e) {
       return NextResponse.json({ status: 'erro' })
     }
@@ -55,10 +57,17 @@ export async function GET() {
 
   try {
     const base = 'https://graph.facebook.com/' + GRAPH_VERSION + '/' + encodeURIComponent(conn.ad_account_id) + '/insights?fields=action_values,actions&access_token=' + encodeURIComponent(conn.access_token) + '&date_preset='
-    const [r, rOntem] = await Promise.all([
+    const hojeBr = new Date(Date.now() - 3 * 3600 * 1000)
+    const ate = hojeBr.toISOString().slice(0, 10)
+    const desde = new Date(hojeBr.getTime() - 6 * 86400000).toISOString().slice(0, 10)
+    const urlSemana = base.replace('&date_preset=', '') + '&time_range=' + encodeURIComponent(JSON.stringify({ since: desde, until: ate }))
+    const [r, rOntem, rSemana] = await Promise.all([
       fetch(base + 'today', { cache: 'no-store', signal: AbortSignal.timeout(15000) }),
       fetch(base + 'yesterday', { cache: 'no-store', signal: AbortSignal.timeout(15000) }).catch(function() { return null }),
+      fetch(urlSemana, { cache: 'no-store', signal: AbortSignal.timeout(15000) }).catch(function() { return null }),
     ])
+    const jSemana: any = rSemana && rSemana.ok ? await rSemana.json().catch(function() { return null }) : null
+    const semana = valorDe(((jSemana && jSemana.data && jSemana.data[0]) || {}).action_values, ['omni_purchase', 'purchase', 'offsite_conversion.fb_pixel_purchase'])
     const jOntem: any = rOntem && rOntem.ok ? await rOntem.json().catch(function() { return null }) : null
     const ontem = valorDe(((jOntem && jOntem.data && jOntem.data[0]) || {}).action_values, ['omni_purchase', 'purchase', 'offsite_conversion.fb_pixel_purchase'])
     const j: any = await r.json().catch(function() { return null })
@@ -66,7 +75,7 @@ export async function GET() {
     const linha = (j.data && j.data[0]) || {}
     const valor = valorDe(linha.action_values, ['omni_purchase', 'purchase', 'offsite_conversion.fb_pixel_purchase'])
     const vendas = valorDe(linha.actions, ['omni_purchase', 'purchase', 'offsite_conversion.fb_pixel_purchase'])
-    return NextResponse.json({ status: 'ok', valor, vendas, ontem })
+    return NextResponse.json({ status: 'ok', valor, vendas, ontem, semana })
   } catch (e) {
     return NextResponse.json({ status: 'erro' })
   }

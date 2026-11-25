@@ -1,10 +1,10 @@
 'use client'
 // Card "Comissoes de hoje" do Painel do Aluno (ordem do Breno): o valor das vendas que o Facebook registrou hoje
 // nos anuncios do aluno. Atualiza sozinho a cada 5 minutos.
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 
-type Resp = { status: 'ok' | 'conectar' | 'sem_acesso' | 'erro'; valor?: number; pendente?: number; ontem?: number; fonte?: string }
+type Resp = { status: 'ok' | 'conectar' | 'sem_acesso' | 'erro'; valor?: number; pendente?: number; ontem?: number; semana?: number; fonte?: string }
 
 function reais(v: number) {
   return 'R$ ' + (v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -12,22 +12,35 @@ function reais(v: number) {
 
 export default function ComissoesHoje() {
   const [d, setD] = useState<Resp | null>(null)
+  const [girando, setGirando] = useState(false)
+  const vivoRef = useRef(true)
+
+  const carregar = useCallback(function() {
+    setGirando(true)
+    return fetch('/api/facebook/comissao-hoje', { cache: 'no-store' }).then(function(r) { return r.json() })
+      .then(function(j) { if (vivoRef.current) setD(j) })
+      .catch(function() { if (vivoRef.current) setD({ status: 'erro' }) })
+      .finally(function() { if (vivoRef.current) setGirando(false) })
+  }, [])
 
   useEffect(function() {
-    let vivo = true
-    function carregar() {
-      fetch('/api/facebook/comissao-hoje', { cache: 'no-store' }).then(function(r) { return r.json() }).then(function(j) { if (vivo) setD(j) }).catch(function() { if (vivo) setD({ status: 'erro' }) })
-    }
+    vivoRef.current = true
     carregar()
     const t = setInterval(carregar, 5 * 60 * 1000)
-    return function() { vivo = false; clearInterval(t) }
-  }, [])
+    // Ao voltar para o aplicativo (sem fechar), atualiza na hora
+    function aoVoltar() { if (document.visibilityState === 'visible') carregar() }
+    document.addEventListener('visibilitychange', aoVoltar)
+    return function() { vivoRef.current = false; clearInterval(t); document.removeEventListener('visibilitychange', aoVoltar) }
+  }, [carregar])
 
   const valor = d && d.status === 'ok' ? reais(d.valor || 0) : d && d.status === 'erro' ? '—' : d ? reais(0) : '...'
 
   return (
     <div className="ch-card">
       <div className="ch-brilho" />
+      <button type="button" className="ch-atualizar" onClick={function() { carregar() }} disabled={girando} aria-label="Atualizar">
+        <i className={'ti ti-refresh' + (girando ? ' ch-gira' : '')} /> {girando ? 'Atualizando' : 'Atualizar'}
+      </button>
       <div className="ch-rotulo">Comissões de hoje</div>
       <div className="ch-valor">{valor}</div>
       {d && d.status === 'conectar' && (
@@ -37,6 +50,7 @@ export default function ComissoesHoje() {
         <div className="ch-linha">
           {d.fonte === 'hubla' && <span>⏳ {reais(d.pendente || 0)} em vendas pendentes</span>}
           <span>📅 Ontem: {reais(d.ontem || 0)}</span>
+          <span>📊 Últimos 7 dias: {reais(d.semana || 0)}</span>
         </div>
       )}
       {d && d.status === 'erro' && <div className="ch-dica">Não foi possível ler as vendas agora. Tente mais tarde.</div>}
@@ -48,6 +62,10 @@ export default function ComissoesHoje() {
         .ch-valor { position: relative; font-family: Syne, sans-serif; font-size: 38px; font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; }
         .ch-dica { position: relative; display: block; margin-top: 8px; font-size: 13px; color: rgba(255,255,255,.75); text-decoration: none; line-height: 1.45; }
         .ch-linha { position: relative; display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 8px; font-size: 13px; color: rgba(255,255,255,.82); }
+        .ch-atualizar { position: absolute; top: 14px; right: 14px; z-index: 1; display: inline-flex; align-items: center; gap: 5px; padding: 6px 11px; border-radius: 999px; border: 1px solid rgba(255,255,255,.35); background: rgba(255,255,255,.14); color: #fff; font-size: 12px; font-weight: 700; cursor: pointer; }
+        .ch-atualizar:disabled { opacity: .75; cursor: default; }
+        .ch-gira { animation: chGira .8s linear infinite; }
+        @keyframes chGira { to { transform: rotate(360deg); } }
         a.ch-dica { color: #fff; text-decoration: underline; font-weight: 700; }
       `}</style>
     </div>
