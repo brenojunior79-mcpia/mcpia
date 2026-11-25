@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { recordPayment, clearBilling, firstFutureDate, toAmount } from '@/lib/billing'
 import { recordSale, markRefunded } from '@/lib/sales-ledger'
 import { trackReferralSale, trackReferralRefund } from '@/lib/referrals'
+import { enviarBlackUtmify } from '@/lib/utmifyBlack'
 import { tratarEventoHubla, lerEvento } from '@/lib/waAuto'
 import { tratarEventoSequencias } from '@/lib/waSeq'
 import { avisarVendaAdmin } from '@/lib/pushAdmin'
@@ -165,6 +166,7 @@ export async function POST(req: NextRequest) {
 
     await trackSale(admin, eventType, payload, email)
     await registrarFatura(eventType, payload)
+    await enviarBlackUtmify(eventType, payload)
     if (eventType === 'invoice.payment_succeeded') await avisarVendaHubla(payload, email)
 
     // Reembolso da Estrutura Express (upsell): so tira o acesso ao menu Estrutura Express.
