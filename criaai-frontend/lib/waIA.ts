@@ -458,7 +458,7 @@ function tirarNomeDaResposta(texto: string, primeiro: string): string {
 }
 
 // Disparos em que o Junior nao responde quem responder (ex.: lembrete da aula ao vivo de 24/11/2026)
-const DISPAROS_SEM_RESPOSTA = ['f6cd48ae-ac3a-46dd-99bd-8c9a91819586']
+const DISPAROS_SEM_RESPOSTA: string[] = [] // aula ao vivo de 24/11 ja passou: o Junior volta a responder
 
 export async function tratarIA(admin: any, convId: string, waId: string, msgId: string, tipo: string, nomeContato: string | null): Promise<boolean> {
   try {
