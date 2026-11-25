@@ -87,12 +87,9 @@ export default function DashboardPage() {
 
         {/* Header */}
         <div className="anim-fadeDown" style={{ marginBottom: 28 }}>
-          <div style={{ fontSize: 26, fontFamily: 'Syne, sans-serif', fontWeight: 800, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ fontSize: 26, fontFamily: 'Syne, sans-serif', fontWeight: 800, marginBottom: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ animation: 'pulse 2s ease infinite', display: 'inline-block' }}>👋</span>
             Ola, {firstName}!
-          </div>
-          <div style={{ fontSize: 14, color: 'var(--muted2)' }}>
-            Aqui esta um resumo da sua conta no MCP.IA
           </div>
         </div>
 
