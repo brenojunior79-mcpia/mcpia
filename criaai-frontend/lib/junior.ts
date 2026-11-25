@@ -1124,6 +1124,10 @@ Tela com dois carrosseis (setas para os lados): Produtos Digitais (6) e Produtos
 Nunca cite ganhos, faturamento ou "vendas por dia" dos produtos e nunca diga qual vende mais.
 
 Produtos digitais:
+- 700 Receitas de Bolos e Tortas (Cakto, Confeitaria): 700 receitas exclusivas de bolos, tortas e sobremesas, do basico ao avancado, com suporte diario. Publico: mulheres empreendedoras, confeiteiras, donas de casa. Tem Material.
+  Afiliar: https://app.cakto.com.br/affiliate/invite/01fca864-3760-432f-af31-c583f05d1508
+  Site: https://www.reinoemfoco.com/700-receitas
+  Material: https://drive.google.com/drive/folders/15x3aNoA-rtQFu18oIaDx0ge6QFnfoQT3?usp=drive_link
 - Jovens no Altar (Cakto, Ministerio Jovem): guia pratico para jovens cristaos vencerem a pornografia e viverem em pureza. Publico: jovens cristaos, pastores, lideres de jovens. Tem Material.
   Afiliar: https://app.cakto.com.br/affiliate/invite/530d76d8-005e-4de4-a9e6-98b07a722e6a
   Site: https://www.reinoemfoco.com/cakto
@@ -1141,10 +1145,6 @@ Produtos digitais:
 - Pack AEG - Artes para Igreja (Kiwify, Design Gospel): mais de 600 artes 100% editaveis no Canva e Photoshop para igrejas e ministerios. Publico: designers gospel, igrejas, lideres de comunicacao. Sem botao Material.
   Afiliar: https://dashboard.kiwify.com.br/marketplace?product=njYS5if6
   Site: https://lianesoares.com.br/pack-aeg-afiliados/
-- 700 Receitas de Bolos e Tortas (Cakto, Confeitaria): 700 receitas exclusivas de bolos, tortas e sobremesas, do basico ao avancado, com suporte diario. Publico: mulheres empreendedoras, confeiteiras, donas de casa. Tem Material.
-  Afiliar: https://app.cakto.com.br/affiliate/invite/01fca864-3760-432f-af31-c583f05d1508
-  Site: https://www.reinoemfoco.com/700-receitas
-  Material: https://drive.google.com/drive/folders/15x3aNoA-rtQFu18oIaDx0ge6QFnfoQT3?usp=drive_link
 
 Produtos fisicos (todos na Kaiross; nao tem botao Ver site nem Material; a venda e feita levando a pessoa para o WhatsApp Business, como ensina a aula "Script de conversa"):
 - Luva Lanca Teia Homem-Aranha (Brinquedos): luva lanca-teia tematica, com lancador e dardos. Publico: pais e criancas fas de super-herois.

@@ -3,6 +3,23 @@ import { useState, useRef } from 'react'
 
 const digitalProducts = [
   {
+    id: 'receitas-bolos',
+    name: '700 Receitas de Bolos e Tortas',
+    platform: 'cakto',
+    category: 'Confeitaria',
+    description: '700 receitas exclusivas de bolos, tortas e sobremesas para vender e lucrar imediatamente. Do basico ao avancado, com suporte diario.',
+    audience: 'Mulheres empreendedoras, confeiteiras, donas de casa',
+    ageRange: '25-55 anos',
+    dailySales: 'R$100 - R$300/dia',
+    affiliateUrl: 'https://app.cakto.com.br/affiliate/invite/01fca864-3760-432f-af31-c583f05d1508',
+    siteUrl: 'https://www.reinoemfoco.com/700-receitas',
+    driveUrl: 'https://drive.google.com/drive/folders/15x3aNoA-rtQFu18oIaDx0ge6QFnfoQT3?usp=drive_link',
+    image: '/produtos/receitas-bolos.jpg',
+    imagePosition: 'center',
+    color: '#f97316',
+    colorBg: 'rgba(249,115,22,0.08)',
+  },
+  {
     id: 'jovens-altar',
     name: 'Jovens no Altar',
     platform: 'cakto',
@@ -81,23 +98,6 @@ const digitalProducts = [
     image: 'https://lianesoares.com.br/wp-content/uploads/2025/06/Pack-AEG-1.0-Topo-1024x641.webp',
     color: '#ec4899',
     colorBg: 'rgba(236,72,153,0.08)',
-  },
-  {
-    id: 'receitas-bolos',
-    name: '700 Receitas de Bolos e Tortas',
-    platform: 'cakto',
-    category: 'Confeitaria',
-    description: '700 receitas exclusivas de bolos, tortas e sobremesas para vender e lucrar imediatamente. Do basico ao avancado, com suporte diario.',
-    audience: 'Mulheres empreendedoras, confeiteiras, donas de casa',
-    ageRange: '25-55 anos',
-    dailySales: 'R$100 - R$300/dia',
-    affiliateUrl: 'https://app.cakto.com.br/affiliate/invite/01fca864-3760-432f-af31-c583f05d1508',
-    siteUrl: 'https://www.reinoemfoco.com/700-receitas',
-    driveUrl: 'https://drive.google.com/drive/folders/15x3aNoA-rtQFu18oIaDx0ge6QFnfoQT3?usp=drive_link',
-    image: '/produtos/receitas-bolos.jpg',
-    imagePosition: 'center',
-    color: '#f97316',
-    colorBg: 'rgba(249,115,22,0.08)',
   },
 ]
 
