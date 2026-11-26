@@ -356,13 +356,49 @@ export default function AtendimentoPage() {
       if (tm) return
       tm = setTimeout(function() { tm = null; if (selRef.current) carregarMsgs(selRef.current) }, 300)
     }
-    // Otimizacao: em vez de recarregar 600 conversas e 500 mensagens a cada aviso do banco,
-    // atualiza SO o item que mudou (status entregue/lido, mensagem nova, conversa nova). So recarrega tudo quando algo e apagado.
+    // Otimizacao (26/11/2026, disparo grande deixava a tela lenta): a lista de conversas junta as mudancas e atualiza
+    // UMA vez por segundo (antes reorganizava a lista inteira a cada aviso). As mensagens so escutam a conversa aberta (efeito abaixo).
+    let pend: Record<string, any> = {}
+    let tf: any = null
+    const aplicar = function() {
+      tf = null
+      const lote = pend; pend = {}
+      setConvs(function(old) {
+        const mapa: Record<string, any> = {}
+        for (const c of old) mapa[c.id] = c
+        for (const id in lote) mapa[id] = mapa[id] ? { ...mapa[id], ...lote[id] } : lote[id]
+        const lista2 = Object.keys(mapa).map(function(k) { return mapa[k] as Conv })
+        lista2.sort(function(x: any, y: any) { return new Date(y.last_message_at || 0).getTime() - new Date(x.last_message_at || 0).getTime() })
+        return lista2
+      })
+    }
     const ch = supabase.channel('wa-inbox')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'wa_messages' }, function(p: any) {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'wa_conversations' }, function(p: any) {
         const n: any = p && p.new
-        const cid = (n && n.conversation_id) || (p && p.old && p.old.conversation_id) || ''
-        if (!cid || cid !== selRef.current) return
+        if ((p.eventType === 'UPDATE' || p.eventType === 'INSERT') && n && n.id) {
+          pend[n.id] = pend[n.id] ? { ...pend[n.id], ...n } : n
+          if (!tf) tf = setTimeout(aplicar, 1000)
+          return
+        }
+        lista()
+      })
+      .subscribe()
+    const tudo = function() { lista(); abertas() }
+    const iv = setInterval(function() { if (document.visibilityState === 'visible') tudo() }, 60000)
+    const vis = function() { if (document.visibilityState === 'visible') tudo() }
+    document.addEventListener('visibilitychange', vis)
+    return function() { clearInterval(iv); document.removeEventListener('visibilitychange', vis); if (tl) clearTimeout(tl); if (tm) clearTimeout(tm); if (tf) clearTimeout(tf); supabase.removeChannel(ch) }
+  }, [staff])
+
+  // Mensagens em tempo real SO da conversa aberta (o banco filtra; antes chegavam as de todas as conversas)
+  useEffect(function() {
+    if (!staff || !sel) return
+    const cid = sel
+    let tm: any = null
+    const ch = supabase.channel('wa-msgs-' + cid)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'wa_messages', filter: 'conversation_id=eq.' + cid }, function(p: any) {
+        const n: any = p && p.new
+        if (selRef.current !== cid) return
         if (p.eventType === 'UPDATE' && n && n.id) {
           setMsgs(function(old) {
             let achou = false
@@ -374,7 +410,6 @@ export default function AtendimentoPage() {
         if (p.eventType === 'INSERT' && n && n.id) {
           setMsgs(function(old) {
             if (old.some(function(m) { return m.id === n.id })) return old
-            // tira a mensagem provisoria ("enviando") que corresponde a esta
             let tirou = false
             const semTmp = old.filter(function(m) {
               if (tirou || m.id.indexOf('tmp-') !== 0 || n.direction !== 'out' || n.type !== 'text' || m.body !== n.body) return true
@@ -386,30 +421,11 @@ export default function AtendimentoPage() {
           })
           return
         }
-        abertas()
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'wa_conversations' }, function(p: any) {
-        const n: any = p && p.new
-        if ((p.eventType === 'UPDATE' || p.eventType === 'INSERT') && n && n.id) {
-          setConvs(function(old) {
-            const resto = old.filter(function(c) { return c.id !== n.id })
-            const antiga = old.find(function(c) { return c.id === n.id })
-            const nova = antiga ? { ...antiga, ...n } : (n as Conv)
-            const lista2 = resto.concat([nova])
-            lista2.sort(function(x: any, y: any) { return new Date(y.last_message_at || 0).getTime() - new Date(x.last_message_at || 0).getTime() })
-            return lista2
-          })
-          return
-        }
-        lista()
+        if (!tm) tm = setTimeout(function() { tm = null; if (selRef.current === cid) carregarMsgs(cid) }, 300)
       })
       .subscribe()
-    const tudo = function() { lista(); abertas() }
-    const iv = setInterval(function() { if (document.visibilityState === 'visible') tudo() }, 60000)
-    const vis = function() { if (document.visibilityState === 'visible') tudo() }
-    document.addEventListener('visibilitychange', vis)
-    return function() { clearInterval(iv); document.removeEventListener('visibilitychange', vis); if (tl) clearTimeout(tl); if (tm) clearTimeout(tm); supabase.removeChannel(ch) }
-  }, [staff])
+    return function() { if (tm) clearTimeout(tm); supabase.removeChannel(ch) }
+  }, [staff, sel, carregarMsgs])
 
   useEffect(function() { if (fim.current) fim.current.scrollIntoView({ block: 'end' }) }, [msgs.length, sel])
 
