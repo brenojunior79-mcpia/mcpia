@@ -29,6 +29,27 @@ export const REGRA_PIX = `# PAGAMENTO DO PLANO NO PIX (ORDEM DO BRENO - PRIORIDA
 - Se ela disser que ja pagou no Pix e ainda nao mandou o comprovante: peca o comprovante (print ou PDF do Pix feito).
 - Pix nao renova sozinho: o plano pago no Pix vale 31 dias. Para renovar, ela paga de novo e manda o comprovante.`
 
+// RECUPERACAO DA BLACK (ordem do Breno, 26/11/2026): quem estava no grupo da Black e nao comprou recebe um disparo perguntando o motivo.
+// O Junior entende o motivo, oferece a Black (Mentoria + Estrutura Express) por R$ 147 no Pix e aceita qualquer valor a partir de R$ 100.
+// O comprovante e conferido aqui (como no plano) e o SISTEMA libera a Estrutura Express e o cadastro pelo e-mail.
+export const BLACK_MINIMO = 100
+export const BLACK_MAXIMO = 247
+export const BLACK_PRODUTO = 'Black 2026 (Pix)'
+export const REGRA_BLACK_RECUPERACAO = `# RECUPERACAO DA BLACK FRIDAY (ORDEM DO BRENO - PRIORIDADE MAXIMA, SOBREPOE A BASE, O PRECO DA BLACK, O DESCONTO DA MENTORIA, A REGRA DE NAO ALUNA E O PIX DO PLANO)
+Esta pessoa estava no grupo da Black Friday e NAO comprou. Ela recebeu do Breno uma mensagem perguntando por que nao entrou na Black e avisando que o valor promocional vai encerrar. Voce e o Breno conversando com ela: fale de forma humana, simples, carinhosa e curta (1 a 3 frases), UMA pergunta por vez, sem parecer robo e sem pressionar.
+O que e a Black: a Mentoria Cristao Prospero completa + a Estrutura Express (site de vendas pronto, produto pronto e aulas para colocar tudo no ar). Valor normal da Black: R$ 247,00.
+PASSOS, um por mensagem:
+1) ENTENDER O MOTIVO: se ela ainda nao disse por que nao entrou, pergunte com carinho o motivo. Se ela tiver uma DUVIDA, responda a duvida com o que esta na base, em poucas palavras.
+2) OFERTA: depois de entender o motivo (dinheiro, nao deu tempo, duvida resolvida etc.), ofereca com suas palavras: "Se eu fizer para voce por R$ 147, voce conseguiria entrar?"
+3) VALOR QUE ELA PODE: se ela disser que nao consegue R$ 147 e falar um valor, OU se ela ja tiver falado um valor antes: se for R$ ${BLACK_MINIMO} ou mais, ACEITE na hora ("Combinado, consigo fazer por R$ X para voce"). Se for MENOS de R$ ${BLACK_MINIMO}, diga com carinho que o minimo que voce consegue fazer e R$ ${BLACK_MINIMO}. Se ela disser que nao consegue R$ 147 e nao falar valor, pergunte quanto ela consegue.
+4) PIX: quando ela aceitar um valor, mande um texto curto com: o valor combinado; que o Pix e para Breno Junio de Souza, Banco Inter, chave celular; que a chave vai na proxima mensagem para copiar; e que depois de pagar ela manda o comprovante aqui. No FIM desse texto escreva a marca ${MARCA_PIX}. NUNCA escreva o numero da chave voce mesmo.
+5) LINK: se ela pedir link, cartao ou boleto, explique que esse valor especial so da para fazer no Pix, porque no site nao tem esse valor que voce esta fazendo para ela.
+6) COMPROVANTE: quando ela mandar o comprovante, o SISTEMA confere e pede o e-mail dela para liberar. Nao diga que liberou antes disso e nao peca o e-mail antes do comprovante.
+- NUNCA mande o link de pagamento da Hubla (pay.hub.la) nesta conversa e NUNCA ofereca plano (Starter, Pro, Premium).
+- Nunca ofereca menos de R$ ${BLACK_MINIMO}. Nunca comece oferecendo menos de R$ 147.
+- Se ela disser que ja comprou a Black, peca o e-mail da compra para conferir e nao ofereca nada.
+- Se ela disser que nao quer, agradeca com carinho e encerre, sem insistir.`
+
 // Troca a marca pela chave sozinha numa mensagem propria (e tira a chave de dentro do texto do modelo)
 export function prepararRespostaPix(texto: string, pode: boolean): string {
   const t0 = String(texto || '')
@@ -205,12 +226,36 @@ async function liberar(db: any, p: { perfilId: string; email: string; convId: st
   }
 }
 
+// Libera a Black paga no Pix: Estrutura Express + cadastro na plataforma pelo e-mail. Registra antes (o comprovante nao pode ser usado duas vezes).
+async function liberarBlack(db: any, p: { email: string; convId: string; waId: string; valor: number; leitura: Leitura; hash: string; quando: string | null }): Promise<Saida> {
+  const falhou = { humano: true, texto: 'Recebi o seu e-mail, mas não consegui liberar agora. Deixei tudo registrado aqui para liberar o seu acesso.' }
+  const pr = await db.from('profiles').select('id').ilike('email', p.email).limit(1).maybeSingle()
+  const perfilId = (pr.data as any)?.id || null
+  const base = { profile_id: perfilId, conversation_id: p.convId, wa_id: p.waId, valor: p.valor, plano: BLACK_PRODUTO, id_transacao: (p.leitura && p.leitura.id_transacao) || null, hash_arquivo: p.hash, data_pagamento: p.quando, dados: p.leitura as any }
+  const reg = await registrar(db, { ...base, resultado: 'liberado', motivo: null })
+  if (reg.duplicado) return { humano: true, texto: 'Esse comprovante já foi usado antes. Se for outro pagamento, me manda o comprovante do Pix novo.' }
+  if (!reg.ok) return falhou
+  const quando = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+  const nota = 'Black no Pix pelo Junior (' + brl(p.valor) + ', ' + quando + ')'
+  const e1 = await db.from('estrutura_liberados').upsert({ email: p.email, nota, liberado_por: 'Junior (Pix Black)' }, { onConflict: 'email' })
+  const e2 = await db.from('cadastro_liberados').upsert({ email: p.email, nota }, { onConflict: 'email' })
+  if (e1.error || e2.error) {
+    console.error('[pix] liberar black:', (e1.error || e2.error).message)
+    await db.from('pix_comprovantes').update({ resultado: 'erro', motivo: 'falha ao liberar black' }).eq('hash_arquivo', p.hash).eq('resultado', 'liberado')
+    return falhou
+  }
+  try { await db.from('hubla_events').insert({ provider: 'junior', event_type: 'junior.pix_black', email: p.email, user_id: perfilId, action: 'liberado', note: nota.slice(0, 300) }) } catch (e) { /* so historico */ }
+  await avisarPix(db, { convId: p.convId, hash: p.hash, tipo: 'venda', produto: BLACK_PRODUTO, valor: p.valor, leitura: p.leitura })
+  if (perfilId) return { humano: false, texto: 'Pronto! Liberei a Black para você ✅\n\nEntre na plataforma (' + LINK_PLATAFORMA + ') com o e-mail ' + p.email + ' e atualize a página: o menu "Estrutura Express" já vai estar aberto. Seja muito bem-vindo(a)! 🙏' }
+  return { humano: false, texto: 'Pronto! Liberei a Black para você ✅\n\nAgora entre em ' + LINK_PLATAFORMA + ', toque em "Criar conta" e use este mesmo e-mail: ' + p.email + '. Lá dentro você já encontra a Mentoria e o menu "Estrutura Express". Seja muito bem-vindo(a)! 🙏' }
+}
+
 function negar(motivoInterno: string, texto: string, humano: boolean): { motivo: string; saida: Saida } {
   return { motivo: motivoInterno, saida: { texto, humano } }
 }
 
 // Confere a leitura do comprovante. Devolve null se esta tudo certo, ou a recusa.
-function conferir(l: Leitura, hashJaVisto: boolean): { motivo: string; saida: Saida } | null {
+function conferir(l: Leitura, hashJaVisto: boolean, black: boolean = false): { motivo: string; saida: Saida } | null {
   const falha = 'Recebi o seu comprovante, mas não consegui confirmar o pagamento sozinho. Deixei tudo registrado aqui para conferir o seu Pix.'
   if (!l.eh_comprovante) return negar('nao parece comprovante', 'Não consegui ler isso como um comprovante de Pix. Pode me mandar o print (ou o PDF) do comprovante do pagamento, mostrando o valor, a data e para quem foi?', false)
   if (!l.concluido) return negar('pix nao concluido', 'Esse comprovante não mostra o Pix como concluído. Quando o pagamento for efetuado, me manda o comprovante final aqui.', false)
@@ -222,7 +267,10 @@ function conferir(l: Leitura, hashJaVisto: boolean): { motivo: string; saida: Sa
   if (!nomeOk && !chaveOk) return negar('destinatario diferente', 'Esse Pix não parece ter sido feito para a chave que eu te passei (Breno Junio de Souza). Confere o comprovante e me manda o certo?', false)
   if (l.valor == null) return negar('valor nao lido', falha, true)
   const plano = PRECOS.find(function(x) { return Math.abs(x.valor - (l.valor as number)) < 0.005 })
-  if (!plano) return negar('valor nao bate com plano: ' + l.valor, 'O valor desse Pix (' + brl(l.valor) + ') não bate com nenhum plano (Starter ' + brl(39.9) + ', Pro ' + brl(49.9) + ' ou Premium ' + brl(79.9) + '). Deixei registrado aqui para conferir.', true)
+  if (black) {
+    if (l.valor < BLACK_MINIMO - 0.005) return negar('valor abaixo do minimo da black: ' + l.valor, 'O valor desse Pix (' + brl(l.valor) + ') ficou abaixo do que combinamos. Deixei registrado aqui para conferir.', true)
+    if (l.valor > BLACK_MAXIMO + 0.005) return negar('valor acima da black: ' + l.valor, falha, true)
+  } else if (!plano) return negar('valor nao bate com plano: ' + l.valor, 'O valor desse Pix (' + brl(l.valor) + ') não bate com nenhum plano (Starter ' + brl(39.9) + ', Pro ' + brl(49.9) + ' ou Premium ' + brl(79.9) + '). Deixei registrado aqui para conferir.', true)
   const t = l.data_hora ? new Date(l.data_hora + (/[zZ]|[+-]\d\d:?\d\d$/.test(l.data_hora) ? '' : '-03:00')).getTime() : NaN
   if (!isFinite(t)) return negar('data nao lida', falha, true)
   if (t > Date.now() + 3600000) return negar('data no futuro', falha, true)
@@ -235,7 +283,7 @@ function conferir(l: Leitura, hashJaVisto: boolean): { motivo: string; saida: Sa
 // Devolve null quando nao e um caso de Pix (a conversa segue normal com o modelo).
 export async function processarPixDaConversa(db: any, p: {
   convId: string; waId: string; perfilId: string | null; contasAtivas: { id: string; email: string }[]; contasTodas: { id: string; email: string }[]
-  linhas: any[]; partes: any[]; ultimaEntrada: any
+  linhas: any[]; partes: any[]; ultimaEntrada: any; black?: boolean
 }): Promise<Saida> {
   if (!chaveEnviadaRecentemente(p.linhas)) return null
   const tipo = String(p.ultimaEntrada?.type || '')
@@ -247,6 +295,10 @@ export async function processarPixDaConversa(db: any, p: {
     const linha: any = pend.data
     if (!linha || Date.now() - new Date(linha.created_at).getTime() > 24 * 3600000) return null
     const email = (corpo.match(EMAIL_RE) as RegExpMatchArray)[0].toLowerCase()
+    if (linha.plano === BLACK_PRODUTO) {
+      await db.from('pix_comprovantes').update({ resultado: 'concluido_conta' }).eq('id', linha.id)
+      return await liberarBlack(db, { email, convId: p.convId, waId: p.waId, valor: Number(linha.valor), leitura: linha.dados as Leitura, hash: linha.hash_arquivo, quando: linha.data_pagamento })
+    }
     const pr = await db.from('profiles').select('id, email, is_admin').eq('email', email).maybeSingle()
     const perfil: any = pr.data
     if (!perfil) return { humano: false, texto: 'Não achei esse e-mail na plataforma. Confere se ele está certinho e me manda de novo?' }
@@ -273,13 +325,20 @@ export async function processarPixDaConversa(db: any, p: {
     if ((q2.count || 0) > 0) jaVisto = true
   }
 
-  const rec = conferir(leitura, jaVisto)
+  const rec = conferir(leitura, jaVisto, !!p.black)
   const tsData = leitura.data_hora ? new Date(leitura.data_hora + (/[zZ]|[+-]\d\d:?\d\d$/.test(leitura.data_hora) ? '' : '-03:00')) : null
   const quando = tsData && isFinite(tsData.getTime()) ? tsData.toISOString() : null
   if (rec) {
     await registrar(db, { conversation_id: p.convId, wa_id: p.waId, profile_id: p.perfilId, resultado: 'recusado', motivo: rec.motivo, valor: leitura.valor, id_transacao: null, hash_arquivo: null, data_pagamento: quando, dados: leitura as any })
     if (rec.saida && rec.saida.humano && rec.motivo !== 'arquivo repetido' && leitura.eh_comprovante && leitura.concluido && leitura.valor != null) await avisarPix(db, { convId: p.convId, hash, tipo: 'conferir', produto: 'Comprovante para conferir (' + rec.motivo + ')', valor: leitura.valor, leitura })
     return rec.saida
+  }
+
+  // Recuperacao da Black: comprovante ok -> pede o e-mail (a liberacao e pelo e-mail, tenha ou nao conta)
+  if (p.black) {
+    await registrar(db, { conversation_id: p.convId, wa_id: p.waId, profile_id: p.perfilId, resultado: 'aguardando_conta', motivo: 'black: comprovante ok, falta o e-mail', valor: leitura.valor, plano: BLACK_PRODUTO, id_transacao: null, hash_arquivo: hash, data_pagamento: quando, dados: leitura as any })
+    await avisarPix(db, { convId: p.convId, hash, tipo: 'conta', produto: BLACK_PRODUTO + ' (falta o e-mail)', valor: leitura.valor, leitura })
+    return { humano: false, texto: 'Recebi o seu comprovante de ' + brl(leitura.valor as number) + ' ✅ Agora me escreve aqui o seu e-mail, que eu já libero tudo para você.' }
   }
 
   const plano = (PRECOS.find(function(x) { return Math.abs(x.valor - (leitura.valor as number)) < 0.005 }) as { nome: string; valor: number })

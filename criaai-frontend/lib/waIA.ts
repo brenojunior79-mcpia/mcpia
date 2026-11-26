@@ -21,7 +21,7 @@ import { falouEmReembolso, AVISO_REEMBOLSO } from '@/lib/juniorReembolso'
 import { REGRA_COMPRA_WHATSAPP, MENSAGEM_PRIMEIRO_ACESSO, pediuConsultarCompra, removerMarcaCompra, dadosDaMarcaCompra, consultarCompraPeloJunior } from '@/lib/juniorCompra'
 import { REGRA_CADASTRO_WHATSAPP, pediuLiberarCadastro, removerMarcaCadastro, emailDaMarcaCadastro, liberarCadastroPeloJunior, conversaDeProblemaDeAcesso, ultimoEmailDaPessoa } from '@/lib/juniorCadastro'
 import { ehDespedida } from '@/lib/waDespedida'
-import { REGRA_PIX, prepararRespostaPix, processarPixDaConversa, SEPARADOR_PARTE } from '@/lib/juniorPix'
+import { REGRA_PIX, prepararRespostaPix, processarPixDaConversa, SEPARADOR_PARTE, REGRA_BLACK_RECUPERACAO } from '@/lib/juniorPix'
 import { REGRA_ASSINATURA_WHATSAPP, pediuVerificarAssinatura, removerMarcaAssinatura, emailsDaMarcaAssinatura, verificarAssinaturaPeloJunior } from '@/lib/juniorAssinatura'
 
 const MARCA_HUMANO = '[[HUMANO]]'
@@ -460,6 +460,21 @@ function tirarNomeDaResposta(texto: string, primeiro: string): string {
 // Disparos em que o Junior nao responde quem responder (ex.: lembrete da aula ao vivo de 24/11/2026)
 const DISPAROS_SEM_RESPOSTA: string[] = [] // aula ao vivo de 24/11 ja passou: o Junior volta a responder
 
+// Recuperacao da Black (ordem do Breno, 26/11/2026): a pessoa recebeu nos ultimos 4 dias o disparo que fala da Black Friday
+// (ex.: "vi que voce nao entrou na Black Friday, qual foi o motivo?"). Ai o Junior negocia a Black no Pix (lib/juniorPix.ts).
+async function emRecuperacaoBlack(admin: any, waId: string): Promise<boolean> {
+  try {
+    const fim8 = String(waId).replace(/\D/g, '').slice(-8)
+    if (fim8.length !== 8) return false
+    const rc = await admin.from('wa_broadcast_recipients').select('broadcast_id, sent_at').like('wa_id', '%' + fim8).in('status', ['sent', 'delivered', 'read']).order('sent_at', { ascending: false }).limit(1).maybeSingle()
+    const r0: any = rc.data
+    if (!r0 || !r0.sent_at || Date.now() - new Date(r0.sent_at).getTime() > 4 * 86400000) return false
+    const bc = await admin.from('wa_broadcasts').select('preview').eq('id', r0.broadcast_id).maybeSingle()
+    const t = String((bc.data as any)?.preview || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    return /black\s*friday/.test(t) && /(nao entrou|motivo|nao comprou|ficou de fora)/.test(t)
+  } catch (e) { return false }
+}
+
 export async function tratarIA(admin: any, convId: string, waId: string, msgId: string, tipo: string, nomeContato: string | null): Promise<boolean> {
   try {
     const cv = await admin.from('wa_conversations').select('id, ia_ativa, ia_humano, connection_id, profile_id, name').eq('id', convId).maybeSingle()
@@ -492,6 +507,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     }
 
     await registrarDisparoNaConversa(admin, convId, waId)
+    const recuperacaoBlack = await emRecuperacaoBlack(admin, waId)
     const hist = await admin.from('wa_messages').select('id, wa_message_id, direction, type, body, created_at, media_path, mime').eq('conversation_id', convId).order('created_at', { ascending: false }).limit(300)
     const linhas: any[] = (hist.data || []).slice().reverse()
     if (linhas.length === 0) return true
@@ -531,7 +547,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       // Ordem do Breno (para nao parecer IA): a primeira mensagem da conversa (parada ha mais de 3h) e respondida em cerca de 2 minutos;
       // cada mensagem seguinte, em cerca de 1 minuto. O tempo conta ate a resposta sair, entao desconta ~30s do "digitando" (lib/waIAFila.ts).
       const jaConversavam = linhas.some(function(m) { return String(m.id) !== String(msgId) && Date.now() - new Date(m.created_at).getTime() < 3 * 3600 * 1000 })
-      const esperaLeituraS = (jaConversavam ? 60 : 120) - 25 + Math.random() * 8
+      const esperaLeituraS = (jaConversavam || recuperacaoBlack ? 60 : 120) - 25 + Math.random() * 8 // recuperacao da Black: sempre ~1 min (ordem do Breno)
       const lerEm = new Date(Date.now() + esperaLeituraS * 1000).toISOString()
       lerEmUltimo = Date.now() + esperaLeituraS * 1000
       const ins = await admin.from('wa_ia_fila').insert({ ler_em: lerEm, conversation_id: convId, inbound_msg_id: String(msgId), inbound_wa_id: (ultimaIn as any).wa_message_id || null, wa_id: waId, connection_id: conv.connection_id || null, texto, passa_humano: passaParaHumano, enviar_video: querVideo && !passaParaHumano, print_slug: (!passaParaHumano && printSlug) ? printSlug : null })
@@ -652,7 +668,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     // Quem nao e aluna (sem cadastro e sem compra) nunca recebe orientacao nem link de aluno
     // No numero de SUPORTE a pessoa e tratada como aluna (muitos alunos compraram com outro telefone e o sistema nao os reconhece). A trava de "nao aluna" vale so no numero de recuperacao.
     const ehAluna = canal === 'suporte' ? true : (contasNumero.length > 0 || await pessoaEhAluna(admin, waId, conv.profile_id || null))
-    if (!ehAluna) system = REGRA_NAO_ALUNA + '\n\n' + system + '\n\n' + REGRA_NAO_ALUNA
+    if (!ehAluna && !recuperacaoBlack) system = REGRA_NAO_ALUNA + '\n\n' + system + '\n\n' + REGRA_NAO_ALUNA
     // Liberar cadastro e SO para aluno (quem ja pagou). Quem gerou Pix e nao pagou e lead: nunca recebe acesso nem liberacao.
     if (ehAluna) system = system + '\n\n' + REGRA_CADASTRO_WHATSAPP
     { const bc = blocoContasDoNumero(contasNumero); if (bc) system = system + '\n\n' + bc }
@@ -666,7 +682,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
         convId, waId, perfilId: conv.profile_id || null,
         contasAtivas: contasNumero.filter(function(c) { return c.ativa }).map(function(c) { return { id: c.id, email: c.email } }),
         contasTodas: contasNumero.map(function(c) { return { id: c.id, email: c.email } }),
-        linhas, partes, ultimaEntrada: ultimaIn,
+        linhas, partes, ultimaEntrada: ultimaIn, black: recuperacaoBlack,
       })
       if (rp) {
         const [cvP, ultP] = await Promise.all([
@@ -742,7 +758,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
         }
       }
     } catch (e) { /* sem instrucao: segue normal */ }
-    if (instrucaoDisparo) system = system + '\n\n' + instrucaoDisparo
+    if (instrucaoDisparo && !recuperacaoBlack) system = system + '\n\n' + instrucaoDisparo
 
     // Anuncios (so aluna com conta ligada): pergunta da integracao com o Facebook e, com plano + integracao, le as campanhas reais dela
     if (ehAluna && (conv.profile_id || perfilDisparo)) {
@@ -776,6 +792,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     system = system + '\n\n' + blocoHostinger(hostInfo)
 
     system = system + '\n\n' + REGRA_ESTILO_HUMANO
+    if (recuperacaoBlack) system = REGRA_BLACK_RECUPERACAO + '\n\n' + system + '\n\n' + REGRA_BLACK_RECUPERACAO
     // Espelhamento: fala do jeito da pessoa (tom, palavras, tamanho, emojis)
     { const perfil = blocoPerfilPessoa(linhas); if (perfil) system = system + '\n\n' + perfil }
 
@@ -1015,7 +1032,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       if (!texto) { await avisarFalha(admin, convId, 'texto vazio apos marca express'); return true }
     }
 
-    texto = prepararRespostaPix(texto, ehAluna)
+    texto = prepararRespostaPix(texto, ehAluna || recuperacaoBlack)
     if (jaFalou) texto = tirarNomeDaResposta(texto, primeiro)
     else texto = colocarNomeNaPrimeira(texto, primeiro)
     // Anti-repeticao de novo, agora com o texto FINAL: a limpeza acima (tira "Otimo!", "Qualquer duvida...", o nome etc.)
