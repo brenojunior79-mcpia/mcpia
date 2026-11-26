@@ -1,8 +1,8 @@
 // Aviso de que o suporte vai encerrar (ordem do Breno): sai nos ultimos minutos do horario de atendimento, so no SUPORTE (alunos).
 // O recuperacao atende 24h e nunca recebe esse aviso. Os textos comecam sempre igual para o sistema reconhecer que o aviso ja foi dado hoje.
 export const AVISO_ENCERRAR_INICIO = 'Em breve vamos encerrar o nosso suporte'
-export const MIN_AVISO_PROATIVO = 15   // o sistema manda o aviso sozinho nos ultimos 15 minutos para quem esta em conversa
-export const MIN_AVISO_NA_RESPOSTA = 30 // e o Junior junta o aviso as respostas dos ultimos 30 minutos
+export const MIN_AVISO_PROATIVO = 5    // ordem do Breno (26/11/2026): comeca a encerrar as 17h55 (5 min antes do fim); o sistema manda o aviso sozinho nos ultimos 5 minutos para quem esta em conversa
+export const MIN_AVISO_NA_RESPOSTA = 5  // e o Junior junta o aviso as respostas dos ultimos 5 minutos
 
 // "18:00" -> "18h"; "13:30" -> "13h30"
 export function horaFalada(hm: string): string {

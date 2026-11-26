@@ -261,8 +261,6 @@ export async function modoIA(admin: any, conv: any, quando?: Date): Promise<'man
   if (conv.connection_id && (a.agendaAtiva || a.geral)) return 'geral'
   // Fora do horario, mas a pessoa ainda esta conversando com o assistente: ele continua ate terminar a conversa
   if (a.agendaAtiva && !a.dentro && await conversaEmAndamento(admin, String(conv.id || ''))) return 'geral'
-  // Recuperacao da Black (ordem do Breno, 26/11/2026): enquanto tiver gente falando da Black, o Junior responde a qualquer hora
-  if ((a.agendaAtiva || a.geral) && await convEmRecuperacaoBlack(admin, conv)) return 'geral'
   return null
 }
 

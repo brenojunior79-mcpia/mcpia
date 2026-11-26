@@ -3,7 +3,7 @@ import { adminClient, graphFetch, postMessage, validSignature, waConfig } from '
 import { abertoAgora, normalizar } from '@/lib/waHours'
 import { aplicaNome, casaPalavra } from '@/lib/waFlows'
 import { primeiroNome } from '@/lib/waBroadcast'
-import { tratarIA, estadoAgendaIA, registrarDisparoNaConversa, convEmRecuperacaoBlack } from '@/lib/waIA'
+import { tratarIA, estadoAgendaIA, registrarDisparoNaConversa } from '@/lib/waIA'
 import { tratarMensagemSequencias } from '@/lib/waSeq'
 
 export const maxDuration = 30
@@ -67,8 +67,6 @@ async function respostaAutomatica(admin: any, convId: string, waId: string): Pro
     // Chat de recuperacao atende todos os dias, 24h: o aviso de horario e so do suporte (alunos)
     const cvAway = await admin.from('wa_conversations').select('connection_id').eq('id', convId).maybeSingle()
     if ((cvAway.data as any)?.connection_id) return false
-    // Recuperacao da Black: o Junior responde a qualquer hora, sem aviso de horario
-    if (await convEmRecuperacaoBlack(admin, { id: convId, wa_id: waId })) return false
     // Com a agenda do assistente ligada (ex.: 8h as 20h), "fora do horario" e fora dessa janela; senao vale o horario da equipe
     const ag = await estadoAgendaIA(admin)
     const aberto = ag.agendaAtiva ? ag.dentro : abertoAgora(h)
