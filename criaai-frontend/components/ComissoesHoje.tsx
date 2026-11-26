@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 
-type Resp = { status: 'ok' | 'conectar' | 'sem_acesso' | 'erro'; valor?: number; pendente?: number; ontem?: number; semana?: number; fonte?: string }
+type Resp = { status: 'ok' | 'conectar' | 'sem_acesso' | 'erro'; valor?: number; pix?: number; pixVendas?: number; pendente?: number; ontem?: number; semana?: number; fonte?: string }
 
 function reais(v: number) {
   return 'R$ ' + (v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -49,6 +49,7 @@ export default function ComissoesHoje() {
       {d && d.status === 'ok' && (
         <div className="ch-linha">
           {d.fonte === 'hubla' && <span>⏳ {reais(d.pendente || 0)} em vendas pendentes</span>}
+          {d.fonte === 'hubla' && (d.pixVendas || 0) > 0 && <span>💚 Inclui {reais(d.pix || 0)} em {d.pixVendas} {d.pixVendas === 1 ? 'venda' : 'vendas'} no Pix pelo Júnior</span>}
           <span>📅 Ontem: {reais(d.ontem || 0)}</span>
           <span>📊 Últimos 7 dias: {reais(d.semana || 0)}</span>
         </div>

@@ -37,14 +37,28 @@ export async function GET() {
       const inicio = new Date(hoje + 'T03:00:00.000Z').toISOString()
       const inicioOntem = new Date(new Date(inicio).getTime() - 86400000).toISOString()
       const inicio7 = new Date(new Date(inicio).getTime() - 6 * 86400000).toISOString() // hoje + 6 dias antes
-      const [pagas, pend, ontem, semana] = await Promise.all([
+      const [pagas, pend, ontem, semana, pixRows] = await Promise.all([
         admin.from('sales_ledger').select('net').eq('provider', 'hubla').gte('paid_at', inicio),
         admin.from('hubla_faturas').select('valor').eq('status', 'pendente').gte('criado_em', inicio),
         admin.from('sales_ledger').select('net').eq('provider', 'hubla').gte('paid_at', inicioOntem).lt('paid_at', inicio),
         admin.from('sales_ledger').select('net').eq('provider', 'hubla').gte('paid_at', inicio7),
+        // Vendas por Pix confirmadas pelo Junior no WhatsApp (comprovante lido): contam junto com as da Hubla
+        admin.from('pix_comprovantes').select('valor, hash_arquivo, data_pagamento, created_at, dados').in('resultado', ['liberado', 'aguardando_conta', 'concluido_conta']).gte('created_at', inicio7).limit(2000),
       ])
       const soma = function(l: any[], k: string) { return (l || []).reduce(function(a: number, r: any) { return a + (Number(r[k]) || 0) }, 0) }
-      return NextResponse.json({ status: 'ok', fonte: 'hubla', valor: soma(pagas.data, 'net'), pendente: soma(pend.data, 'valor'), ontem: soma(ontem.data, 'net'), semana: soma(semana.data, 'net') })
+      // O mesmo pagamento pode ter mais de uma linha (aguardando conta, depois concluido): conta uma vez so
+      const vistos: Record<string, boolean> = {}
+      let pixHoje = 0, pixOntem = 0, pixSemana = 0, pixVendasHoje = 0
+      for (const r of (pixRows.data || []) as any[]) {
+        const chave = String((r.dados && r.dados.id_transacao) || r.hash_arquivo || '')
+        if (!chave || vistos[chave]) continue
+        vistos[chave] = true
+        const v = Number(r.valor) || 0
+        const quando = new Date(r.data_pagamento || r.created_at).toISOString()
+        if (quando >= inicio7) pixSemana += v
+        if (quando >= inicio) { pixHoje += v; pixVendasHoje++ } else if (quando >= inicioOntem) pixOntem += v
+      }
+      return NextResponse.json({ status: 'ok', fonte: 'hubla', valor: soma(pagas.data, 'net') + pixHoje, pendente: soma(pend.data, 'valor'), ontem: soma(ontem.data, 'net') + pixOntem, semana: soma(semana.data, 'net') + pixSemana, pix: pixHoje, pixVendas: pixVendasHoje })
     } catch (e) {
       return NextResponse.json({ status: 'erro' })
     }
