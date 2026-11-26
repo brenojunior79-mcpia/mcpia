@@ -1080,6 +1080,8 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       if (!avisouHoje) texto = texto.trim() + '[[PARTE]]' + AVISO_SUPORTE_PLATAFORMA
     }
     const okEnf = await enfileirar(texto, passaParaHumano, querVideo, printSlug)
+    // Ordem do Breno (26/11/2026): quando o Junior encerra o assunto, a conversa ja fica finalizada (se a pessoa escrever de novo, ela reabre)
+    if (okEnf && acabou && !passaParaHumano) { try { await admin.from('wa_conversations').update({ status: 'resolvida' }).eq('id', convId) } catch (e) { /* so conforto */ } }
     // Segunda mensagem do cupom (link + aviso), 1 minuto depois da primeira; se a pessoa escrever antes, ela e trocada pela resposta nova
     if (okEnf && cupomDepois && lerEmUltimo > 0) {
       const ins2 = await admin.from('wa_ia_fila').insert({ ler_em: new Date(lerEmUltimo + 80000 + Math.random() * 10000).toISOString(), conversation_id: convId, inbound_msg_id: String(msgId), inbound_wa_id: (ultimaIn as any).wa_message_id || null, wa_id: waId, connection_id: conv.connection_id || null, texto: cupomDepois, passa_humano: false, enviar_video: false, print_slug: null })
