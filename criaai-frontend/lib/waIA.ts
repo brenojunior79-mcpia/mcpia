@@ -261,7 +261,15 @@ export async function modoIA(admin: any, conv: any, quando?: Date): Promise<'man
   if (conv.connection_id && (a.agendaAtiva || a.geral)) return 'geral'
   // Fora do horario, mas a pessoa ainda esta conversando com o assistente: ele continua ate terminar a conversa
   if (a.agendaAtiva && !a.dentro && await conversaEmAndamento(admin, String(conv.id || ''))) return 'geral'
+  // Recuperacao da Black (ordem do Breno, 26/11/2026): enquanto tiver gente falando da Black, o Junior responde a qualquer hora
+  if ((a.agendaAtiva || a.geral) && await convEmRecuperacaoBlack(admin, conv)) return 'geral'
   return null
+}
+
+export async function convEmRecuperacaoBlack(admin: any, conv: any): Promise<boolean> {
+  let wa = conv && conv.wa_id ? String(conv.wa_id) : ''
+  if (!wa && conv && conv.id) { const r = await admin.from('wa_conversations').select('wa_id').eq('id', conv.id).maybeSingle(); wa = String((r.data as any)?.wa_id || '') }
+  return wa ? emRecuperacaoBlack(admin, wa) : false
 }
 
 // A conversa esta no meio? (o assistente respondeu ha pouco e ainda nao se despediu). Usado depois do fim do horario:
@@ -957,7 +965,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     if (!texto) { await avisarFalha(admin, convId, 'texto vazio'); return true }
     // Fim do horario do SUPORTE chegando (ordem do Breno): nos ultimos 30 minutos a resposta leva o aviso "em breve vamos encerrar o suporte. Consegui te ajudar?"
     // Uma vez por conversa por dia; nunca no chat de recuperacao (24h) e nunca quando a conversa ja acabou ou foi para a equipe.
-    if (canal !== 'recuperacao' && !passaParaHumano && !acabou && texto.indexOf(AVISO_ENCERRAR_INICIO) < 0) {
+    if (canal !== 'recuperacao' && !recuperacaoBlack && !passaParaHumano && !acabou && texto.indexOf(AVISO_ENCERRAR_INICIO) < 0) {
       try {
         const agFim = await estadoAgendaIA(admin)
         if (agFim.agendaAtiva && agFim.dentro && agFim.minutosParaFechar !== null && agFim.minutosParaFechar <= MIN_AVISO_NA_RESPOSTA && !avisouEncerramentoHoje(linhas)) {
