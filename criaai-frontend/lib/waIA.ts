@@ -21,7 +21,7 @@ import { falouEmReembolso, AVISO_REEMBOLSO } from '@/lib/juniorReembolso'
 import { REGRA_COMPRA_WHATSAPP, MENSAGEM_PRIMEIRO_ACESSO, pediuConsultarCompra, removerMarcaCompra, dadosDaMarcaCompra, consultarCompraPeloJunior } from '@/lib/juniorCompra'
 import { REGRA_CADASTRO_WHATSAPP, pediuLiberarCadastro, removerMarcaCadastro, emailDaMarcaCadastro, liberarCadastroPeloJunior, conversaDeProblemaDeAcesso, ultimoEmailDaPessoa } from '@/lib/juniorCadastro'
 import { ehDespedida } from '@/lib/waDespedida'
-import { REGRA_PIX, prepararRespostaPix, processarPixDaConversa, SEPARADOR_PARTE, REGRA_BLACK_RECUPERACAO } from '@/lib/juniorPix'
+import { REGRA_PIX, prepararRespostaPix, processarPixDaConversa, SEPARADOR_PARTE, REGRA_BLACK_RECUPERACAO, MARCA_ESPERA } from '@/lib/juniorPix'
 import { REGRA_ASSINATURA_WHATSAPP, pediuVerificarAssinatura, removerMarcaAssinatura, emailsDaMarcaAssinatura, verificarAssinaturaPeloJunior } from '@/lib/juniorAssinatura'
 
 const MARCA_HUMANO = '[[HUMANO]]'
@@ -471,7 +471,7 @@ async function emRecuperacaoBlack(admin: any, waId: string): Promise<boolean> {
     if (!r0 || !r0.sent_at || Date.now() - new Date(r0.sent_at).getTime() > 4 * 86400000) return false
     const bc = await admin.from('wa_broadcasts').select('preview').eq('id', r0.broadcast_id).maybeSingle()
     const t = String((bc.data as any)?.preview || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    return /black\s*friday/.test(t) && /(nao entrou|motivo|nao comprou|ficou de fora)/.test(t)
+    return /black\s*friday/.test(t) && /(nao entrou|motivo|nao comprou|ficou de fora|nao conseguiu)/.test(t)
   } catch (e) { return false }
 }
 
@@ -805,6 +805,15 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     const resp = { ok: r1.ok, status: r1.status }
     const j: any = r1.j
     let texto = r1.texto
+    // Recuperacao da Black: "espera ai que vou tentar conseguir esse valor" agora e "consegui! (chave Pix)" 3 minutos depois (ordem do Breno)
+    let blackDepois: string | null = null
+    if (texto && texto.indexOf(MARCA_ESPERA) >= 0) {
+      const pedacos = texto.split(MARCA_ESPERA)
+      const resto = pedacos.slice(1).join(' ').trim()
+      texto = pedacos[0].trim()
+      if (recuperacaoBlack && resto) blackDepois = prepararRespostaPix(resto, true)
+      if (!texto && blackDepois) { texto = blackDepois; blackDepois = null }
+    }
     if (!resp.ok || !texto) { await avisarFalha(admin, convId, 'IA sem resposta ' + resp.status + ' ' + JSON.stringify(j?.error || '')); return true }
 
     // Anti-repeticao: nao manda de novo o que ja foi dito na conversa (ex.: a mesma oferta de desconto duas vezes)
@@ -814,7 +823,7 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
       if (rep.todoRepetido) {
         const extra = system + '\n\nATENCAO (PRIORIDADE MAXIMA): a sua resposta ficou igual a uma mensagem que voce JA mandou nesta conversa. NAO repita. Releia a ULTIMA mensagem da pessoa e responda especificamente a ela, com outras palavras. Se ela contou um problema (doenca, cirurgia, sem dinheiro, sem condicoes), acolha em uma frase curta e humana (desejando melhoras, por exemplo) e diga que quando ela puder e so chamar, sem insistir em oferta ou desconto.'
         const r2 = await chamarModelo(extra, 0.7)
-        if (r2.ok && r2.texto) { texto = r2.texto; rep = tirarRepetido(texto, anteriores) }
+        if (r2.ok && r2.texto) { texto = r2.texto.split(MARCA_ESPERA).join(' ').trim(); rep = tirarRepetido(texto, anteriores) }
         if (rep.todoRepetido) { console.error('[wa-ia] resposta repetida, nao enviada', convId); return true }
       }
       if (rep.repetiu && rep.texto) texto = rep.texto
@@ -1066,6 +1075,10 @@ export async function tratarIA(admin: any, convId: string, waId: string, msgId: 
     if (okEnf && cupomDepois && lerEmUltimo > 0) {
       const ins2 = await admin.from('wa_ia_fila').insert({ ler_em: new Date(lerEmUltimo + 80000 + Math.random() * 10000).toISOString(), conversation_id: convId, inbound_msg_id: String(msgId), inbound_wa_id: (ultimaIn as any).wa_message_id || null, wa_id: waId, connection_id: conv.connection_id || null, texto: cupomDepois, passa_humano: false, enviar_video: false, print_slug: null })
       if (ins2.error) console.error('[wa-ia] cupom express: fila do link falhou:', ins2.error.message)
+    }
+    if (okEnf && blackDepois && lerEmUltimo > 0) {
+      const ins3 = await admin.from('wa_ia_fila').insert({ ler_em: new Date(lerEmUltimo + 180000 + Math.random() * 15000).toISOString(), conversation_id: convId, inbound_msg_id: String(msgId), inbound_wa_id: (ultimaIn as any).wa_message_id || null, wa_id: waId, connection_id: conv.connection_id || null, texto: blackDepois, passa_humano: false, enviar_video: false, print_slug: null })
+      if (ins3.error) console.error('[wa-ia] black: fila da segunda mensagem falhou:', ins3.error.message)
     }
     return okEnf
   } catch (e) {
