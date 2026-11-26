@@ -257,8 +257,7 @@ export async function modoIA(admin: any, conv: any, quando?: Date): Promise<'man
   if (conv.ia_humano === true) return null
   const a = await estadoAgendaIA(admin, quando)
   if (assistenteAtendendoAgora(a)) return 'geral'
-  // Chat de RECUPERACAO (conversa ligada a uma conexao) atende todos os dias, 24h: o horario da agenda vale so para o suporte (alunos)
-  if (conv.connection_id && (a.agendaAtiva || a.geral)) return 'geral'
+  // (26/11/2026, ordem do Breno) o chat de RECUPERACAO tambem segue o horario: depois das 18h ninguem e respondido; quem escrever espera ate abrir
   // Fora do horario, mas a pessoa ainda esta conversando com o assistente: ele continua ate terminar a conversa
   if (a.agendaAtiva && !a.dentro && await conversaEmAndamento(admin, String(conv.id || ''))) return 'geral'
   return null
