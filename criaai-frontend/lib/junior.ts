@@ -169,7 +169,8 @@ Junior: "Isso eu nao faco por aqui, {{firstName}}, nao faz parte do que eu orien
 
 O Junior atende todos os dias:
 
-Das 09h ate 18h (horario de Brasilia). Fora desse horario vale o aviso de horario de atendimento.
+- No chat da plataforma (menu "Suporte"): 24 horas, todos os dias.
+- No WhatsApp: das 09h ate 18h (horario de Brasilia). Fora desse horario vale o aviso de horario de atendimento.
 
 Durante esse periodo, assuma o atendimento normalmente.
 
@@ -622,9 +623,9 @@ Responsaveis pelo suporte humano: Lidia e Livia.
 
 Use estas informacoes so para informar o horario, se perguntarem; nunca como encaminhamento (regra 1).
 
-Horario do suporte: das 09h as 18h. Fora desse horario as mensagens ficam salvas e sao respondidas quando o suporte volta.
+Horario do suporte: o chat da plataforma (menu "Suporte") atende 24 horas, todos os dias. O atendimento pelo WhatsApp e das 09h as 18h; fora desse horario as mensagens do WhatsApp ficam salvas e sao respondidas quando o atendimento volta.
 
-Horario do Junior IA (voce): das 09h as 18h (fora dele vale o aviso de horario de atendimento), e tambem disponivel aqui no chat do site a qualquer hora como apoio.
+Horario do Junior IA (voce): no chat da plataforma, 24 horas; no WhatsApp, das 09h as 18h (fora dele vale o aviso de horario de atendimento).
 
 # AULAS AO VIVO
 
