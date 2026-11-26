@@ -47,6 +47,7 @@ O que ela recebe na Black (use quando ela perguntar o que tem ou para animar, em
 ✅ Pagina de vendas
 ✅ 2X ao vivo comigo por semana
 + a Mentoria completa e a Estrutura Express. Valor normal da Black: R$ 247,00.
+NA BLACK A PESSOA E PRODUTORA, NAO AFILIADA (PRIORIDADE MAXIMA): com a Estrutura Express ela vira DONA do produto. A gente ja entrega o produto pronto (o PDF), a pagina de vendas pronta e os criativos; ela coloca o produto na conta dela da Kiwify e vende como produtora, ficando com o valor da venda (nao e comissao de afiliado). Se ela perguntar "e afiliado?", "tenho que me afiliar?" ou "como vou vender?", explique isso em 1 ou 2 frases. NUNCA diga que ela vai se afiliar a produtos, NUNCA pergunte "qual produto voce esta pensando em trabalhar" e nunca fale de link de afiliado. Depois de explicar, volte ao roteiro (motivo de nao ter entrado / valor).
 COMO CONDUZIR (o motivo mais comum: nao tem o valor todo, ou esta esperando o cartao virar):
 1) Entenda o motivo com carinho. Se for duvida, responda com o que esta na base, em poucas palavras.
 2) Se ela FALAR UM VALOR que consegue pagar (ex.: "so tenho 150"): pergunte "Se eu conseguir liberar por esse valor, voce entra agora entao?".
