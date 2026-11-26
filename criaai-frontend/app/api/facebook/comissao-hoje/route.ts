@@ -43,14 +43,16 @@ export async function GET() {
         admin.from('sales_ledger').select('net').eq('provider', 'hubla').gte('paid_at', inicioOntem).lt('paid_at', inicio),
         admin.from('sales_ledger').select('net').eq('provider', 'hubla').gte('paid_at', inicio7),
         // Vendas por Pix confirmadas pelo Junior no WhatsApp (comprovante lido): contam junto com as da Hubla
-        admin.from('pix_comprovantes').select('valor, hash_arquivo, data_pagamento, created_at, dados').in('resultado', ['liberado', 'aguardando_conta', 'concluido_conta']).gte('created_at', inicio7).limit(2000),
+        admin.from('pix_comprovantes').select('valor, hash_arquivo, data_pagamento, created_at, dados, wa_id, plano').in('resultado', ['liberado', 'aguardando_conta', 'concluido_conta']).gte('created_at', inicio7).limit(2000),
       ])
       const soma = function(l: any[], k: string) { return (l || []).reduce(function(a: number, r: any) { return a + (Number(r[k]) || 0) }, 0) }
       // O mesmo pagamento pode ter mais de uma linha (aguardando conta, depois concluido): conta uma vez so
       const vistos: Record<string, boolean> = {}
       let pixHoje = 0, pixOntem = 0, pixSemana = 0, pixVendasHoje = 0
       for (const r of (pixRows.data || []) as any[]) {
-        const chave = String((r.dados && r.dados.id_transacao) || r.hash_arquivo || '')
+        // Black no Pix: a mesma pessoa com o mesmo valor e UM pagamento so, mesmo que tenha mandado varios prints diferentes
+        const ehBlack = String(r.plano || '').indexOf('Black') >= 0 && r.wa_id
+        const chave = ehBlack ? 'black:' + String(r.wa_id).replace(/\D/g, '').slice(-8) + ':' + Number(r.valor).toFixed(2) : String((r.dados && r.dados.id_transacao) || r.hash_arquivo || '')
         if (!chave || vistos[chave]) continue
         vistos[chave] = true
         const v = Number(r.valor) || 0

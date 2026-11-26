@@ -357,6 +357,17 @@ export async function processarPixDaConversa(db: any, p: {
 
   // Recuperacao da Black: comprovante ok -> pede o e-mail (a liberacao e pelo e-mail, tenha ou nao conta)
   if (p.black) {
+    // Mesmo pagamento mandado de novo em outro print/foto (arquivo diferente): a pessoa ja mandou um Pix da Black com o MESMO valor
+    // nos ultimos 3 dias. Nao registra de novo, nao avisa o Breno de novo e nao soma de novo nas comissoes (caso do Abilio, 26/11/2026).
+    const fim8 = String(p.waId || '').replace(/\D/g, '').slice(-8)
+    if (fim8.length === 8) {
+      const ant = await db.from('pix_comprovantes').select('resultado').like('wa_id', '%' + fim8).eq('plano', BLACK_PRODUTO).in('resultado', ['liberado', 'aguardando_conta', 'concluido_conta']).gte('created_at', new Date(Date.now() - 3 * 86400000).toISOString()).gte('valor', (leitura.valor as number) - 0.005).lte('valor', (leitura.valor as number) + 0.005).limit(5)
+      const ja: any[] = ant.data || []
+      if (ja.length > 0) {
+        if (ja.some(function(x) { return x.resultado === 'liberado' })) return { humano: false, texto: 'Esse pagamento de ' + brl(leitura.valor as number) + ' eu já recebi ✅ e a sua Estrutura Express já está liberada. Se precisar de ajuda para entrar, é só me falar.' }
+        return { humano: false, texto: 'Esse comprovante de ' + brl(leitura.valor as number) + ' eu já recebi ✅ Só falta você me escrever aqui o seu e-mail, que eu já libero tudo para você.' }
+      }
+    }
     await registrar(db, { conversation_id: p.convId, wa_id: p.waId, profile_id: p.perfilId, resultado: 'aguardando_conta', motivo: 'black: comprovante ok, falta o e-mail', valor: leitura.valor, plano: BLACK_PRODUTO, id_transacao: null, hash_arquivo: hash, data_pagamento: quando, dados: leitura as any })
     await avisarPix(db, { convId: p.convId, hash, tipo: 'conta', produto: BLACK_PRODUTO + ' (falta o e-mail)', valor: leitura.valor, leitura })
     return { humano: false, texto: 'Recebi o seu comprovante de ' + brl(leitura.valor as number) + ' ✅ Agora me escreve aqui o seu e-mail, que eu já libero tudo para você.' }
