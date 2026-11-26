@@ -9,7 +9,7 @@ const HF_API_KEY_SECRET = process.env.HF_API_KEY_SECRET!
 // pra confirmarmos o formato exato antes de construir o pipeline completo.
 export async function POST(req: NextRequest) {
   try {
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

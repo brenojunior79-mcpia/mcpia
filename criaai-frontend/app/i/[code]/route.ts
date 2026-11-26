@@ -4,8 +4,9 @@ import { REFERRAL_CHECKOUT } from '@/lib/referrals'
 
 // Link de indicacao: mcpia.site/i/CODIGO
 // Guarda o codigo no navegador e leva a pessoa para o pagamento da Mentoria (R$ 297) com o codigo no link.
-export async function GET(req: NextRequest, { params }: { params: { code: string } }) {
-  const code = String(params.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8)
+export async function GET(req: NextRequest, { params }: { params: Promise<{ code: string }> }) {
+  const { code: codeParam } = await params
+  const code = String(codeParam || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8)
   const valid = code.length === 8
 
   let known = false

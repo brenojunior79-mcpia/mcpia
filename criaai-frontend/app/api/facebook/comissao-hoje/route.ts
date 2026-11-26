@@ -20,7 +20,7 @@ function valorDe(lista: any, tipos: string[]): number {
 // Card "Comissoes de hoje" do Painel do Aluno: valor das vendas que o Facebook registrou HOJE nos anuncios do aluno.
 // So leitura. Respostas: { status: 'ok', valor } | { status: 'conectar' } | { status: 'sem_acesso' } | { status: 'erro' }
 export async function GET() {
-  const cookieStore = cookies()
+  const cookieStore = await cookies()
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

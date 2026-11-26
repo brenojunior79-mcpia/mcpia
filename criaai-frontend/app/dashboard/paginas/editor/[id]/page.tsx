@@ -2,6 +2,7 @@
 // Editor de paginas: lista de secoes, formulario da secao e preview real (a mesma pagina que vai pro ar).
 
 import { useState, useEffect, useRef } from 'react'
+import { useParams } from 'next/navigation'
 import { renderSalesPage, normalizeSections, newSection, SECTION_LABELS, Section, SectionType, DEFAULT_ACCENT } from '@/lib/sales-page'
 
 interface ImageItem { id: string; url: string; thumb: string; small: string; alt: string; author: string }
@@ -227,7 +228,8 @@ function buildDefaultSections(page: any): Section[] {
   ]
 }
 
-export default function PageEditorPage({ params }: { params: { id: string } }) {
+export default function PageEditorPage() {
+  const params = useParams<{ id: string }>()
   const [sections, setSections] = useState<Section[]>([])
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const [accent, setAccent] = useState<string>(DEFAULT_ACCENT)

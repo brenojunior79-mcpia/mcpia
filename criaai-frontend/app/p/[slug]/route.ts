@@ -5,12 +5,13 @@ export const dynamic = 'force-dynamic'
 
 // A pagina publica e' devolvida como um documento HTML de verdade (e nao dentro de outra pagina),
 // para que os scripts rodem: animacoes, perguntas frequentes, barra fixa e pixel do Facebook.
-export async function GET(_req: NextRequest, { params }: { params: { slug: string } }) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
   const supabase = createClient()
   const { data: page } = await supabase
     .from('sales_pages')
     .select('html, active, product_name, views')
-    .eq('slug', params.slug)
+    .eq('slug', slug)
     .eq('active', true)
     .single()
 
@@ -26,7 +27,7 @@ export async function GET(_req: NextRequest, { params }: { params: { slug: strin
   supabase
     .from('sales_pages')
     .update({ views: (page.views || 0) + 1 })
-    .eq('slug', params.slug)
+    .eq('slug', slug)
     .then(() => {})
 
   // Paginas antigas: o player do YouTube/Vimeo dentro da pagina isolada ficava preto. Troca pela capa com botao de play (abre o video no YouTube/Vimeo).
