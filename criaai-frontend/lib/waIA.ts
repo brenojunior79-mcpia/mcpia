@@ -402,7 +402,8 @@ export async function responderQuemAguardou(admin: any): Promise<number> {
       if (c.ia_humano === true) continue
       // A mensagem chegou com o atendimento fechado? (se chegou dentro do horario, o fluxo normal ja cuidou dela)
       const dentroQuandoChegou = abertoAgoraEm(a.horario, new Date(c.last_inbound_at))
-      if (dentroQuandoChegou) continue
+      // Excecao (26/11/2026): quem respondeu o disparo da Black enquanto o Junior estava desligado tambem recebe resposta
+      if (dentroQuandoChegou && !(await emRecuperacaoBlack(admin, String(c.wa_id)))) continue
       const ms = await admin.from('wa_messages').select('id, direction, type, body, sent_by, created_at').eq('conversation_id', c.id).order('created_at', { ascending: false }).limit(8)
       const linhas: any[] = ms.data || []
       const ultimaIn = linhas.find(function(m) { return m.direction === 'in' })
