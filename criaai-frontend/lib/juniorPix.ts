@@ -175,7 +175,16 @@ async function avisarPix(db: any, p: { convId: string; hash: string | null; tipo
     if (!nome) nome = String(p.leitura?.pagador_nome || '').trim()
     if (!nome) nome = String((cv.data as any)?.wa_id || '').trim()
     const titulo = p.tipo === 'venda' ? '💰 Venda no Pix!' : p.tipo === 'conta' ? '💰 Pix recebido!' : '⚠️ Pix para conferir'
-    const chave = 'pix:' + p.tipo + ':' + (p.hash || (p.convId + ':' + (p.leitura?.id_transacao || Date.now())))
+    // Um aviso so por pagamento: "Pix recebido" (falta o e-mail) e depois "Venda no Pix" eram o MESMO pagamento e chegavam 2 vezes.
+    // A chave agora e a do pagamento (numero da transacao do Pix, ou o arquivo) e nao depende da etapa.
+    const pg = String(p.leitura?.id_transacao || '').trim()
+    const base = pg || p.hash || (p.convId + ':' + Date.now())
+    const chave = (p.tipo === 'conferir' ? 'pix:conferir:' : 'pix:pg:') + base
+    // Avisos feitos antes desta correcao usavam outra chave: se o "Pix recebido" desse arquivo ja foi avisado, nao avisa a venda de novo
+    if (p.tipo === 'venda' && p.hash) {
+      const antigo = await db.from('push_vendas_avisadas').select('chave').eq('chave', 'pix:conta:' + p.hash).maybeSingle()
+      if (antigo.data) return
+    }
     await avisarVendaAdmin(db, { chave, renovacao: false, produto: p.produto, valor: p.valor, nome: nome || null, email: null, origem: 'Pix', titulo })
   } catch (e) { console.error('[pix] aviso ao admin:', e) }
 }
