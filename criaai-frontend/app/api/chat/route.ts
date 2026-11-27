@@ -36,10 +36,13 @@ export async function POST(req: NextRequest) {
       let iAssist = -1
       for (let k = messages.length - 1; k >= 0; k--) { if (messages[k].role === 'assistant') { iAssist = k; break } }
       const lastUserMessage = { content: messages.slice(iAssist + 1).filter(function(m) { return m.role === 'user' }).map(function(m) { return m.content }).join('\n') }
-      const userContentToSave = (lastUserMessage?.content || '') + (imageBase64 ? ' [imagem anexada]' : '')
+      const userContentToSave = (lastUserMessage?.content || '') + (imageBase64 ? ' [imagem anexada]' : '') + (corpo?.arquivoNome ? ' [arquivo enviado: ' + String(corpo.arquivoNome).slice(0, 120) + ']' : '')
 
       // Guarda o print numa pasta privada (so o admin consegue ver) para poder consultar depois
       let imagePath: string | null = null
+      // Video ou arquivo que o aluno ja subiu direto para a pasta dele (so aceita a pasta do proprio aluno)
+      const arq = typeof corpo?.arquivoPath === 'string' ? corpo.arquivoPath : ''
+      if (arq && arq.indexOf(user!.id + '/') === 0 && arq.indexOf('..') < 0) imagePath = arq.slice(0, 300)
       if (imageBase64 && typeof imageBase64 === 'string' && !corpo?.jaSalvo) { // com o print ja guardado (api/chat/salvar) nao sobe de novo
         try {
           const match = imageBase64.match(/^data:(image\/(?:png|jpeg|webp|gif));base64,(.+)$/)

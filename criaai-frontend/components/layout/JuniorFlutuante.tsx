@@ -25,6 +25,9 @@ export default function JuniorFlutuante() {
   const [humano, setHumano] = useState(false)
   const [pronto, setPronto] = useState(false)
   const fim = useRef<HTMLDivElement>(null)
+  const arquivoRef = useRef<HTMLInputElement>(null)
+  const [anexo, setAnexo] = useState<{ file: File; preview: string | null } | null>(null)
+  const [erroAnexo, setErroAnexo] = useState('')
 
   // Le o historico e o nome ao abrir o chat (sempre atualizado com o que foi falado no menu Assistente IA)
   useEffect(function() {
@@ -66,16 +69,48 @@ export default function JuniorFlutuante() {
 
   if (ESCONDER_EM.some(function(p) { return pathname === p || pathname.indexOf(p + '/') === 0 })) return null
 
+  function escolherArquivo(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files && e.target.files[0]
+    e.target.value = ''
+    setErroAnexo('')
+    if (!f) return
+    const ehImagem = /^image\/(png|jpeg|webp|gif)$/.test(f.type)
+    const limite = ehImagem ? 5 : 50
+    if (f.size > limite * 1024 * 1024) { setErroAnexo('Esse arquivo é grande demais. O limite é ' + limite + ' MB.'); return }
+    if (!ehImagem) { setAnexo({ file: f, preview: null }); return }
+    const leitor = new FileReader()
+    leitor.onload = function() { setAnexo({ file: f, preview: String(leitor.result || '') }) }
+    leitor.readAsDataURL(f)
+  }
+
   async function enviar() {
-    const t = texto.trim()
+    const anexoAgora = anexo
+    const t = texto.trim() || (anexoAgora ? (anexoAgora.preview ? 'Mandei uma imagem.' : 'Mandei um arquivo: ' + anexoAgora.file.name) : '')
     if (!t || enviando) return
-    const novas: Msg[] = [...msgs, { role: 'user', content: t }]
-    setMsgs(novas); setTexto(''); setEnviando(true)
+    let imageBase64: string | null = null
+    let arquivoPath: string | null = null
+    let arquivoNome: string | null = null
+    setEnviando(true); setErroAnexo('')
+    if (anexoAgora && anexoAgora.preview) imageBase64 = anexoAgora.preview
+    else if (anexoAgora) {
+      try {
+        const sb = createClient()
+        const u = await sb.auth.getUser()
+        const uid = u.data.user && u.data.user.id
+        const nomeLimpo = anexoAgora.file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-80)
+        const caminho = uid + '/' + Date.now() + '-' + nomeLimpo
+        const up = uid ? await sb.storage.from('chat-prints').upload(caminho, anexoAgora.file, { contentType: anexoAgora.file.type || 'application/octet-stream', upsert: false }) : { error: true }
+        if (up.error) { setErroAnexo('Não consegui enviar esse arquivo. Tente de novo ou mande um print.'); setEnviando(false); return }
+        arquivoPath = caminho; arquivoNome = anexoAgora.file.name
+      } catch (e) { setErroAnexo('Não consegui enviar esse arquivo. Tente de novo.'); setEnviando(false); return }
+    }
+    const novas: Msg[] = [...msgs, { role: 'user', content: t, imageUrl: anexoAgora ? 'anexo' : undefined }]
+    setMsgs(novas); setTexto(''); setAnexo(null)
     try {
       const r = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: novas.filter(function(m, i) { return m.role !== 'assistant' || i > 0 }).map(function(m) { return { role: m.role, content: m.content } }) }),
+        body: JSON.stringify({ imageBase64: imageBase64, arquivoPath: arquivoPath, arquivoNome: arquivoNome, messages: novas.filter(function(m, i) { return m.role !== 'assistant' || i > 0 }).map(function(m) { return { role: m.role, content: m.content } }) }),
       })
       const d = await r.json()
       if (d.human) setHumano(true)
@@ -119,7 +154,7 @@ export default function JuniorFlutuante() {
                 <div key={i} style={{ display: 'flex', justifyContent: eu ? 'flex-end' : 'flex-start' }}>
                   <div style={{ maxWidth: '86%', padding: '9px 12px', borderRadius: eu ? '14px 14px 4px 14px' : '14px 14px 14px 4px', background: eu ? '#1f6f50' : 'var(--surface)', color: eu ? '#fff' : 'var(--text)', border: eu ? 0 : '1px solid var(--border)', fontSize: 14, lineHeight: 1.45, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                     {m.human && <div style={{ fontSize: 11, fontWeight: 800, color: '#16a34a', marginBottom: 2 }}>Atendimento da equipe</div>}
-                    {m.imageUrl && <div style={{ fontSize: 12, opacity: .8, marginBottom: 4 }}>[print enviado]</div>}
+                    {m.imageUrl && <div style={{ fontSize: 12, opacity: .8, marginBottom: 4 }}>📎 anexo enviado</div>}
                     <TextoComLinks texto={m.content} />
                   </div>
                 </div>
@@ -128,11 +163,24 @@ export default function JuniorFlutuante() {
             {enviando && <div style={{ fontSize: 13, color: 'var(--muted2)' }}>Junior está digitando…</div>}
             <div ref={fim} />
           </div>
+          {(anexo || erroAnexo) && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderTop: '1px solid var(--border)', background: 'var(--surface)', fontSize: 13, color: erroAnexo ? '#dc2626' : 'var(--text)' }}>
+              {erroAnexo ? erroAnexo : (
+                <>
+                  {anexo && anexo.preview ? <img src={anexo.preview} alt="Imagem escolhida" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 6 }} /> : <span style={{ fontSize: 20 }}>{anexo && anexo.file.type.indexOf('video/') === 0 ? '🎬' : '📄'}</span>}
+                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{anexo ? anexo.file.name : ''}</span>
+                </>
+              )}
+              <button onClick={function() { setAnexo(null); setErroAnexo('') }} aria-label="Tirar o anexo" style={{ background: 'none', border: 0, color: 'var(--muted2)', cursor: 'pointer', fontSize: 15 }}>✕</button>
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 8, padding: 10, borderTop: '1px solid var(--border)', background: 'var(--surface)' }}>
+            <input ref={arquivoRef} type="file" accept="image/*,video/*,application/pdf,.doc,.docx,.txt" onChange={escolherArquivo} style={{ display: 'none' }} />
+            <button onClick={function() { if (arquivoRef.current) arquivoRef.current.click() }} disabled={enviando} aria-label="Enviar foto, vídeo ou arquivo" title="Enviar foto, vídeo ou arquivo" style={{ width: 42, height: 42, borderRadius: 12, border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', cursor: 'pointer', fontSize: 19, flexShrink: 0 }}>📎</button>
             <textarea value={texto} onChange={function(e) { setTexto(e.target.value) }} rows={1} placeholder="Escreva sua dúvida…"
               onKeyDown={function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar() } }}
               style={{ flex: 1, resize: 'none', border: '1px solid var(--border2)', background: 'var(--surface2)', color: 'var(--text)', borderRadius: 12, padding: '10px 12px', fontSize: 14, fontFamily: 'inherit', outline: 'none', maxHeight: 90 }} />
-            <button onClick={enviar} disabled={enviando || !texto.trim()} aria-label="Enviar" style={{ width: 42, height: 42, borderRadius: 12, border: 0, background: '#1f6f50', color: '#fff', cursor: enviando || !texto.trim() ? 'default' : 'pointer', opacity: enviando || !texto.trim() ? .5 : 1, fontSize: 18 }}>➤</button>
+            <button onClick={enviar} disabled={enviando || (!texto.trim() && !anexo)} aria-label="Enviar" style={{ width: 42, height: 42, borderRadius: 12, border: 0, background: '#1f6f50', color: '#fff', cursor: enviando || (!texto.trim() && !anexo) ? 'default' : 'pointer', opacity: enviando || (!texto.trim() && !anexo) ? .5 : 1, fontSize: 18 }}>➤</button>
           </div>
         </div>
       )}
