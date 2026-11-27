@@ -538,7 +538,9 @@ export default function ConversasAdminPage() {
                           <div className={'cv-bubble ' + (isUser ? 'user' : msg.role === 'admin' ? 'human' : 'bot')}>
                             {msg.role === 'admin' && <span className="cv-human-label">Você (atendimento)</span>}
                             {msg.image_path && shots[msg.image_path] && (
-                              <img className="cv-shot" src={shots[msg.image_path]} alt="Print enviado pelo aluno" onClick={function() { setZoomSrc(shots[msg.image_path]) }} />
+                              /\.(mp4|mov|webm|m4v|3gp)$/i.test(msg.image_path) ? <video className="cv-shot" src={shots[msg.image_path]} controls />
+                              : /\.(png|jpe?g|webp|gif)$/i.test(msg.image_path) ? <img className="cv-shot" src={shots[msg.image_path]} alt="Print enviado pelo aluno" onClick={function() { setZoomSrc(shots[msg.image_path]) }} />
+                              : <a href={shots[msg.image_path]} target="_blank" rel="noreferrer">📎 Abrir arquivo enviado</a>
                             )}
                             {msg.image_path && !shots[msg.image_path] && <span className="cv-shot-missing">Carregando print...</span>}
                             {!msg.image_path && isUser && (msg.content || '').indexOf('[imagem anexada]') !== -1 && <span className="cv-shot-missing">Print enviado antes de os prints serem guardados</span>}
