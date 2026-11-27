@@ -282,14 +282,14 @@ export function enviarAoChat(conteudo: string, imagem: string | null, audioUrl?:
   const id = 'l-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)
   const hora = agora()
   mudar({ mensagens: [...estado.mensagens, { id, role: 'user', content: conteudo, imageUrl: imagem || undefined, audio: !!audioUrl, audioUrl, hora, lido: false }] })
-  if (!imagem) salvarNoServidor(id, conteudo, hora)
+  salvarNoServidor(id, conteudo, hora, undefined, imagem || undefined)
   agendarResposta()
 }
 
 // Guarda a fala do aluno no servidor na hora (aparece nos outros aparelhos); o id passa a ser o do servidor
-async function salvarNoServidor(id: string, content: string, hora: string, audioPath?: string) {
+async function salvarNoServidor(id: string, content: string, hora: string, audioPath?: string, imagem?: string) {
   try {
-    const r = await fetch('/api/chat/salvar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content, hora, audioPath: audioPath || '' }) })
+    const r = await fetch('/api/chat/salvar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content, hora, audioPath: audioPath || '', imageBase64: imagem || '' }) })
     const d = await r.json()
     if (r.ok && d.id) mudar({ mensagens: estado.mensagens.map(function(m) { return m.id === id ? { ...m, id: 'db-' + d.id, salvo: true } : m }) })
   } catch (e) {}
